@@ -39,6 +39,8 @@ Real xmax=1.0;
 Real ymin=0.0;
 Real ymax=1.0;
 Real force=1.0;
+Real kforce=1.0;
+Real deltaf=2.0;
 
 int movie=0;
 
@@ -81,6 +83,7 @@ public:
 };
    
 class DNS : public ProblemBase {
+  int iNxb,iNyb;
   Real hxinv, hyinv;
   unsigned nmode;
 	
@@ -96,6 +99,8 @@ class DNS : public ProblemBase {
   Array3<Real> ForceMask;
   Array3<Complex> FMk;
   
+  Real coeffx,coeffy;
+  
 public:
   DNS();
   virtual ~DNS() {}
@@ -104,12 +109,17 @@ public:
   void Output(int it);
   void OutFrame(int it);
   void Source(Var *, Var *, double);
-  void ComputeInvariants(Real& E);
-  Real ForceSpatial(unsigned s, unsigned i, unsigned j);
+  void ComputeInvariants(Real& E, Real& Z);
   void Stochastic(Var *y, double, double dt);
   
   Real X(int i) {return xmin+i*(xmax-xmin)/Nxb;}
   Real Y(int i) {return ymin+i*(ymax-ymin)/Nyb;}
+  
+  Real Vorticity(int i, int j) {
+    return coeffx*(u(i+1 < iNxb ? i+1 : 0,j,1)-u(i > 0 ? i-1 : iNxb-1,j,1))-
+      coeffy*(u(i,j+1 < iNyb ? j+1 : 0,0)-u(i,j > 0 ? j-1 : iNyb-1,0));
+  }
+
 };
 
 DNS *DNSProblem;
@@ -126,7 +136,9 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(rho,0.0,REAL_MAX,"density");
   VOCAB(nu,0.0,REAL_MAX,"Kinematic viscosity");
   VOCAB(force,0.0,REAL_MAX,"force coefficient");
-    
+  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
+  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
+  
   VOCAB(P0,-REAL_MAX,REAL_MAX,"");
   VOCAB(P1,-REAL_MAX,REAL_MAX,"");
   VOCAB(ICvx,-REAL_MAX,REAL_MAX,"Initial condition multiplier for vx");
@@ -168,6 +180,11 @@ void DNS::InitialConditions()
   Geometry=DNS_Vocabulary.NewGeometry(geometry);
   Geometry->Create(0);
   nmode=Geometry->nMode();
+  
+  iNxb=Nxb;
+  iNyb=Nyb;
+  coeffx=0.5*(xmax-xmin)/Nxb;
+  coeffy=0.5*(ymax-ymin)/Nyb;
   
   ny=Nxb*Nyb*nspecies;
   y=new Var[ny];
@@ -246,35 +263,28 @@ void DNS::InitialConditions()
     }
   }
   
-  // Filter high-components from forcing and enforce solenoidal condition
+  // Apply band-limited forcing, enforcing solenoidal condition
   
-  for(unsigned s=0; s < nspecies; s++) {
-    for(unsigned i=0; i < Nxb; i++) {
-      for(unsigned j=0; j < Nyb; j++) {
-	ForceMask(s,i,j)=ForceSpatial(s,i,j);
-      }	
-    }
-    rcfft2d(FMk[s],log2Nxb,log2Nyb,-1);
-  }
-    
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
     if(k2invmask[i]) {
       // Calculate -i*P
+      Real K=sqrt(kx*kx+ky*ky);
+      if(K >= kforce-0.5*deltaf && K <= kforce+0.5*deltaf) {
+	FMk[0](i)=force*crand_gauss();
+	FMk[1](i)=force*crand_gauss();
+      }
+      else FMk[0](i)=FMk[1](i)=0.0;
       Complex miP=(kx*FMk[0](i)+ky*FMk[1](i))*k2invmask[i];
-      FMk[0](i)=(FMk[0](i)-kx*miP)*Nxybinv;
-      FMk[1](i)=(FMk[1](i)-ky*miP)*Nxybinv;
+      FMk[0](i)=(FMk[0](i)-kx*miP);
+      FMk[1](i)=(FMk[1](i)-ky*miP);
     } else {
       FMk[0](i)=FMk[1](i)=0.0;
     }
   }
   
-  for(unsigned s=0; s < nspecies; s++) {
-    crfft2d(FMk[s],log2Nxb,log2Nyb,1);
-  }
-  
-//  cout << u << endl;
+  for(unsigned s=0; s < nspecies; s++) crfft2d(FMk[s],log2Nxb,log2Nyb,1);
   
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
@@ -288,33 +298,9 @@ void DNS::InitialConditions()
 
 void DNS::Initialize()
 {
-  fevt << "#   t\t\t E\t\t\t Z\t\t\t I\t\t\t C" << endl;
+  fevt << "#   t\t\t E\t\t\t Z" << endl;
 }
 
-Real DNS::ForceSpatial(unsigned s, unsigned i, unsigned j)
-{
-  Real x=X(i);
-  Real y=Y(j);
-  
-  Real k1=7.0;
-  Real k2=8.0;
-  Real f=0.0;
-  
-#if 1  
-  for(int kx=-k2; kx <= k2; kx++) {
-    for(int ky=-k2; ky <= k2; ky++) {
-      Real K2=kx*kx+ky*ky;
-      if(K2 >= k1*k1 && K2 <= k2*k2) {
-	f += cos(twopi*(kx*x+ky*y));
-      }
-    }
-  }
-  return f*force;
-#endif  
-//  return force*(sin(twopi*x)*cos(twopi*y)+sin(2.0*twopi*x)*cos(2.0*twopi*y));
-//  return force*(abs(x-0.5) <= 0.01)*(0.01-abs(x-0.5));
-//  return force*rand_gauss()*(abs(x-0.5) <= 0.1)*(0.1-abs(x-0.5));
-}
 
 void Basis<Cartesian>::Initialize()
 {
@@ -345,11 +331,11 @@ void Basis<Cartesian>::Initialize()
 
 void DNS::Output(int it)
 {
-  Real E;
+  Real E,Z;
 	
   u.Set(y);
-  ComputeInvariants(E);
-  fevt << t << "\t" << E << endl;
+  ComputeInvariants(E,Z);
+  fevt << t << "\t" << E << "\t" << Z << endl;
 
   if(movie) OutFrame(it);
 	
@@ -362,18 +348,11 @@ void DNS::OutFrame(int it)
   fvy << Nxb << Nyb << 1;
   fw << Nxb << Nyb << 1;  
   
-  Real coeffx=0.5*(xmax-xmin)/Nxb;
-  Real coeffy=0.5*(ymax-ymin)/Nyb;
-  
-  int iNxb=Nxb;
-  int iNyb=Nyb;
   for(int j=iNyb-1; j >= 0; j--) {
     for(int i=0; i < iNxb; i++) {
       fvx << (float) u(i,j,0);
       fvy << (float) u(i,j,1);
-      Real w=coeffx*(u(i+1 < iNxb ? i+1 : 0,j,1)-u(i > 0 ? i-1 : iNxb-1,j,1))-
-	coeffy*(u(i,j+1 < iNyb ? j+1 : 0,0)-u(i,j > 0 ? j-1 : iNyb-1,0));
-      fw << (float) w;
+      fw << (float) Vorticity(i,j);
     }
   }
   
@@ -382,9 +361,9 @@ void DNS::OutFrame(int it)
   fw.flush();
 }	
 
-void DNS::ComputeInvariants(Real& E)
+void DNS::ComputeInvariants(Real& E, Real& Z)
 {
-  E=0.0;
+  E=Z=0.0;
 	
   for(unsigned i=0; i < Nxb; i++) {
     Array2<Real> ui=u[i];
@@ -393,12 +372,17 @@ void DNS::ComputeInvariants(Real& E)
       for(unsigned s=0; s < nspecies; s++) {
 	E += uij[s]*uij[s];
       }
+      
+      Real w=Vorticity(i,j);
+      Z += w*w;
     }
   }
   
   Real volume=(xmax-xmin)*(ymax-ymin)/(Nxb*Nyb);
   Real factor=0.5*volume;
+  
   E *= factor;
+  Z *= factor;
 }
 
 void DNS::Source(Var *source, Var *y, double t)
