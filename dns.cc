@@ -55,10 +55,10 @@ Real shellmin2;
 Real shellmax2;
 
 // Local Variables;
-static Array1<Real> kxmask;
-static Array1<Real> kymask;
-static Array1<Real> k2mask, k2invmask;
-static Array2<Real> k2maskij;
+static vector kxmask;
+static vector kymask;
+static vector k2mask, k2invmask;
+static array2<Real> k2maskij;
 static int tcount=0;
 
 enum Field {VEL,EK,PX,PV};
@@ -95,22 +95,22 @@ class DNS : public ProblemBase {
   Real hxinv, hyinv;
   unsigned nmode;
 	
-  Array3<Real> u,S,f;
+  array3<Real> u,S,f;
   unsigned nspecies;
   
   unsigned nbshells; // Total number of spectral shells, including buffer
   unsigned nshells;  // Number of physical spectral shells
   
-  Array2<Real> us,dudx,dudy;
-  Array2<Complex> uk,ikxu,ikyu;
+  array2<Real> us,dudx,dudy;
+  array2<Complex> uk,ikxu,ikyu;
   
-  Array3<Real> Ss;
-  Array3<Complex> Sk;
+  array3<Real> Ss;
+  array3<Complex> Sk;
   
-  Array1<Real> spectrum;
+  array1<Real> spectrum;
   
-  Array3<Real> ForceMask;
-  Array3<Complex> FMk;
+  array3<Real> ForceMask;
+  array3<Complex> FMk;
   
   Real coeffx,coeffy;
   
@@ -119,14 +119,13 @@ public:
   virtual ~DNS() {}
   void InitialConditions();
   void Initialize();
-  void Output(int it);
+  void Output(double t, int it);
   void FinalOutput();
   void OutFrame(int it);
-  void Source(const Array1<Array1<Var> >& Src,
-	      const Array1<Array1<Var> >& Y, double t);
+  void Source(const vector2& Src, const vector2& Y, double t);
   void ComputeInvariants(Real& E, Real& Z);
-  void Stochastic(const Array1<Array1<Var> >& Y, double, double);
-  void Spectrum(Array1<Var> y, Array1<Var> S);
+  void Stochastic(const vector2& Y, double, double);
+  void Spectrum(vector& S, const vector& y);
   
   Real Xof(int i) {return xmin+i*(xmax-xmin)/Nxb;}
   Real Yof(int i) {return ymin+i*(ymax-ymin)/Nyb;}
@@ -277,10 +276,11 @@ void DNS::InitialConditions()
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
-    if(k2invmask[i] && k2mask[i] <= 42.0*42.0) {
+//    if(k2invmask[i] && k2mask[i] <= 42.0*42.0) {
+    if(k2invmask[i]) {
       // Calculate -i*P
-      Sk[0](i)=-I*ky*Nxb*Nyb*sqrt(k2invmask[i])/twopi;
-      Sk[1](i)=I*kx*Nxb*Nyb*sqrt(k2invmask[i])/twopi;
+//      Sk[0](i)=-I*ky*Nxb*Nyb*sqrt(k2invmask[i])/twopi;
+//      Sk[1](i)=I*kx*Nxb*Nyb*sqrt(k2invmask[i])/twopi;
       Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
       Sk[0](i)=(Sk[0](i)-kx*miP)*Nxybinv;
       Sk[1](i)=(Sk[1](i)-ky*miP)*Nxybinv;
@@ -290,8 +290,8 @@ void DNS::InitialConditions()
   }
   
   for(unsigned s=0; s < nspecies; s++) {
-    Array2<Real> Sss=Ss[s];
-    Array2<Complex> Sks=Sk[s];
+    array2<Real> Sss=Ss[s];
+    array2<Complex> Sks=Sk[s];
     crfft2d(Sks,log2Nxb,log2Nyb,1);
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
@@ -364,8 +364,8 @@ void Basis<Cartesian>::Initialize()
   cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
        << ")." << endl;
   
-  Array1<Complex> temp(nmode);
-  Array1<Complex> mask(nfft);
+  array1<Complex> temp(nmode);
+  array1<Complex> mask(nfft);
   
   kxmask.Allocate(nfft);
   kymask.Allocate(nfft);
@@ -388,7 +388,7 @@ void Basis<Cartesian>::Initialize()
   }
 }
 
-void DNS::Spectrum(Array1<Var> y, Array1<Var> S)
+void DNS::Spectrum(vector& S, const vector& y)
 {
   u.Set(y);
   
@@ -413,7 +413,7 @@ void DNS::Spectrum(Array1<Var> y, Array1<Var> S)
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
       int kx=i-Nxb2;
-      Array1<Real>::opt k2maski=k2maskij[i];
+      array1<Real>::opt k2maski=k2maskij[i];
       for(unsigned j=(kx > 0) ? 0 : 1; j < Nyp; j++) {
 	if(k2maski[j]) {
 	  int K2=kx*kx+j*j;
@@ -429,7 +429,7 @@ void DNS::Spectrum(Array1<Var> y, Array1<Var> S)
     if(count[K]) S[K] *= twopi*K/count[K]*twopi*twopi;
 }
 
-void DNS::Output(int it)
+void DNS::Output(double t, int it)
 {
   Real E,Z;
 	
@@ -477,9 +477,9 @@ void DNS::ComputeInvariants(Real& E, Real& Z)
   E=Z=0.0;
 	
   for(unsigned i=0; i < Nxb; i++) {
-    Array2<Real> ui=u[i];
+    array2<Real> ui=u[i];
     for(unsigned j=0; j < Nyb; j++) {
-    Array1(Real) uij=ui[j];
+    array1(Real) uij=ui[j];
       for(unsigned s=0; s < nspecies; s++) 
 	E += uij[s]*uij[s];
       Real w=Vorticity(i,j);
@@ -503,8 +503,7 @@ void DNS::FinalOutput()
   cout << "Enstrophy = " << Z << newl;
 }
 
-void DNS::Source(const Array1<Array1<Var> >& Src,
-		 const Array1<Array1<Var> >& Y, double)
+void DNS::Source(const vector2& Src, const vector2& Y, double)
 {
   u.Set(Y[VEL]);
   S.Set(Src[VEL]);
@@ -566,7 +565,7 @@ void DNS::Source(const Array1<Array1<Var> >& Src,
   }
   
   for(unsigned s=0; s < nspecies; s++) {
-    Array2<Real> Sss=Ss[s];
+    array2<Real> Sss=Ss[s];
     crfft2d(Sk[s],log2Nxb,log2Nyb,1);
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
@@ -575,13 +574,13 @@ void DNS::Source(const Array1<Array1<Var> >& Src,
     }
   }
   
-  Spectrum(Y[VEL],Src[EK]);
+  Spectrum(Src[EK],Y[VEL]);
   
 //  Src[PX]=0.0;
 //  Src[PV]=0.0;
 }
 
-void DNS::Stochastic(const Array1<Array1<Var> >&Y, double, double)
+void DNS::Stochastic(const vector2&Y, double, double)
 {
   u.Set(Y[0]);
   Real factor=sqrt(2.0*dt)*rand_gauss();
