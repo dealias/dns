@@ -39,7 +39,6 @@ Real ymax=1.0;
 Real force=1.0;
 Real kforce=1.0;
 Real deltaf=2.0;
-Real gammaf=2.0;
 int nparticles=1;
 int movie=0;
 
@@ -161,7 +160,6 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(force,0.0,REAL_MAX,"force coefficient");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
-  VOCAB(gammaf,0.0,0.0,"forcing band width");
   
   VOCAB(P0,0.0,0.0,"");
   VOCAB(P1,0.0,0.0,"");
@@ -575,15 +573,8 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
     array2<Complex> Sks=Sk[s];
     rcfft2d(Sks,log2Nxb,log2Nyb,-1);
     
-    Real k1=kforce-0.5*deltaf;
-    Real k2=kforce+0.5*deltaf;
-    Real factor=gammaf/deltaf;
-    k1 *= k1;
-    k2 *= k2;
     for(unsigned i=0; i < nfft; i++) {
       if(k2mask[i]) {
-	Real K2=k2mask[i];
-	if(K2 >= k1 && K2 <= k2) Sks(i) += factor*uk(i);
 	Sks(i)=(Sks(i)-nu*k2mask[i]*uk(i))*Nxybinv;
       } else Sks(i)=0.0;
     }
