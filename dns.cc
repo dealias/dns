@@ -48,12 +48,6 @@ int movie=0;
 
 int dumpbins=0;
 
-// Global Variables;
-//unsigned int Nmode;
-extern unsigned Nxb,Nxb1,Nyb,Nyp;
-Real shellmin2;
-Real shellmax2;
-
 // Local Variables;
 
 typedef array1<Complex>::opt cvector;
@@ -63,6 +57,7 @@ static rvector kymask;
 static rvector k2mask, k2invmask;
 static array2<Real> k2maskij;
 static int tcount=0;
+unsigned int nfft;
 
 enum Field {VEL,EK,PX,PV};
 
@@ -94,6 +89,11 @@ public:
 class DNS : public ProblemBase {
   int iNxb,iNyb;
   unsigned Nxb2, Nyb2; // half of Nxb, Nyb
+  
+  unsigned int Nxb,Nxb1,log2Nxb;
+  unsigned int Nyb,Nyp,log2Nyb;
+  
+  Real Nxybinv;
   
   Real hxinv, hyinv;
   unsigned nmode;
@@ -128,6 +128,8 @@ public:
   void Source(const vector2& Src, const vector2& Y, double t);
   void ComputeInvariants(Real& E, Real& Z);
   void Stochastic(const vector2& Y, double, double);
+  void SetFFTparameters();
+  
   void Spectrum(vector& S, const vector& y);
   
   Real Xof(int i) {return xmin+i*(xmax-xmin)/Nxb;}
@@ -192,12 +194,29 @@ ifstream ftin;
 ofstream ft,fevt,fu;
 oxstream fvx,fvy,fw,fekvk;
 
+void DNS::SetFFTparameters()
+{
+  Geometry->SetFFTparameters();
+  Nxb=Geometry->getNxb();
+  Nxb1=Geometry->getNxb1();
+    
+  Nyb=Geometry->getNyb();
+  Nyp=Geometry->getNyp();
+    
+  log2Nxb=Geometry->getlog2Nxb();
+  log2Nyb=Geometry->getlog2Nyb();
+    
+  Nxybinv=1.0/(Nxb*Nyb);
+  nfft=Nxb1*Nyp;
+  
+  cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
+}
+
 void DNS::InitialConditions()
 {
   nspecies=2;
-  set_fft_parameters();
   
-  cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
+  SetFFTparameters();
 	
   Geometry=DNS_Vocabulary.NewGeometry(geometry);
   Geometry->Create(0);
@@ -382,11 +401,11 @@ void Basis<Cartesian>::Initialize()
   k2maskij.Dimension(Nxb,Nyp,k2mask);
   
   for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].X();
-  CartesianPad(mask,temp);
+  Geometry->Pad(mask,temp);
   for(unsigned int i=0; i < nfft; i++) kxmask[i]=mask[i].im;
   
   for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].Y();
-  CartesianPad(mask,temp);
+  Geometry->Pad(mask,temp);
   for(unsigned int i=0; i < nfft; i++) {
     kymask[i]=mask[i].im;
     Real k2=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
