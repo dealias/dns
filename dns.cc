@@ -332,11 +332,16 @@ void DNS::InitialConditions()
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
-//    if(k2invmask[i] && k2mask[i] <= krmax*krmax) {
     if(k2invmask[i]) {
       // Calculate -i*P
-//      Sk[0](i)=-I*ky*Nxb*Nyb*sqrt(k2invmask[i])/twopi;
-//      Sk[1](i)=I*kx*Nxb*Nyb*sqrt(k2invmask[i])/twopi;
+#if 0      
+// Initial condition E(k)=pi/2 k^-7 (for testing)
+      Real k4=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
+      k4 *= k4;
+      Sk[0](i)=-I*ky*Nxb*Nyb*sqrt(k2invmask[i])/k4;
+      Sk[1](i)=I*kx*Nxb*Nyb*sqrt(k2invmask[i])/k4;
+#endif      
+      
       Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
       Sk[0](i)=(Sk[0](i)-kx*miP)*Nxybinv;
       Sk[1](i)=(Sk[1](i)-ky*miP)*Nxybinv;
@@ -458,7 +463,7 @@ void DNS::Spectrum(vector& S, const vector& y)
   }
   
   for(unsigned K=0; K < nbshells; K++) // Could reduce this to nshells
-    if(count[K]) S[K] *= twopi*K/count[K]*twopi*twopi;
+    if(count[K]) S[K] *= twopi*K/count[K];
 }
 
 void DNS::Output(int it)
@@ -521,7 +526,9 @@ void DNS::ComputeInvariants(Real& E, Real& Z)
     }
   }
   
-  Real volume=(xmax-xmin)*(ymax-ymin)/(Nxb*Nyb);
+// Real volume=(xmax-xmin)*(ymax-ymin)/(Nxb*Nyb);
+  // Compute energy density
+  Real volume=Nxybinv;
   Real factor=0.5*volume;
   
   E *= factor;
@@ -581,17 +588,15 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
     
     Real k1=kforce-0.5*deltaf;
     Real k2=kforce+0.5*deltaf;
-    Real deltafinv=1.0/deltaf;
+    Real factor=gammaf/deltaf;
     k1 *= k1;
     k2 *= k2;
     for(unsigned i=0; i < nfft; i++) {
       if(k2mask[i]) {
 	Real K2=k2mask[i];
-	if(K2 >= k1 && K2 <= k2) Sks(i) += gammaf*deltafinv*uk(i);
+	if(K2 >= k1 && K2 <= k2) Sks(i) += factor*uk(i);
 	Sks(i)=(Sks(i)-nu*k2mask[i]*uk(i))*Nxybinv;
-      }
-      else
-	Sks(i)=0.0;
+      } else Sks(i)=0.0;
     }
   }
   
