@@ -609,7 +609,7 @@ void DNS::Stochastic(const vector2&Y, double, double)
       array2<Real> ui=u[i];
       rvector ForceMasksi=ForceMasks[i];
       for(unsigned j=0; j < Nyb; j++) {
-	ui(j,s) += factor*ForceMasksi(j);
+	ui(j,s) += factor*ForceMasksi[j];
       }
     }
   }
