@@ -212,10 +212,6 @@ void DNS::SetFFTparameters()
   Nxybinv=1.0/(Nxb*Nyb);
   nfft=Nxb1*Nyp;
   
-//  array2<Complex> Sk0=Sk[0];
-  cr=new crfft2d(Sk[0]);
-  rc=new rcfft2d(Sk[0]);
-  
   cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
 }
 
@@ -250,26 +246,31 @@ void DNS::InitialConditions()
 //  position.Dimension(nparticles,nspecies);
 //  velocity.Dimension(nparticles,nspecies);
   
+  unsigned int align=sizeof(Complex);
+  
   u.Dimension(Nxb,Nyb,nspecies);
   S.Dimension(Nxb,Nyb,nspecies);
   
-  us.Allocate(Nxb,2*Nyp);
+  us.Allocate(Nxb,2*Nyp,align);
   uk.Dimension(Nxb,Nyp,(Complex *) us());
   
-  dudx.Allocate(Nxb,2*Nyp);
+  dudx.Allocate(Nxb,2*Nyp,align);
   ikxu.Dimension(Nxb,Nyp,(Complex *) dudx());
   
-  dudy.Allocate(Nxb,2*Nyp);
+  dudy.Allocate(Nxb,2*Nyp,align);
   ikyu.Dimension(Nxb,Nyp,(Complex *) dudy());
   
-  Ss.Allocate(nspecies,Nxb,2*Nyp);
+  Ss.Allocate(nspecies,Nxb,2*Nyp,align);
   Sk.Dimension(nspecies,Nxb,Nyp,(Complex *) Ss());
   
-  ForceMask.Allocate(nspecies,Nxb,2*Nyp);
+  ForceMask.Allocate(nspecies,Nxb,2*Nyp,align);
   FMk.Dimension(nspecies,Nxb,Nyp,(Complex *) ForceMask());
   
   cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
        << ")." << endl;
+  
+  cr=new crfft2d(Sk[0]);
+  rc=new rcfft2d(Sk[0]);
   
   cvector temp;
   cvector mask;
