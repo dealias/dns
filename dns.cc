@@ -1,1000 +1,1015 @@
 #include "options.h"
 #include "kernel.h"
-#include "phin3.h"
-#include "Grid3N.h"
-#include "fft.h"
+#include "Grid2.h"
+#include "Poisson.h"
+#include "Helmholtz.h"
+#include "Parcel.h"
 
 using namespace Array;
 
-const char *method="HW";
+const char *method="OS";
 const char *integrator="PC";
 
+#define PERIODIC 0
+#define ZERODIV 1
+#define LAGRANGIAN 1
+#define UPWIND 0
+
 // Vocabulary
-Real Dphi=0.0, Dn=0.0; // Laplacian diffusion
-Real mu=0.25; // Velocity-dependent diffusion
-Real shear=0.0;
-Real ICphi=0.25, ICn=0.25;
-int mx=1, my=1, mz=1;
-int mx2=0, my2=0, mz2=0;
-int randomIC=0;
-int xperiodic=0;
-int yperiodic=0;
-int zperiodic=0;
-Real xmin=0.0,xmax=1.0;
-Real ymin=0.0,ymax=1.0;
-Real zmin=0.0,zmax=1.0;
-Real nmin=1.0, nmax=1.0;
-Real nonlinear=1.0;
-Real C=1.0;
+Real kappa2=1.0;
+Real nuv=1.0, nuC=1.0; // Laplacian diffusion
+Real alpha=1.0;
+Real P0=1.0;
+Real P1=1.0;
+Real rho=1.0;
+Real mu=0.0;
+Real ICvx=1.0;
+Real ICvy=1.0;
+Real ICC=1.0;
+Real xmin=0.0;
+Real xmax=1.0;
+Real ymin=0.0;
+Real ymax=1.0;
 Real implicit_factor=0.5;
 Real explicit_factor=0.5;
-int interpolate=0; 	// Linearly interpolate solver initial guess temporally
-int nonlocal=1;
-int nhyperviscosity=1;
-int pseudospectral=0;
-int FDdissipation=0;
-int fftout=0;
-int spectrum=0;
-int spectrum2d=0;
-int Nbox=1;
+Real nonlinear=1.0;
+
+Real delta=0.0; //OBSOLETE
+
+//new parameters: need more test
+
+Real zeta=1.0;
+Real Phi0=1.0;
+Real Phi1=0.0;
+
 int xlevel=4;
 int ylevel=4;
-int zlevel=4;
-int byte=1;
-int movie=1;
-int twisted=0;
-int nsections=0;	// Requested number of xy cross sections
+int exactpsi=1;
 int niterations=1;
+int ncrank=1;
+int nfirst=1000;
 int npresmooth=0;
+int igamma=1;
 int npostsmooth=1;
-int niterations2=1;
-int npresmooth2=0;
-int npostsmooth2=1;
-int ziterations=1;
 int defectstat=0;
 Real convrate=0.0;
+int movie=0;
+int pressure=1;
 
 // Local Variables;
-static int nlevel;
-static int skip=1;
-static int sections;
-static int singular;
-static int periodic3;
-Real vstar=0.0;
-static U rmin=REAL_MAX, rmax=0.0;
-static int imin=INT_MAX, imax=0;
+static U beta;
 static const Real twelfth=1.0/12.0;
-Array3<Real> *rjoffsetm, *rjoffsetp;
-Array4<Real> rjoffset;
+static int nlevel;
+static U rmin=REAL_MAX, rmax=0.0;
+static U urmin=REAL_MAX, urmax=0.0;
+static U nu;
+static int imin=INT_MAX, imax=0;
+static int uimin=INT_MAX, uimax=0;
 	
-static U step;
-static U minval=REAL_MAX;
-static U maxval=-REAL_MAX;
-
-template<class T>
-class FineGrid : public Grid3<T> {
-public:	
-  Limits XMeshRange(),YMeshRange(),ZMeshRange();
-  void BoundaryConditions(const Array3<T>& u);
-  void Defect(const Array3<T>& d0, const Array3<T>& u, const Array3<T>& f)
-  {};
-  void Smooth(const Array3<T>& u, const Array3<T>& f) {};
-};
-
-class HWVocabulary : public VocabularyBase {
+class OSVocabulary : public VocabularyBase {
 public:
-  const char *Name() {return "Hasagawa-Wakatani Multigrid";}
-  const char *Abbrev() {return "hw";}
-  HWVocabulary();
+  const char *Name() {return "ELECTRO-OSMOSIS MULTIGRID";}
+  const char *Abbrev() {return "OS";}
+  OSVocabulary();
 };
+   
+class OS : public ProblemBase {
+  Real hxinv, hyinv, volume;
+  int Nx, Ny;
+  int Nxi, Nyi;
+	
+  Array2<U> u,S,f;
+  Array2<U> Gx; 	// Flux
+  Array2<U> Gy;
 
-class HW : public ProblemBase {
-  Real hxinv,hyinv,hzinv,volume;
-  Real hxyinv;
-  int Nx,Ny,Nz;
-  int Nxi,Nyi,Nzi,Nzp;
-  int Nxi2,Nyi2,Nzi2;
-  int log2Nxi,log2Nyi,log2Nzi;
-  int Nfft;
-  Real kxmin,kymin,kzmin;
-	
-  Complex *phifft,*nfft;
-  Real *phifftr,*nfftr;
-	
-  Array4<U> u,S,f;
-  Array3<U> w,L2w,u1;
-	
-  Array3<Real> Sphi,Sn;
-  Array3<Real> Hx,Hy;
-  Array3<Real> F1x,F1y;
-  Array3<Real> F2x,F2y;
-  Array3<Real> F3x,F3y;
-  MultiGrid< Poisson3Np<U> > *Multigrid;
-  Poisson3N<U> *grid;
-  FineGrid<Real> gridreal;
-  Real *z;
-  U defect0,defect;
-  Array1<Real> phi_prof,n_prof;
-  Array1<Real> phi_corr,n_corr;
-  Real dtold;
+  Array2<Real> Ex; 	// mu * grad(phi) , dimensionless
+  Array2<Real> Ey;
+  
+  Grid2<Real> *gridP;
+  Grid2<Var> *gridCrank;
+  Array2<Real> phi,psi;
+  Array2<Real> Fx;	// Body force
+  Array2<Real> Fy;
+  Array2<Real> Hx;	// Body force minus advection
+  Array2<Real> Hy;
+
+  Array2<Real> Div;	// Divergence of H
+  Array2<Real> P;	// Pressure
+  
+  Array2<Cell> grid;
+  Array2<U> u0,uL;
+  DynVector<Parcel> parcel;
+  DynVector<unsigned int> Inactive;
+
+  Real defect0,defect;
+  U udefect0,udefect;
+  int first;
 public:
-  virtual ~HW() {}
+  OS() {}
+  virtual ~OS() {}
   void InitialConditions();
   void Initialize();
+  void Setup();
   void Output(int it);
-  void Spectrum(Complex *fft, ofstream& s, const char *text, int norm);
-  void OutFrame(int b, int k, int pass);
+  void OutFrame(int it);
   void Source(Var *, Var *, double);
-  void Transform(Var *, double, double, Var *&);
-  void BackTransform(Var *, double, double, Var *);
-  void ComputeInvariants(Real& E, Real& Z, Real& N, Real & I, Real& G,
-			 Real& M);
-  void SetBeta(double dt);
-  void Setuold(Var *yi);
-  void FFT(Var *y, Array4<U> &u);
-  void FFTinv(Array4<U> &u, Var *y);
-  void Laplacian(const Array3<U>& u0, const Array3<U>& f, int phionly=0);
-  void Divergence(const Array3<Real>& Fx, const Array3<Real>& Fy,
-		  const Array3<Real>& Div);
-  inline void VorticityBoundaryConditions(const Array3<U>& v);
-  void ShearOffset(const Array2<Real>& rjoffset, int level, Real sign);
+  void ComputeInvariants(Real& E, Real& Z, Real& I, Real& C);
+  void Transform(Var *Y, double, double dt, Var *&yi);
+  void BackTransform(Var *Y, double, double dt, Var *yi);
+  template<class T>
+  inline void BoundaryConditions(const Array2<T>&);
+  inline void BoundaryConditions(const Array2<Real>&);
 };
 
-// Note: this function evaluates the negative of the Laplacian
-// (a positive semi-definite operator) to third-order accuracy
-// (fourth-order in the absence of shear).
-// u1 is a work array of same dimensions as u
+class C_PC : public PC {
+public:
+  const char *Name() {return "Conservative Predictor-Corrector";}
+  void Predictor(double, double, unsigned int, unsigned int);
+  int Corrector(double, int, unsigned int, unsigned int);
+};
 
-static const int PHI_ONLY=1;
-
-void HW::Laplacian(const Array3<U>& u0, const Array3<U>& f0, int phionly)
-{
-  Real coeffx1=twelfth*hxinv;
-	
-  if(alpha) {
-    for(int i=1; i <= Nxi; i++) {
-      Array2<U> um=u0[i-1], up=u0[i+1];
-      Array2<U> uP=(i+2 < Nx) ? u0[i+2] : (xperiodic ? u0[2] : u0[Nx-1]);
-      Array2<U> uM=(i-2 >= 0) ? u0[i-2] : (xperiodic ? u0[Nx-3] : u0[0]);
-      Array2<U> u1i=u1[i];
-      for(int j=1; j <= Nyi; j++) {
-	Array1<U>::opt umj=um[j], upj=up[j], uPj=uP[j], uMj=uM[j], u1ij=u1i[j];
-	for(int k=1; k <= Nzi; k++) {
-	  u1ij[k].phi=coeffx1*
-	    (uMj[k].phi-8.0*(umj[k].phi-upj[k].phi)-uPj[k].phi);
-	  if(!phionly) u1ij[k].n=coeffx1*
-			 (uMj[k].n-8.0*(umj[k].n-upj[k].n)-uPj[k].n);
-	}
-      }
-    }
-    VorticityBoundaryConditions(u1);
-  }
-	
-  Real alpha2=alpha*alpha;
-  Real hy2inv=hyinv*hyinv;
-	
-  Real coeffx2=-twelfth*hxinv*hxinv;
-  for(int k=1; k <= Nzi; k++) 
-    coeffy2[k]=-twelfth*hy2inv*(1.0+alpha2*z[k]*z[k]);
-  Real coeffy1=-twelfth*hyinv*2.0*alpha;
-		
-  for(int i=1; i <= Nxi; i++) {
-    Array2<U> um=u0[i-1], ui=u0[i], up=u0[i+1];
-    Array2<U> uP=(i+2 < Nx) ? u0[i+2] : (xperiodic ? u0[2] : u0[Nx-1]);
-    Array2<U> uM=(i-2 >= 0) ? u0[i-2] : (xperiodic ? u0[Nx-3] : u0[0]);
-		
-    Array2<U> u1i=u1[i];
-    Array2<U> fi=f0[i];
-    for(int j=1; j <= Nyi; j++) {
-      Array1<U>::opt umj=um[j], uim=ui[j-1], uij=ui[j], uip=ui[j+1];
-      Array1<U>::opt upj=up[j], uPj=uP[j], uMj=uM[j];
-      Array1<U>::opt uiP=(j+2 < Ny) ? ui[j+2] :
-	(yperiodic ? ui[2] : ui[Ny-1]);
-      Array1<U>::opt uiM=(j-2 >= 0) ? ui[j-2] :
-	(yperiodic ? ui[Ny-3] : ui[0]);
-			
-      Array1<U>::opt u1im=u1i[j-1], u1ip=u1i[j+1];
-      Array1<U>::opt u1iP=(j+2 < Ny) ? u1i[j+2] :
-	(yperiodic ? u1i[2] : u1i[Ny-1]);
-      Array1<U>::opt u1iM=(j-2 >= 0) ? u1i[j-2] :
-	(yperiodic ? u1i[Ny-3] : u1i[0]);
-			
-      Array1<U>::opt fij=fi[j];
-      for(int k=1; k <= Nzi; k++) {
-	fij[k].phi=coeffx2*(-uMj[k].phi+16.0*umj[k].phi-
-			    30.0*uij[k].phi+16.0*upj[k].phi-
-			    uPj[k].phi)+
-	  coeffy2[k]*(-uiM[k].phi+16.0*uim[k].phi-30.0*uij[k].phi+
-		      16.0*uip[k].phi-uiP[k].phi)+
-	  coeffy1*z[k]*(u1iM[k].phi-8.0*(u1im[k].phi-u1ip[k].phi)-
-			u1iP[k].phi);
-	fij[k].n=phionly ? uij[k].n : 
-	  coeffx2*(-uMj[k].n+16.0*umj[k].n-
-		   30.0*uij[k].n+16.0*upj[k].n-
-		   uPj[k].n)+
-	  coeffy2[k]*(-uiM[k].n+16.0*uim[k].n-30.0*uij[k].n+
-		      16.0*uip[k].n-uiP[k].n)+
-	  coeffy1*z[k]*(u1iM[k].n-8.0*(u1im[k].n-u1ip[k].n)-
-			u1iP[k].n);
-      }
-    }
-  }
-}
-
-
-HWVocabulary::HWVocabulary()
+OSVocabulary::OSVocabulary()
 {
   Vocabulary=this;
-	
-  VOCAB(Dphi,0.0,REAL_MAX,"");
-  VOCAB(Dn,0.0,REAL_MAX,"");
+
   VOCAB(mu,0.0,REAL_MAX,"");
-  VOCAB(shear,-REAL_MAX,REAL_MAX,"");
-  VOCAB(ICphi,-REAL_MAX,REAL_MAX,"");
-  VOCAB(ICn,-REAL_MAX,REAL_MAX,"");
-  VOCAB(nonlinear,0.0,REAL_MAX,"");
-  VOCAB(C,0.0,REAL_MAX,"");
+  VOCAB(zeta,0.0,REAL_MAX,"");
+  VOCAB(Phi0,-REAL_MAX,REAL_MAX,"");
+  VOCAB(Phi1,-REAL_MAX,REAL_MAX,"");
+    
+  VOCAB(nuv,0.0,REAL_MAX,"");
+  VOCAB(nuC,0.0,REAL_MAX,"");
+  VOCAB(kappa2,0.0,REAL_MAX,"");
+  VOCAB(alpha,-REAL_MAX,REAL_MAX,"");
+
+  VOCAB_NODUMP(delta,-REAL_MAX,REAL_MAX,""); // Obsolete
+  
+  VOCAB(P0,-REAL_MAX,REAL_MAX,"");
+  VOCAB(P1,-REAL_MAX,REAL_MAX,"");
+  VOCAB(ICvx,-REAL_MAX,REAL_MAX,"");
+  VOCAB(ICvy,-REAL_MAX,REAL_MAX,"");
+  VOCAB(ICC,-REAL_MAX,REAL_MAX,"");
+  VOCAB(nonlinear,0.0,1.0,"");
+  VOCAB(explicit_factor,0.0,REAL_MAX,"");
+  VOCAB(implicit_factor,0.0,REAL_MAX,"");
 	
   VOCAB(xmin,-REAL_MAX,REAL_MAX,"");
   VOCAB(xmax,-REAL_MAX,REAL_MAX,"");
+	
   VOCAB(ymin,-REAL_MAX,REAL_MAX,"");
   VOCAB(ymax,-REAL_MAX,REAL_MAX,"");
-  VOCAB(zmin,-REAL_MAX,REAL_MAX,"");
-  VOCAB(zmax,-REAL_MAX,REAL_MAX,"");
-	
-  VOCAB(nmin,0.0,REAL_MAX,"");
-  VOCAB(nmax,0.0,REAL_MAX,"");
-	
-  VOCAB(Nbox,1,INT_MAX,"");
-  VOCAB(mx,0,INT_MAX,"");
-  VOCAB(my,0,INT_MAX,"");
-  VOCAB(mz,0,INT_MAX,"");
-  VOCAB(mx2,0,INT_MAX,"");
-  VOCAB(my2,0,INT_MAX,"");
-  VOCAB(mz2,0,INT_MAX,"");
-  VOCAB(randomIC,0,1,"");
-  VOCAB(xperiodic,0,1,"");
-  VOCAB(yperiodic,0,1,"");
-  VOCAB(zperiodic,0,1,"");
-	
-  VOCAB(explicit_factor,0.0,REAL_MAX,"");
-  VOCAB(implicit_factor,0.0,REAL_MAX,"");
-  VOCAB(interpolate,0,1,"");
-  VOCAB(nonlocal,0,1,"");
-  VOCAB(nhyperviscosity,1,INT_MAX,"");
-  VOCAB(pseudospectral,0,1,"");
-  VOCAB(FDdissipation,0,1,"");
-  VOCAB(fftout,0,1,"");
-  VOCAB(spectrum,0,1,"");
-  VOCAB(spectrum2d,0,1,"");
+
   VOCAB(xlevel,1,INT_MAX,"");
-  VOCAB(ylevel,2,INT_MAX,"");
-  VOCAB(zlevel,1,INT_MAX,"");
-  VOCAB(byte,0,1,"");
-  VOCAB(movie,0,1,"");
-  VOCAB(twisted,0,1,"");
-  VOCAB(nsections,0,INT_MAX,"");
+  VOCAB(ylevel,1,INT_MAX,"");
+
+  VOCAB(exactpsi,1,1,"");
+  
   VOCAB(niterations,1,INT_MAX,"");
-  VOCAB(niterations2,0,INT_MAX,"");
-  VOCAB(ziterations,1,INT_MAX,"");
+  VOCAB(ncrank,1,INT_MAX,"");
+  VOCAB(nfirst,1,INT_MAX,"");
   VOCAB(npresmooth,0,INT_MAX,"");
+  VOCAB(igamma,1,INT_MAX,"");
   VOCAB(npostsmooth,0,INT_MAX,"");
-  VOCAB(npresmooth2,0,INT_MAX,"");
-  VOCAB(npostsmooth2,0,INT_MAX,"");
   VOCAB(defectstat,0,1,"");
   VOCAB(convrate,0.0,REAL_MAX,"");
-	
-  VOCAB_NODUMP(vstar,0.0,REAL_MAX,""); // Obsolete
-	
-  METHOD(HW);
+  VOCAB(movie,0,1,"");
+  VOCAB(pressure,0,1,"");
+  
+  METHOD(OS);
 }
 
-HWVocabulary HW_Vocabulary;
+OSVocabulary OS_Vocabulary;
 
-ofstream ft,fevt,fprofile,fcorr,fdefect,fekvk,fnkvk,fu;
-oxstream fphi,fn,fphiRe,fphiIm;
+ofstream ft,fevt,fdefect,fudefect,fu,ftest,fc,fvel;
+oxstream fvx,fvy,fC,fP,fphi,fpsi;
 
-Limits xlim,ylim,zlim;
-
-template<class T>
-Limits Poisson3<T>::XMeshRange() {return xlim;}
-template<class T>
-Limits Poisson3<T>::YMeshRange() {return ylim;}
-template<class T>
-Limits Poisson3<T>::ZMeshRange() {return zlim;}
-template<class T>
-Limits Poisson2<T>::XMeshRange() {return xlim;}
-template<class T>
-Limits Poisson2<T>::YMeshRange() {return ylim;}
+Limits xlimphi,ylimphi;
+Limits xlimpsi,ylimpsi;
+Limits xlimP,ylimP;
+Limits xlimP0,ylimP0;
+Limits xlimu,ylimu;
 
 template<class T>
-Limits FineGrid<T>::XMeshRange() {return xlim;}
-template<class T>
-Limits FineGrid<T>::YMeshRange() {return ylim;}
-template<class T>
-Limits FineGrid<T>::ZMeshRange() {return zlim;}
-
-template<class T>
-void Poisson3N<T>::SetNumber() {ndomain=Nbox;}
-
-template<class T>
-void Poisson3N<T>::Smooth(const Array4<T>& u, const Array4<T>& f) {
-  for(int n=0; n < ndomain; n++) {
-    box=n;
-    grid3.XYZebra(u[n],f[n]);
+class Phi : public Poisson2<T> {
+public:	
+  Limits XMeshRange() {return xlimphi;}
+  Limits YMeshRange() {return ylimphi;}
+  void BoundaryConditions(const Array2<T>& u) {
+#if PERIODIC
+    XPeriodic(u);
+    YPeriodic(u);
+#else
+    XDirichlet2(u,Phi0,Phi1);    
+    YNeumann(u);
+#endif
   }
-		
-  for(int l=0; l < ziterations; l++) {
-    BoundaryConditions(u);
-    for(int n=0; n < ndomain; n++) {
-      box=n;
-      grid3.ZLexicographical(u[n],f[n]);
+};
+
+template<class T>
+class Psi : public Helmholtz2<T> {
+public:	
+  T A() {return 1.0;}
+  T B() {return -kappa2;}
+  Limits XMeshRange() {return xlimpsi;}
+  Limits YMeshRange() {return ylimpsi;}
+	
+  void BoundaryConditions(const Array2<T>& u) {
+#if PERIODIC
+    XPeriodic(u);
+    YPeriodic(u);
+#else
+    XNeumann(u);
+    YDirichlet2(u,-zeta,-zeta);    
+#endif
+  }
+};
+
+template<class T>
+class Crank : public Helmholtz2<T> {
+public:	
+  T A() {return beta;}
+  T B() {return 1.0;}
+  Limits XMeshRange() {return xlimu;}
+  Limits YMeshRange() {return ylimu;}
+	
+  void BoundaryConditions(const Array2<T>& u) {
+#if PERIODIC
+    XPeriodic(u);
+    YPeriodic(u);
+#else
+    Array1(T) u0=u[i1-1], u2=u[i1+1];
+    Array1(T) unxm1=u[i2-1], unx1=u[i2+1];
+    int nybco=nybc+oy;
+    for(int j=oy; j < nybco; j++) {
+      // xmin: Neumann BC on v, Constant BC on C
+      u0[j].vx=u2[j].vx;
+      u0[j].vy=u2[j].vy;
+      u0[j].C=0.0;
+      // xmax: Neumann BC on v, Constant BC on C
+      unx1[j].vx=unxm1[j].vx;
+      unx1[j].vy=unxm1[j].vy;
+      unx1[j].C=0.0;
+    }
+    
+    int nxbco=nxbc+ox;
+    for(int i=ox; i < nxbco; i++) {
+      Array1(T) ui=u[i];
+      // ymin: Dirichlet BC on v, Neumann BC on C
+      ui[j1-2].vx=ui[j1-1].vx=0.0;
+      ui[j1-2].vy=ui[j1-1].vy=0.0;
+      ui[j1-2].C=ui[j1-1].C=ui[j1].C;
+      // ymax: Dirichlet BC on v, Neumann BC on C
+      ui[j2+2].vx=ui[j2+1].vx=0.0;
+      ui[j2+2].vy=ui[j2+1].vy=0.0;
+      ui[j2+2].C=ui[j2+1].C=ui[j2].C;
+    }
+#endif
+  }
+};
+
+template<class T>
+inline void OS::BoundaryConditions(const Array2<T>& H)
+{
+  gridCrank->BoundaryConditions(H);
+}
+
+// Neumann boundary conditions on fluxes at all boundaries
+inline void OS::BoundaryConditions(const Array2<Real>& H)
+{
+#if PERIODIC
+  // Periodic BC's
+  Array1(Real) H0=H[0], H1=H[1];
+  Array1(Real) HN=H[Nxi], HNp1=H[Nxi+1];
+  for(int j=0; j < Ny; j++) {
+    H0[j]=HN[j];
+    HNp1[j]=H[1][j];
+  }
+  for(int i=0; i < Nx; i++) {
+    Array1(Real) Hi=H[i];
+    Hi[0]=Hi[Nyi];
+    Hi[Nyi+1]=Hi[1];
+  }
+#else
+  Array1(Real) H0=H[0], H2=H[2];
+  Array1(Real) HNm1=H[Nxi-1], HNp1=H[Nxi+1];
+  for(int j=0; j < Ny; j++) {
+    // xmin: Neumann BC
+    H0[j]=H2[j];
+    // xmax: Neumann BC
+    HNp1[j]=HNm1[j];
+  }
+  for(int i=0; i < Nx; i++) {
+    Array1(Real) Hi=H[i];
+    // ymin: Neumann BC
+    Hi[0]=Hi[2];
+    // ymax: Neumann BC
+    Hi[Nyi+1]=Hi[Nyi-1];
+  }
+#endif
+}
+
+template<class T>
+class Pressure0 : public Poisson2<T> {
+public:	
+  Limits XMeshRange() {return xlimP0;}
+  Limits YMeshRange() {return ylimP0;}
+  void BoundaryConditions(const Array2<T>& u) {
+#if PERIODIC
+    XPeriodic(u);
+    YPeriodic(u);
+#else
+    XDirichlet2(u,P0,P1);
+    YNeumann(u);
+#endif
+  }
+};
+
+template<class T>
+class Pressure : public Poisson2<T> {
+public:	
+  Limits XMeshRange() {return xlimP;}
+  Limits YMeshRange() {return ylimP;}
+  void Defect(const Array2<T>& d0, const Array2<T>& u, const Array2<T>& f);
+  void GaussSeidel(const Array2<T>&, const Array2<T>&, int, int, int, int);
+  void Smooth(const Array2<T>& u, const Array2<T>& f);
+  void Restrict(const Array2<T>& r, const Array2<T>& u);
+	
+  void BoundaryConditions(const Array2<T>& u) {
+#if PERIODIC
+    XPeriodic2(u);
+    YPeriodic2(u);
+#else
+    XDirichlet2(u,P0,P1);
+    YNeumann2(u);
+#endif
+  };
+};
+
+template<class T>
+void Pressure<T>::Defect(const Array2<T>& d0, const Array2<T>& u,
+			 const Array2<T>& f)
+{
+  T coeffx2y2=-2.0*(hx2inv+hy2inv);
+	
+  for(int i=i1; i <= i2; i++) {
+    Array1(T) di=d0[i];
+    Array1(T) fi=f[i];
+    Array1(T) uM=u[i-2], ui=u[i], uP=u[i+2];
+    for(int j=j1; j <= j2; j++) {
+      di[j]=0.25*(hx2inv*(uM[j]+uP[j])+coeffx2y2*ui[j]+
+		  hy2inv*(ui[j-2]+ui[j+2]))-fi[j];
     }
   }
-}		
-	
-template<class T>
-void Poisson3<T>::BoundaryConditions(const Array3<T>& u)
-{
-  // NB: This routine is used only to update perpendicular BC's in Smooth().
-  if(xperiodic) XPeriodic(u);
-  if(yperiodic) YPeriodic(u);
 }
 
 template<class T>
-void Poisson3N<T>::BoundaryConditions(const Array4<T>& u)
+void Pressure<T>::GaussSeidel(const Array2<T>& u, const Array2<T>& f,
+			      int i0, int j0, int istep, int jstep)
 {
-  int ndomainm1=ndomain-1;
-	
-  for(int b=0; b < ndomain; b++) {
-    Array3<T> ub=u[b];
-    if(xperiodic) grid3.XPeriodic(ub);
-    if(yperiodic) grid3.YPeriodic(ub);
-	
-    int nxbc=Nxbc();
-    int nybc=Nybc();
-    int nz=Nz();
-    Array3<T> up=u[(b > 0) ? b-1 : ndomain-1];
-    Array3<T> un=u[(b < ndomainm1) ? b+1 : 0];
-
-    if(alpha) {
-      Array2<Real> Rjoffsetp=rjoffsetp[level][(b > 0) ? 0 : 1];
-      Array2<Real> Rjoffsetm=rjoffsetm[level][(b < ndomainm1) ? 0 : 1];
-      for(int i=0; i < nxbc; i++) {
-	Array2<T> upi=up[i], ubi=ub[i], uni=un[i];
-	Array1<Real>::opt Rjoffsetmi=Rjoffsetm[i], Rjoffsetpi=Rjoffsetp[i];
-	for(int j=0; j < nybc; j++) {
-	  Array1<T>::opt ubij=ubi[j];
-					
-	  Real r=Rjoffsetpi[j];
-	  int joff=(int) r;
-	  Array1<T>::opt upij1=upi[joff], upij2=upi[joff+1];
-	  if(zperiodic || b > 0)
-	    ubij[0]=upij1[nz]+(upij2[nz]-upij1[nz])*(r-joff);
-					
-	  r=Rjoffsetmi[j];
-	  joff=(int) r;
-	  Array1<T>::opt unij1=uni[joff], unij2=uni[joff+1];
-	  if(zperiodic || b < ndomainm1)
-	    ubij[nz+1]=unij1[1]+(unij2[1]-unij1[1])*(r-joff);
-	}
-      }
-    } else {
-      for(int i=0; i < nxbc; i++) {
-	Array2<T> upi=up[i], ubi=ub[i], uni=un[i];
-	for(int j=0; j < nybc; j++) {
-	  Array1<T>::opt unij=uni[j], ubij=ubi[j], upij=upi[j];
-	  if(zperiodic || b > 0) ubij[0]=upij[nz];
-	  if(zperiodic || b < ndomainm1) ubij[nz+1]=unij[1];
-	}
-      }
-    }	
-  }	
-}
-
-inline void FineGrid<Real>::BoundaryConditions(const Array3<Real>& u)
-{
-  xperiodic ? XPeriodic(u) : XConstant(u);
-  yperiodic ? YPeriodic(u) : YConstant(u);
-}
-
-inline void HW::VorticityBoundaryConditions(const Array3<U>& v)
-{
-  xperiodic ? grid->Poisson3().XPeriodic(v) : grid->Poisson3().XConstant(v);
-  yperiodic ? grid->Poisson3().YPeriodic(v) : grid->Poisson3().YConstant(v);
-}
-
-void HW::ShearOffset(const Array2<Real>& rjoffset, int level, Real deltaz)
-{
-  Poisson3N<U> *Grid=&Multigrid->Grid(level);
-  int nxbc=Grid->Nxbc();
-  int nybc=Grid->Nybc();
-  int mody=Grid->Ny();
-  Real Hyinv=1.0/Grid->Hy();
-  Real factor=alpha*deltaz*Hyinv;
-  for(int i=0; i < nxbc; i++) {
-    Real offset=factor*Grid->X(i);
-    Array1<Real>::opt rjoffseti=rjoffset[i];
-    for(int j=0; j < nybc; j++) {
-      Real r=j+offset;
-      while (r < 0 ) r += mody;
-      while (r > mody) r -= mody;
-      rjoffseti[j]=r;
+  T factor=0.5/(hx2inv+hy2inv);
+  for(int i=i1+i0; i <= i2; i += istep) {
+    Array1(T) fi=f[i];
+    Array1(T) uM=u[i-2], ui=u[i], uP=u[i+2];
+    for(int j=j1+j0; j <= j2; j += jstep) {
+      ui[j]=factor*(hx2inv*(uM[j]+uP[j])+hy2inv*(ui[j-2]+ui[j+2])
+		    -4.0*fi[j]);
     }
   }
 }
 
-void dispersion(int mx, int my, int mz, Real& kx, Real& ky, Real& kz,
-		Complex& Omegap, Complex& Omegam,
-		Complex& phasep, Complex& phasem)
+template<class T>
+void Pressure<T>::Smooth(const Array2<T>& u, const Array2<T>& f)
 {
-  const Complex I(0.0,1.0);
-  kx=mx*twopi/(xmax-xmin);
-  ky=my*twopi/(ymax-ymin);
-  kz=mz*twopi/(Nbox*(zmax-zmin));
-  Real kperp2=(kx*kx+ky*ky);
-  if(kperp2 == 0.0) {Omegap=Omegam=phasep=phasem=0.0; return;}
-  Real a=kz*kz*C;
-  Real b=1.0+1.0/kperp2;
-  Real kperp4=kperp2*kperp2;
-	
-  Real khyper;
-  if(nhyperviscosity == 1) khyper=1.0;
-  else {
-    khyper=kperp2;
-    for(int n=2; n < nhyperviscosity; n++) khyper *= kperp2;
+//  Jacobi(u,f,-1.0/(4.0*(hx2inv+hy2inv)));
+  Lexicographical(u,f);
+//  RedBlack(u,f);
+}
+
+template<class T>
+void Pressure<T>::Restrict(const Array2<T>& r, const Array2<T>& u)
+{
+  if(&r != &u) {
+    XDirichlet2(r,u,1);
+    YDirichlet2(r,u,1);
   }
-	
-  Real Rphi=khyper*Dphi;
-  Real Rn=khyper*Dn;
-	
-  Real B=a*b+(Rphi+Rn)*kperp2;
-  Complex discr=sqrt(4*(a*((Rphi*kperp2+Rn)+I*ky*vstar/kperp2)+
-			Rphi*Rn*kperp4)-B*B);
-  Omegap=0.5*(-I*B+discr);
-  Omegam=0.5*(-I*B-discr);
-  cout << endl << "LINEAR EIGENVALUES: Omega(" << mx << ", " << my << ", "
-       << mz << ") = " << Omegap;
-  cout << endl << "                    Omega(" << mx << ", " << my << ", "
-       << mz << ") = " << Omegam << endl; 
-	
-  phasep=phasem=1.0;
-  if(kz != 0.0) {
-    phasep += (-I*Omegap+Rphi*kperp2)*kperp2/(kz*kz);
-    phasem += (-I*Omegam+Rphi*kperp2)*kperp2/(kz*kz);
+  for(int i=i1; i <= i2p; i++) {
+    int i2=rx*i+offx;
+    Array1(T) ri=r[i];
+    Array1(T) um=u[i2-2]+offy, uz=u[i2]+offy, up=u[i2+2]+offy;
+    for(int j=j1; j <= j2p; j++) {
+      ri[j]=0.25*(0.5*(0.5*(um[ry*j-2]+um[ry*j+2]+up[ry*j-2]+
+			    up[ry*j+2])+
+		       um[ry*j]+uz[ry*j-2]+uz[ry*j+2]+up[ry*j])+
+		  uz[ry*j]);
+    }
   }
 }
 
-void HW::InitialConditions()
+void OS::InitialConditions()
 {
-  int i;
+  Array2<Real> f0;
 	
   if(convrate || verbose > 2) defectstat=1;
   if(convrate && niterations == 1) {niterations=100;}
-  zmax=zmin+(zmax-zmin)/Nbox;
 	
   rmin=rmax=0.0;
   imin=imax=0;
 	
-  nlevel=max(max(xlevel,ylevel),zlevel);
+  nlevel=max(xlevel,ylevel);
 	
-  xlim=xperiodic ? Limits(xmin,xmax,Periodic,nlevel-xlevel) : 
-    Limits(xmin,xmax,Dirichlet,nlevel-xlevel);
-  ylim=yperiodic ? Limits(ymin,ymax,Periodic,nlevel-ylevel) :
-    Limits(ymin,ymax,Dirichlet,nlevel-ylevel);
-  zlim=zperiodic ? Limits(zmin,zmax,Periodic,nlevel-zlevel) :
-    Limits(zmin,zmax,Dirichlet,nlevel-zlevel);
+#if PERIODIC
+  xlimP0=xlimphi=xlimpsi=xlimu=Limits(xmin,xmax,Periodic,nlevel-xlevel);
+  ylimP0=ylimphi=ylimpsi=ylimu=Limits(ymin,ymax,Periodic,nlevel-ylevel);
+	
+  xlimP=Limits(xmin,xmax,Periodic2,nlevel-xlevel);
+  ylimP=Limits(ymin,ymax,Periodic2,nlevel-ylevel);
+#else
+  xlimu=Limits(xmin,xmax,Neumann,nlevel-xlevel);
+  ylimu=Limits(ymin,ymax,ExtendedDirichlet,nlevel-ylevel);
+	
+  xlimphi=xlimP0=Limits(xmin,xmax,ExtendedDirichlet,nlevel-xlevel);
+  ylimphi=ylimP0=Limits(ymin,ymax,Neumann,nlevel-ylevel);
+	
+  xlimpsi=Limits(xmin,xmax,Neumann,nlevel-xlevel);
+  ylimpsi=Limits(ymin,ymax,ExtendedDirichlet,nlevel-ylevel);
+	
+  xlimP=Limits(xmin,xmax,ExtendedDirichlet2,nlevel-xlevel);
+  ylimP=Limits(ymin,ymax,Neumann2,nlevel-ylevel);
+#endif
+	
+  MultiGrid< Phi<Real> > MGphi(nlevel);
+  MultiGrid< Psi<Real> > MGpsi(nlevel);
+  MultiGrid< Crank<Var> > MGCrank(nlevel);
+#if ZERODIV	
+  MultiGrid< Pressure<Real> > MGpressure(nlevel);
+#else	
+  MultiGrid< Pressure0<Real> > MGpressure(nlevel);
+#endif	
+	
+  Grid2<Real> *gridphi=&MGphi.Fine();
+  Grid2<Real> *gridpsi=&MGpsi.Fine();
+  gridCrank=&MGCrank.Fine();
+  gridP=&MGpressure.Fine();
+	
+  Nx=gridCrank->Nxbc();
+  Ny=gridCrank->Nybc();
+  
+  Nxi=Nx-2;
+  Nyi=Ny-2;
+
+  int NxP=gridP->Nxbc();
+  int NyP=gridP->Nybc();
+	
+  int oxP=gridP->Ox();
+  int oyP=gridP->Oy();
+	
+  cout << endl << "GEOMETRY: (" << Nxi << " X " << Nyi << ")" << endl; 
+	
+  hxinv=1.0/gridCrank->Hx();
+  hyinv=1.0/gridCrank->Hy();
+  volume=gridCrank->Hx()*gridCrank->Hy();
+	
+  nu.vx=nuv;
+  nu.vy=nuv;
+  nu.C=nuC;
+	
+  ny=Nx*Ny;
+  y=new Var[ny];
+	
+  u.Dimension(Nx,Ny);
+  S.Dimension(Nx,Ny);
+  u.Set(y);
 		
-  singular=(xperiodic && yperiodic);
-  periodic3=(singular && zperiodic);
+  f.Allocate(Nx,Ny);
+  f0.Allocate(Nx,Ny);
+  phi.Allocate(Nx,Ny);
+  psi.Allocate(Nx,Ny);
 	
-  if(xperiodic) {
-    if(nonlocal) msg(ERROR,"Nonlocal option requires xperiodic=0");
-    if(shear) msg(OVERRIDE,"Shear specified with xperiodic=1");
-  }
+  Ex.Allocate(Nx,Ny);
+  Ey.Allocate(Nx,Ny);
+  Fx.Allocate(Nx,Ny);
+  Fy.Allocate(Nx,Ny);
+  Gx.Allocate(Nx,Ny);
+  Gy.Allocate(Nx,Ny);
+  Hx.Allocate(Nx,Ny);
+  Hy.Allocate(Nx,Ny);
+  
+  P.Allocate(NxP,NyP,oxP,oyP);
+  Div.Allocate(NxP,NyP,oxP,oyP);
 	
-  if(pseudospectral && !periodic3)
-    msg(ERROR, "Pseudospectral option requires periodic BC's");
+  // Initialize arrays with zero boundary conditions
+  Ex=0.0;
+  Ey=0.0;
+  Fx=0.0;
+  Fy=0.0;
+  Gx=0.0;
+  Gy=0.0;
+  Hx=0.0;
+  Hy=0.0;
+  u=0.0;
 	
-  if(!pseudospectral) FDdissipation=1;
-						   
-  if(FDdissipation && nhyperviscosity > 1)
-    msg(WARNING,
-	"nhyperviscosity > 1 may be inaccurate with finite differencing"); 
-	
-  kxmin=twopi/(xmax-xmin);
-  kymin=twopi/(ymax-ymin);
-  kzmin=twopi/(zmax-zmin);
-	
-  Multigrid=new MultiGrid< Poisson3Np<U> >(nlevel);
-  Multi2=new MultiGrid< Poisson2<Real> >(nlevel);
-  gridreal.Initialize(nlevel-1);
-	
-  grid=&Multigrid->Fine();
-	
-  Nx=grid->Nxbc();
-  Ny=grid->Nybc();
-  Nz=grid->Nzbc();
-	
-  Nxi=grid->Nx();
-  Nyi=grid->Ny();
-  Nzi=grid->Nz();
-	
-  cout << endl << "GEOMETRY: (" << Nxi << " x " << Nyi << " x " << Nzi*Nbox
-       << ")" << endl; 
-	
-  if(fftout || spectrum || pseudospectral) {
-    for(log2Nxi=0; Nxi > (1 << log2Nxi); log2Nxi++);
-    for(log2Nyi=0; Nyi > (1 << log2Nyi); log2Nyi++);
-    for(log2Nzi=0; Nzi > (1 << log2Nzi); log2Nzi++);
-		
-    if(Nxi != (1 << log2Nxi) || Nyi != (1 << log2Nyi) || 
-       Nzi != (1 << log2Nzi)) {
-      const char *s=
-	"Spectral data available only for power-of-2 geometries";
-      if(pseudospectral) msg(ERROR,s);
-      else msg(WARNING,s);
-      fftout=0;
-      spectrum=0;
-    } else {
-      Nxi2=Nxi/2, Nyi2=Nyi/2, Nzi2=Nzi/2;
-		
-      Nzp=Nzi/2+1;
-      Nfft=Nxi*Nyi*Nzp;
-		
-      phifft=new Complex[Nfft];
-      phifftr=(Real *) phifft;
-      nfft=new Complex[Nfft];
-      nfftr=(Real *) nfft;
-		
-      for(i=0; i < Nfft; i++) phifft[i]=nfft[i]=0.0;
+  for(int i=0; i < Nx; i++) {
+    for(int j=0; j < Ny; j++) {
+      // Incompressible initial velocity
+#if PERIODIC
+      Real x=gridCrank->X(i);
+      Real y=gridCrank->Y(j);
+      Real C=cos(twopi*x)*cos(twopi*x)*cos(twopi*y)*cos(twopi*y);
+      Real vx=-cos(twopi*x)*sin(twopi*y);
+      Real vy=sin(twopi*x)*cos(twopi*y);
+#else
+      // Real x=gridCrank->X(i);
+      // Real y=gridCrank->Y(j);
+      Real vx=0.0; // 0.5*(1.0-y*y);	
+      Real vy=0.0;
+      Real C=(6 <= i & i <= 10) ? 1.0 : 0.0;
+#endif
+      u(i,j)=U(ICvx*vx,ICvy*vy,ICC*C);
     }
   }
 	
-  hxinv=1.0/grid->Hx();
-  hyinv=1.0/grid->Hy();
-  hzinv=1.0/grid->Hz();
+  BoundaryConditions(u);
+  
+#if LAGRANGIAN
+  parcel.Allocate((Nx+1)*(Ny+1));
+  grid.Allocate(Nx,Ny);
+  u0.Dimension(Nx,Ny);
+  uL.Allocate(Nx,Ny);
+#endif	
+
+  P=0.0;
+  phi=0.0;
+  psi=0.0;
+  
+  gridP->BoundaryConditions(P);	
+  
+  f=0.0; // Source for Poisson and Helmholtz equations
+  first=1;
 	
-  volume=grid->Hx()*grid->Hy()*grid->Hz();
+  gridphi->BoundaryConditions(phi);
+  if(verbose > 3) {
+    gridphi->ReportHeader();
+    defect0=gridphi->DefectNorm(phi,f0);
+    gridphi->Report(defect0,0);
+  }
 	
-  hxyinv=hxinv*hyinv;
+  for(int it=1; it < nfirst; it++) {
+    gridphi->Solve(phi,f0,2,2,0);
+    if(verbose > 3) { 
+      defect=gridphi->DefectNorm(phi,f0);
+      gridphi->Report(defect,defect0,it);
+      defect0=defect;
+    }
+  }
 	
-  z=grid->Z();
-	
-  coeffy2=new Real[Nz-1];
-		
-  if(pseudospectral) {
-    if(nonlocal) msg(ERROR,"Pseudospectral option requires nonlocal=0");
-    if(shear) msg(ERROR,"Pseudospectral mode requires shear=0");
-    if(C == 0.0) msg(ERROR,"Pseudospectral mode requires C != 0");
-    ny=Nbox*Nfft*sizeof(UComplex)/sizeof(Var);
-    y=new Var[ny];
-    u.Allocate(Nbox,Nx,Ny,Nz);
-    S.Allocate(Nbox,Nx,Ny,Nz);
-    errmask=new int[ny];
+  Real kappa=sqrt(kappa2);
+  if(exactpsi) {
+    for(int j=1; j <= Nyi; j++) {
+      Real y=gridCrank->Y(j);
+      Real solution;
+      if(kappa > 1.9*log(REAL_MAX))
+	solution=-exp(kappa*(y-1))-exp(-kappa*y);
+      else solution=-cosh(kappa*(y-0.5))/cosh(0.5*kappa);
+      for(int i=1; i <= Nxi; i++) psi(i,j)=solution;
+      gridpsi->BoundaryConditions(psi);
+    }
   } else {
-    ny=Nbox*Nx*Ny*Nz;
-    y=new Var[ny];
-    u.Dimension(Nbox,Nx,Ny,Nz);
-    S.Dimension(Nbox,Nx,Ny,Nz);
-    vtemp.Allocate(Nx,Ny);
-    ftemp.Allocate(Nx,Ny);
-		
-    int m=max(Ny,Nz);
-    coeffa=new Real[m];
-    coeffb=new Real[m];
-    coeffc=new Real[m];
-    g=new Real[Nz];
-    zavg=new Var[Nz];
-
-    u.Set(y);
-		
-    nold=new Array2<Real>[nlevel];
-    for(i=1; i < nlevel; i++) {
-      int nx0=Multi2->Grid(i).Nxbc();
-      int ny0=Multi2->Grid(i).Nybc();
-      nold[i].Allocate(nx0,ny0);
-    }
-  }
-	
-  uold=new Array4<U>[nlevel];
-	
-  for(i=((nlevel==1) ? 0 : 1); i < (nonlocal ? nlevel-1 : nlevel); i++) {
-    int nx0=Multigrid->Grid(i).Nxbc();
-    int ny0=Multigrid->Grid(i).Nybc();
-    int nz0=Multigrid->Grid(i).Nzbc();
-    uold[i].Allocate(Nbox,nx0,ny0,nz0);
-    if(!nonlocal) uold[i]=1.0;
-  }
-	
-  if(nonlocal) uold[nlevel-1].Dimension(Nbox,Nx,Ny,Nz);
-	
-  vstar=(nmax-nmin)/(xmax-xmin);
-	
-  // For linear dispersion relation
-	
-  cout << endl << "INVERSE DENSITY SCALE LENGTH: " << vstar << endl;
-
-  if((FDdissipation) && (Dphi || Dn)) {
-    L2w.Allocate(Nx,Ny,Nz);
-    L2w=0.0;
-  }
-	
-  f.Allocate(Nbox,Nx,Ny,Nz);
-  w.Dimension(Nx,Ny,Nz,f);
-	
-  u1.Allocate(Nx,Ny,Nz);
-	
-  Sn.Allocate(Nx,Ny,Nz);
-  Sphi.Allocate(Nx,Ny,Nz);
-	
-  Hx.Allocate(Nx,Ny,Nz);
-  Hy.Allocate(Nx,Ny,Nz);
-	
-  F1x.Dimension(Nx,Ny,Nz,Sphi); // Memory optimization
-  F1y.Allocate(Nx,Ny,Nz);
-	
-  F2x.Allocate(Nx,Ny,Nz);
-  F2y.Allocate(Nx,Ny,Nz);
-	
-  F3x.Allocate(Nx,Ny,Nz);
-  F3y.Allocate(Nx,Ny,Nz);
-	
-  phi_prof.Allocate(Nxi);
-  n_prof.Allocate(Nxi);
-	
-  phi_corr.Allocate(Nz);
-  n_corr.Allocate(Nz);
-	
-  f=0.0;
-  u1=0.0;
-	
-  Sn=0.0;
-  Sphi=0.0;
-	
-  F1y=0.0;
-	
-  F2x=0.0;
-  F2y=0.0;
-	
-  F3x=0.0;
-  F3y=0.0;
-	
-  alpha=shear;
-	
-  int twomodes=(mx2 || my2 || mz2);
-  Real kx,ky,kz;
-  Complex Omega1p,Omega1m,phase1p,phase1m;
-  Real kx2,ky2,kz2;
-  Complex Omega2p,Omega2m,phase2p,phase2m;
-	
-  int offset=1;
-  u=0.0; // Initialize with zero boundary conditions
-	
-  if(!randomIC) {
-    dispersion(mx,my,mz,kx,ky,kz,Omega1p,Omega1m,phase1p,phase1m);
-    dispersion(mx2,my2,mz2,kx2,ky2,kz2,Omega2p,Omega2m,phase2p,phase2m);
-  }
-	
-  Real deltaz=zmax-zmin;
-	
-  int b;
-	
-  for(b=0; b < Nbox; b++) {
-    Real zoff=b*deltaz;
-    for(i=offset; i < Nx-offset; i++) {
-      Real X=grid->X(i);
-      for(int j=offset; j < Ny-offset; j++) {
-	Real Y0=grid->Y(j);
-	for(int k=offset; k < Nz-offset; k++) {
-	  Real phi,n;
-	  if(randomIC) {phi=2.0*drand()-1.0; n=2.0*drand()-1.0;}
-	  else {
-	    Real Z=z[k]+zoff;
-	    Real Y=Y0-alpha*Z*X;
-	    Real arg=kx*X+ky*Y+kz*Z;
-	    phi=cos(arg);
-	    n=phi*phase1p.re-sin(arg)*phase1p.im;
-	    if(twomodes) {
-	      Real arg=kx2*X+ky2*Y+kz2*Z;
-	      Real phi2=cos(arg);
-	      phi += phi2;
-	      n += phi2*phase2p.re-sin(arg)*phase2p.im;
-	    }
-	  }
-	  u(b,i,j,k)=U(ICphi*phi,ICn*n);
-	}
-      }
+    gridpsi->BoundaryConditions(psi);
+    if(verbose > 3) {
+      gridpsi->ReportHeader();
+      defect0=gridpsi->DefectNorm(psi,f0);
+      gridpsi->Report(defect0,0);
     }
 	
-    // Add mean density gradient
-    if(nonlocal) {
-      int Nxm1=Nx-1;
-      Real nfactor=(nmax-nmin)/Nxm1;
-      for(i=0; i < Nx; i++) {
-	Real nmean=nmin+nfactor*(Nxm1-i);
-	for(int j=0; j < Ny; j++) {
-	  for(int k=0; k < Nz; k++) {
-	    u(b,i,j,k).n += nmean;
-	    if(u(b,i,j,k).n <= 0)
-	      msg(ERROR,"Initial density is not positive");
-	  }
-	}
+    for(int it=1; it < nfirst; it++) {
+      gridpsi->Solve(psi,f0,2,2,0);
+      if(verbose > 3) {
+	defect=gridpsi->DefectNorm(psi,f0);
+	gridpsi->Report(defect,defect0,it);
+	defect0=defect;
       }
     }
   }
-	
-  if(alpha) {
-    if((zperiodic || Nbox > 1) && !yperiodic) 
-      msg(ERROR,
-	  "Shear with zperiodic=1 or Nbox > 1 requires yperiodic=1");
-    rjoffsetm=new Array3<Real>[nlevel];
-    rjoffsetp=new Array3<Real>[nlevel];
-		
-    for(int level=0; level < nlevel; level++) {
-      Poisson3N<U> *Grid=&Multigrid->Grid(level);
-      rjoffsetm[level].Allocate(2,Grid->Nxbc(),Grid->Nybc());
-      rjoffsetp[level].Allocate(2,Grid->Nxbc(),Grid->Nybc());
-      Real deltaz=zmax-zmin;
-      ShearOffset(rjoffsetm[level][0],level,-deltaz);
-      ShearOffset(rjoffsetp[level][0],level,deltaz);
-      ShearOffset(rjoffsetm[level][1],level,-Nbox*deltaz);
-      ShearOffset(rjoffsetp[level][1],level,Nbox*deltaz);
+
+
+// Electric field E = -mu*grad(phi)
+
+  Real coeffx=0.5*hxinv;
+  Real coeffy=0.5*hyinv;
+  
+  for(int i=1; i <= Nxi; i++) {
+    for(int j=1; j <= Nyi; j++) {
+      Real phix=coeffx*(phi(i+1,j)-phi(i-1,j));
+      Real phiy=coeffy*(phi(i,j+1)-phi(i,j-1));
+      Ex(i,j)=-mu*phix;
+      Ey(i,j)=-mu*phiy;
+      Fx(i,j)=alpha*psi(i,j)*phix;
+      Fy(i,j)=alpha*psi(i,j)*phiy;
     }
-		
-  }
-	
-  rjoffset.Allocate(Nbox,Nz,Nx,Ny);
-  for(b=0; b < Nbox; b++) {
-    Real zoff=b*deltaz;
-    for(int k=0; k < Nz; k++) {
-      ShearOffset(rjoffset[b][k],nlevel-1,z[k]+zoff);
-    }
-  }
-	
-  grid->BoundaryConditions(u);
-  if(nonlocal) Setuold(u);
-		
-  if(pseudospectral) FFT(y,u);
-	
+  }	
+  
+  // Neumann boundary conditions on E
+  
+  BoundaryConditions(Ex);
+  BoundaryConditions(Ey);
+  
+  open_output(fc,dirsep,"c"); 	 // Distribution of C
+  open_output(fvel,dirsep,"Vx"); // Fluid velocity
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
   open_output(fdefect,dirsep,"defect");
-  if(fftout) {
-    open_output(fphiRe,dirsep,"phifft.re");
-    open_output(fphiIm,dirsep,"phifft.im");
-  }
-  if(!spectrum) {
-    open_output(fekvk,dirsep,"ekvk");
-    fekvk.close();
-    open_output(fnkvk,dirsep,"nkvk");
-    fnkvk.close();
-  }
+  open_output(fudefect,dirsep,"udefect");
   if(output) open_output(fu,dirsep,"u");
   if(movie) {
+    open_output(fvx,dirsep,"vx");
+    open_output(fvy,dirsep,"vy");
+    open_output(fC,dirsep,"C");
+    open_output(fP,dirsep,"P");
     open_output(fphi,dirsep,"phi");
-    open_output(fn,dirsep,"n");
-		
-    // Compute the actual number of xy cross sections.
-    if(nsections == 0) nsections=Nzi;
-    if(nsections == 1) sections=1;
-    else {
-      div_t d;
-      d=div(Nzi-1,nsections-1);
-      skip=(d.rem == 0) ? d.quot : d.quot+1;
-      sections=0;
-      for(int k=1; k <= Nzi; k += max(1,min(skip,Nzi-k))) sections++; 
-    }
-    sections *= Nbox;
+    open_output(fpsi,dirsep,"psi");
   }
 }
 
-void HW::Initialize()
+void OS::Initialize()
 {
-  fevt << "#   t\t\t E\t\t Z\t\t N\t\t I\t\t G\t\t M" << endl;
+  fevt << "#   t\t\t E\t\t\t Z\t\t\t I\t\t\t C" << endl;
   fdefect << "t\t\t rmin\t\t rmax\t\t imin\t\t imax" << endl;
+  fudefect << "t\t\t rmin\t\t rmax\t\t imin\t\t imax" << endl;
 }
 
-void HW::SetBeta(double dt)
-{
-  beta=C*dt;
-}
-
-void HW::FFT(Var *Y, Array4<U> &u0)
-{
-  int i,Nzip2=Nzi+2;
-	
-  for(int b=0; b < Nbox; b++) {
-    Array3<U> ub=u0[b];
-    for(i=0; i < Nxi; i++) {
-      Array2<U> ui=ub[i+1];
-      int Nyii=Nyi*i;
-      for(int j=0; j < Nyi; j++) {
-	Array1<U>::opt uij=ui[j+1];
-	int Nij=Nzip2*(Nyii+j);
-	for(int k=0; k < Nzi; k++) {
-	  phifftr[Nij+k]=uij[k+1].phi;
-	  nfftr[Nij+k]=uij[k+1].n;
-	}
-      }
+void OS::Setup()
+{  
+#if LAGRANGIAN
+// This loop supplies the size and position to each cell and initializes
+// the parcels
+  int k=0;
+  Real hx=gridCrank->Hx();
+  Real hy=gridCrank->Hy();
+  
+  for(int i=0; i < Nx; i++) {
+    for(int j=0; j < Ny; j++) {
+      grid(i,j).CellSize(hx,hy);
+      grid(i,j).Position(i,j);
+      parcel[k].Parameters(i*hx,j*hy,hxinv,hyinv,u(i,j));
+      k++;
     }
+  }
+  
+  int size=parcel.Size();
+  for(int k=0; k < size; k++) parcel[k].Locate(u);
+  	
+  // Specify the outward normal vector on each boundary.
+  for(int j=0; j < Ny; j++) {
+    grid[0][j].Boundary(-1.0,0.0);
+    grid[Nx-1][j].Boundary(1.0,0.0);
+  }
+  for(int i=0; i < Nx; i++) {
+    grid[i][0].Boundary(0.0,-1.0);
+    grid[i][Ny-1].Boundary(0.0,1.0);
+  }
+#endif
+}
 
-    rcfft3d(phifft,log2Nxi,log2Nyi,log2Nzi,-1);
-    rcfft3d(nfft,log2Nxi,log2Nyi,log2Nzi,-1);
+void OS::Output(int it)
+{
+  Real E,Z,I,C;
+  u.Set(y);
+  BoundaryConditions(u);
 	
-    if(Y) {
-      UComplex *Yc=(UComplex *) Y;
-      int bNfft=b*Nfft;
-      for(i=0; i < Nfft; i++) {
-	Yc[bNfft+i].phi=phifft[i];
-	Yc[bNfft+i].n=nfft[i];
+  ComputeInvariants(E,Z,I,C);
+  fevt << t << "\t" << E << "\t" << Z << "\t" 
+       << I << "\t" << C << endl;
+
+  // Compute the distribution of C at different locations
+//  int x0=(int)(0.025*Nxi);
+  int x0=15;
+  int x1=(int)(0.25*Nxi);
+  int x3=(int)(0.75*Nxi);  
+  int y1=(int)(0.5*Nyi);
+
+
+  Real C0=0.0;
+  Real C3=0.0;
+  Real strip=1.0/(5.0*41.0);
+
+  for(int i=x0-2; i <= x0+2; i++){
+    for(int j=y1-20; j <= y1+20; j++){
+      C0 += u[i][j].C;
+    }
+  }
+
+  C0*=strip;
+
+  for(int i=x3-2; i <= x3+2; i++){
+    for(int j=y1-20; j <= y1+20; j++){
+      C3 += u[i][j].C;
+    }
+  }
+
+  C3*=strip;
+
+//  fc << t << "\t" << C0 << "\t" << C3 << endl;
+  fc << t << "\t" << C3 << endl;
+
+// Compute the electro-osmotic velocity profile
+  for(int j=1; j <= Nyi; j++) {
+    Real y=gridCrank->Y(j);
+    if(it == 30 || it == 60 || it == 90)
+      fvel << y << "\t" << u(x1,j).vx << "\t" << u(x3,j).vx << endl;
+  }
+
+
+
+  if(defectstat) {
+    fdefect << t << "\t" << rmin << "\t"  << rmax << "\t" << imin << "\t" 
+	    << imax << endl;
+    fudefect << t << "\t" << urmin << "\t" << urmax << "\t" << uimin
+	     << "\t" << uimax << endl;
+  }
+	
+  rmin=REAL_MAX; rmax=0.0;
+  imin=INT_MAX; imax=0;
+	
+  urmin=REAL_MAX; urmax=0.0;
+  uimin=INT_MAX; uimax=0;
+	
+  if(output) {
+    out_curve(fu,u(),"u",ny);
+    fu.flush();
+  }
+  if(movie) OutFrame(it);
+	
+  ft << t << endl;
+}
+
+void OS::OutFrame(int it)
+{
+  fvx << Nxi << Nyi << 1;
+  fvy << Nxi << Nyi << 1;
+  fC << Nxi << Nyi << 1;
+  fP << Nxi << Nyi << 1;
+  if(it == 0) {
+    fphi << Nxi << Nyi << 1;
+    fpsi << Nxi << Nyi << 1;
+  }
+  
+  for(int j=Nyi; j >= 1; j--) {
+    for(int i=1; i <= Nxi; i++) {
+      fvx << (float) u(i,j).vx;
+      fvy << (float) u(i,j).vy;
+      fC << (float) u(i,j).C;
+      fP << (float) P(i,j);
+      if(it == 0) {
+	fphi << (float) phi(i,j);
+	fpsi << (float) psi(i,j);
       }
     }
   }
+  
+  if(it == 0) {
+    fphi.close();
+    fpsi.close();
+  }
+  
+  fvx.flush();
+  fvy.flush();
+  fC.flush();
+  fP.flush();
+}	
+
+void OS::ComputeInvariants(Real& E, Real& Z, Real& I, Real& C)
+{
+  E=Z=I=C=0.0;
+	
+  Real coeffx=0.5*hxinv;
+  Real coeffy=0.5*hyinv;
+  for(int i=1; i <= Nxi; i++) {
+    Array1(U) um=u[i-1], ui=u[i], up=u[i+1];
+    for(int j=1; j <= Nyi; j++) {
+      E += ui[j].vx*ui[j].vx+ui[j].vy*ui[j].vy;
+      Real w=-coeffx*(um[j].vy-up[j].vy)+coeffy*(ui[j-1].vx-ui[j+1].vx);
+      Z += w*w;
+      I += ui[j].C*w;
+      C += ui[j].C*ui[j].C;
+    }
+  }
+  
+  Real factor=0.5*volume;
+  E *= factor;
+  Z *= factor;
+  I *= factor;
+  C *= factor;
 }
 
-void HW::FFTinv(Array4<U> &u0, Var *Y)
+void OS::Transform(Var *Y, double, double dt, Var *&yi)
 {
-  int i;
+  if(!yi) yi=new Var[ny];
+  set(yi,Y,ny);
 	
-  for(int b=0; b < Nbox; b++) {
-    if(Y) {
-      UComplex *Yc=(UComplex *) Y;
-      int bNfft=b*Nfft;
-      for(i=0; i < Nfft; i++) {
-	phifft[i]=Yc[bNfft+i].phi;
-	nfft[i]=Yc[bNfft+i].n;
-      }
-    }	
+  beta=explicit_factor*dt*nu;
 	
-    Real scale=1.0/(Nxi*Nyi*Nzi);
-    crfft3d(phifft,log2Nxi,log2Nyi,log2Nzi,1,scale);
-    crfft3d(nfft,log2Nxi,log2Nyi,log2Nzi,1,scale);
+  u.Set(Y);
+  gridCrank->Lu(u,f);
+  u=f;
+}
+
+void OS::BackTransform(Var *Y, double, double dt, Var *yi)
+{
+  beta=-implicit_factor*dt*nu;
+	
+  u.Set(Y);
+  f=y;
+  u.Load(yi);
+	
+  int it=gridCrank->Solve(u,f,npresmooth,igamma,npostsmooth,0,
+			  ncrank,convrate,
+			  defectstat,&udefect0,&udefect);
+
+  if(verbose > 2) {
+    cout << endl;
+    gridCrank->Report(udefect0,0);
+    gridCrank->Report(udefect,udefect0,it);
+  }
+	
+  if(!it) 
+    msg(ERROR,"Maximum number of iterations (%d) exceeeded in Solve",
+	niterations);
+	
+  if(defectstat) {
+    U ratio=divide0(udefect0,udefect);
+    if(ratio < urmin) urmin=ratio;
+    if(ratio > urmax) urmax=ratio;
+  }
+	
+  BoundaryConditions(u);
+    
+#if LAGRANGIAN
+  
+  u0.Set(yi);
+  
+  for(int i=0; i < Nx; i++) {
+    Array1(Cell) gridi=grid[i];
+    Array1(U) uLi=uL[i], ui=u[i], u0i=u0[i];
+    Array1(Real) Exi=Ex[i], Eyi=Ey[i];
+    for(int j=0; j < Ny; j++) {
+      uLi[j].vx=0.5*(ui[j].vx+u0i[j].vx)+Exi[j];
+      uLi[j].vy=0.5*(ui[j].vy+u0i[j].vy)+Eyi[j];
+      uLi[j].C=ui[j].C;
+      grid(i,j).Input(uLi[j]);
+      gridi[j].Source(ui[j].C-u0i[j].C); // Parcel diffusion
+    }
+  }
+  
+  int size=parcel.Size();
+  for(int k=0; k < size; k++) parcel[k].Source(grid);
+      
+  for(int i=0; i < Nx; i++) {
+    Array1(Cell) gridi=grid[i];
+    Array1(U) uLi=uL[i];
+    for(int j=0; j < Ny; j++) {
+      if(gridi[j].Boundary()) InjectParcel(gridi[j],parcel,Inactive);
+      uLi[j].C=0.0;
+      gridi[j].Area(0.0);
+    }
+  }
+      
+  size=parcel.Size();
+  for(int k=0; k < size; k++) {
+    parcel[k].Advect(dt);
+    if(parcel[k].Locate(uL)) Inactive.Push(k);
+    else parcel[k].Contribute(uL,grid);
+  }
 		
-    int Nzip2=Nzi+2;
-    Array3<U> ub=u0[b];
-    for(i=0; i < Nxi; i++) {
-      Array2<U> ui=ub[i+1];
-      int Nyii=Nyi*i;
-      for(int j=0; j < Nyi; j++) {
-	Array1<U>::opt uij=ui[j+1];
-	int Nij=Nzip2*(Nyii+j);
-	for(int k=0; k < Nzi; k++) {
-	  uij[k+1].phi=phifftr[Nij+k];
-	  uij[k+1].n=nfftr[Nij+k];
-	}
-      }
+  for(int i=0; i < Nx; i++) {
+    Array1(U) uLi=uL[i], ui=u[i];
+    for(int j=0; j < Ny; j++) {
+      ui[j].C=uLi[j].C;
     }
   }
-  grid->BoundaryConditions(u0);
+  
+  BoundaryConditions(u);
+#endif
+
+  if(it < uimin) uimin=it;
+  if(it > uimax) uimax=it;
 }
 
-void HW::Setuold(Var *yi)
+void OS::Source(Var *source, Var *Y, double)
 {
-  uold[nlevel-1].Set(yi);
-  for(int i=nlevel-2; i >= 1; i--) {
-    Multigrid->Grid(i+1).Restrict(uold[i],uold[i+1]);
-    Multigrid->Grid(i).BoundaryConditions(uold[i]);
-  }
-}
+  u.Set(Y);
+  BoundaryConditions(u);
+  S.Set(source);
+	
+  Real coeffx=0.5*hxinv;
+  Real coeffy=0.5*hyinv;
 
-void HW::Transform(Var *Y, double, double dt, Var *&yi)
-{
-  if(yi) {
-    if(interpolate) {
-      for(unsigned int i=0; i < ny; i++) 
-	yi[i]=Y[i]+dt/dtold*(Y[i]-yi[i]);
-      dtold=dt;
-    } else set(yi,Y,ny);
-  } else {yi=new Var[ny]; set(yi,Y,ny); dtold=dt;}
-	
-  SetBeta(-explicit_factor*dt);
-	
-  if(pseudospectral) {
-    int i;
-    UComplex *Yc=(UComplex *) Y;
-    for(int b=0; b < Nbox; b++) {
-      int Nxib=Nxi*b;
-      for(i=0; i < Nxi; i++) {
-	Real kx=(i-Nxi2)*kxmin;
-	Real kx2=kx*kx;
-	int Nyii=Nyi*(Nxib+i);
-	for(int j=0; j < Nyi; j++) {
-	  Real ky=(j-Nyi2)*kymin;
-	  Real kxy2=kx2+ky*ky;
-	  int Nij=Nzp*(Nyii+j);
-	  for(int k=0; k < Nzp; k++) {
-	    Real kz=k*kzmin;
-	    Real kz2=kz*kz;
-	    Real betakz2=beta*kz2;
-	    int index=Nij+k;
-	    Complex phi=Yc[index].phi;
-	    Yc[index].phi=phi*(kxy2+betakz2)-betakz2*Yc[index].n;
-	    Yc[index].n=Yc[index].n*(1.0+betakz2)-betakz2*phi;
-	  }
-	}
-      }
+// The following code is used to calculate fluxes without hyperviscosity.
+
+  for(int i=1; i <= Nxi; i++) {
+    Array1(U) Gxi=Gx[i], Gyi=Gy[i];
+    Array1(Real) Exi=Ex[i], Eyi=Ey[i];
+    Array1(U) ui=u[i];
+
+// Calculate the fluxes......
+
+    for(int j=1; j <= Nyi; j++) {
+
+      // Flux Gx=vx * u:
+      Gxi[j].vx=ui[j].vx*ui[j].vx;
+      Gxi[j].vy=ui[j].vx*ui[j].vy;
+      Gxi[j].C=(ui[j].vx+Exi[j])*ui[j].C;
+      // Flux Gy=vy * u:
+      Gyi[j].vx=ui[j].vy*ui[j].vx;
+      Gyi[j].vy=ui[j].vy*ui[j].vy;
+      Gyi[j].C=(ui[j].vy+Eyi[j])*ui[j].C;
     }
-    for(unsigned int m=0; m < ny; m++) errmask[m]=(Y[m] != 0.0);
-  } else {
-    if(nonlocal) Setuold(yi);
-    u.Set(Y);
-    grid->Lu(u,f);
-    u=f;
   }
-}
-
-void HW::BackTransform(Var *Y, double, double dt, Var *yi)
-{
-  SetBeta(implicit_factor*dt);
-	
-  if(pseudospectral) {
-    int kinit=(implicit_factor ? 1 : Nzp);
-    UComplex *Yc=(UComplex *) Y;
-    for(int b=0; b < Nbox; b++) {
-      Yc[Nfft*b+Nzp*(Nyi*Nxi2+Nyi2)].phi=0.0;
-      int Nxib=Nxi*b;
-      for(int i=0; i < Nxi; i++) {
-	int i0=i-Nxi2;
-	Real kx=i0*kxmin;
-	Real kx2=kx*kx;
-	int Nyii=Nyi*(Nxib+i);
-	for(int j=0; j < Nyi; j++) {
-	  int j0=j-Nyi2;
-	  Real ky=j0*kymin;
-	  Real kxy2=kx2+ky*ky;
-	  int Nij=Nzp*(Nyii+j);
-	  for(int k=((i0 == 0 && j0 == 0) ? kinit : 0); k < Nzp; k++)
-	    {
-	      int index=Nij+k;
-	      Real kz=k*kzmin;
-	      Real kz2=kz*kz;
-	      Real betakz2=beta*kz2;
-	      Real ndenominv=1.0/(1.0+betakz2);
-	      Real factor=betakz2*ndenominv;
-	      Yc[index].phi=(Yc[index].phi+Yc[index].n*factor)/
-		(kxy2+betakz2-betakz2*factor);
-	      Yc[index].n=(Yc[index].n+betakz2*Yc[index].phi)*
-		ndenominv;
-	    }
-	}
-      }
-    }
-  } else {
-    u.Set(Y);
-    f=y;
-    u.Load(yi);
-    if(nonlocal) Setuold(yi);
 		
-    int it=grid->Solve(u,f,npresmooth,1,npostsmooth,singular,
-		       niterations,convrate,defectstat,&defect0,&defect);
+  BoundaryConditions(Gx);
+  BoundaryConditions(Gy);
 
+#if 0
+  Div=0.0;
+  for(int i=1; i <= Nxi; i++) {
+    Array1(U) um=u[i-1], up=u[i+1], ui=u[i];
+    for(int j=1; j <= Nyi; j++) {
+      // Div = div u
+      Div(i,j)=-coeffx*(um[j].vx-up[j].vx)-
+	coeffy*(ui[j-1].vy-ui[j+1].vy);
+    }
+  }
+
+  cout << Div << endl;
+#endif	
+
+  Real coeffx0=coeffx*nonlinear;
+  Real coeffy0=coeffy*nonlinear;
+  
+  for(int i=1; i <= Nxi; i++) {
+    Array1(U) Gxm=Gx[i-1], Gxp=Gx[i+1];
+#if UPWIND
+    Array1(U) Gxi=Gx[i];
+#endif    
+    Array1(U) Gyi=Gy[i];
+    
+    Array1(Real) Hxi=Hx[i], Hyi=Hy[i];
+    Array1(Real) Fxi=Fx[i], Fyi=Fy[i];
+    Array1(U) Si=S[i];
+
+// center in space for momentum equation; optionally upwind C equation
+
+    for(int j=1; j <= Nyi; j++) {
+      // div (v u)
+      U advection=-coeffx0*(Gxm[j]-Gxp[j])-coeffy0*(Gyi[j-1]-Gyi[j+1]);
+      
+#if UPWIND
+      // div(v C + mu E C)
+      advection.C=
+	hxinv*(u(i,j).vx > 0 ? (Gxi[j].C-Gxm[j].C) : (Gxp[j].C-Gxi[j].C))+
+	hyinv*(u(i,j).vy > 0 ? (Gyi[j].C-Gyi[j-1].C) : (Gyi[j+1].C-Gyi[j].C));
+#endif      
+      
+      // H=F - div (v u)
+      Hxi[j]=Fxi[j]-advection.vx;
+      Hyi[j]=Fyi[j]-advection.vy;
+      
+#if LAGRANGIAN
+      Si[j].C=0.0;
+#else
+      Si[j].C=-advection.C;
+#endif      
+    }
+  }
+
+  BoundaryConditions(Hx);
+  BoundaryConditions(Hy);
+
+  if(pressure) {
+    for(int i=1; i <= Nxi; i++) {
+      Array1(Real) Hxm=Hx[i-1], Hxp=Hx[i+1];
+      Array1(Real) Hyi=Hy[i];
+      Array1(Real) Di=Div[i];
+
+      for(int j=1; j <= Nyi; j++) {
+	// Div=div H
+	Di[j]=-coeffx*(Hxm[j]-Hxp[j])-coeffy*(Hyi[j-1]-Hyi[j+1]);
+      }
+    }
+
+    int it=gridP->Solve(P,Div,npresmooth,igamma,npostsmooth,0,
+			first ? max(nfirst,niterations) : niterations,
+			convrate,defectstat,&defect0,&defect);
+	
+    first=0;
+	
     if(verbose > 2) {
       cout << endl;
-      grid->Report(defect0,0);
-      grid->Report(defect,defect0,it);
+      gridP->Report(defect0,0);
+      gridP->Report(defect,defect0,it);
     }
 		
-    if(!it)
-      msg(ERROR,"Maximum number of iterations (%d) exceeeded in Solve",
-	  niterations);
-		
-    if(periodic3) {
-      // Subtract off null solution.
-      Real sum=0.0;
-      for(int b=0; b < Nbox; b++) {
-	Array3<U> ub=u[b];
-	for(int i=1; i <= Nxi; i++) {
-	  Array2<U> ui=ub[i];
-	  for(int j=1; j <= Nyi; j++) {
-	    Array1<U>::opt uij=ui[j];
-	    for(int k=1; k <= Nzi; k++) sum += uij[k].phi;
-	  }
-	}
-      }				
-      sum /= Nxi*Nyi*Nzi*Nbox;
-      for(unsigned int i=0; i < ny; i++) Y[i].phi -= sum;
-    }
+    if(!it) msg(ERROR,"Maximum number of iterations (%d) exceeeded in Solve",
+		niterations);
 		
     if(defectstat) {
       U ratio=divide0(defect0,defect);
@@ -1005,545 +1020,22 @@ void HW::BackTransform(Var *Y, double, double dt, Var *yi)
     if(it < imin) imin=it;
     if(it > imax) imax=it;
   }
-}
-
-void HW::Spectrum(Complex *fft, ofstream& s, const char *text, int norm)
-{
-  int K, Kmax=(int) (sqrt(Nxi2*Nxi2+Nyi2*Nyi2+Nzi2*Nzi2)+0.5);
-  Real *sum=new Real[Kmax+1];
-  int *count=new int[Kmax+1];
-		
-  for(K=0; K <= Kmax; K++) {
-    count[K]=0;
-    sum[K]=0.0;
-  }
-				
-  // Compute angular average over circular or spherical shell.
-  int kstart,kstop;
-  if(spectrum2d) {kstart=Nzi2; kstop=Nzi2+1;} // circular shell at kz=0
-  else {kstart=0; kstop=Nzi;}
-		
-  for(int i=0; i < Nxi; i++) {
-    int kx=i-Nxi2;
-    for(int j=0; j < Nyi; j++) {
-      int ky=j-Nyi2;
-      int kperp2=kx*kx+ky*ky;
-      for(int k=kstart; k < kstop; k++) {
-	int kp=k-Nzi2;
-	int K2=kperp2+kp*kp;
-	int K=(int)(sqrt(K2)+0.5);
-	int ip=i, jp=j;
-	if(kp < 0) {
-	  if(i > 0) ip=Nxi-i;
-	  if(j > 0) jp=Nyi-j;
-	  if(k > 0) kp=-kp;
-	  else kp=Nzi2;
-	}
-	count[K]++;
-	sum[K] += (norm ? K2 : 1.0)*abs2(fft[Nzp*(Nyi*ip+jp)+kp]);
-      }
-    }
-  }
-		
-  for(K=0; K <= Kmax; K++)
-    if(count[K]) sum[K] *= 0.5/count[K] *
-		   (spectrum2d ? 2.0*pi*K : 4.0*pi*(K*K+twelfth));
-				
-  open_output(s,dirsep,text,0);
-  out_curve(s,t,"t");
-  out_curve(s,sum,text,Kmax+1);
-  out_curve(s,Nxi,"Nxi");
-  out_curve(s,Nyi,"Nyi");
-  out_curve(s,Nzi,"Nzi");
-  s.close();
-}
-
-void HW::Output(int)
-{
-  Real E,Z,N,I,G,M;
-  int k;
 	
-  if(pseudospectral) {
-    FFTinv(u,y);
-		
-    // Output spectrum only for last box.
-    UComplex *Yc=(UComplex *) y;
-    for(int i=0; i < Nfft; i++) {
-      phifft[i]=Yc[i].phi;
-      nfft[i]=Yc[i].n;
-    }
-  } else {
-    u.Set(y);
-    grid->BoundaryConditions(u);
-	
-    if(fftout || spectrum) FFT(NULL,u);
-  }
-		
-  ComputeInvariants(E,Z,N,I,G,M);
-  fevt << t << "\t" << E << "\t" << Z << "\t" << N << "\t" << I << "\t"
-       << G << "\t" << M << endl;
-	
-  if(defectstat && pseudospectral == 0)
-    fdefect << t << "\t" << rmin << "\t" << rmax << "\t" << imin << "\t" 
-	    << imax << endl;
-	
-  rmin=REAL_MAX; rmax=0.0;
-  imin=INT_MAX; imax=0;
-  unsigned int nu=Nx*Ny*Nz;
-  if(output) out_curve(fu,u(),"u",nu);
-	
-  if(movie) {
-    int Nx0=xperiodic ? Nxi : Nx;
-    int Ny0=yperiodic ? Nyi : Ny;
-		
-    fphi << Nx0 << Ny0 << sections;
-    fn << Nx0 << Ny0 << sections;
-		
-    for(int pass=0; pass < (byte ? 2 : 1); pass++) {
-      if(pass == 1) {
-	if (maxval == minval) step=0.0;
-	else step=255.0/(maxval-minval);
-      }
-      for(int b=0; b < Nbox; b++) {
-	if(nsections == 1) OutFrame(b,Nz/2,pass);
-	else for(int k=1; k <= Nzi; k += max(1,min(skip,Nzi-k))) {
-	  OutFrame(b,k,pass);
-	}
-      }
-    }
-  }
-	
-  if(fftout) {
-    // Output spectrum only for last box.
-    fphiRe << Nxi << Nyi << Nzp;
-    fphiIm << Nxi << Nyi << Nzp;
-				
-    for(int k=0; k < Nzp; k++) {
-      for(int j=Nyi-1; j >= 0; j--) {
-	for(int i=0; i < Nxi; i++) {
-	  fphiRe << (float) phifft[Nzp*(Nyi*i+j)+k].re;
-	  fphiIm << (float) phifft[Nzp*(Nyi*i+j)+k].im;
-	}
-      }
-    }
-    fphiRe.flush();
-    fphiIm.flush();
-  }
-	
-  // Output profiles.
-  for(int i=1; i <= Nxi; i++) {
-    U sum=0.0;
-    for(int b=0; b < Nbox; b++) {
-      Array2<U> ubi=u[b][i];
-      for(int j=1; j <= Nyi; j++) {
-	Array1<U>::opt ubij=ubi[j];
-	for(int k=1; k <= Nzi; k++) {
-	  sum += ubij[k];
-	}
-      }
-    }
-    sum /= (Nyi*Nzi*Nbox);
-    phi_prof[i-1]=sum.phi;
-    n_prof[i-1]=sum.n;
-  }
-	
-  open_output(fprofile,dirsep,"profile",0);
-  out_curve(fprofile,grid->X()+1,"X",Nxi);
-  out_curve(fprofile,phi_prof(),"phi",Nxi);
-  out_curve(fprofile,n_prof(),"n",Nxi);
-  fprofile.close();
-	
-  // Output correlation function.
-  int count0=Nxi*Nyi*Nbox;
-	
-  for(k=0; k < Nzi; k++) {
-    Real sum_phi=0.0;
-    Real sum_n=0.0;
-    for(int b=0; b < Nbox; b++) {
-      Array3<U> ub=u[b];
-      for(int i=1; i <= Nxi; i++) {
-	Array2<U> ubi=ub[i];
-	for(int j=1; j <= Nyi; j++) {
-	  Array1<U>::opt ubij=ubi[j];
-	  for(int kp=0; kp < Nz-k; kp++) {
-	    sum_phi += ubij[kp].phi*ubij[k+kp].phi;
-	    sum_n += ubij[kp].n*ubij[k+kp].n;
-	  }
-	}
-      }
-    }
-    int count=count0*(Nz-k);
-    sum_phi /= count;
-    sum_n /= count;
-    phi_corr[k] += sum_phi;
-    n_corr[k] += sum_n;
-  }
-	
-  for(k=1; k < Nzi; k++) {
-    phi_corr[k] /= phi_corr[0];
-    n_corr[k] /= n_corr[0];
-  }
-	
-  phi_corr[0]=n_corr[0]=1.0;
-	
-  open_output(fcorr,dirsep,"corr",0);
-  out_curve(fcorr,grid->Z(),"Z",Nzi);
-  out_curve(fcorr,phi_corr(),"phi",Nzi);
-  out_curve(fcorr,n_corr(),"n",Nzi);
-  fcorr.close();
-	
-  if(spectrum) {
-    // Output spectrum only for last box.
-    Spectrum(phifft,fekvk,"ekvk",1); // Normalize phi^2 by K^2
-    Spectrum(nfft,fnkvk,"nkvk",0);
-  }
-	
-  ft << t << endl;
-}
-
-void HW::OutFrame(int b, int k, int pass)
-{
-  int xoffset=xperiodic ? 2 : 0;
-  int yoffset=yperiodic ? 2 : 0;
-	
-  Array3<Real> rjoffsetb=rjoffset[b];
-  Array3<U> ub=u[b];
-
-  for(int j=Ny-1-yoffset; j >= 0; j--) {
-    for(int i=0; i < Nx-xoffset; i++) {
-      U uinterp;
-			
-      if(alpha && !twisted) {
-	Real r=rjoffsetb(k,i,j);
-	int joff=(int) r;
-	uinterp=ub(i,joff,k)+(ub(i,joff+1,k)-ub(i,joff,k))*(r-joff);
-      } else uinterp=ub(i,j,k);
-		
-      if(byte) {
-	if(pass == 0) {
-	  minval=min(minval,uinterp);
-	  maxval=max(maxval,uinterp);
-	} else {
-	  U scaled;
-	  if (step == 0.0) scaled=127;
-	  else scaled=(uinterp-minval)*step+0.5;
-	  fphi << (xbyte) (unsigned int) scaled.phi;
-	  fn << (xbyte) (unsigned int) scaled.n;
-	}
-      } else {
-	fphi << (float) uinterp.phi;
-	fn << (float) uinterp.n;
-      }
-    }
-  }
-  fphi.flush();
-  fn.flush();
-	
-  const char *text="Cannot write to movie file %s";
-  if(!fphi) msg(ERROR,text,"phi");
-  if(!fn) msg(ERROR,text,"n");
-}
-
-void HW::ComputeInvariants(Real& E, Real& Z, Real& N, Real& I, Real& G,
-			   Real &M)
-{
-  E=Z=N=I=G=M=0.0;
-  Real coeffy=0.5*hyinv;
-	
-  int Nxm1=Nx-1;
-  Real nfactor=(nmax-nmin)/Nxm1;
-  for(int b=0; b < Nbox; b++) {
-    Array3<U> ub=u[b];
-    Laplacian(ub,w,PHI_ONLY);
-    for(int i=1; i <= Nxi; i++) {
-      Real nmean=nmin+nfactor*(Nxm1-i);
-      Real n0;
-      if(nonlocal) n0=0.0;
-      else {
-	n0=nmean;
-	nmean=0.0;
-      }
-      Array2<U> ui=ub[i], wi=w[i];
-      for(int j=1; j <= Nyi; j++) {
-	Array1<U>::opt uim=ui[j-1], uij=ui[j], uip=ui[j+1], wij=wi[j];
-	for(int k=1; k <= Nzi; k++) {
-	  Real vort=wij[k].phi;
-	  Real n=uij[k].n;
-	  E += vort*uij[k].phi;
-	  Z += vort*vort;
-	  N += (n-nmean)*(n-nmean);
-	  I += n*vort;
-	  G += n*(uim[k].phi-uip[k].phi)*coeffy;
-	  M += n+n0;
-	}
-      }
-    }
-  }
-	
-  Real factor=0.5*volume;
-  E *= factor;
-  Z *= factor;
-  N *= factor;
-  I *= factor;
-  G *= volume;
-  M *= volume;
-}
-
-void HW::Divergence(const Array3<Real>& Fx, const Array3<Real>& Fy,
-		    const Array3<Real>& D)
-{
-  gridreal.BoundaryConditions(Fx);
-  gridreal.BoundaryConditions(Fy);
-	
-  Real coeffx12=twelfth*hxinv;
-  Real coeffy12=twelfth*hyinv;
+  Real rhoinv=1.0/rho;
+  Real coeffrx=coeffx*rhoinv;
+  Real coeffry=coeffy*rhoinv;
 	
   for(int i=1; i <= Nxi; i++) {
-    Array2<Real> Fxm=Fx[i-1], Fxp=Fx[i+1];
-    Array2<Real> FxP=(i+2 < Nx) ? Fx[i+2] : (xperiodic ? Fx[2] : Fx[Nx-1]);
-    Array2<Real> FxM=(i-2 >= 0) ? Fx[i-2] : (xperiodic ? Fx[Nx-3] : Fx[0]);
-    Array2<Real> Di=D[i], Fyi=Fy[i];
-		
+    Array1(Real) Pm=P[i-1];
+    Array1(Real) Pi=P[i];
+    Array1(Real) Pp=P[i+1];
+    Array1(U) Si=S[i];
+    Array1(Real) Hxi=Hx[i];
+    Array1(Real) Hyi=Hy[i];
     for(int j=1; j <= Nyi; j++) {
-      Array1<Real>::opt Dij=Di[j]; 
-      Array1<Real>::opt Fxmj=Fxm[j], Fxpj=Fxp[j], FxPj=FxP[j], FxMj=FxM[j];
-			
-      Array1<Real>::opt Fyim=Fyi[j-1], Fyip=Fyi[j+1];
-      Array1<Real>::opt FyiP=(j+2 < Ny) ? Fyi[j+2] :
-	(yperiodic ? Fyi[2] : Fyi[Ny-1]);
-      Array1<Real>::opt FyiM=(j-2 >= 0) ? Fyi[j-2] :
-	(yperiodic ? Fyi[Ny-3] : Fyi[0]);
-			
-      for(int k=1; k <= Nzi; k++) {
-	Dij[k]=coeffx12*(FxMj[k]-8.0*(Fxmj[k]-Fxpj[k])-FxPj[k])+
-	  coeffy12*(FyiM[k]-8.0*(Fyim[k]-Fyip[k])-FyiP[k]);
-      }
-    }
-  }
-}				
-
-void HW::Source(Var *source, Var *Y, double)
-{
-  int i;
-	
-  if(pseudospectral) FFTinv(u,Y);
-  else {
-    u.Set(Y);
-    grid->BoundaryConditions(u);
-    S.Set(source);
-  }
-	
-  Array4<U> uoldl=uold[nlevel-1];
-	
-  for(int b=0; b < Nbox; b++) {
-    Array3<U> ub=u[b], Sb=S[b];
-		
-    if(!xperiodic) {
-      // Enforce Neumann BC on phi in x-direction (not in solver)
-      Array2<U> ub0=ub[0], ub1=ub[1], ubnx=ub[Nx-2], ubnx1=ub[Nx-1];
-      for(int j=0; j < Ny; j++) {
-	Array1<U>::opt ub0j=ub0[j], ub1j=ub1[j];
-	Array1<U>::opt ubnxj=ubnx[j], ubnx1j=ubnx1[j];
-	for(int k=0; k < Nz; k++) {
-	  ub0j[k].phi=ub1j[k].phi;
-	  ubnx1j[k].phi=ubnxj[k].phi;
-	}
-      }
-    }
-		
-    if(FDdissipation || mu) {
-      Laplacian(ub,w,PHI_ONLY);
-      VorticityBoundaryConditions(w);
-    }
-	
-    Real coeffx12=twelfth*hxinv;
-    Real coeffy12=twelfth*hyinv;
-    Real coeffvstar=nonlocal ? 0.0 : vstar;
-    Real coeffmu=0.5*mu;
-	
-    for(int k=1; k <= Nzi; k++) coeffy2[k]=alpha*z[k];
-			
-    for(i=1; i <= Nxi; i++) {
-      Array2<U> um=ub[i-1], ui=ub[i], up=ub[i+1];
-      Array2<U> uP=(i+2 < Nx) ? ub[i+2] : (xperiodic ? ub[2] : ub[Nx-1]);
-      Array2<U> uM=(i-2 >= 0) ? ub[i-2] : (xperiodic ? ub[Nx-3] : ub[0]);
-		
-      Array2<U> wm=w[i-1], wi=w[i], wp=w[i+1];
-      Array2<U> wP=(i+2 < Nx) ? w[i+2] : (xperiodic ? w[2] : w[Nx-1]);
-      Array2<U> wM=(i-2 >= 0) ? w[i-2] : (xperiodic ? w[Nx-3] : w[0]);
-		
-      Array2<Real> Hxi=Hx[i], Hyi=Hy[i];
-      Array2<Real> F1xi=F1x[i], F1yi=F1y[i];
-      Array2<Real> F2xi=F2x[i], F2yi=F2y[i];
-      Array2<Real> F3xi=F3x[i], F3yi=F3y[i];
-      for(int j=1; j <= Nyi; j++) {
-	Array1<U>::opt umj=um[j], uim=ui[j-1], uij=ui[j], uip=ui[j+1];
-	Array1<U>::opt upj=up[j], uPj=uP[j], uMj=uM[j];
-	Array1<U>::opt uiP=(j+2 < Ny) ? ui[j+2] :
-	  (yperiodic ? ui[2] : ui[Ny-1]);
-	Array1<U>::opt uiM=(j-2 >= 0) ? ui[j-2] :
-	  (yperiodic ? ui[Ny-3] : ui[0]);
-		
-	Array1<U>::opt wmj=wm[j], wim=wi[j-1], wip=wi[j+1], wpj=wp[j];
-		
-	Array1<U>::opt wPj=wP[j], wMj=wM[j];
-	Array1<U>::opt wiP=(j+2 < Ny) ? wi[j+2] :
-	  (yperiodic ? wi[2] : wi[Ny-1]);
-	Array1<U>::opt wiM=(j-2 >= 0) ? wi[j-2] :
-	  (yperiodic ? wi[Ny-3] : wi[0]);
-			
-	Array1<Real>::opt Hxij=Hxi[j], Hyij=Hyi[j];
-	Array1<Real>::opt F1xij=F1xi[j], F1yij=F1yi[j];
-	Array1<Real>::opt F2xij=F2xi[j], F2yij=F2yi[j];
-	Array1<Real>::opt F3xij=F3xi[j], F3yij=F3yi[j];
-			
-	for(int k=1; k <= Nzi; k++) {
-	  Real vx=-coeffy12*
-	    (uiM[k].phi-8.0*(uim[k].phi-uip[k].phi)-uiP[k].phi);
-	  Real Hyn=-uiM[k].n+2.0*(uim[k].n-uip[k].n)+uiP[k].n;
-				
-	  Real vy=coeffx12*
-	    (uMj[k].phi-8.0*(umj[k].phi-upj[k].phi)-uPj[k].phi);
-	  Real Hxn=-uMj[k].n+2.0*(umj[k].n-upj[k].n)+uPj[k].n;
-				
-	  Real avx=abs(vx)*coeffmu;
-	  Real avy=abs(vy)*coeffmu;
-					
-	  vx *= nonlinear;
-	  vy *= nonlinear;
-				
-	  Real alphaz=coeffy2[k];
-	  Real phix=vy-alphaz*vx;
-				
-	  // Flux F1 = v * (-phi_x):
-				
-	  F1xij[k]=-vx*phix;
-	  F1yij[k]=-vy*phix;
-				
-	  Real phiy=alphaz*vy-(1.0+alphaz*alphaz)*vx;
-				
-	  // Flux F2 = v * (-phi_y):
-				
-	  F2xij[k]=-vx*phiy;
-	  F2yij[k]=-vy*phiy;
-				
-	  // Flux F3 = v * n:
-				
-	  F3xij[k]=vx*uij[k].n+avx*Hxn;
-	  F3yij[k]=vy*uij[k].n+coeffvstar*uij[k].phi+avy*Hyn;
-				
-	  // Hyperviscosity: Equation 19 of
-	  // Guzdar et al. Phys. Fluids B 5, p. 3712 (1993);
-	  // implemented here as a flux correction.
-				
-	  Hxij[k]=avx*
-	    (-wMj[k].phi+2.0*(wmj[k].phi-wpj[k].phi)+wPj[k].phi);
-	  Hyij[k]=avy*
-	    (-wiM[k].phi+2.0*(wim[k].phi-wip[k].phi)+wiP[k].phi);
-	}
-      }
-    }
-				
-    Divergence(F3x,F3y,Sn);
-    Divergence(F1x,F1y,F3x);
-    Divergence(F2x,F2y,F3y);
-	
-    Array3<U> uoldlb=uoldl[b];
-		
-    for(i=1; i <= Nxi; i++) {
-      Array2<Real> F3xi=F3x[i], F3yi=F3y[i];
-      Array2<Real> Hxi=Hx[i], Hyi=Hy[i];
-      Array2<U> Ui=uoldlb[i];
-      for(int j=1; j <= Nyi; j++) {
-	Array1<Real>::opt F3xij=F3xi[j], F3yij=F3yi[j];
-	Array1<Real>::opt Hxij=Hxi[j], Hyij=Hyi[j];
-	Array1<U>::opt Uij=Ui[j]; 
-	for(int k=1; k <= Nzi; k++) {
-	  Real n=Uij[k].n;
-	  F3xij[k]=(F3xij[k]+Hxij[k])*n;
-	  F3yij[k]=(F3yij[k]+Hyij[k])*n;
-	}
-      }
-    }
-	
-    Divergence(F3x,F3y,Sphi);
-	
-    // Combine fluxes with Laplacian viscosity
-	
-    if(FDdissipation && (Dphi || Dn)) {
-      if(Dphi || Dn) {
-	for(int n=1; n <= nhyperviscosity; n++) {
-	  if(n > 1) w=L2w;
-	  Laplacian(w,L2w);
-	  VorticityBoundaryConditions(L2w);
-	}
-      }
-      for(i=1; i <= Nxi; i++) {
-	Array2<U> Si=Sb[i], L2wi=L2w[i];
-	Array2<Real> Sphii=Sphi[i], Sni=Sn[i];
-	for(int j=1; j <= Nyi; j++) {
-	  Array1<U>::opt Sij=Si[j]; 
-	  Array1<U>::opt L2wij=L2wi[j];
-	  Array1<Real>::opt Sphiij=Sphii[j];
-	  Array1<Real>::opt Snij=Sni[j];
-	  for(int k=1; k <= Nzi; k++) {
-	    Sij[k].phi=-Sphiij[k]-Dphi*L2wij[k].phi;
-	    Sij[k].n=-Snij[k]-Dn*L2wij[k].n;
-	  }
-	}
-      } 
-    } else {
-      for(i=1; i <= Nxi; i++) {
-	Array2<U> Si=Sb[i];
-	Array2<Real> Sphii=Sphi[i], Sni=Sn[i];
-	for(int j=1; j <= Nyi; j++) {
-	  Array1<U>::opt Sij=Si[j];
-	  Array1<Real>::opt Sphiij=Sphii[j], Snij=Sni[j];
-	  for(int k=1; k <= Nzi; k++) {
-	    Sij[k].phi=-Sphiij[k];
-	    Sij[k].n=-Snij[k];
-	  }
-	}
-      }
-    }
-  }
-	
-  if(pseudospectral) {
-    FFT(source,S);
-    for(int b=0; b < Nbox; b++) {
-      if(!FDdissipation) {
-	UComplex *Sc=(UComplex *) source;
-	UComplex *Yc=(UComplex *) Y;
-	int Nxib=Nxi*b;
-	for(i=0; i < Nxi; i++) {
-	  int i0=i-Nxi2;
-	  Real kx=i0*kxmin;
-	  Real kx2=kx*kx;
-	  int Nyii=Nyi*(Nxib+i);
-	  for(int j=0; j < Nyi; j++) {
-	    int j0=j-Nyi2;
-	    Real ky=j0*kymin;
-	    Real kxy2=kx2+ky*ky;
-	    Real kxy4=kxy2*kxy2;
-	    Real khyper;
-	    if(nhyperviscosity == 1) khyper=1.0;
-	    else {
-	      khyper=kxy2;
-	      for(int n=2; n < nhyperviscosity; n++)
-		khyper *= kxy2;
-	    }
-	    int Nij=Nzp*(Nyii+j);
-	    Real nuphi=kxy4*Dphi*khyper;
-	    Real nun=kxy2*Dn*khyper;
-	    for(int k=((i0 == 0 && j0 == 0) ? 1 : 0); k < Nzp; k++)
-	      {
-		int index=Nij+k;
-		Sc[index].phi -= nuphi*Yc[index].phi;
-		Sc[index].n -= nun*Yc[index].n;
-	      }
-	  }
-	}
-      }
+      // H - grad P
+      Si[j].vx=Hxi[j]+coeffrx*(Pm[j]-Pp[j]);
+      Si[j].vy=Hyi[j]+coeffry*(Pi[j-1]-Pi[j+1]);
     }
   }
 }
