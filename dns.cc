@@ -25,10 +25,6 @@ LinearityBase *Linearity;
 ForcingBase *Forcing;
 InitialConditionBase *InitialCondition;
 
-Real krmin;
-Real krmax;
-int reality=1; // Reality condition flag 
-
 // Vocabulary
 Real nu=1.0;
 Real rho=1.0;
@@ -45,24 +41,18 @@ Real kforce=1.0;
 Real deltaf=2.0;
 Real gammaf=2.0;
 int nparticles=1;
-
 int movie=0;
-
-int dumpbins=0;
-
-// Local Variables;
 
 typedef array1<Complex>::opt cvector;
 
-static rvector kxmask;
-static rvector kymask;
-static rvector k2mask, k2invmask;
-static array2<Real> k2maskij;
-static int tcount=0;
+// Unused variables:
 
 Real shellmin2;
 Real shellmax2;
-unsigned int nfft;
+int dumpbins=0;
+Real krmin;
+Real krmax;
+int reality=1;
 
 enum Field {VEL,EK,PX,PV};
 
@@ -97,8 +87,15 @@ class DNS : public ProblemBase {
   
   unsigned int Nxb,Nxb1,log2Nxb;
   unsigned int Nyb,Nyp,log2Nyb;
+  unsigned int nfft;
   
   Real Nxybinv;
+  
+  rvector kxmask;
+  rvector kymask;
+  rvector k2mask, k2invmask;
+  array2<Real> k2maskij;
+  int tcount;
   
   Real hxinv, hyinv;
   unsigned nmode;
@@ -334,14 +331,6 @@ void DNS::InitialConditions()
     Real ky=kymask[i];
     if(k2invmask[i]) {
       // Calculate -i*P
-#if 0      
-// Initial condition E(k)=pi/2 k^-7 (for testing)
-      Real k4=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
-      k4 *= k4;
-      Sk[0](i)=-I*ky*Nxb*Nyb*sqrt(k2invmask[i])/k4;
-      Sk[1](i)=I*kx*Nxb*Nyb*sqrt(k2invmask[i])/k4;
-#endif      
-      
       Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
       Sk[0](i)=(Sk[0](i)-kx*miP)*Nxybinv;
       Sk[1](i)=(Sk[1](i)-ky*miP)*Nxybinv;
@@ -389,6 +378,7 @@ void DNS::InitialConditions()
 //  for(unsigned int i=0; i < NY[PX]; i++) Y[PX][i]=0.0;
 //  for(unsigned int i=0; i < NY[PV]; i++) Y[PV][i]=0.0;
   
+  tcount=0;
   if(restart) {
     Real t0;
     ftin.open(Vocabulary->FileName(dirsep,"t"));
@@ -526,9 +516,8 @@ void DNS::ComputeInvariants(Real& E, Real& Z)
     }
   }
   
-// Real volume=(xmax-xmin)*(ymax-ymin)/(Nxb*Nyb);
-  // Compute energy density
-  Real volume=Nxybinv;
+  Real volume=(xmax-xmin)*(ymax-ymin)/(Nxb*Nyb);
+  // Real volume=Nxybinv <- to compute energy density instead of total energy
   Real factor=0.5*volume;
   
   E *= factor;
