@@ -352,25 +352,17 @@ void DNS::Spectrum(Array3<Complex>& Sk, ofstream& os, const char *text)
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
       int kx=i-Nxb2;
-      for(unsigned j=0; j < Nyb; j++) {
-	int jp=j-Nyb2;
-	int K2=kx*kx+jp*jp;
+      for(unsigned j=(kx > 0) ? 0 : 1; j < Nyp; j++) {
+	int K2=kx*kx+j*j;
 	int K=(int)(sqrt(K2)+0.5);
-	int ip=i;
-	if(jp < 0) {
-	  if(i > 0) ip=Nxb-i;
-	  if(j > 0) jp=-jp;
-	  else jp=Nyb2;
-	}
-
 	count[K]++;
-	sum[K] += abs2(Sk(s,ip,jp));
+	sum[K] += abs2(Sk(s,i,j));
       }
     }
   }
 		
   for(unsigned K=0; K <= Kmax; K++)
-    if(count[K]) sum[K] *= 0.5/count[K] * 2.0*pi*K;
+    if(count[K]) sum[K] *= 2.0*pi*K/count[K];
 				
   open_output(os,dirsep,text,0);
   out_curve(os,t,"t");
@@ -391,7 +383,7 @@ void DNS::Output(int it)
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
-	Ss(s,i,j)=u(i,j,s);
+	Ss(s,i,j)=u(i,j,s)*Nxybinv;
       }
     }
     rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
