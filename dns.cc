@@ -11,6 +11,8 @@
 
 using namespace Array;
 
+const double ProblemVersion=1.0;
+
 const char *method="DNS";
 const char *integrator="RK5";
 const char *geometry="Cartesian";
@@ -267,6 +269,34 @@ void DNS::InitialConditions()
   ForceMask.Allocate(nspecies,Nxb,2*Nyp);
   FMk.Dimension(nspecies,Nxb,Nyp,(Complex *) ForceMask());
   
+  cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
+       << ")." << endl;
+  
+  cvector temp;
+  cvector mask;
+  
+  Allocate1(kxmask,nfft);
+  Allocate1(kymask,nfft);
+  Allocate1(k2mask,nfft);
+  Allocate1(k2invmask,nfft);
+  Allocate1(temp,nmode);
+  Allocate1(mask,nfft);
+  
+  k2maskij.Dimension(Nxb,Nyp,k2mask);
+  
+  for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].X();
+  Geometry->Pad(mask,temp);
+  for(unsigned int i=0; i < nfft; i++) kxmask[i]=mask[i].im;
+  
+  for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].Y();
+  Geometry->Pad(mask,temp);
+  for(unsigned int i=0; i < nfft; i++) {
+    kymask[i]=mask[i].im;
+    Real k2=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
+    k2mask[i]=k2;
+    k2invmask[i]=k2 ? 1.0/k2 : 0.0;
+  }
+  
   u.Set(Y[VEL]);
 		
   // Initialize arrays with zero boundary conditions
@@ -388,33 +418,6 @@ void DNS::Initialize()
 
 void Basis<Cartesian>::Initialize()
 {
-  cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
-       << ")." << endl;
-  
-  cvector temp;
-  cvector mask;
-  
-  Allocate1(kxmask,nfft);
-  Allocate1(kymask,nfft);
-  Allocate1(k2mask,nfft);
-  Allocate1(k2invmask,nfft);
-  Allocate1(temp,nmode);
-  Allocate1(mask,nfft);
-  
-  k2maskij.Dimension(Nxb,Nyp,k2mask);
-  
-  for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].X();
-  Geometry->Pad(mask,temp);
-  for(unsigned int i=0; i < nfft; i++) kxmask[i]=mask[i].im;
-  
-  for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].Y();
-  Geometry->Pad(mask,temp);
-  for(unsigned int i=0; i < nfft; i++) {
-    kymask[i]=mask[i].im;
-    Real k2=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
-    k2mask[i]=k2;
-    k2invmask[i]=k2 ? 1.0/k2 : 0.0;
-  }
 }
 
 void DNS::Spectrum(vector& S, const vector& y)
