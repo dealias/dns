@@ -425,7 +425,6 @@ void DNS::Spectrum(vector& S, const vector& y)
     rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
   }
   
-  
   for(unsigned int K=0; K < nshells; K++) {
     count[K]=0;
     S[K]=0.0;
