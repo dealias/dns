@@ -604,9 +604,12 @@ void DNS::Stochastic(const vector2&Y, double, double)
   Real factor=sqrt(2.0*dt)*rand_gauss();
   
   for(unsigned s=0; s < nspecies; s++) {
+    array2<Real> ForceMasks=ForceMask[s];
     for(unsigned i=0; i < Nxb; i++) {
+      array2<Real> ui=u[i];
+      rvector ForceMasksi=ForceMasks[i];
       for(unsigned j=0; j < Nyb; j++) {
-	u(i,j,s) += factor*ForceMask(s,i,j);
+	ui(j,s) += factor*ForceMasksi(j);
       }
     }
   }
