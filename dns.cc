@@ -1,5 +1,8 @@
 #include "options.h"
 #include "kernel.h"
+#include "Cartesian.h"
+#include "fft.h"
+#include "Array.h"
 
 using namespace Array;
 
@@ -22,8 +25,12 @@ Real nonlinear=1.0;
 int movie=0;
 int pressure=1;
 
+// Global Variables;
+extern unsigned Nxb,Nxb1,Nyb,Nyp;
+
 // Local Variables;
-	
+Real *k2invfactor;
+
 class DNSVocabulary : public VocabularyBase {
 public:
   const char *Name() {return "Direct Numerical Simulation of Turbulence";}
@@ -33,14 +40,12 @@ public:
    
 class DNS : public ProblemBase {
   Real hxinv, hyinv;
-  int Nx, Ny;
-  int Nxi, Nyi;
+  unsigned Nx, Ny;
+  unsigned Nxi, Nyi;
+  unsigned nmode;
 	
-  Array2<U> u,S,f;
-  
-  Array2<Real> Div;	// Divergence of H
-  Array2<Real> P;	// Pressure
-  
+  Array3<Real> u,S,f;
+  int nspecies;
 public:
   DNS() {}
   virtual ~DNS() {}
@@ -50,6 +55,9 @@ public:
   void OutFrame(int it);
   void Source(Var *, Var *, double);
   void ComputeInvariants(Real& E);
+  
+  Real X(int i) {return xmin+(xmax-xmin)*i/Nxb;}
+  Real Y(int i) {return ymin+(ymax-ymin)*i/Nyb;}
 };
 
 class C_PC : public PC {
@@ -88,57 +96,51 @@ DNSVocabulary::DNSVocabulary()
 DNSVocabulary DNS_Vocabulary;
 
 ofstream ft,fevt,fu;
-oxstream fvx,fvy,fP;
+oxstream fvx,fvy;
 
 void DNS::InitialConditions()
 {
-  Array2<Real> f0;
+  nspecies=2;
+  set_fft_parameters();
+  
+  cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
 	
-  if(convrate || verbose > 2) defectstat=1;
-  if(convrate && niterations == 1) {niterations=100;}
-	
-  rmin=rmax=0.0;
-  imin=imax=0;
-	
-  cout << endl << "GEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
-	
-  ny=Nx*Ny;
+  nmode=Nxb*Nyb;
+  ny=nmode*nspecies;
   y=new Var[ny];
 	
-  u.Dimension(Nx,Ny);
-  S.Dimension(Nx,Ny);
+  u.Dimension(Nxb,Nyb,nspecies);
+  S.Dimension(Nxb,Nyb,nspecies);
   u.Set(y);
 		
-  f.Allocate(Nx,Ny);
-  
-  P.Allocate(NxP,NyP,oxP,oyP);
-  Div.Allocate(NxP,NyP,oxP,oyP);
-	
   // Initialize arrays with zero boundary conditions
   u=0.0;
 	
-  for(int i=0; i < Nx; i++) {
-    for(int j=0; j < Ny; j++) {
+  for(unsigned i=0; i < Nx; i++) {
+    for(unsigned j=0; j < Ny; j++) {
       // Incompressible initial velocity
       Real x=X(i);
       Real y=Y(j);
       Real vx=-cos(twopi*x)*sin(twopi*y);
       Real vy=sin(twopi*x)*cos(twopi*y);
-      u(i,j)=U(ICvx*vx,ICvy*vy);
+      u(i,j,0)=ICvx*vx;
+      u(i,j,1)=ICvy*vy;
     }
   }
 	
-  BoundaryConditions(u);
+  k2invfactor=new Real[nmode];
+  for(unsigned int k=0; k < nmode; k++) {
+//    k2invfactor[k]=1.0/K2();
+  }
   
-  P=0.0;
-
+//  BoundaryConditions(u);
+  
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
   if(output) open_output(fu,dirsep,"u");
   if(movie) {
     open_output(fvx,dirsep,"vx");
     open_output(fvy,dirsep,"vy");
-    open_output(fP,dirsep,"P");
   }
 }
 
@@ -149,7 +151,7 @@ void DNS::Initialize()
 
 void DNS::Output(int it)
 {
-  Real E,Z,I,C;
+  Real E;
 	
   ComputeInvariants(E);
   fevt << t << "\t" << E << endl;
@@ -163,88 +165,53 @@ void DNS::OutFrame(int it)
 {
   fvx << Nxi << Nyi << 1;
   fvy << Nxi << Nyi << 1;
-  fP << Nxi << Nyi << 1;
   
   for(int j=Nyi; j >= 1; j--) {
     for(int i=1; i <= Nxi; i++) {
-      fvx << (float) u(i,j).vx;
-      fvy << (float) u(i,j).vy;
-      fP << (float) P(i,j);
+      fvx << (float) u(i,j,0);
+      fvy << (float) u(i,j,1);
     }
   }
   
   fvx.flush();
   fvy.flush();
-  fP.flush();
 }	
 
 void DNS::ComputeInvariants(Real& E)
 {
   E=0.0;
 	
-  Real coeffx=0.5*hxinv;
-  Real coeffy=0.5*hyinv;
   for(int i=1; i <= Nxi; i++) {
-    Array1(U) um=u[i-1], ui=u[i], up=u[i+1];
+    Array2<Real> um=u[i-1], ui=u[i], up=u[i+1];
     for(int j=1; j <= Nyi; j++) {
-      E += ui[j].vx*ui[j].vx+ui[j].vy*ui[j].vy;
+      for(int s=0; s < nspecies; s++) {
+	E += ui(j,s)*ui(j,s);
+      }
     }
   }
   
-  Real factor=0.5*volume;
+  Real factor=0.5;
   E *= factor;
-}
-
-void PS::FFT(Var *v, Var *u, unsigned int stride)
-{
-  CartesianPad(v,u,work,stride);
-  crfft3d(v,log2Nxb,log2Nyb,log2Nzb,1);
-}
-
-void PS::XDerivative(Var *buffer, Var *u, Cartesian *K, unsigned int stride)
-{
-//#pragma ivdep	
-  for(unsigned int i=0; i < nmode; i++) {
-    Real k=K[i].X();
-    int istride=i*stride;
-    buffer[i].re=-u[istride].im*k;
-    buffer[i].im=u[istride].re*k;
-  }
-}
-
-void PS::YDerivative(Var *buffer, Var *u, Cartesian *K, unsigned int stride)
-{
-//#pragma ivdep	
-  for(unsigned int i=0; i < nmode; i++) {
-    Real k=K[i].Y();
-    int istride=i*stride;
-    buffer[i].re=-u[istride].im*k;
-    buffer[i].im=u[istride].re*k;
-  }
 }
 
 void DNS::Source(Var *source, Var *Y, double)
 {
-  unsigned int i;
   unsigned nspecies=2;
 	
-  Array3<Real> u(Nxb,Nyb,nspecies);
-  Array3<Real> S(Nxb,Nyb,nspecies);
-  
   u.Set(Y);
   S.Set(source);
   
   Array2<Real> us(Nxb,2*Nyp);
-  Array2<Complex> uk(Nxb,Nyp,us);
+  Array2<Complex> uk(Nxb,Nyp,(Complex *) us());
   
   Array2<Real> dudx(Nxb,2*Nyp);
-  Array2<Complex> ikxu(Nxb,Nyp,dudx);
+  Array2<Complex> ikxu(Nxb,Nyp,(Complex *) dudx());
   
   Array2<Real> dudy(Nxb,2*Nyp);
-  Array2<Complex> ikyu(Nxb,Nyp,dudy);
+  Array2<Complex> ikyu(Nxb,Nyp,(Complex *) dudy());
   
   Array3<Real> Ss(nspecies,Nxb,2*Nyp);
-  Array3<Complex> Sk(nspecies,Nxb,Nyp,Ss);
+  Array3<Complex> Sk(nspecies,Nxb,Nyp,(Complex *) Ss());
   
   for(unsigned s=0; s < nspecies; s++) {
     
@@ -256,17 +223,17 @@ void DNS::Source(Var *source, Var *Y, double)
   
     rcfft2d(uk,log2Nxb,log2Nyb,-1);
   
-    for(i=0; i < nmode; i++) {
-      dudx[i].re=-uk[i].im*kxmask[i];
-      dudx[i].im=uk[i].re*kxmask[i];
+    for(unsigned i=0; i < nmode; i++) {
+      ikxu(i).re=-uk(i).im*kxmask(i);
+      ikxu(i).im=uk(i).re*kxmask(i);
     }
-    crfft2d(dudx,log2Nxb,log2Nyb,1);
+    crfft2d(ikxu,log2Nxb,log2Nyb,1);
   
-    for(i=0; i < nmode; i++) {
-      dudy[i].re=-uk[i].im*kymask[i];
-      dudy[i].im=uk[i].re*kymask[i];
+    for(unsigned i=0; i < nmode; i++) {
+      ikyu(i).re=-uk(i).im*kymask(i);
+      ikyu(i).im=uk(i).re*kymask(i);
     }
-    crfft2d(dudy,log2Nxb,log2Nyb,1);
+    crfft2d(ikyu,log2Nxb,log2Nyb,1);
   
   
     for(unsigned i=0; i < Nxb; i++) {
@@ -278,13 +245,13 @@ void DNS::Source(Var *source, Var *Y, double)
     
   }
   
-  for(i=0; i < nmode; i++) {
+  for(unsigned i=0; i < nmode; i++) {
     Real kx=CartesianMode[i].X();
     Real ky=CartesianMode[i].Y();
     // Calculate -i*P
-    Complex miP=(kx*Sk[0]+ky*Sk[1])*k2invfactor[i];
-    Sk[0]=(kx*miP-Sk[0])*Nxybinv;
-    Sk[1]=(ky*miP-Sk[1])*Nxybinv;
+    Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invfactor[i];
+    Sk[0]=(kx*miP-Sk[0](i))*Nxybinv;
+    Sk[1]=(ky*miP-Sk[1](i))*Nxybinv;
   }
   
   for(unsigned s=0; s < nspecies; s++) {
