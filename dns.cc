@@ -84,9 +84,9 @@ class DNS : public ProblemBase {
   int iNxb,iNyb;
   unsigned Nxb2, Nyb2; // half of Nxb, Nyb
   
-  unsigned int Nxb,Nxb1,log2Nxb;
-  unsigned int Nyb,Nyp,log2Nyb;
-  unsigned int nfft;
+  unsigned Nxb,Nxb1,log2Nxb;
+  unsigned Nyb,Nyp,log2Nyb;
+  unsigned nfft;
   
   Real Nxybinv;
   
@@ -96,14 +96,15 @@ class DNS : public ProblemBase {
   array2<Real> k2maskij;
   int tcount;
   
+  array1<unsigned>::opt count;
+  
   Real hxinv, hyinv;
   unsigned nmode;
 	
   array3<Real> u,S,f;
   unsigned nspecies;
   
-  unsigned nbshells; // Total number of spectral shells, including buffer
-  unsigned nshells;  // Number of physical spectral shells
+  unsigned nshells;  // Number of spectral shells
   
   array2<Real> us,dudx,dudy;
   array2<Complex> uk,ikxu,ikyu;
@@ -161,8 +162,8 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   
-  VOCAB(P0,0.0,0.0,"");
-  VOCAB(P1,0.0,0.0,"");
+  VOCAB(P0,0.0,0.0,"Pressure at xmin (not yet implemented)");
+  VOCAB(P1,0.0,0.0,"Pressure at xmax (not yet implemented)");
   VOCAB(ICvx,0.0,0.0,"Initial condition multiplier for vx");
   VOCAB(ICvy,0.0,0.0,"Initial condition multiplier for vy");
 
@@ -228,16 +229,13 @@ void DNS::InitialConditions()
   coeffy=0.5*Nyb/(ymax-ymin);
   
   Nxb2=Nxb/2, Nyb2=Nyb/2;
-  unsigned Kbmax=(unsigned) (sqrt(Nxb2*Nxb2+Nyb2*Nyb2)+0.5);
   
   unsigned Nx2=(Nx-1)/2, Ny2=(Ny-1)/2;
   unsigned Kmax=(unsigned) (sqrt(Nx2*Nx2+Ny2*Ny2)+0.5);
-  
-  nbshells=Kbmax+1;
   nshells=Kmax+1;
   
   NY[VEL]=Nxb*Nyb*nspecies;
-  NY[EK]=nbshells;
+  NY[EK]=nshells;
 //  NY[PX]=nparticles*nspecies;
 //  NY[PV]=nparticles*nspecies;
   
@@ -276,16 +274,17 @@ void DNS::InitialConditions()
   Allocate1(k2invmask,nfft);
   Allocate1(temp,nmode);
   Allocate1(mask,nfft);
+  Allocate1(count,nshells);
   
   k2maskij.Dimension(Nxb,Nyp,k2mask);
   
-  for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].X();
+  for(unsigned i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].X();
   Geometry->Pad(mask,temp);
-  for(unsigned int i=0; i < nfft; i++) kxmask[i]=mask[i].im;
+  for(unsigned i=0; i < nfft; i++) kxmask[i]=mask[i].im;
   
-  for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].Y();
+  for(unsigned i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].Y();
   Geometry->Pad(mask,temp);
-  for(unsigned int i=0; i < nfft; i++) {
+  for(unsigned i=0; i < nfft; i++) {
     kymask[i]=mask[i].im;
     Real k2=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
     k2mask[i]=k2;
@@ -372,9 +371,9 @@ void DNS::InitialConditions()
   for(unsigned s=0; s < nspecies; s++) crfft2d(FMk[s],log2Nxb,log2Nyb,1);
   
   
-  for(unsigned int i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
-//  for(unsigned int i=0; i < NY[PX]; i++) Y[PX][i]=0.0;
-//  for(unsigned int i=0; i < NY[PV]; i++) Y[PV][i]=0.0;
+  for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
+//  for(unsigned i=0; i < NY[PX]; i++) Y[PX][i]=0.0;
+//  for(unsigned i=0; i < NY[PV]; i++) Y[PV][i]=0.0;
   
   tcount=0;
   if(restart) {
@@ -426,12 +425,9 @@ void DNS::Spectrum(vector& S, const vector& y)
     rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
   }
   
-  unsigned *count=new unsigned[nbshells];
-		
-  for(unsigned K=0; K < nbshells; K++) {
-    count[K]=0;
-    S[K]=0.0;
-  }
+  
+  count=(unsigned int) 0;
+  S=0.0;
 				
   // Compute instantaneous angular average over circular shell.
 		
@@ -442,7 +438,7 @@ void DNS::Spectrum(vector& S, const vector& y)
       for(unsigned j=(kx > 0) ? 0 : 1; j < Nyp; j++) {
 	if(k2maski[j]) {
 	  int K2=kx*kx+j*j;
-	  int K=(int)(sqrt(K2)+0.5);
+	  unsigned K=(unsigned)(sqrt(K2)+0.5);
 	  count[K]++;
 	  S[K] += abs2(Sk(s,i,j));
 	}
@@ -450,7 +446,7 @@ void DNS::Spectrum(vector& S, const vector& y)
     }
   }
   
-  for(unsigned K=0; K < nbshells; K++) // Could reduce this to nshells
+  for(unsigned K=0; K < nshells; K++)
     if(count[K]) S[K] *= twopi*K/count[K];
 }
 

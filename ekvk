@@ -7,7 +7,6 @@ execute getrun
 execute timeaverage
 
 getekvk $T
-
 set kmax=DIMEN(Ek)-1
 set k=0,kmax
 set k=k if(Ek > 0)
