@@ -57,6 +57,9 @@ static rvector kymask;
 static rvector k2mask, k2invmask;
 static array2<Real> k2maskij;
 static int tcount=0;
+
+Real shellmin2;
+Real shellmax2;
 unsigned int nfft;
 
 enum Field {VEL,EK,PX,PV};
@@ -216,12 +219,12 @@ void DNS::InitialConditions()
 {
   nspecies=2;
   
-  SetFFTparameters();
-	
   Geometry=DNS_Vocabulary.NewGeometry(geometry);
   Geometry->Create(0);
   nmode=Geometry->nMode();
   
+  SetFFTparameters();
+	
   iNxb=Nxb;
   iNyb=Nyb;
   coeffx=0.5*Nxb/(xmax-xmin);
@@ -620,7 +623,7 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
 
 void DNS::Stochastic(const vector2&Y, double, double)
 {
-  u.Set(Y[0]);
+  u.Set(Y[VEL]);
   Real factor=sqrt(2.0*dt)*rand_gauss();
   
   for(unsigned s=0; s < nspecies; s++) {
