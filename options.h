@@ -20,6 +20,10 @@ typedef Real Var;
 inline Real rand_gauss() {return drand_gauss();}
 #endif
 
+#if(NUCOMPLEX)
 typedef Var Nu;
+#else
+typedef Real Nu;
+#endif
 
 #endif
