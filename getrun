@@ -1,0 +1,26 @@
+if($?run==0) {define run test
+	define run ? {run?}}
+
+if($?machine==0) {define machine localhost
+	define machine ? {machine?}}
+
+if($?path ==0) {define path "~/tri/nw"
+	if('$machine' != 'localhost') {define path ? {path?}}}
+define dir "$!machine:$!path/$!run"
+
+define rsync "rsync --rsync-path '~/bin/rsync' -tu"
+
+macro remotecommand 1 {
+	if('$machine' != 'localhost' || '$path' != '~/tri/nw') {!$1}	
+}
+
+macro binfactor 1 {
+	define binfactor $1
+}
+
+if($?noprolog) {define xprolog " --exclude prolog "} else {define xprolog " "}
+
+define exclude "--exclude 'avgy*' --exclude 'vinc*' --exclude restart$!xprolog--exclude yvt --exclude psi --exclude log"
+
+remotecommand "mkdir -p $!run; $!rsync -r $!exclude $!dir/ $!run/"
+

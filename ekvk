@@ -2,20 +2,14 @@ reset
 define row 0
 execute getrun
 #execute "$!run/param"
-define markers 1
+#define markers 1
 
-remotecommand "mkdirhier $!run; $!rsync $!dir/ekvk $!run/"
+execute timeaverage
 
-data "$!run/ekvk"
-#execute prolog
-
-readnext t
-readnext Ek
-
+getekvk $T
 
 set kmax=DIMEN(Ek)-1
-set k=1,min(kmax,59)
-set Ek=Ek[k]
+set k=0,kmax
 set k=k if(Ek > 0)
 set Ek=Ek if(Ek > 0)
 
@@ -27,6 +21,7 @@ macro plotEk	{
 		expand $expand0
 		xlabel "\i k"
 		ylabel "\i E\i(\i k\i)"
+		ylimits 0 3
 
 		lctype 0 red
 		connect (lg(k)) (lg(Ek))
