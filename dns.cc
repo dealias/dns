@@ -3,8 +3,8 @@
 #include "Geometry.h"
 #include "Basis.h"
 #include "Cartesian.h"
-#include "fft.h"
 #include "Array.h"
+#include "fftw++.h"
 #include "Linearity.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
@@ -118,6 +118,8 @@ class DNS : public ProblemBase {
   array3<Complex> FMk;
   
   Real coeffx,coeffy;
+  crfft2d *cr;
+  rcfft2d *rc;
   
 public:
   DNS();
@@ -209,6 +211,10 @@ void DNS::SetFFTparameters()
     
   Nxybinv=1.0/(Nxb*Nyb);
   nfft=Nxb1*Nyp;
+  
+//  array2<Complex> Sk0=Sk[0];
+  cr=new crfft2d(Sk[0]);
+  rc=new rcfft2d(Sk[0]);
   
   cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
 }
@@ -320,7 +326,7 @@ void DNS::InitialConditions()
 	Ss(s,i,j)=u(i,j,s);
       }	
     }
-    rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
+    rc->fft(Sk[s]);
   }
 
   for(unsigned i=0; i < nfft; i++) {
@@ -338,8 +344,7 @@ void DNS::InitialConditions()
   
   for(unsigned s=0; s < nspecies; s++) {
     array2<Real> Sss=Ss[s];
-    array2<Complex> Sks=Sk[s];
-    crfft2d(Sks,log2Nxb,log2Nyb,1);
+    cr->fft(Sk[s]);
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
 	u(i,j,s)=Sss(i,j);
@@ -368,7 +373,7 @@ void DNS::InitialConditions()
     }
   }
   
-  for(unsigned s=0; s < nspecies; s++) crfft2d(FMk[s],log2Nxb,log2Nyb,1);
+  for(unsigned s=0; s < nspecies; s++) cr->fft(FMk[s]);
   
   
   for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
@@ -421,7 +426,7 @@ void DNS::Spectrum(vector& S, const vector& y)
 	Ss(s,i,j)=u(i,j,s)*Nxybinv;
       }
     }
-    rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
+    rc->fft(Sk[s]);
   }
   
   for(unsigned K=0; K < nshells; K++) {
@@ -542,20 +547,20 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
       }
     }
   
-    rcfft2d(uk,log2Nxb,log2Nyb,-1);
+    rc->fft(uk);
   
     for(unsigned i=0; i < nfft; i++) {
       ikxu(i).re=-uk(i).im*kxmask[i];
       ikxu(i).im=uk(i).re*kxmask[i];
     }
     
-    crfft2d(ikxu,log2Nxb,log2Nyb,1);
+    cr->fft(ikxu);
   
     for(unsigned i=0; i < nfft; i++) {
       ikyu(i).re=-uk(i).im*kymask[i];
       ikyu(i).im=uk(i).re*kymask[i];
     }
-    crfft2d(ikyu,log2Nxb,log2Nyb,1);
+    cr->fft(ikyu);
   
     for(unsigned i=0; i < Nxb; i++) {
       array2<Real> ui=u[i];
@@ -567,7 +572,7 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
     }
     
     array2<Complex> Sks=Sk[s];
-    rcfft2d(Sks,log2Nxb,log2Nyb,-1);
+    rc->fft(Sks);
     
     for(unsigned i=0; i < nfft; i++) {
       if(k2mask[i]) {
@@ -589,7 +594,7 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   
   for(unsigned s=0; s < nspecies; s++) {
     array2<Real> Sss=Ss[s];
-    crfft2d(Sk[s],log2Nxb,log2Nyb,1);
+    cr->fft(Sk[s]);
     for(unsigned i=0; i < Nxb; i++) {
       array2<Real> Si=S[i];
       rvector Sssi=Sss[i];

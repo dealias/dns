@@ -1,6 +1,5 @@
 TRI = $(HOME)/tri
 ARCH = unix
-FFT = fft
 POLL = poll
 
 include $(TRI)/config/Common
@@ -8,8 +7,8 @@ include $(TRI)/config/Common
 vpath %.cc $(HOME)/nw
 INCL = -I. -I$(TRI) -I$(HOME)/nw -I-
 
-FILES = dns Cartesian rfft $(FFT) $(CORE) $(UTILS)
-LIB += $(LIBFFT)
+FILES = dns Cartesian $(CORE) $(UTILS)
+LIB += -lfftw3
 
 include $(TRI)/config/Rules
 
