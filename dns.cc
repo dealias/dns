@@ -278,7 +278,7 @@ void DNS::InitialConditions()
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
-//    if(k2invmask[i] && k2mask[i] <= 42.0*42.0) {
+//    if(k2invmask[i] && k2mask[i] <= krmax*krmax) {
     if(k2invmask[i]) {
       // Calculate -i*P
 //      Sk[0](i)=-I*ky*Nxb*Nyb*sqrt(k2invmask[i])/twopi;
