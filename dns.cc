@@ -166,8 +166,8 @@ void DNS::OutFrame(int it)
   fvx << Nxi << Nyi << 1;
   fvy << Nxi << Nyi << 1;
   
-  for(int j=Nyi; j >= 1; j--) {
-    for(int i=1; i <= Nxi; i++) {
+  for(unsigned j=Nyi; j >= 1; j--) {
+    for(unsigned i=1; i <= Nxi; i++) {
       fvx << (float) u(i,j,0);
       fvy << (float) u(i,j,1);
     }
@@ -181,9 +181,9 @@ void DNS::ComputeInvariants(Real& E)
 {
   E=0.0;
 	
-  for(int i=1; i <= Nxi; i++) {
+  for(unsigned i=1; i <= Nxi; i++) {
     Array2<Real> um=u[i-1], ui=u[i], up=u[i+1];
-    for(int j=1; j <= Nyi; j++) {
+    for(unsigned j=1; j <= Nyi; j++) {
       for(int s=0; s < nspecies; s++) {
 	E += ui(j,s)*ui(j,s);
       }
