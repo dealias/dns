@@ -1,0 +1,56 @@
+macro scanforT 3 {
+	do _i=0,$nt-1 {
+		if(t[$_i] >= $1 || $_i == $nt-1) {
+			define $2 (t[$_i])
+			remotecommand "$!rsync $!dir/ekvk/t$!_i $!run/ekvk/"
+			xopen "$!run/ekvk/t$!_i"
+			xreadd time
+			xreadd $3
+			xclose
+			return
+		}
+	}
+}
+
+macro getekvk 1 {
+	remotecommand "mkdir -p $!run/ekvk"
+	scanforT $1 time0 int0
+	if($time0 >= $tmax) {
+			  define noprompt delete 
+			  user abort T=$2 is too large for data range
+    }
+	scanforT $tmax tmax int1
+	define factor (1.0/($tmax-$time0))
+	set Ek=(int1-int0)*$factor
+}
+
+data "$!run/t"
+read t 1
+define nt (DIMEN(t))
+define j ($nt-1)
+if($?tstop !=0 ) {
+	define tlim 0
+	define tmax 0
+	define j 0
+	while {$j < $nt && t[$j] <= $tstop} {define j ($j+1)}
+	define j ($j-1)
+	define value (t[$j])
+	echo tstop=$value
+}	
+
+if($j < 1) {define T -1
+	    return}
+
+define tmax (t[$j])
+define tlim (t[$j-1]*0.9999999)
+
+if($?binfactor==0) {define binfactor 1}
+
+if($?T == 0) {define T -1}
+if($T == -1) {define T (0.5*$tlim)}
+
+if($?noprompt==0) {
+    if($T > $tlim) {define T $tlim}
+	define T ? {T? (<= $!!tlim)}
+}
+
