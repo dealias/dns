@@ -426,8 +426,10 @@ void DNS::Spectrum(vector& S, const vector& y)
   }
   
   
-  count=(unsigned int) 0;
-  S=0.0;
+  for(unsigned int K=0; K < nshells; K++) {
+    count[K]=0;
+    S[K]=0.0;
+  }
 				
   // Compute instantaneous angular average over circular shell.
 		
