@@ -52,9 +52,9 @@ Real shellmin2;
 Real shellmax2;
 
 // Local Variables;
-Real *k2invfactor;
-Real *kxmask;
-Real *kymask;
+Array1<Real> k2invfactor;
+Array1<Real> kxmask;
+Array1<Real> kymask;
 
 class DNSVocabulary : public VocabularyBase {
 public:
@@ -187,6 +187,8 @@ void DNS::InitialConditions()
     }
   }
 	
+//  cout << u << endl;
+  
   us.Allocate(Nxb,2*Nyp);
   uk.Dimension(Nxb,Nyp,(Complex *) us());
   
@@ -221,14 +223,21 @@ void Basis<Cartesian>::Initialize()
   cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
        << ")." << endl;
   
-  k2invfactor=new Real[nmode];
-  kxmask=new Real[nmode];
-  kymask=new Real[nmode];
-  for(unsigned int k=0; k < nmode; k++) {
-    k2invfactor[k]=1.0/CartesianMode[k].K2();
-    kxmask[k]=CartesianMode[k].X();
-    kymask[k]=CartesianMode[k].Y();
-  }
+  cout << nmode << endl;
+  
+  Array1<Real> temp(nmode);
+  
+  k2invfactor.Allocate(nfft);
+  kxmask.Allocate(nfft);
+  kymask.Allocate(nfft);
+  
+  for(unsigned int k=0; k < nmode; k++) temp[k]=CartesianMode[k].X();
+  CartesianPad(kxmask,temp);
+  for(unsigned int k=0; k < nmode; k++) temp[k]=CartesianMode[k].Y();
+  CartesianPad(kymask,temp);
+  for(unsigned int k=0; k < nmode; k++) temp[k]=1.0/CartesianMode[k].K2();
+  CartesianPad(k2invfactor,temp);
+
 }
 
 void DNS::Output(int it)
@@ -293,17 +302,16 @@ void DNS::Source(Var *source, Var *Y, double)
       }
     }
   
-    cout << us << endl;
-    
     rcfft2d(uk,log2Nxb,log2Nyb,-1);
   
-    for(unsigned i=0; i < nmode; i++) {
+    for(unsigned i=0; i < nfft; i++) {
       ikxu(i).re=-uk(i).im*kxmask[i];
       ikxu(i).im=uk(i).re*kxmask[i];
     }
+    
     crfft2d(ikxu,log2Nxb,log2Nyb,1);
   
-    for(unsigned i=0; i < nmode; i++) {
+    for(unsigned i=0; i < nfft; i++) {
       ikyu(i).re=-uk(i).im*kymask[i];
       ikyu(i).im=uk(i).re*kymask[i];
     }
@@ -314,17 +322,24 @@ void DNS::Source(Var *source, Var *Y, double)
 	Ss(s,i,j)=u(i,j,0)*dudx(i,j)+u(i,j,1)*dudy(i,j);
       }
     }
+    
     rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
     
   }
   
-  for(unsigned i=0; i < nmode; i++) {
-    Real kx=CartesianMode[i].X();
-    Real ky=CartesianMode[i].Y();
+  Real Nxybinv2=Nxybinv*Nxybinv;
+  
+  for(unsigned i=0; i < nfft; i++) {
+    Real kx=kxmask[i];
+    Real ky=kymask[i];
+    if(k2invfactor[i] == 0.0) Sk[0](i)=Sk[1](i)=0.0;
+    else {
     // Calculate -i*P
-    Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invfactor[i];
-    Sk[0](i)=(kx*miP-Sk[0](i))*Nxybinv;
-    Sk[1](i)=(ky*miP-Sk[1](i))*Nxybinv;
+      Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invfactor[i];
+
+      Sk[0](i)=(kx*miP-Sk[0](i))*Nxybinv2;
+      Sk[1](i)=(ky*miP-Sk[1](i))*Nxybinv2;
+    }
   }
   
   for(unsigned s=0; s < nspecies; s++) {
