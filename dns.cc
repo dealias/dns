@@ -8,6 +8,7 @@
 #include "Linearity.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
+#include "NWave.h"
 
 using namespace Array;
 
@@ -149,7 +150,10 @@ DNSVocabulary::DNSVocabulary()
 //  InitialConditionTable=new Table<InitialConditionBase>("initial condition");
   
   BASIS(Cartesian);
+  
   METHOD(DNS);
+  
+  INTEGRATOR(C_PC);
 }
 
 DNSVocabulary DNS_Vocabulary;
