@@ -293,9 +293,26 @@ void DNS::Initialize()
 
 Real DNS::ForceSpatial(unsigned s, unsigned i, unsigned j)
 {
-  Real x=X(i);
-  Real y=Y(j);
-  return force*(sin(twopi*x)*cos(twopi*y)+sin(2.0*twopi*x)*cos(2.0*twopi*y));
+  Real x=twopi*X(i);
+  Real y=twopi*Y(j);
+  
+  Real k1=4.0;
+  Real k2=8.0;
+  Real f=0.0;
+  
+#if 0  
+  for(int kx=-k2; kx <= k2; kx++) {
+    for(int ky=-k2; ky <= k2; ky++) {
+      Real K2=kx*kx+ky*ky;
+      if(K2 >= k1*k1 && K2 <= k2*k2) {
+	f += cos(kx*x+ky*y);
+      }
+    }
+  }
+  return f*force;
+#endif  
+//  return force*(sin(twopi*x)*cos(twopi*y)+sin(2.0*twopi*x)*cos(2.0*twopi*y));
+  return force*(2*i == Nyb);
 }
 
 void Basis<Cartesian>::Initialize()
@@ -450,13 +467,13 @@ void DNS::Source(Var *source, Var *y, double t)
 void DNS::Stochastic(Var *y, double, double dt)
 {
   u.Set(y);
-  Real rand_gauss();
+  Real xi=rand_gauss();
   Real sqrt2dt=sqrt(2.0*dt);
   
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
-	u(i,j,s) += sqrt2dt*ForceMask(s,i,j);
+	u(i,j,s) += sqrt2dt*ForceMask(s,i,j)*xi;
       }
     }
   }
