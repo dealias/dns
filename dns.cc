@@ -334,16 +334,20 @@ void Basis<Cartesian>::Initialize()
 void DNS::Spectrum(Array3<Complex>& Sk, ofstream& os, const char *text)
 {
   unsigned Nxb2=Nxb/2, Nyb2=Nyb/2;
-  unsigned Kmax=(unsigned) (sqrt(Nxb2*Nxb2+Nyb2*Nyb2)+0.5);
-  Real *sum=new Real[Kmax+1];
-  unsigned *count=new unsigned[Kmax+1];
+  unsigned Kbmax=(unsigned) (sqrt(Nxb2*Nxb2+Nyb2*Nyb2)+0.5);
+  
+  unsigned Nx2=(Nx-1)/2, Ny2=(Ny-1)/2;
+  unsigned Kmax=(unsigned) (sqrt(Nx2*Nx2+Ny2*Ny2)+0.5);
+  
+  Real *sum=new Real[Kbmax+1];
+  unsigned *count=new unsigned[Kbmax+1];
 		
-  for(unsigned K=0; K <= Kmax; K++) {
+  for(unsigned K=0; K <= Kbmax; K++) {
     count[K]=0;
     sum[K]=0.0;
   }
 				
-  // Compute angular average over circular shell.
+  // Compute instantaneous angular average over circular shell.
 		
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
@@ -371,8 +375,6 @@ void DNS::Spectrum(Array3<Complex>& Sk, ofstream& os, const char *text)
   open_output(os,dirsep,text,0);
   out_curve(os,t,"t");
   out_curve(os,sum,text,Kmax+1);
-  out_curve(os,Nxb,"Nxb");
-  out_curve(os,Nyb,"Nyb");
   os.close();
 }
 
