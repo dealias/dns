@@ -239,7 +239,7 @@ void DNS::InitialConditions()
 //  NY[PX]=nparticles*nspecies;
 //  NY[PV]=nparticles*nspecies;
   
-  Allocate();
+  Allocator();
   
 //  position.Dimension(nparticles,nspecies);
 //  velocity.Dimension(nparticles,nspecies);
@@ -268,13 +268,13 @@ void DNS::InitialConditions()
   cvector temp;
   cvector mask;
   
-  Allocate1(kxmask,nfft);
-  Allocate1(kymask,nfft);
-  Allocate1(k2mask,nfft);
-  Allocate1(k2invmask,nfft);
-  Allocate1(temp,nmode);
-  Allocate1(mask,nfft);
-  Allocate1(count,nshells);
+  Allocate(kxmask,nfft);
+  Allocate(kymask,nfft);
+  Allocate(k2mask,nfft);
+  Allocate(k2invmask,nfft);
+  Allocate(temp,nmode);
+  Allocate(mask,nfft);
+  Allocate(count,nshells);
   
   k2maskij.Dimension(Nxb,Nyp,k2mask);
   
