@@ -56,6 +56,8 @@ Real shellmax2;
 
 // Local Variables;
 
+typedef array1<Complex>::opt cvector;
+
 static rvector kxmask;
 static rvector kymask;
 static rvector k2mask, k2invmask;
@@ -366,13 +368,15 @@ void Basis<Cartesian>::Initialize()
   cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
        << ")." << endl;
   
-  vector temp(nmode);
-  vector mask(nfft);
+  cvector temp;
+  cvector mask;
   
   Allocate1(kxmask,nfft);
   Allocate1(kymask,nfft);
   Allocate1(k2mask,nfft);
   Allocate1(k2invmask,nfft);
+  Allocate1(temp,nmode);
+  Allocate1(mask,nfft);
   
   k2maskij.Dimension(Nxb,Nyp,k2mask);
   
@@ -518,7 +522,7 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
       array2<Real> ui=u[i];
       rvector usi=us[i];
       for(unsigned j=0; j < Nyb; j++) {
-	usi(j)=ui(j,s);
+	usi[j]=ui(j,s);
       }
     }
   
@@ -542,11 +546,11 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
       rvector dudxi=dudx[i];
       rvector dudyi=dudy[i];
       for(unsigned j=0; j < Nyb; j++) {
-	Ss(s,i,j)=-(ui(j,0)*dudxi(j)+ui(j,1)*dudyi(j))*Nxybinv;
+	Ss(s,i,j)=-(ui(j,0)*dudxi[j]+ui(j,1)*dudyi[j])*Nxybinv;
       }
     }
     
-    vector Sks=Sk[s];
+    array2<Complex> Sks=Sk[s];
     rcfft2d(Sks,log2Nxb,log2Nyb,-1);
     
     Real k1=kforce-0.5*deltaf;
@@ -565,15 +569,15 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
     }
   }
   
-  vector Sk0=Sk[0];
-  vector Sk1=Sk[1];
+  array2<Complex> Sk0=Sk[0];
+  array2<Complex> Sk1=Sk[1];
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
     // Calculate -i*P
     Complex miP=(kx*Sk0(i)+ky*Sk1(i))*k2invmask[i];
-    Sk[0](i) -= kx*miP;
-    Sk[1](i) -= ky*miP;
+    Sk0(i) -= kx*miP;
+    Sk1(i) -= ky*miP;
   }
   
   for(unsigned s=0; s < nspecies; s++) {
@@ -583,7 +587,7 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
       array2<Real> Si=S[i];
       rvector Sssi=Sss[i];
       for(unsigned j=0; j < Nyb; j++) {
-	Si(j,s)=Sssi(j);
+	Si(j,s)=Sssi[j];
       }
     }
   }
