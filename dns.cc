@@ -28,7 +28,7 @@ Real krmax;
 int reality=1; // Reality condition flag 
 
 // Vocabulary
-Real nu=1.0; // Laplacian diffusion
+Real nu=1.0;
 Real rho=1.0;
 Real P0=1.0;
 Real P1=1.0;
@@ -38,10 +38,8 @@ Real xmin=0.0;
 Real xmax=1.0;
 Real ymin=0.0;
 Real ymax=1.0;
-Real nonlinear=1.0;
 
 int movie=0;
-int pressure=1;
 
 int dumpbins=0;
 
@@ -52,9 +50,9 @@ Real shellmin2;
 Real shellmax2;
 
 // Local Variables;
-Array1<Real> k2invmask;
 Array1<Real> kxmask;
 Array1<Real> kymask;
+Array1<Real> k2mask, k2invmask;
 
 class DNSVocabulary : public VocabularyBase {
 public:
@@ -120,29 +118,24 @@ DNSVocabulary::DNSVocabulary()
 {
   Vocabulary=this;
 
-  VOCAB(rho,0.0,REAL_MAX,"");
-  VOCAB(nu,0.0,REAL_MAX,"");
+  VOCAB(rho,0.0,REAL_MAX,"density");
+  VOCAB(nu,0.0,REAL_MAX,"Kinematic viscosity");
     
-  VOCAB(k0,0.0,STD_MAX,"");
-  
   VOCAB(P0,-REAL_MAX,REAL_MAX,"");
   VOCAB(P1,-REAL_MAX,REAL_MAX,"");
-  VOCAB(ICvx,-REAL_MAX,REAL_MAX,"");
-  VOCAB(ICvy,-REAL_MAX,REAL_MAX,"");
+  VOCAB(ICvx,-REAL_MAX,REAL_MAX,"Initial condition multiplier for vx");
+  VOCAB(ICvy,-REAL_MAX,REAL_MAX,"Initial condition multiplier for vy");
 
-  VOCAB(nonlinear,0.0,1.0,"");
-	
-  VOCAB(Nx,1,INT_MAX,"");
-  VOCAB(Ny,1,INT_MAX,"");
+  VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
+  VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   
-  VOCAB(xmin,-REAL_MAX,REAL_MAX,"");
-  VOCAB(xmax,-REAL_MAX,REAL_MAX,"");
+  VOCAB(xmin,-REAL_MAX,REAL_MAX,"Minimum x value");
+  VOCAB(xmax,-REAL_MAX,REAL_MAX,"Maximum x value");
 	
-  VOCAB(ymin,-REAL_MAX,REAL_MAX,"");
-  VOCAB(ymax,-REAL_MAX,REAL_MAX,"");
+  VOCAB(ymin,-REAL_MAX,REAL_MAX,"Minimum y value");
+  VOCAB(ymax,-REAL_MAX,REAL_MAX,"Maximum y value");
 
-  VOCAB(movie,0,1,"");
-  VOCAB(pressure,0,1,"");
+  VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
   
   GeometryTable=new Table<GeometryBase>("geometry");
 //  LinearityTable=new Table<LinearityBase>("linearity");
@@ -196,12 +189,15 @@ void DNS::InitialConditions()
 	
   for(unsigned i=0; i < Nxb; i++) {
     for(unsigned j=0; j < Nyb; j++) {
-//      Real x=X(i);
-//      Real y=Y(j);
-//      Real vx=-cos(twopi*x)*sin(twopi*y);
-//      Real vy=sin(twopi*x)*cos(twopi*y);
+#if 0     
+      Real x=X(i);
+      Real y=Y(j);
+      Real vx=-cos(twopi*x)*sin(twopi*y);
+      Real vy=sin(twopi*x)*cos(twopi*y);
+#else      
       Real vx=drand();
       Real vy=drand();
+#endif
       u(i,j,0)=ICvx*vx;
       u(i,j,1)=ICvy*vy;
     }
@@ -221,12 +217,13 @@ void DNS::InitialConditions()
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
-    if(k2invmask[i] == 0.0) Sk[0](i)=Sk[1](i)=0.0;
-    else {
-    // Calculate -i*P
+    if(k2invmask[i]) {
+      // Calculate -i*P
       Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
-      Sk[0](i)=(kx*miP-Sk[0](i))*Nxybinv2;
-      Sk[1](i)=(ky*miP-Sk[1](i))*Nxybinv2;
+      Sk[0](i)=(Sk[0](i)-kx*miP)*Nxybinv2;
+      Sk[1](i)=(Sk[1](i)-ky*miP)*Nxybinv2;
+    } else {
+      Sk[0](i)=Sk[1](i)=0.0;
     }
   }
   
@@ -265,21 +262,22 @@ void Basis<Cartesian>::Initialize()
   Array1<Complex> temp(nmode);
   Array1<Complex> mask(nfft);
   
-  k2invmask.Allocate(nfft);
   kxmask.Allocate(nfft);
   kymask.Allocate(nfft);
+  k2mask.Allocate(nfft);
+  k2invmask.Allocate(nfft);
   
-  for(unsigned int k=0; k < nmode; k++) temp[k]=I*CartesianMode[k].X();
+  for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].X();
   CartesianPad(mask,temp);
-  for(unsigned int k=0; k < nfft; k++) kxmask[k]=mask[k].im;
+  for(unsigned int i=0; i < nfft; i++) kxmask[i]=mask[i].im;
   
-  for(unsigned int k=0; k < nmode; k++) temp[k]=I*CartesianMode[k].Y();
+  for(unsigned int i=0; i < nmode; i++) temp[i]=I*CartesianMode[i].Y();
   CartesianPad(mask,temp);
-  for(unsigned int k=0; k < nfft; k++) kymask[k]=mask[k].im;
-  
-  for(unsigned int k=0; k < nfft; k++) {
-    Real k2=kxmask[k]*kxmask[k]+kymask[k]*kymask[k];
-    k2invmask[k]=k2 ? 1.0/k2 : 0.0;
+  for(unsigned int i=0; i < nfft; i++) {
+    kymask[i]=mask[i].im;
+    Real k2=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
+    k2mask[i]=k2;
+    k2invmask[i]=k2 ? 1.0/k2 : 0.0;
   }
 }
 
@@ -366,18 +364,21 @@ void DNS::Source(Var *source, Var *Y, double)
     
     rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
     
+    for(unsigned i=0; i < nfft; i++) {
+      if(k2mask[i])
+	Sk[s](i)=-(Sk[s](i)*Nxybinv+nu*k2mask[i]*uk(i))*Nxybinv;
+      else
+	Sk[s](i)=0.0;
+    }
   }
   
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
-    if(k2invmask[i] == 0.0) Sk[0](i)=Sk[1](i)=0.0;
-    else {
     // Calculate -i*P
-      Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
-      Sk[0](i)=(kx*miP-Sk[0](i))*Nxybinv2;
-      Sk[1](i)=(ky*miP-Sk[1](i))*Nxybinv2;
-    }
+    Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
+    Sk[0](i) -= kx*miP;
+    Sk[1](i) -= ky*miP;
   }
   
   for(unsigned s=0; s < nspecies; s++) {
