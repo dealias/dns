@@ -235,6 +235,7 @@ void DNS::Output(int it)
 {
   Real E;
 	
+  u.Set(y);
   ComputeInvariants(E);
   fevt << t << "\t" << E << endl;
 
@@ -306,7 +307,6 @@ void DNS::Source(Var *source, Var *Y, double)
     }
     crfft2d(ikyu,log2Nxb,log2Nyb,1);
   
-  
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
 	Ss(s,i,j)=u(i,j,0)*dudx(i,j)+u(i,j,1)*dudy(i,j);
@@ -321,17 +321,18 @@ void DNS::Source(Var *source, Var *Y, double)
     Real ky=CartesianMode[i].Y();
     // Calculate -i*P
     Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invfactor[i];
-    Sk[0]=(kx*miP-Sk[0](i))*Nxybinv;
-    Sk[1]=(ky*miP-Sk[1](i))*Nxybinv;
+    Sk[0](i)=(kx*miP-Sk[0](i))*Nxybinv;
+    Sk[1](i)=(ky*miP-Sk[1](i))*Nxybinv;
   }
   
   for(unsigned s=0; s < nspecies; s++) {
-    crfft2d(Sk[s],log2Nxb,log2Nyb,1);
+    Array2<Real> Sss=Ss[s];
+    Array2<Complex> Sks=Sk[s];
+    crfft2d(Sks,log2Nxb,log2Nyb,1);
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
-	S(i,j,s)=Ss(s,i,j);
+	S(i,j,s)=Sss(i,j);
       }
     }
   }
-
 }
