@@ -49,7 +49,6 @@ int dumpbins=0;
 extern unsigned Nxb,Nxb1,Nyb,Nyp;
 Real shellmin2;
 Real shellmax2;
-Real k2max=0.0;
 
 // Local Variables;
 Array1<Real> kxmask;
@@ -279,7 +278,6 @@ void Basis<Cartesian>::Initialize()
     kymask[i]=mask[i].im;
     Real k2=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
     k2mask[i]=k2;
-    if(k2 > k2max) k2max=k2;
     k2invmask[i]=k2 ? 1.0/k2 : 0.0;
   }
 }
@@ -395,7 +393,7 @@ void DNS::Source(Var *source, Var *y, double t)
       if(k2mask[i])
 	Sk[s](i)=(Sk[s](i)-nu*k2mask[i]*uk(i))*Nxybinv;
       else
-	Sk[s](i)=-nu*k2max*uk(i)*Nxybinv;
+	Sk[s](i)=0.0;
     }
   }
   
