@@ -84,9 +84,10 @@ public:
 class DNS : public ProblemBase {
   Real hxinv, hyinv;
   unsigned nmode;
+  Real Nxybinv2;
 	
   Array3<Real> u,S,f;
-  int nspecies;
+  unsigned nspecies;
   
   Array2<Real> us,dudx,dudy;
   Array2<Complex> uk,ikxu,ikyu;
@@ -113,85 +114,6 @@ DNS *DNSProblem;
 DNS::DNS()
 {
   DNSProblem=this;
-}
-
-class CorrectC_PC {
- public:
-  void Correct(Real y0, Real y1, Real& y,
-	       Real source0, Real source,
-	       double dt, double halfdt, int& invertible);
-  void Correct(const Complex& y0, const Complex& y1, Complex& y,
-	       const Complex& source0, const Complex& source,
-	       double dt, double halfdt, int& invertible);
-};
-
-class C_PC : public PC, public CorrectC_PC {
- protected:
-  int skipmoments;
-  int invertible;
- public:
-  void Allocate(int n) {
-    ny=n; yi=NULL; source=new(n) (Var);
-    y=y1=new Var [n]; source0=new(n) (Var); new_y0=1;
-    pgrow=0.5/order; pshrink=0.5/(order-1);
-    skipmoments=0;
-  }
-  const char *Name() {return "Conservative Predictor-Corrector";}
-	
-  void Source(Var *src, Var *Y, double t) {
-    DNSProblem->Source(src,Y,t);
-  }
-	
-  void Predictor(double t, double dt, unsigned start,
-		 unsigned stop) {
-    StandardPredictor(t,dt,start,stop);
-  }
-	
-  int Corrector(double, int, unsigned, unsigned);
-};
-
-inline void CorrectC_PC::Correct(Real y0, Real y1, Real& y,
-				 Real source0, Real source,
-				 double dt, double halfdt, int& invertible)
-{
-  Real discr=y0*y0+dt*(y0*source0+y1*source);
-  if(discr >= 0.0) y=sgn(y1)*sqrt(discr);
-  else {
-    if(hybrid) y=y0+halfdt*(source0+source);
-    else invertible=0;
-  }
-}
-
-inline void CorrectC_PC::Correct(const Complex& y0, const Complex& y1,
-				 Complex& y, const Complex& source0,
-				 const Complex& source, double dt,
-				 double halfdt, int& invertible)
-{
-  Correct(y0.re,y1.re,y.re,source0.re,source.re,dt,halfdt,invertible);
-  if(!invertible) return;
-  Correct(y0.im,y1.im,y.im,source0.im,source.im,dt,halfdt,invertible);
-}
-
-int C_PC::Corrector(double dt, int dynamic, unsigned int start,
-		    unsigned int stop)
-{
-  unsigned int j;
-  invertible=1;
-	
-  if(dynamic) {
-    for(j=start; j < stop; j++) {
-      Var pred=y1[j];
-      Correct(y0[j],y1[j],y[j],source0[j],source[j],dt,halfdt,
-	      invertible);
-      if(!invertible) return 0;
-      if(!errmask || errmask[j]) CalcError(y0[j],y[j],pred,y[j]);
-    }
-  } else for(j=start; j < stop; j++) {
-    Correct(y0[j],y1[j],y[j],source0[j],source[j],dt,halfdt,
-	    invertible);
-    if(!invertible) return 0;
-  }		
-  return 1;
 }
 
 DNSVocabulary::DNSVocabulary()
@@ -230,8 +152,6 @@ DNSVocabulary::DNSVocabulary()
   BASIS(Cartesian);
   
   METHOD(DNS);
-  
-  INTEGRATOR(C_PC);
 }
 
 DNSVocabulary DNS_Vocabulary;
@@ -252,27 +172,10 @@ void DNS::InitialConditions()
   
   ny=Nxb*Nyb*nspecies;
   y=new Var[ny];
-	
+  Nxybinv2=Nxybinv*Nxybinv;	
+  
   u.Dimension(Nxb,Nyb,nspecies);
   S.Dimension(Nxb,Nyb,nspecies);
-  u.Set(y);
-		
-  // Initialize arrays with zero boundary conditions
-  u=0.0;
-	
-  for(unsigned i=0; i < Nxb; i++) {
-    for(unsigned j=0; j < Nyb; j++) {
-      // Incompressible initial velocity
-      Real x=X(i);
-      Real y=Y(j);
-      Real vx=-cos(twopi*x)*sin(twopi*y);
-      Real vy=sin(twopi*x)*cos(twopi*y);
-      u(i,j,0)=ICvx*vx;
-      u(i,j,1)=ICvy*vy;
-    }
-  }
-	
-//  cout << u << endl;
   
   us.Allocate(Nxb,2*Nyp);
   uk.Dimension(Nxb,Nyp,(Complex *) us());
@@ -286,8 +189,59 @@ void DNS::InitialConditions()
   Ss.Allocate(nspecies,Nxb,2*Nyp);
   Sk.Dimension(nspecies,Nxb,Nyp,(Complex *) Ss());
   
+  u.Set(y);
+		
+  // Initialize arrays with zero boundary conditions
+  u=0.0;
+	
+  for(unsigned i=0; i < Nxb; i++) {
+    for(unsigned j=0; j < Nyb; j++) {
+//      Real x=X(i);
+//      Real y=Y(j);
+//      Real vx=-cos(twopi*x)*sin(twopi*y);
+//      Real vy=sin(twopi*x)*cos(twopi*y);
+      Real vx=drand();
+      Real vy=drand();
+      u(i,j,0)=ICvx*vx;
+      u(i,j,1)=ICvy*vy;
+    }
+  }
+	
+  // Enforce incompressible initial velocity
   
-//  BoundaryConditions(u);
+  for(unsigned s=0; s < nspecies; s++) {
+    for(unsigned i=0; i < Nxb; i++) {
+      for(unsigned j=0; j < Nyb; j++) {
+	Ss(s,i,j)=u(i,j,s);
+      }	
+    }
+    rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
+  }
+
+  for(unsigned i=0; i < nfft; i++) {
+    Real kx=kxmask[i];
+    Real ky=kymask[i];
+    if(k2invmask[i] == 0.0) Sk[0](i)=Sk[1](i)=0.0;
+    else {
+    // Calculate -i*P
+      Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
+      Sk[0](i)=(kx*miP-Sk[0](i))*Nxybinv2;
+      Sk[1](i)=(ky*miP-Sk[1](i))*Nxybinv2;
+    }
+  }
+  
+  for(unsigned s=0; s < nspecies; s++) {
+    Array2<Real> Sss=Ss[s];
+    Array2<Complex> Sks=Sk[s];
+    crfft2d(Sks,log2Nxb,log2Nyb,1);
+    for(unsigned i=0; i < Nxb; i++) {
+      for(unsigned j=0; j < Nyb; j++) {
+	u(i,j,s)=Sss(i,j);
+      }
+    }
+  }
+  
+//  cout << u << endl;
   
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
@@ -325,7 +279,7 @@ void Basis<Cartesian>::Initialize()
   
   for(unsigned int k=0; k < nfft; k++) {
     Real k2=kxmask[k]*kxmask[k]+kymask[k]*kymask[k];
-    k2invmask[k]=k2 ? 1.0/sqrt(k2) : 0.0;
+    k2invmask[k]=k2 ? 1.0/k2 : 0.0;
   }
 }
 
@@ -366,7 +320,7 @@ void DNS::ComputeInvariants(Real& E)
     Array2<Real> ui=u[i];
     for(unsigned j=0; j < Nyb; j++) {
     Array1(Real) uij=ui[j];
-      for(int s=0; s < nspecies; s++) {
+      for(unsigned s=0; s < nspecies; s++) {
 	E += uij[s]*uij[s];
       }
     }
@@ -378,8 +332,6 @@ void DNS::ComputeInvariants(Real& E)
 
 void DNS::Source(Var *source, Var *Y, double)
 {
-  unsigned nspecies=2;
-	
   u.Set(Y);
   S.Set(source);
   
@@ -416,8 +368,6 @@ void DNS::Source(Var *source, Var *Y, double)
     
   }
   
-  Real Nxybinv2=Nxybinv*Nxybinv;
-  
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
@@ -425,7 +375,6 @@ void DNS::Source(Var *source, Var *Y, double)
     else {
     // Calculate -i*P
       Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
-
       Sk[0](i)=(kx*miP-Sk[0](i))*Nxybinv2;
       Sk[1](i)=(ky*miP-Sk[1](i))*Nxybinv2;
     }
@@ -441,5 +390,4 @@ void DNS::Source(Var *source, Var *Y, double)
       }
     }
   }
-  
 }
