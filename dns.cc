@@ -29,7 +29,7 @@ Real krmax;
 int reality=1; // Reality condition flag 
 
 // Vocabulary
-Real nu=1.0; // Laplacian diffusion
+//Real nu=1.0; // Laplacian diffusion
 Real rho=1.0;
 Real P0=1.0;
 Real P1=1.0;
@@ -109,19 +109,12 @@ public:
   Real Y(int i) {return ymin+(ymax-ymin)*i/Nyb;}
 };
 
-class C_PC : public PC {
-public:
-  const char *Name() {return "Conservative Predictor-Corrector";}
-  void Predictor(double, double, unsigned int, unsigned int);
-  int Corrector(double, int, unsigned int, unsigned int);
-};
-
 DNSVocabulary::DNSVocabulary()
 {
   Vocabulary=this;
 
   VOCAB(rho,0.0,REAL_MAX,"");
-  VOCAB(nu,0.0,REAL_MAX,"");
+//  VOCAB(nu,0.0,REAL_MAX,"");
     
   VOCAB(k0,0.0,STD_MAX,"");
   
