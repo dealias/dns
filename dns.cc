@@ -93,8 +93,8 @@ class DNS : public ProblemBase {
   Array3<Real> Ss;
   Array3<Complex> Sk;
   
-  Array3<Real> FForce;
-  Array3<Complex> FFk;
+  Array3<Real> ForceMask;
+  Array3<Complex> FMk;
   
 public:
   DNS();
@@ -105,7 +105,7 @@ public:
   void OutFrame(int it);
   void Source(Var *, Var *, double);
   void ComputeInvariants(Real& E);
-  Real Force(unsigned s, unsigned i, unsigned j);
+  Real ForceSpatial(unsigned s, unsigned i, unsigned j);
   
   Real X(int i) {return xmin+(xmax-xmin)*i/Nxb;}
   Real Y(int i) {return ymin+(ymax-ymin)*i/Nyb;}
@@ -186,8 +186,8 @@ void DNS::InitialConditions()
   Ss.Allocate(nspecies,Nxb,2*Nyp);
   Sk.Dimension(nspecies,Nxb,Nyp,(Complex *) Ss());
   
-  FForce.Allocate(nspecies,Nxb,2*Nyp);
-  FFk.Dimension(nspecies,Nxb,Nyp,(Complex *) FForce());
+  ForceMask.Allocate(nspecies,Nxb,2*Nyp);
+  FMk.Dimension(nspecies,Nxb,Nyp,(Complex *) ForceMask());
   
   u.Set(y);
 		
@@ -210,7 +210,7 @@ void DNS::InitialConditions()
     }
   }
 	
-  // Enforce incompressible initial velocity
+  // Filter high-components from velocity and enforce solenoidal condition
   
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
@@ -245,20 +245,32 @@ void DNS::InitialConditions()
     }
   }
   
-  // Filter high-components from forcing
-  
-  Array1<Complex> temp(nmode);
+  // Filter high-components from forcing and enforce solenoidal condition
   
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
-	FForce(s,i,j)=Force(s,i,j);
+	ForceMask(s,i,j)=ForceSpatial(s,i,j);
       }	
     }
-    rcfft2d(FFk[s],log2Nxb,log2Nyb,-1);
-    CartesianUnPad(temp,FFk[s]);
-    CartesianPad(FFk[s],temp);
-    crfft2d(FFk[s],log2Nxb,log2Nyb,1);
+    rcfft2d(FMk[s],log2Nxb,log2Nyb,-1);
+  }
+    
+  for(unsigned i=0; i < nfft; i++) {
+    Real kx=kxmask[i];
+    Real ky=kymask[i];
+    if(k2invmask[i]) {
+      // Calculate -i*P
+      Complex miP=(kx*FMk[0](i)+ky*FMk[1](i))*k2invmask[i];
+      FMk[0](i)=(FMk[0](i)-kx*miP)*Nxybinv;
+      FMk[1](i)=(FMk[1](i)-ky*miP)*Nxybinv;
+    } else {
+      FMk[0](i)=FMk[1](i)=0.0;
+    }
+  }
+  
+  for(unsigned s=0; s < nspecies; s++) {
+    crfft2d(FMk[s],log2Nxb,log2Nyb,1);
   }
   
 //  cout << u << endl;
@@ -278,7 +290,7 @@ void DNS::Initialize()
   fevt << "#   t\t\t E\t\t\t Z\t\t\t I\t\t\t C" << endl;
 }
 
-Real DNS::Force(unsigned s, unsigned i, unsigned j)
+Real DNS::ForceSpatial(unsigned s, unsigned i, unsigned j)
 {
   Real x=X(i);
   Real y=Y(j);
@@ -400,18 +412,7 @@ void DNS::Source(Var *source, Var *y, double t)
   
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
-	Real f;
-	switch(s) {
-	case 0: 
-	  f=cos(10.0*t)*FForce(0,i,j);
-	  break;
-	case 1:
-	  f=sin(10.0*t)*FForce(1,i,j);
-	  break;
-	default:
-	  msg(ERROR,"Invalid species value: %d",s);
-	}
-	Ss(s,i,j)=f-(u(i,j,0)*dudx(i,j)+u(i,j,1)*dudy(i,j))*Nxybinv;
+	Ss(s,i,j)=-(u(i,j,0)*dudx(i,j)+u(i,j,1)*dudy(i,j))*Nxybinv;
       }
     }
     
@@ -440,6 +441,21 @@ void DNS::Source(Var *source, Var *y, double t)
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
 	S(i,j,s)=Sss(i,j);
+      }
+    }
+  }
+}
+
+void DNS::Stochastic(Var *y, double, double dt)
+{
+  u.Set(y);
+  Real rand_gauss();
+  Real sqrt2dt=sqrt(2.0*dt);
+  
+  for(unsigned s=0; s < nspecies; s++) {
+    for(unsigned i=0; i < Nxb; i++) {
+      for(unsigned j=0; j < Nyb; j++) {
+	u(i,j,s) += sqrt2dt*ForceMask(s,i,j);
       }
     }
   }
