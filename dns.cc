@@ -106,6 +106,7 @@ public:
   void Source(Var *, Var *, double);
   void ComputeInvariants(Real& E);
   Real ForceSpatial(unsigned s, unsigned i, unsigned j);
+  void Stochastic(Var *y, double, double dt);
   
   Real X(int i) {return xmin+(xmax-xmin)*i/Nxb;}
   Real Y(int i) {return ymin+(ymax-ymin)*i/Nyb;}
