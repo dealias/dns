@@ -8,7 +8,6 @@
 #include "Linearity.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
-#include "NWave.h"
 
 using namespace Array;
 
@@ -26,13 +25,10 @@ InitialConditionBase *InitialCondition;
 
 Real krmin;
 Real krmax;
-
-int truncation=0;
-int vinc=0;
-//int reality=1; // Reality condition flag 
+int reality=1; // Reality condition flag 
 
 // Vocabulary
-//Real nu=1.0; // Laplacian diffusion
+Real nu=1.0; // Laplacian diffusion
 Real rho=1.0;
 Real P0=1.0;
 Real P1=1.0;
@@ -50,7 +46,7 @@ int pressure=1;
 int dumpbins=0;
 
 // Global Variables;
-unsigned int Nmode;
+//unsigned int Nmode;
 extern unsigned Nxb,Nxb1,Nyb,Nyp;
 Real shellmin2;
 Real shellmax2;
@@ -99,7 +95,7 @@ class DNS : public ProblemBase {
   Array3<Complex> Sk;
   
 public:
-  DNS() {}
+  DNS();
   virtual ~DNS() {}
   void InitialConditions();
   void Initialize();
@@ -112,12 +108,98 @@ public:
   Real Y(int i) {return ymin+(ymax-ymin)*i/Nyb;}
 };
 
+DNS *DNSProblem;
+
+DNS::DNS()
+{
+  DNSProblem=this;
+}
+
+class CorrectC_PC {
+ public:
+  void Correct(Real y0, Real y1, Real& y,
+	       Real source0, Real source,
+	       double dt, double halfdt, int& invertible);
+  void Correct(const Complex& y0, const Complex& y1, Complex& y,
+	       const Complex& source0, const Complex& source,
+	       double dt, double halfdt, int& invertible);
+};
+
+class C_PC : public PC, public CorrectC_PC {
+ protected:
+  int skipmoments;
+  int invertible;
+ public:
+  void Allocate(int n) {
+    ny=n; yi=NULL; source=new(n) (Var);
+    y=y1=new Var [n]; source0=new(n) (Var); new_y0=1;
+    pgrow=0.5/order; pshrink=0.5/(order-1);
+    skipmoments=0;
+  }
+  const char *Name() {return "Conservative Predictor-Corrector";}
+	
+  void Source(Var *src, Var *Y, double t) {
+    DNSProblem->Source(src,Y,t);
+  }
+	
+  void Predictor(double t, double dt, unsigned start,
+		 unsigned stop) {
+    StandardPredictor(t,dt,start,stop);
+  }
+	
+  int Corrector(double, int, unsigned, unsigned);
+};
+
+inline void CorrectC_PC::Correct(Real y0, Real y1, Real& y,
+				 Real source0, Real source,
+				 double dt, double halfdt, int& invertible)
+{
+  Real discr=y0*y0+dt*(y0*source0+y1*source);
+  if(discr >= 0.0) y=sgn(y1)*sqrt(discr);
+  else {
+    if(hybrid) y=y0+halfdt*(source0+source);
+    else invertible=0;
+  }
+}
+
+inline void CorrectC_PC::Correct(const Complex& y0, const Complex& y1,
+				 Complex& y, const Complex& source0,
+				 const Complex& source, double dt,
+				 double halfdt, int& invertible)
+{
+  Correct(y0.re,y1.re,y.re,source0.re,source.re,dt,halfdt,invertible);
+  if(!invertible) return;
+  Correct(y0.im,y1.im,y.im,source0.im,source.im,dt,halfdt,invertible);
+}
+
+int C_PC::Corrector(double dt, int dynamic, unsigned int start,
+		    unsigned int stop)
+{
+  unsigned int j;
+  invertible=1;
+	
+  if(dynamic) {
+    for(j=start; j < stop; j++) {
+      Var pred=y1[j];
+      Correct(y0[j],y1[j],y[j],source0[j],source[j],dt,halfdt,
+	      invertible);
+      if(!invertible) return 0;
+      if(!errmask || errmask[j]) CalcError(y0[j],y[j],pred,y[j]);
+    }
+  } else for(j=start; j < stop; j++) {
+    Correct(y0[j],y1[j],y[j],source0[j],source[j],dt,halfdt,
+	    invertible);
+    if(!invertible) return 0;
+  }		
+  return 1;
+}
+
 DNSVocabulary::DNSVocabulary()
 {
   Vocabulary=this;
 
   VOCAB(rho,0.0,REAL_MAX,"");
-//  VOCAB(nu,0.0,REAL_MAX,"");
+  VOCAB(nu,0.0,REAL_MAX,"");
     
   VOCAB(k0,0.0,STD_MAX,"");
   
@@ -165,7 +247,7 @@ void DNS::InitialConditions()
   cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
 	
   Geometry=DNS_Vocabulary.NewGeometry(geometry);
-  Nmode=Geometry->Create(0);
+  Geometry->Create(0);
   nmode=Geometry->nMode();
   
   ny=Nxb*Nyb*nspecies;
@@ -292,42 +374,6 @@ void DNS::ComputeInvariants(Real& E)
   
   Real factor=0.5;
   E *= factor;
-}
-
-void NWave::Stochastic(Var *, double, double)
-{
-}
-
-void NWave::Setup()
-{
-}
-
-void SR::ComputeVinc(Var *source, Var *psi)
-{
-}
-
-void SR::SourceFactor(Var *source)
-{
-}
-  
-void NWave::ComputeForcing(Var *Y, double t)
-{
-}
-
-void NWave::ComputeInvariants(Var *Y, Real& E, Real& Z, Real& P, int)
-{
-}
-
-void NWave::InitialConditions()
-{
-}
-
-void NWave::Initialize()
-{
-}
-
-void NWave::Output(int)
-{
 }
 
 void DNS::Source(Var *source, Var *Y, double)
