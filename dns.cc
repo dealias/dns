@@ -111,6 +111,7 @@ public:
   void Source(Var *, Var *, double);
   void ComputeInvariants(Real& E, Real& Z);
   void Stochastic(Var *y, double, double dt);
+  void Spectrum(Array3<Complex>& Sk, ofstream& s, const char *text);
   
   Real X(int i) {return xmin+i*(xmax-xmin)/Nxb;}
   Real Y(int i) {return ymin+i*(ymax-ymin)/Nyb;}
@@ -167,7 +168,7 @@ DNSVocabulary::DNSVocabulary()
 
 DNSVocabulary DNS_Vocabulary;
 
-ofstream ft,fevt,fu;
+ofstream ft,fevt,fekvk,fu;
 oxstream fvx,fvy,fw;
 
 void DNS::InitialConditions()
@@ -288,6 +289,7 @@ void DNS::InitialConditions()
   
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
+  
   if(output) open_output(fu,dirsep,"u");
   if(movie) {
     open_output(fvx,dirsep,"vx");
@@ -329,6 +331,51 @@ void Basis<Cartesian>::Initialize()
   }
 }
 
+void DNS::Spectrum(Array3<Complex>& Sk, ofstream& os, const char *text)
+{
+  unsigned Nxb2=Nxb/2, Nyb2=Nyb/2;
+  unsigned Kmax=(unsigned) (sqrt(Nxb2*Nxb2+Nyb2*Nyb2)+0.5);
+  Real *sum=new Real[Kmax+1];
+  unsigned *count=new unsigned[Kmax+1];
+		
+  for(unsigned K=0; K <= Kmax; K++) {
+    count[K]=0;
+    sum[K]=0.0;
+  }
+				
+  // Compute angular average over circular shell.
+		
+  for(unsigned s=0; s < nspecies; s++) {
+    for(unsigned i=0; i < Nxb; i++) {
+      int kx=i-Nxb2;
+      for(unsigned j=0; j < Nyb; j++) {
+	int jp=j-Nyb2;
+	int K2=kx*kx+jp*jp;
+	int K=(int)(sqrt(K2)+0.5);
+	int ip=i;
+	if(jp < 0) {
+	  if(i > 0) ip=Nxb-i;
+	  if(j > 0) jp=-jp;
+	  else jp=Nyb2;
+	}
+
+	count[K]++;
+	sum[K] += abs2(Sk(s,ip,jp));
+      }
+    }
+  }
+		
+  for(unsigned K=0; K <= Kmax; K++)
+    if(count[K]) sum[K] *= 0.5/count[K] * 2.0*pi*K;
+				
+  open_output(os,dirsep,text,0);
+  out_curve(os,t,"t");
+  out_curve(os,sum,text,Kmax+1);
+  out_curve(os,Nxb,"Nxb");
+  out_curve(os,Nyb,"Nyb");
+  os.close();
+}
+
 void DNS::Output(int it)
 {
   Real E,Z;
@@ -339,6 +386,17 @@ void DNS::Output(int it)
 
   if(movie) OutFrame(it);
 	
+  for(unsigned s=0; s < nspecies; s++) {
+    for(unsigned i=0; i < Nxb; i++) {
+      for(unsigned j=0; j < Nyb; j++) {
+	Ss(s,i,j)=u(i,j,s);
+      }
+    }
+    rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
+  }
+  
+  Spectrum(Sk,fekvk,"ekvk");
+    
   ft << t << endl;
 }
 
