@@ -121,7 +121,7 @@ public:
   virtual ~DNS() {}
   void InitialConditions();
   void Initialize();
-  void Output(double t, int it);
+  void Output(int it);
   void FinalOutput();
   void OutFrame(int it);
   void Source(const vector2& Src, const vector2& Y, double t);
@@ -432,7 +432,7 @@ void DNS::Spectrum(vector& S, const vector& y)
     if(count[K]) S[K] *= twopi*K/count[K]*twopi*twopi;
 }
 
-void DNS::Output(double t, int it)
+void DNS::Output(int it)
 {
   Real E,Z;
 	
