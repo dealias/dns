@@ -93,6 +93,9 @@ class DNS : public ProblemBase {
   Array3<Real> Ss;
   Array3<Complex> Sk;
   
+  Array3<Real> FForce;
+  Array3<Complex> FFk;
+  
 public:
   DNS();
   virtual ~DNS() {}
@@ -102,6 +105,7 @@ public:
   void OutFrame(int it);
   void Source(Var *, Var *, double);
   void ComputeInvariants(Real& E);
+  Real Force(unsigned s, unsigned i, unsigned j);
   
   Real X(int i) {return xmin+(xmax-xmin)*i/Nxb;}
   Real Y(int i) {return ymin+(ymax-ymin)*i/Nyb;}
@@ -182,6 +186,9 @@ void DNS::InitialConditions()
   Ss.Allocate(nspecies,Nxb,2*Nyp);
   Sk.Dimension(nspecies,Nxb,Nyp,(Complex *) Ss());
   
+  FForce.Allocate(nspecies,Nxb,2*Nyp);
+  FFk.Dimension(nspecies,Nxb,Nyp,(Complex *) FForce());
+  
   u.Set(y);
 		
   // Initialize arrays with zero boundary conditions
@@ -238,6 +245,22 @@ void DNS::InitialConditions()
     }
   }
   
+  // Filter high-components from forcing
+  
+  Array1<Complex> temp(nmode);
+  
+  for(unsigned s=0; s < nspecies; s++) {
+    for(unsigned i=0; i < Nxb; i++) {
+      for(unsigned j=0; j < Nyb; j++) {
+	FForce(s,i,j)=Force(s,i,j);
+      }	
+    }
+    rcfft2d(FFk[s],log2Nxb,log2Nyb,-1);
+    CartesianUnPad(temp,FFk[s]);
+    CartesianPad(FFk[s],temp);
+    crfft2d(FFk[s],log2Nxb,log2Nyb,1);
+  }
+  
 //  cout << u << endl;
   
   open_output(ft,dirsep,"t");
@@ -253,6 +276,13 @@ void DNS::InitialConditions()
 void DNS::Initialize()
 {
   fevt << "#   t\t\t E\t\t\t Z\t\t\t I\t\t\t C" << endl;
+}
+
+Real DNS::Force(unsigned s, unsigned i, unsigned j)
+{
+  Real x=X(i);
+  Real y=Y(j);
+  return force*(sin(twopi*x)*cos(twopi*y)+sin(2.0*twopi*x)*cos(2.0*twopi*y));
 }
 
 void Basis<Cartesian>::Initialize()
@@ -369,16 +399,14 @@ void DNS::Source(Var *source, Var *y, double t)
     crfft2d(ikyu,log2Nxb,log2Nyb,1);
   
     for(unsigned i=0; i < Nxb; i++) {
-      Real x=X(i);
       for(unsigned j=0; j < Nyb; j++) {
-	Real y=Y(j);
 	Real f;
 	switch(s) {
 	case 0: 
-	  f=force*u(i,j,0);
+	  f=cos(10.0*t)*FForce(0,i,j);
 	  break;
 	case 1:
-	  f=force*u(i,j,1);
+	  f=sin(10.0*t)*FForce(1,i,j);
 	  break;
 	default:
 	  msg(ERROR,"Invalid species value: %d",s);
