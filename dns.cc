@@ -38,6 +38,7 @@ Real xmin=0.0;
 Real xmax=1.0;
 Real ymin=0.0;
 Real ymax=1.0;
+Real force=1.0;
 
 int movie=0;
 
@@ -48,6 +49,7 @@ int dumpbins=0;
 extern unsigned Nxb,Nxb1,Nyb,Nyp;
 Real shellmin2;
 Real shellmax2;
+Real k2max=0.0;
 
 // Local Variables;
 Array1<Real> kxmask;
@@ -120,6 +122,7 @@ DNSVocabulary::DNSVocabulary()
 
   VOCAB(rho,0.0,REAL_MAX,"density");
   VOCAB(nu,0.0,REAL_MAX,"Kinematic viscosity");
+  VOCAB(force,0.0,REAL_MAX,"force coefficient");
     
   VOCAB(P0,-REAL_MAX,REAL_MAX,"");
   VOCAB(P1,-REAL_MAX,REAL_MAX,"");
@@ -277,6 +280,7 @@ void Basis<Cartesian>::Initialize()
     kymask[i]=mask[i].im;
     Real k2=kxmask[i]*kxmask[i]+kymask[i]*kymask[i];
     k2mask[i]=k2;
+    if(k2 > k2max) k2max=k2;
     k2invmask[i]=k2 ? 1.0/k2 : 0.0;
   }
 }
@@ -328,7 +332,7 @@ void DNS::ComputeInvariants(Real& E)
   E *= factor;
 }
 
-void DNS::Source(Var *source, Var *Y, double)
+void DNS::Source(Var *source, Var *Y, double t)
 {
   u.Set(Y);
   S.Set(source);
@@ -368,7 +372,7 @@ void DNS::Source(Var *source, Var *Y, double)
       if(k2mask[i])
 	Sk[s](i)=-(Sk[s](i)*Nxybinv+nu*k2mask[i]*uk(i))*Nxybinv;
       else
-	Sk[s](i)=0.0;
+	Sk[s](i)=-nu*k2max*uk(i)*Nxybinv;
     }
   }
   
@@ -388,6 +392,14 @@ void DNS::Source(Var *source, Var *Y, double)
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
 	S(i,j,s)=Sss(i,j);
+      }
+    }
+  
+    for(unsigned i=0; i < Nxb; i++) {
+      Real x=X(i);
+      for(unsigned j=0; j < Nyb; j++) {
+	Real y=X(j);
+	S(i,j,s) += force*x*y*sin(t);
       }
     }
   }
