@@ -484,9 +484,9 @@ void DNS::Output(int it)
 
 void DNS::OutFrame(int)
 {
-  fvx << Nxb << Nyb << 1;
-  fvy << Nxb << Nyb << 1;
-  fw << Nxb << Nyb << 1;  
+  fvx << 1 << Nyb << Nxb;
+  fvy << 1 << Nyb << Nxb;
+  fw << 1 << Nyb << Nxb;  
   
   for(int j=iNyb-1; j >= 0; j--) {
     for(int i=0; i < iNxb; i++) {
