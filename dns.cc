@@ -468,7 +468,7 @@ void DNS::Output(int it)
   buf << "ekvk" << dirsep << "t" << tcount;
   open_output(fekvk,dirsep,buf.str().c_str(),0);
   out_curve(fekvk,t,"t");
-  Var *y1=Y[1];
+  Var *y1=Y[EK];
   out_curve(fekvk,y1,"ekvk",nshells);
   fekvk.close();
   if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
