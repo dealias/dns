@@ -1,0 +1,39 @@
+reset
+define row 0
+execute getrun
+#execute "$!run/param"
+define markers 1
+
+remotecommand "mkdirhier $!run; $!rsync $!dir/ekvk $!run/"
+
+data "$!run/ekvk"
+#execute prolog
+
+readnext t
+readnext Ek
+
+
+set kmax=DIMEN(Ek)-1
+set k=1,min(kmax,59)
+set Ek=Ek[k]
+set k=k if(Ek > 0)
+set Ek=Ek if(Ek > 0)
+
+macro plotEk	{
+		autologlog k Ek
+#		ticksize -1 0 -10 100
+		ticksize -1 0 -10 0
+		box
+		expand $expand0
+		xlabel "\i k"
+		ylabel "\i E\i(\i k\i)"
+
+		lctype 0 red
+		connect (lg(k)) (lg(Ek))
+		}
+
+plotEk
+
+ctitle green "Saturated Energy Spectrum"
+
+id
