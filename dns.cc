@@ -25,7 +25,7 @@ InitialConditionBase *InitialCondition;
 
 Real krmin;
 Real krmax;
-unsigned int reality=1; // Reality condition flag 
+int reality=1; // Reality condition flag 
 
 // Vocabulary
 Real nu=1.0; // Laplacian diffusion
