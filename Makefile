@@ -8,7 +8,7 @@ include $(TRI)/config/Common
 vpath %.cc $(TRI)/nw
 INCL = -I. -I$(TRI) -I$(TRI)/nw -I-
 
-TRIAD = dns $(CORE) $(UTILS)
+TRIAD = dns Cartesian rfft $(FFT) $(CORE) $(UTILS)
 
 DEPEND = $(TRIAD)
 

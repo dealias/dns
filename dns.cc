@@ -1,13 +1,31 @@
 #include "options.h"
 #include "kernel.h"
+#include "Geometry.h"
+#include "Basis.h"
 #include "Cartesian.h"
 #include "fft.h"
 #include "Array.h"
+#include "Linearity.h"
+#include "Forcing.h"
+#include "InitialCondition.h"
 
 using namespace Array;
 
 const char *method="DNS";
 const char *integrator="RK5";
+const char *geometry="Cartesian";
+const char *linearity="BandLimited";
+const char *forcing="WhiteNoiseBanded";
+const char *ic="Equilibrium";
+
+GeometryBase *Geometry;
+LinearityBase *Linearity;
+ForcingBase *Forcing;
+InitialConditionBase *InitialCondition;
+
+Real krmin;
+Real krmax;
+unsigned int reality=1; // Reality condition flag 
 
 // Vocabulary
 Real nu=1.0; // Laplacian diffusion
@@ -25,27 +43,57 @@ Real nonlinear=1.0;
 int movie=0;
 int pressure=1;
 
+int dumpbins=0;
+
 // Global Variables;
+unsigned int Nmode;
 extern unsigned Nxb,Nxb1,Nyb,Nyp;
+Real shellmin2;
+Real shellmax2;
 
 // Local Variables;
 Real *k2invfactor;
+Real *kxmask;
+Real *kymask;
 
 class DNSVocabulary : public VocabularyBase {
 public:
   const char *Name() {return "Direct Numerical Simulation of Turbulence";}
   const char *Abbrev() {return "DNS";}
   DNSVocabulary();
+  
+  Table<LinearityBase> *LinearityTable;
+  Table<GeometryBase> *GeometryTable;
+  Table<ForcingBase> *ForcingTable;
+  Table<InitialConditionBase> *InitialConditionTable;
+  
+  GeometryBase *NewGeometry(const char *& key) {
+    return GeometryTable->Locate(key);
+  }
+  LinearityBase *NewLinearity(const char *& key) {
+    return LinearityTable->Locate(key);
+  }
+  ForcingBase *NewForcing(const char *& key) {
+    return ForcingTable->Locate(key);
+  }
+  InitialConditionBase *NewInitialCondition(const char *& key) {
+    return InitialConditionTable->Locate(key);
+  }
 };
    
 class DNS : public ProblemBase {
   Real hxinv, hyinv;
-  unsigned Nx, Ny;
-  unsigned Nxi, Nyi;
   unsigned nmode;
 	
   Array3<Real> u,S,f;
   int nspecies;
+  
+  Array2<Real> us,dudx,dudy;
+  Array2<Complex> uk,ikxu,ikyu;
+  
+  Array3<Real> Ss;
+  Array3<Complex> Sk;
+  
 public:
   DNS() {}
   virtual ~DNS() {}
@@ -74,6 +122,8 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(rho,0.0,REAL_MAX,"");
   VOCAB(nu,0.0,REAL_MAX,"");
     
+  VOCAB(k0,0.0,STD_MAX,"");
+  
   VOCAB(P0,-REAL_MAX,REAL_MAX,"");
   VOCAB(P1,-REAL_MAX,REAL_MAX,"");
   VOCAB(ICvx,-REAL_MAX,REAL_MAX,"");
@@ -90,6 +140,12 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(movie,0,1,"");
   VOCAB(pressure,0,1,"");
   
+  GeometryTable=new Table<GeometryBase>("geometry");
+//  LinearityTable=new Table<LinearityBase>("linearity");
+//  ForcingTable=new Table<ForcingBase>("forcing");
+//  InitialConditionTable=new Table<InitialConditionBase>("initial condition");
+  
+  BASIS(Cartesian);
   METHOD(DNS);
 }
 
@@ -105,8 +161,11 @@ void DNS::InitialConditions()
   
   cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
 	
-  nmode=Nxb*Nyb;
-  ny=nmode*nspecies;
+  Geometry=DNS_Vocabulary.NewGeometry(geometry);
+  Nmode=Geometry->Create(0);
+  nmode=Geometry->nMode();
+  
+  ny=Nxb*Nyb*nspecies;
   y=new Var[ny];
 	
   u.Dimension(Nxb,Nyb,nspecies);
@@ -116,8 +175,8 @@ void DNS::InitialConditions()
   // Initialize arrays with zero boundary conditions
   u=0.0;
 	
-  for(unsigned i=0; i < Nx; i++) {
-    for(unsigned j=0; j < Ny; j++) {
+  for(unsigned i=0; i < Nxb; i++) {
+    for(unsigned j=0; j < Nyb; j++) {
       // Incompressible initial velocity
       Real x=X(i);
       Real y=Y(j);
@@ -128,10 +187,18 @@ void DNS::InitialConditions()
     }
   }
 	
-  k2invfactor=new Real[nmode];
-  for(unsigned int k=0; k < nmode; k++) {
-//    k2invfactor[k]=1.0/K2();
-  }
+  us.Allocate(Nxb,2*Nyp);
+  uk.Dimension(Nxb,Nyp,(Complex *) us());
+  
+  dudx.Allocate(Nxb,2*Nyp);
+  ikxu.Dimension(Nxb,Nyp,(Complex *) dudx());
+  
+  dudy.Allocate(Nxb,2*Nyp);
+  ikyu.Dimension(Nxb,Nyp,(Complex *) dudy());
+  
+  Ss.Allocate(nspecies,Nxb,2*Nyp);
+  Sk.Dimension(nspecies,Nxb,Nyp,(Complex *) Ss());
+  
   
 //  BoundaryConditions(u);
   
@@ -149,6 +216,21 @@ void DNS::Initialize()
   fevt << "#   t\t\t E\t\t\t Z\t\t\t I\t\t\t C" << endl;
 }
 
+void Basis<Cartesian>::Initialize()
+{
+  cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
+       << ")." << endl;
+  
+  k2invfactor=new Real[nmode];
+  kxmask=new Real[nmode];
+  kymask=new Real[nmode];
+  for(unsigned int k=0; k < nmode; k++) {
+    k2invfactor[k]=1.0/CartesianMode[k].K2();
+    kxmask[k]=CartesianMode[k].X();
+    kymask[k]=CartesianMode[k].Y();
+  }
+}
+
 void DNS::Output(int it)
 {
   Real E;
@@ -163,11 +245,11 @@ void DNS::Output(int it)
 
 void DNS::OutFrame(int it)
 {
-  fvx << Nxi << Nyi << 1;
-  fvy << Nxi << Nyi << 1;
+  fvx << Nxb << Nyb << 1;
+  fvy << Nxb << Nyb << 1;
   
-  for(unsigned j=Nyi; j >= 1; j--) {
-    for(unsigned i=1; i <= Nxi; i++) {
+  for(int j=Nyb-1; j >= 0; j--) {
+    for(unsigned i=0; i < Nxb; i++) {
       fvx << (float) u(i,j,0);
       fvy << (float) u(i,j,1);
     }
@@ -181,11 +263,12 @@ void DNS::ComputeInvariants(Real& E)
 {
   E=0.0;
 	
-  for(unsigned i=1; i <= Nxi; i++) {
-    Array2<Real> um=u[i-1], ui=u[i], up=u[i+1];
-    for(unsigned j=1; j <= Nyi; j++) {
+  for(unsigned i=0; i < Nxb; i++) {
+    Array2<Real> ui=u[i];
+    for(unsigned j=0; j < Nyb; j++) {
+    Array1(Real) uij=ui[j];
       for(int s=0; s < nspecies; s++) {
-	E += ui(j,s)*ui(j,s);
+	E += uij[s]*uij[s];
       }
     }
   }
@@ -201,18 +284,6 @@ void DNS::Source(Var *source, Var *Y, double)
   u.Set(Y);
   S.Set(source);
   
-  Array2<Real> us(Nxb,2*Nyp);
-  Array2<Complex> uk(Nxb,Nyp,(Complex *) us());
-  
-  Array2<Real> dudx(Nxb,2*Nyp);
-  Array2<Complex> ikxu(Nxb,Nyp,(Complex *) dudx());
-  
-  Array2<Real> dudy(Nxb,2*Nyp);
-  Array2<Complex> ikyu(Nxb,Nyp,(Complex *) dudy());
-  
-  Array3<Real> Ss(nspecies,Nxb,2*Nyp);
-  Array3<Complex> Sk(nspecies,Nxb,Nyp,(Complex *) Ss());
-  
   for(unsigned s=0; s < nspecies; s++) {
     
     for(unsigned i=0; i < Nxb; i++) {
@@ -224,14 +295,14 @@ void DNS::Source(Var *source, Var *Y, double)
     rcfft2d(uk,log2Nxb,log2Nyb,-1);
   
     for(unsigned i=0; i < nmode; i++) {
-      ikxu(i).re=-uk(i).im*kxmask(i);
-      ikxu(i).im=uk(i).re*kxmask(i);
+      ikxu(i).re=-uk(i).im*kxmask[i];
+      ikxu(i).im=uk(i).re*kxmask[i];
     }
     crfft2d(ikxu,log2Nxb,log2Nyb,1);
   
     for(unsigned i=0; i < nmode; i++) {
-      ikyu(i).re=-uk(i).im*kymask(i);
-      ikyu(i).im=uk(i).re*kymask(i);
+      ikyu(i).re=-uk(i).im*kymask[i];
+      ikyu(i).im=uk(i).re*kymask[i];
     }
     crfft2d(ikyu,log2Nxb,log2Nyb,1);
   
