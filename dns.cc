@@ -84,7 +84,6 @@ public:
 class DNS : public ProblemBase {
   Real hxinv, hyinv;
   unsigned nmode;
-  Real Nxybinv2;
 	
   Array3<Real> u,S,f;
   unsigned nspecies;
@@ -153,7 +152,7 @@ DNSVocabulary::DNSVocabulary()
 DNSVocabulary DNS_Vocabulary;
 
 ofstream ft,fevt,fu;
-oxstream fvx,fvy;
+oxstream fvx,fvy,fw;
 
 void DNS::InitialConditions()
 {
@@ -168,7 +167,6 @@ void DNS::InitialConditions()
   
   ny=Nxb*Nyb*nspecies;
   y=new Var[ny];
-  Nxybinv2=Nxybinv*Nxybinv;	
   
   u.Dimension(Nxb,Nyb,nspecies);
   S.Dimension(Nxb,Nyb,nspecies);
@@ -223,8 +221,8 @@ void DNS::InitialConditions()
     if(k2invmask[i]) {
       // Calculate -i*P
       Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
-      Sk[0](i)=(Sk[0](i)-kx*miP)*Nxybinv2;
-      Sk[1](i)=(Sk[1](i)-ky*miP)*Nxybinv2;
+      Sk[0](i)=(Sk[0](i)-kx*miP)*Nxybinv;
+      Sk[1](i)=(Sk[1](i)-ky*miP)*Nxybinv;
     } else {
       Sk[0](i)=Sk[1](i)=0.0;
     }
@@ -249,6 +247,7 @@ void DNS::InitialConditions()
   if(movie) {
     open_output(fvx,dirsep,"vx");
     open_output(fvy,dirsep,"vy");
+    open_output(fw,dirsep,"w");
   }
 }
 
@@ -302,16 +301,26 @@ void DNS::OutFrame(int it)
 {
   fvx << Nxb << Nyb << 1;
   fvy << Nxb << Nyb << 1;
+  fw << Nxb << Nyb << 1;  
   
-  for(int j=Nyb-1; j >= 0; j--) {
-    for(unsigned i=0; i < Nxb; i++) {
+  Real coeffx=0.5*(xmax-xmin)/Nxb;
+  Real coeffy=0.5*(ymax-ymin)/Nyb;
+  
+  int iNxb=Nxb;
+  int iNyb=Nyb;
+  for(int j=iNyb-1; j >= 0; j--) {
+    for(int i=0; i < iNxb; i++) {
       fvx << (float) u(i,j,0);
       fvy << (float) u(i,j,1);
+      Real w=coeffx*(u(i+1 < iNxb ? i+1 : 0,j,1)-u(i > 0 ? i-1 : iNxb-1,j,1))-
+	coeffy*(u(i,j+1 < iNyb ? j+1 : 0,0)-u(i,j > 0 ? j-1 : iNyb-1,0));
+      fw << (float) w;
     }
   }
   
   fvx.flush();
   fvy.flush();
+  fw.flush();
 }	
 
 void DNS::ComputeInvariants(Real& E)
@@ -328,13 +337,14 @@ void DNS::ComputeInvariants(Real& E)
     }
   }
   
-  Real factor=0.5;
+  Real volume=(xmax-xmin)*(ymax-ymin)/(Nxb*Nyb);
+  Real factor=0.5*volume;
   E *= factor;
 }
 
-void DNS::Source(Var *source, Var *Y, double t)
+void DNS::Source(Var *source, Var *y, double t)
 {
-  u.Set(Y);
+  u.Set(y);
   S.Set(source);
   
   for(unsigned s=0; s < nspecies; s++) {
@@ -361,8 +371,21 @@ void DNS::Source(Var *source, Var *Y, double t)
     crfft2d(ikyu,log2Nxb,log2Nyb,1);
   
     for(unsigned i=0; i < Nxb; i++) {
+      Real x=X(i);
       for(unsigned j=0; j < Nyb; j++) {
-	Ss(s,i,j)=u(i,j,0)*dudx(i,j)+u(i,j,1)*dudy(i,j);
+	Real y=Y(j);
+	Real f;
+	switch(s) {
+	case 0: 
+	  f=force*u(i,j,0);
+	  break;
+	case 1:
+	  f=force*u(i,j,1);
+	  break;
+	default:
+	  msg(ERROR,"Invalid species value: %d",s);
+	}
+	Ss(s,i,j)=f-(u(i,j,0)*dudx(i,j)+u(i,j,1)*dudy(i,j))*Nxybinv;
       }
     }
     
@@ -370,7 +393,7 @@ void DNS::Source(Var *source, Var *Y, double t)
     
     for(unsigned i=0; i < nfft; i++) {
       if(k2mask[i])
-	Sk[s](i)=-(Sk[s](i)*Nxybinv+nu*k2mask[i]*uk(i))*Nxybinv;
+	Sk[s](i)=(Sk[s](i)-nu*k2mask[i]*uk(i))*Nxybinv;
       else
 	Sk[s](i)=-nu*k2max*uk(i)*Nxybinv;
     }
@@ -387,19 +410,10 @@ void DNS::Source(Var *source, Var *Y, double t)
   
   for(unsigned s=0; s < nspecies; s++) {
     Array2<Real> Sss=Ss[s];
-    Array2<Complex> Sks=Sk[s];
-    crfft2d(Sks,log2Nxb,log2Nyb,1);
+    crfft2d(Sk[s],log2Nxb,log2Nyb,1);
     for(unsigned i=0; i < Nxb; i++) {
       for(unsigned j=0; j < Nyb; j++) {
 	S(i,j,s)=Sss(i,j);
-      }
-    }
-  
-    for(unsigned i=0; i < Nxb; i++) {
-      Real x=X(i);
-      for(unsigned j=0; j < Nyb; j++) {
-	Real y=X(j);
-	S(i,j,s) += force*x*y*sin(t);
       }
     }
   }
