@@ -55,7 +55,6 @@ Real shellmin2;
 Real shellmax2;
 
 // Local Variables;
-typedef array1<Real>::opt rvector;
 
 static rvector kxmask;
 static rvector kymask;
@@ -109,7 +108,7 @@ class DNS : public ProblemBase {
   array3<Real> Ss;
   array3<Complex> Sk;
   
-  array1<Real> spectrum;
+  rvector spectrum;
   
   array3<Real> ForceMask;
   array3<Complex> FMk;
@@ -367,8 +366,8 @@ void Basis<Cartesian>::Initialize()
   cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
        << ")." << endl;
   
-  array1<Complex> temp(nmode);
-  array1<Complex> mask(nfft);
+  vector temp(nmode);
+  vector mask(nfft);
   
   Allocate1(kxmask,nfft);
   Allocate1(kymask,nfft);
@@ -416,7 +415,7 @@ void DNS::Spectrum(vector& S, const vector& y)
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
       int kx=i-Nxb2;
-      array1<Real>::opt k2maski=k2maskij[i];
+      rvector k2maski=k2maskij[i];
       for(unsigned j=(kx > 0) ? 0 : 1; j < Nyp; j++) {
 	if(k2maski[j]) {
 	  int K2=kx*kx+j*j;
@@ -484,7 +483,7 @@ void DNS::ComputeInvariants(Real& E, Real& Z)
   for(unsigned i=0; i < Nxb; i++) {
     array2<Real> ui=u[i];
     for(unsigned j=0; j < Nyb; j++) {
-    array1(Real) uij=ui[j];
+    rvector uij=ui[j];
       for(unsigned s=0; s < nspecies; s++) 
 	E += uij[s]*uij[s];
       Real w=Vorticity(i,j);
@@ -516,8 +515,10 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   for(unsigned s=0; s < nspecies; s++) {
     
     for(unsigned i=0; i < Nxb; i++) {
+      array2<Real> ui=u[i];
+      rvector usi=us[i];
       for(unsigned j=0; j < Nyb; j++) {
-	us(i,j)=u(i,j,s);
+	usi(j)=ui(j,s);
       }
     }
   
@@ -537,12 +538,16 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
     crfft2d(ikyu,log2Nxb,log2Nyb,1);
   
     for(unsigned i=0; i < Nxb; i++) {
+      array2<Real> ui=u[i];
+      rvector dudxi=dudx[i];
+      rvector dudyi=dudy[i];
       for(unsigned j=0; j < Nyb; j++) {
-	Ss(s,i,j)=-(u(i,j,0)*dudx(i,j)+u(i,j,1)*dudy(i,j))*Nxybinv;
+	Ss(s,i,j)=-(ui(j,0)*dudxi(j)+ui(j,1)*dudyi(j))*Nxybinv;
       }
     }
     
-    rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
+    vector Sks=Sk[s];
+    rcfft2d(Sks,log2Nxb,log2Nyb,-1);
     
     Real k1=kforce-0.5*deltaf;
     Real k2=kforce+0.5*deltaf;
@@ -552,19 +557,21 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
     for(unsigned i=0; i < nfft; i++) {
       if(k2mask[i]) {
 	Real K2=k2mask[i];
-	if(K2 >= k1 && K2 <= k2) Sk[s](i) += gammaf*deltafinv*uk(i);
-	Sk[s](i)=(Sk[s](i)-nu*k2mask[i]*uk(i))*Nxybinv;
+	if(K2 >= k1 && K2 <= k2) Sks(i) += gammaf*deltafinv*uk(i);
+	Sks(i)=(Sks(i)-nu*k2mask[i]*uk(i))*Nxybinv;
       }
       else
-	Sk[s](i)=0.0;
+	Sks(i)=0.0;
     }
   }
   
+  vector Sk0=Sk[0];
+  vector Sk1=Sk[1];
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
     // Calculate -i*P
-    Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
+    Complex miP=(kx*Sk0(i)+ky*Sk1(i))*k2invmask[i];
     Sk[0](i) -= kx*miP;
     Sk[1](i) -= ky*miP;
   }
@@ -573,12 +580,14 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
     array2<Real> Sss=Ss[s];
     crfft2d(Sk[s],log2Nxb,log2Nyb,1);
     for(unsigned i=0; i < Nxb; i++) {
+      array2<Real> Si=S[i];
+      rvector Sssi=Sss[i];
       for(unsigned j=0; j < Nyb; j++) {
-	S(i,j,s)=Sss(i,j);
+	Si(j,s)=Sssi(j);
       }
     }
   }
-  
+ 
   Spectrum(Src[EK],Y[VEL]);
   
 //  Src[PX]=0.0;
