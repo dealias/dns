@@ -55,9 +55,11 @@ Real shellmin2;
 Real shellmax2;
 
 // Local Variables;
-static vector kxmask;
-static vector kymask;
-static vector k2mask, k2invmask;
+typedef array1<Real>::opt rvector;
+
+static rvector kxmask;
+static rvector kymask;
+static rvector k2mask, k2invmask;
 static array2<Real> k2maskij;
 static int tcount=0;
 
@@ -323,9 +325,10 @@ void DNS::InitialConditions()
   
   for(unsigned s=0; s < nspecies; s++) crfft2d(FMk[s],log2Nxb,log2Nyb,1);
   
-  Y[EK]=0.0;
-//  Y[PX]=0.0;
-//  Y[PV]=0.0;
+  
+  for(unsigned int i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
+//  for(unsigned int i=0; i < NY[PX]; i++) Y[PX][i]=0.0;
+//  for(unsigned int i=0; i < NY[PV]; i++) Y[PV][i]=0.0;
   
   if(restart) {
     Real t0;
@@ -367,10 +370,10 @@ void Basis<Cartesian>::Initialize()
   array1<Complex> temp(nmode);
   array1<Complex> mask(nfft);
   
-  kxmask.Allocate(nfft);
-  kymask.Allocate(nfft);
-  k2mask.Allocate(nfft);
-  k2invmask.Allocate(nfft);
+  Allocate1(kxmask,nfft);
+  Allocate1(kymask,nfft);
+  Allocate1(k2mask,nfft);
+  Allocate1(k2invmask,nfft);
   
   k2maskij.Dimension(Nxb,Nyp,k2mask);
   
@@ -437,7 +440,8 @@ void DNS::Output(double t, int it)
   ComputeInvariants(E,Z);
   fevt << t << "\t" << E << "\t" << Z << endl;
 
-  if(output) out_curve(fu,Y[0](),"u",Y[0].Size());
+  Var *y=Y[0];
+  if(output) out_curve(fu,y,"u",NY[0]);
   
   if(movie) OutFrame(it);
 	
@@ -445,7 +449,8 @@ void DNS::Output(double t, int it)
   buf << "ekvk" << dirsep << "t" << tcount;
   open_output(fekvk,dirsep,buf.str().c_str(),0);
   out_curve(fekvk,t,"t");
-  out_curve(fekvk,Y[1](),"ekvk",nshells);
+  Var *y1=Y[1];
+  out_curve(fekvk,y1,"ekvk",nshells);
   fekvk.close();
   if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
     

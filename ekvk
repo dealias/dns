@@ -21,7 +21,7 @@ macro plotEk	{
 		expand $expand0
 		xlabel "\i k"
 		ylabel "\i E\i(\i k\i)"
-		ylimits 0 3
+#		ylimits 0 3
 
 		lctype 0 red
 		connect (lg(k)) (lg(Ek))
