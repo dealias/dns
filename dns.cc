@@ -293,6 +293,8 @@ void DNS::Source(Var *source, Var *Y, double)
       }
     }
   
+    cout << us << endl;
+    
     rcfft2d(uk,log2Nxb,log2Nyb,-1);
   
     for(unsigned i=0; i < nmode; i++) {
@@ -335,4 +337,5 @@ void DNS::Source(Var *source, Var *Y, double)
       }
     }
   }
+  
 }
