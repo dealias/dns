@@ -26,7 +26,10 @@ InitialConditionBase *InitialCondition;
 
 Real krmin;
 Real krmax;
-int reality=1; // Reality condition flag 
+
+int truncation=0;
+int vinc=0;
+//int reality=1; // Reality condition flag 
 
 // Vocabulary
 //Real nu=1.0; // Laplacian diffusion
@@ -289,6 +292,42 @@ void DNS::ComputeInvariants(Real& E)
   
   Real factor=0.5;
   E *= factor;
+}
+
+void NWave::Stochastic(Var *, double, double)
+{
+}
+
+void NWave::Setup()
+{
+}
+
+void SR::ComputeVinc(Var *source, Var *psi)
+{
+}
+
+void SR::SourceFactor(Var *source)
+{
+}
+  
+void NWave::ComputeForcing(Var *Y, double t)
+{
+}
+
+void NWave::ComputeInvariants(Var *Y, Real& E, Real& Z, Real& P, int)
+{
+}
+
+void NWave::InitialConditions()
+{
+}
+
+void NWave::Initialize()
+{
+}
+
+void NWave::Output(int)
+{
 }
 
 void DNS::Source(Var *source, Var *Y, double)
