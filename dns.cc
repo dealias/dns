@@ -19,8 +19,6 @@ Real ymin=0.0;
 Real ymax=1.0;
 Real nonlinear=1.0;
 
-//new parameters: need more test
-
 int movie=0;
 int pressure=1;
 
@@ -197,93 +195,105 @@ void DNS::ComputeInvariants(Real& E)
   E *= factor;
 }
 
+void PS::FFT(Var *v, Var *u, unsigned int stride)
+{
+  CartesianPad(v,u,work,stride);
+  crfft3d(v,log2Nxb,log2Nyb,log2Nzb,1);
+}
+
+void PS::XDerivative(Var *buffer, Var *u, Cartesian *K, unsigned int stride)
+{
+//#pragma ivdep	
+  for(unsigned int i=0; i < nmode; i++) {
+    Real k=K[i].X();
+    int istride=i*stride;
+    buffer[i].re=-u[istride].im*k;
+    buffer[i].im=u[istride].re*k;
+  }
+}
+
+void PS::YDerivative(Var *buffer, Var *u, Cartesian *K, unsigned int stride)
+{
+//#pragma ivdep	
+  for(unsigned int i=0; i < nmode; i++) {
+    Real k=K[i].Y();
+    int istride=i*stride;
+    buffer[i].re=-u[istride].im*k;
+    buffer[i].im=u[istride].re*k;
+  }
+}
 
 void DNS::Source(Var *source, Var *Y, double)
 {
-  u.Set(Y);
-  BoundaryConditions(u);
-  S.Set(source);
+  unsigned int i;
+  unsigned nspecies=2;
 	
-  Real coeffx=0.5*hxinv;
-  Real coeffy=0.5*hyinv;
-
-// The following code is used to calculate fluxes without hyperviscosity.
-
-  for(int i=1; i <= Nxi; i++) {
-    Array1(U) Gxi=Gx[i], Gyi=Gy[i];
-    Array1(Real) Exi=Ex[i], Eyi=Ey[i];
-    Array1(U) ui=u[i];
-
-// Calculate the fluxes......
-
-    for(int j=1; j <= Nyi; j++) {
-
-      // Flux Gx=vx * u:
-      Gxi[j].vx=ui[j].vx*ui[j].vx;
-      Gxi[j].vy=ui[j].vx*ui[j].vy;
-      Gxi[j].C=(ui[j].vx+Exi[j])*ui[j].C;
-      // Flux Gy=vy * u:
-      Gyi[j].vx=ui[j].vy*ui[j].vx;
-      Gyi[j].vy=ui[j].vy*ui[j].vy;
-      Gyi[j].C=(ui[j].vy+Eyi[j])*ui[j].C;
-    }
-  }
-		
-  BoundaryConditions(Gx);
-  BoundaryConditions(Gy);
-
-  Real coeffx0=coeffx*nonlinear;
-  Real coeffy0=coeffy*nonlinear;
+  Array3<Real> u(Nxb,Nyb,nspecies);
+  Array3<Real> S(Nxb,Nyb,nspecies);
   
-  for(int i=1; i <= Nxi; i++) {
-    Array1(U) Gxm=Gx[i-1], Gxp=Gx[i+1];
-    Array1(U) Gyi=Gy[i];
+  u.Set(Y);
+  S.Set(source);
+  
+  Array2<Real> us(Nxb,2*Nyp);
+  Array2<Complex> uk(Nxb,Nyp,us);
+  
+  Array2<Real> dudx(Nxb,2*Nyp);
+  Array2<Complex> ikxu(Nxb,Nyp,dudx);
+  
+  Array2<Real> dudy(Nxb,2*Nyp);
+  Array2<Complex> ikyu(Nxb,Nyp,dudy);
+  
+  Array3<Real> Ss(nspecies,Nxb,2*Nyp);
+  Array3<Complex> Sk(nspecies,Nxb,Nyp,Ss);
+  
+  for(unsigned s=0; s < nspecies; s++) {
     
-    Array1(Real) Hxi=Hx[i], Hyi=Hy[i];
-    Array1(Real) Fxi=Fx[i], Fyi=Fy[i];
-    Array1(U) Si=S[i];
-
-// center in space for momentum equation; optionally upwind C equation
-
-    for(int j=1; j <= Nyi; j++) {
-      // div (v u)
-      U advection=-coeffx0*(Gxm[j]-Gxp[j])-coeffy0*(Gyi[j-1]-Gyi[j+1]);
-      
-      // H=F - div (v u)
-      Hxi[j]=Fxi[j]-advection.vx;
-      Hyi[j]=Fyi[j]-advection.vy;
-      
+    for(unsigned i=0; i < Nxb; i++) {
+      for(unsigned j=0; j < Nyb; j++) {
+	us(i,j)=u(i,j,s);
+      }
     }
+  
+    rcfft2d(uk,log2Nxb,log2Nyb,-1);
+  
+    for(i=0; i < nmode; i++) {
+      dudx[i].re=-uk[i].im*kxmask[i];
+      dudx[i].im=uk[i].re*kxmask[i];
+    }
+    crfft2d(dudx,log2Nxb,log2Nyb,1);
+  
+    for(i=0; i < nmode; i++) {
+      dudy[i].re=-uk[i].im*kymask[i];
+      dudy[i].im=uk[i].re*kymask[i];
+    }
+    crfft2d(dudy,log2Nxb,log2Nyb,1);
+  
+  
+    for(unsigned i=0; i < Nxb; i++) {
+      for(unsigned j=0; j < Nyb; j++) {
+	Ss(s,i,j)=u(i,j,0)*dudx(i,j)+u(i,j,1)*dudy(i,j);
+      }
+    }
+    rcfft2d(Sk[s],log2Nxb,log2Nyb,-1);
+    
   }
-
-  if(pressure) {
-    for(int i=1; i <= Nxi; i++) {
-      Array1(Real) Hxm=Hx[i-1], Hxp=Hx[i+1];
-      Array1(Real) Hyi=Hy[i];
-      Array1(Real) Di=Div[i];
-
-      for(int j=1; j <= Nyi; j++) {
-	// Div=div H
-	Di[j]=-coeffx*(Hxm[j]-Hxp[j])-coeffy*(Hyi[j-1]-Hyi[j+1]);
+  
+  for(i=0; i < nmode; i++) {
+    Real kx=CartesianMode[i].X();
+    Real ky=CartesianMode[i].Y();
+    // Calculate -i*P
+    Complex miP=(kx*Sk[0]+ky*Sk[1])*k2invfactor[i];
+    Sk[0]=(kx*miP-Sk[0])*Nxybinv;
+    Sk[1]=(ky*miP-Sk[1])*Nxybinv;
+  }
+  
+  for(unsigned s=0; s < nspecies; s++) {
+    crfft2d(Sk[s],log2Nxb,log2Nyb,1);
+    for(unsigned i=0; i < Nxb; i++) {
+      for(unsigned j=0; j < Nyb; j++) {
+	S(i,j,s)=Ss(s,i,j);
       }
     }
   }
-	
-  Real rhoinv=1.0/rho;
-  Real coeffrx=coeffx*rhoinv;
-  Real coeffry=coeffy*rhoinv;
-	
-  for(int i=1; i <= Nxi; i++) {
-    Array1(Real) Pm=P[i-1];
-    Array1(Real) Pi=P[i];
-    Array1(Real) Pp=P[i+1];
-    Array1(U) Si=S[i];
-    Array1(Real) Hxi=Hx[i];
-    Array1(Real) Hyi=Hy[i];
-    for(int j=1; j <= Nyi; j++) {
-      // H - grad P
-      Si[j].vx=Hxi[j]+coeffrx*(Pm[j]-Pp[j]);
-      Si[j].vy=Hyi[j]+coeffry*(Pi[j-1]-Pi[j+1]);
-    }
-  }
+
 }
