@@ -3,6 +3,7 @@
 
 #define IMPLICIT 0
 #define COMPLEX 0
+#define NUCOMPLEX 0
 #define MCREAL 1
 #define DOUBLE_PRECISION 1
 
