@@ -5,8 +5,8 @@ POLL = poll
 
 include $(TRI)/config/Common
 
-vpath %.cc $(TRI)/nw
-INCL = -I. -I$(TRI) -I$(TRI)/nw -I-
+vpath %.cc $(HOME)/nw
+INCL = -I. -I$(TRI) -I$(HOME)/nw -I-
 
 TRIAD = dns Cartesian rfft $(FFT) $(CORE) $(UTILS)
 

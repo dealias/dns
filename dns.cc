@@ -145,6 +145,7 @@ DNS *DNSProblem;
 DNS::DNS()
 {
   DNSProblem=this;
+  check_compatibility(DEBUG);
 }
 
 DNSVocabulary::DNSVocabulary()
