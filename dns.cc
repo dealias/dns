@@ -52,7 +52,7 @@ Real shellmin2;
 Real shellmax2;
 
 // Local Variables;
-Array1<Real> k2invfactor;
+Array1<Real> k2invmask;
 Array1<Real> kxmask;
 Array1<Real> kymask;
 
@@ -131,6 +131,9 @@ DNSVocabulary::DNSVocabulary()
 
   VOCAB(nonlinear,0.0,1.0,"");
 	
+  VOCAB(Nx,1,INT_MAX,"");
+  VOCAB(Ny,1,INT_MAX,"");
+  
   VOCAB(xmin,-REAL_MAX,REAL_MAX,"");
   VOCAB(xmax,-REAL_MAX,REAL_MAX,"");
 	
@@ -223,21 +226,25 @@ void Basis<Cartesian>::Initialize()
   cout << endl << "ALLOCATING FFT BUFFERS (" << Nxb << " x " << Nyp
        << ")." << endl;
   
-  cout << nmode << endl;
+  Array1<Complex> temp(nmode);
+  Array1<Complex> mask(nfft);
   
-  Array1<Real> temp(nmode);
-  
-  k2invfactor.Allocate(nfft);
+  k2invmask.Allocate(nfft);
   kxmask.Allocate(nfft);
   kymask.Allocate(nfft);
   
-  for(unsigned int k=0; k < nmode; k++) temp[k]=CartesianMode[k].X();
-  CartesianPad(kxmask,temp);
-  for(unsigned int k=0; k < nmode; k++) temp[k]=CartesianMode[k].Y();
-  CartesianPad(kymask,temp);
-  for(unsigned int k=0; k < nmode; k++) temp[k]=1.0/CartesianMode[k].K2();
-  CartesianPad(k2invfactor,temp);
-
+  for(unsigned int k=0; k < nmode; k++) temp[k]=I*CartesianMode[k].X();
+  CartesianPad(mask,temp);
+  for(unsigned int k=0; k < nfft; k++) kxmask[k]=mask[k].im;
+  
+  for(unsigned int k=0; k < nmode; k++) temp[k]=I*CartesianMode[k].Y();
+  CartesianPad(mask,temp);
+  for(unsigned int k=0; k < nfft; k++) kymask[k]=mask[k].im;
+  
+  for(unsigned int k=0; k < nfft; k++) {
+    Real k2=kxmask[k]*kxmask[k]+kymask[k]*kymask[k];
+    k2invmask[k]=k2 ? 1.0/sqrt(k2) : 0.0;
+  }
 }
 
 void DNS::Output(int it)
@@ -332,10 +339,10 @@ void DNS::Source(Var *source, Var *Y, double)
   for(unsigned i=0; i < nfft; i++) {
     Real kx=kxmask[i];
     Real ky=kymask[i];
-    if(k2invfactor[i] == 0.0) Sk[0](i)=Sk[1](i)=0.0;
+    if(k2invmask[i] == 0.0) Sk[0](i)=Sk[1](i)=0.0;
     else {
     // Calculate -i*P
-      Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invfactor[i];
+      Complex miP=(kx*Sk[0](i)+ky*Sk[1](i))*k2invmask[i];
 
       Sk[0](i)=(kx*miP-Sk[0](i))*Nxybinv2;
       Sk[1](i)=(ky*miP-Sk[1](i))*Nxybinv2;
