@@ -390,7 +390,6 @@ void DNS::InitialConditions()
     remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
   }
   
-  ostringstream buf;
   mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
   errno=0;
     
