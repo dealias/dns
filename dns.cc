@@ -305,11 +305,11 @@ void DNS::InitialConditions()
 	
   for(unsigned i=0; i < Nxb; i++) {
     for(unsigned j=0; j < Nyb; j++) {
-#if 0     
+#if 1     
       Real x=Xof(i);
       Real y=Yof(j);
-      Real vx=-cos(twopi*x)*sin(twopi*y);
-      Real vy=sin(twopi*x)*cos(twopi*y);
+      Real vx=sin(twopi*x)*cos(twopi*y);
+      Real vy=-cos(twopi*x)*sin(twopi*y);
 #else      
       Real vx=drand();
       Real vy=drand();
@@ -319,7 +319,7 @@ void DNS::InitialConditions()
     }
   }
 	
-  // Filter high-components from velocity and enforce solenoidal condition
+  // Filter high components from velocity and enforce solenoidal condition
   
   for(unsigned s=0; s < nspecies; s++) {
     for(unsigned i=0; i < Nxb; i++) {
@@ -410,11 +410,6 @@ void DNS::InitialConditions()
 void DNS::Initialize()
 {
   fevt << "#   t\t\t E\t\t\t Z" << endl;
-}
-
-
-void Basis<Cartesian>::Initialize()
-{
 }
 
 void DNS::Spectrum(vector& S, const vector& y)
