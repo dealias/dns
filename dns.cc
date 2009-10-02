@@ -39,8 +39,8 @@ Real ymax=1.0;
 Real force=1.0;
 Real kforce=1.0;
 Real deltaf=2.0;
-int nparticles=1;
 int movie=0;
+int rezero=0;
 
 typedef array1<Complex>::opt cvector;
 
@@ -53,7 +53,7 @@ Real krmin;
 Real krmax;
 int reality=1;
 
-enum Field {VEL,EK,PX,PV};
+enum Field {VEL,EK};
 
 class DNSVocabulary : public VocabularyBase {
 public:
@@ -171,7 +171,6 @@ DNSVocabulary::DNSVocabulary()
 
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
-  VOCAB(nparticles,1,INT_MAX,"Number of particles");
   
   VOCAB(xmin,0.0,0.0,"Minimum x value");
   VOCAB(xmax,0.0,0.0,"Maximum x value");
@@ -180,6 +179,8 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(ymax,0.0,0.0,"Maximum y value");
 
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
+  
+  VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
   
   GeometryTable=new Table<GeometryBase>("geometry");
 //  LinearityTable=new Table<LinearityBase>("linearity");
@@ -233,18 +234,12 @@ void DNS::InitialConditions()
   Nxb2=Nxb/2, Nyb2=Nyb/2;
   
   unsigned Nx2=(Nx-1)/2, Ny2=(Ny-1)/2;
-  unsigned Kmax=(unsigned) (sqrt(Nx2*Nx2+Ny2*Ny2)+0.5);
-  nshells=Kmax+1;
+  nshells=(unsigned) (sqrt(Nx2*Nx2+Ny2*Ny2)+0.5);
   
   NY[VEL]=Nxb*Nyb*nspecies;
   NY[EK]=nshells;
-//  NY[PX]=nparticles*nspecies;
-//  NY[PV]=nparticles*nspecies;
   
   Allocator();
-  
-//  position.Dimension(nparticles,nspecies);
-//  velocity.Dimension(nparticles,nspecies);
   
   unsigned int align=sizeof(Complex);
   
@@ -305,7 +300,7 @@ void DNS::InitialConditions()
 	
   for(unsigned i=0; i < Nxb; i++) {
     for(unsigned j=0; j < Nyb; j++) {
-#if 1     
+#if 0     
       Real x=Xof(i);
       Real y=Yof(j);
       Real vx=sin(twopi*x)*cos(twopi*y);
@@ -376,10 +371,7 @@ void DNS::InitialConditions()
   
   for(unsigned s=0; s < nspecies; s++) cr->fft0(FMk[s]);
   
-  
   for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
-//  for(unsigned i=0; i < NY[PX]; i++) Y[PX][i]=0.0;
-//  for(unsigned i=0; i < NY[PV]; i++) Y[PV][i]=0.0;
   
   tcount=0;
   if(restart) {
@@ -439,7 +431,7 @@ void DNS::Spectrum(vector& S, const vector& y)
       for(unsigned j=(kx > 0) ? 0 : 1; j < Nyp; j++) {
 	if(k2maski[j]) {
 	  int K2=kx*kx+j*j;
-	  unsigned K=(unsigned)(sqrt(K2)+0.5);
+	  unsigned K=(unsigned)(sqrt(K2)-0.5);
 	  count[K]++;
 	  S[K] += abs2(Sk(s,i,j));
 	}
@@ -475,6 +467,13 @@ void DNS::Output(int it)
     
   tcount++;
   ft << t << endl;
+  
+  if(rezero && it % rezero == 0) {
+    vector2 Y=Integrator->YVector();
+    vector T=Y[EK];
+    for(unsigned int i=0; i < NY[EK]; i++)
+      T[i]=0.0;
+  }
 }
 
 void DNS::OutFrame(int)
@@ -601,9 +600,6 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   }
  
   Spectrum(Src[EK],Y[VEL]);
-  
-//  Src[PX]=0.0;
-//  Src[PV]=0.0;
 }
 
 void DNS::Stochastic(const vector2&Y, double, double)
