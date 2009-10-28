@@ -17,19 +17,21 @@ These are notes regarding the implimentation of the DNS code.
 \section{Two dimensional Navier--Stokes}
 The vorticity formulation of the 2-D Navier--Stokes equations is
 \begin{eqnarray}
-  \frac{\partial \omega_{\v k}}{\partial t} 
-  + \nu_{\v k} \omega_{\v k} 
-  &=& \int dp \int dq \frac{\epsilon_{\v{kpq}}}{\v q^2}
-  \omega_{\v p}^* \omega_{\v q}^*
-  + \v F_{\v k}
+  \frac{\partial \omega_k}{\partial t} 
+  + \nu_k \omega_k 
+  &=& \int dp \int dq \frac{\e_{kpq}}{q^2}
+  \omega_p^* \omega_q^*
+  +  F_k
   \\
-  \epsilon_{\v{kpq}} &=& \(\hat{\v z} \dot \v p \times \v q \)
-  \delta\(\v k + \v p + \v q \)
+  \epsilon_{kpq} &=& \( \hat z \cdot  p \times  q \)
+  \delta \( k +  p +  q \)
 \end{eqnarray}
-where $\v F_{\v k}$ represents an external force. The 2D equations conserve
+where $ F_{ k}$ represents an external force. The 2D equations conserve
 energy $E = \sum_i |u_i|^2$ and enstrophy $  Z = \sum_i k_i^2|u_i|^2$.
 
 \section{The nonlinearity}
+
+\subsection{Fourier Transforms}
 In order to avoid aliasing errors due to quadratic source terms, the NS eqns 
 must be padded.  That is, if we wish to evolve $u_k$ with $k = 0\dots, N-1$,
 then we must pad the domain to include $u_k, k \in N, \dots, N + N/2$ directly
@@ -40,31 +42,53 @@ padding.
 Let $\hat u_k$ be the Fourer transform of $u_j(x)$, and suppose that we instead
 have a $2/4$ rule, with half the domain used for padding, as is the case for 
 higher-order nonlinear terms. With padding, $u_k=0$ for $k > \frac{N}{2}$. 
-Let $\zeta = e^{\frac{2 i \pi}{N}}$, i.e.\ an $N$th root of unity.  Ignoring 
-normalization factors,
-\bee
-u_j &=& \sum_{k=0}^{2N-1}\zeta ^{jk} \hat u_k , j=0,\dots,N-1
-\\
-u_j &=& \sum_{k=0}^{2N-1}\zeta ^{jk} \hat u_k , j=N,\dots,2N-1
-\eee
-
-\bee
+Let $\zeta = e^{\frac{2 i \pi}{N}}$, i.e.\ an $N$th root of unity.  Ignoring the
+normalization factor of $1/N$,
+\begin{eqnarray}
 u_j &=& \sum_{k=0}^{2N-1}\zeta ^{jk} \hat u_k 
-=\sum_{k=0}^{N-1}\zeta ^{jk} \hat u_k
 \\
-&=& \sum_{m=0}^{\frac{N}{2}-1} \zeta^{2mj}  u_{2m}
-+\zeta^j\sum_{m=0}^{\frac{N}{2}-1}\zeta^{2mj} u_{2m+1}.
-\eee
-However, the second sum can be gained using the shift theorem (from wikipedia):
-\be
-\mathcal{F}(\{x_n\})_k=X_k \implies
-\mathcal{F}(\{ x_n\cdot e^{\frac{2\pi i}{N}n m} \})_k=X_{k-m},
-\ee
-since
-\be
-u_{2m+1}
-\ee
+&=& \sum_{k=0}^{N-1}\zeta ^{jk} \hat u_k 
++\sum_{k=N}^{2N-1}\zeta ^{jk} \hat u_k 
+\\
+&=& \sum_{k=0}^{N-1}\zeta ^{jk} \hat u_k 
++\sum_{\ell=0}^{N-1}\zeta ^{j(\ell + N)} \hat u_{\ell+N} 
+\\
+&=& \sum_{k=0}^{N-1}\zeta ^{jk} \hat u_k 
++(-1)^j\sum_{\ell=0}^{N-1}\zeta ^{j\ell} \hat u_{\ell+N} 
+,\qquad \text{since $\zeta^N=-1$}
+\\
+&=& \sum_{k=0}^{N-1}\zeta ^{jk} \hat u_k 
++(-1)^j\sum_{\ell=0}^{N-1}\zeta ^{j\ell} (-1)^{\ell+N}\hat u_\ell 
+,\qquad \text{by the shift theorem, eq \eqref{shiftthm}}
+\\
+\label{speedy}
+&=& \sum_{k=0}^{N-1}\zeta ^{jk} \(1 + (-1)^{j+k}\) \hat u_k 
+\end{eqnarray}
+I'm worried that we're using the shift theorem wrong here.  
+However, it looks like we can eliminate half of the modes; either
+the even ones (if $j$ is odd) or the odd ones (if $j$ is even) which
+are cancelled by the $\(1 + (-1)^{j+k}\)$.  This works particularly well
+with FFTs, which separate interlaced modes.  Which would be a really dramatic
+increase in speed (more than I can believe right now, frankly.)
+
+Note that equation \eqref{speedy} is not technically a FFT, since the summation
+should go from $0$ to $2N-1$. However, the only modification needed is an
+adjustment of the summation limit (and on each subsequent step.)
 
 
+\begin{theorem}
+This shift theorem (lifted from Wikipedia) is:
+If $\mathcal{F}(\{x_n\})_k=X_k$
+then
+\begin{eqnarray}
+  \mathcal{F}(\{ x_n\cdot e^{\frac{2\pi i}{N}n m} \})_k=X_{k-m}
+\end{eqnarray}
+and 
+\begin{eqnarray}
+  \label{shiftthm}
+  \mathcal{F}(\{x_{n-m}\})_k=X_k\cdot e^{-\frac{2\pi i}{N}k m}.
+\end{eqnarray}
+\end{theorem}
 
+asdf
 \end{document}
