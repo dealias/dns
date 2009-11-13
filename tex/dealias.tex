@@ -1,0 +1,40 @@
+\documentclass[12pt]{article}
+\usepackage{math}
+\begin{document}
+
+\topmargin=-1in
+
+\title{Efficient Dealiasing of Fast Fourier-Transform Convolutions}
+\author{John C. Bowman and Malcolm Roberts}
+\maketitle
+
+Suppose $N$ is a power of $2$. In terms of the $N$th primitive root of unity,
+$$
+\zeta_N\doteq \exp\(\frac{2 \pi i}{N}\),
+$$
+the discrete inverse Fourier transform may be written
+$$
+u_j=\sum_{k=0}^{N-1}\zeta_N^{jk} \hat u_k\qquad j=0,\ldots,N-1.
+$$
+Notice that $\zeta_N^2=\zeta_{N/2}$ and $\zeta_N^N=1$.
+
+If $\hat u_k=0$ for $k \ge N/2$ then
+\be
+u_{2\ell}
+=\ds\sum_{k=0}^{N/2-1}\zeta_{N/2}^{\ell k} \hat u_k
+%=\ds\sum_{m=0}^{N/4-1}\zeta_{N/2}^{2\ell m} \hat u_{2m}+
+%\zeta_N^{2\ell}\sum_{m=0}^{N/4-1}\zeta_{N/2}^{2\ell m} \hat u_{2m+1}.
+\ee
+
+Likewise,
+\be
+u_{2\ell+1}
+=\ds\sum_{k=0}^{N/2-1}\zeta_{N/2}^{\ell k} \zeta_N^k\hat u_k
+%=\ds\sum_{m=0}^{N/4-1}\zeta_{N/2}^{2\ell m} \zeta_N^{2m}\hat u_{2m}
+%+\zeta_N^{2\ell+1}\sum_{m=0}^{N/4-1}\zeta_{N/2}^{2\ell m} \zeta_N^{2m}\hat u_{2m+1}
+\ee
+
+These terms need only be computed for $\ell=0,\ldots,N/2-1$.
+So the scaling is $2\fr{N}{2}\log {N/2}=N\log(N/2)$.
+
+\end{document}
