@@ -1,0 +1,57 @@
+\documentclass[12pt,showpacs,showkeys,%preprint,
+amsfonts,amsmath,
+onecolumn,
+floatfix,aps,superscriptaddress]{revtex4}
+\usepackage{amsfonts,amsmath,array}
+\usepackage{graphicx}
+\usepackage{bm}
+\usepackage{mal}
+\usepackage{math}
+\usepackage{cancel}
+\begin{document}
+
+\title{A Faster Fast Fourier-Transform for Zero-Padded Input}
+
+Let 
+\begin{eqnarray}
+  \zeta_N = \exp\(\frac{2 \pi i}{N}\)
+\end{eqnarray}
+This is a discrete Fourier transform:
+\begin{eqnarray}
+  u_j = \sum_{k=0}^{N-1}\zeta_N^{jk} u_k
+  =\sum_{k=0}^{N-1}e^{2 \pi ijk/N} u_k.
+\end{eqnarray}
+This is not a discrete Fourier transform:
+\begin{eqnarray}
+  \label{nodft}
+  \sum_{k=0}^{N-1}e^{\frac{\pi ijk}{N}} u_k
+  &=& \sum_{k=0}^{N/2-1}e^{\frac{2\pi ijk}{N}} u_{2k}
+  +e^{\frac{\pi ij}{N}}\sum_{k=0}^{N/2-1}e^{\frac{2\pi ijk}{N}} u_{2k+1}
+\end{eqnarray}
+Wait, maybe that doesn't go anywhere. Ok, consider 2/4 padding, so
+\begin{eqnarray}
+  u_j&=& \sum_{k=0}^{N-1} e^{\frac{2 \pi ijk}{N}}u_k \\
+  &=&  \sum_{k=0}^{N/2-1} e^{\frac{2 \pi ijk}{N}}u_k\\
+  &=&
+  \begin{cases}
+    \sum_{k=0}^{N/2-1} e^{\frac{2 \pi i2\ell k}{N}}u_k, \quad j=2\ell\\
+    \sum_{k=0}^{N/2-1} e^{\frac{2 \pi i(2\ell +1)k}{N}}u_k, \quad j=2\ell+1\\
+  \end{cases}\\
+  &=&
+  \begin{cases}
+    \sum_{k=0}^{N/2-1} e^{\frac{4 \pi i\ell k}{N}}u_k, \quad j=2\ell\\
+    \sum_{k=0}^{N/2-1} e^{\frac{2\pi i k}{N}}e^{\frac{4 \pi i\ell k}{N}}u_k, \quad j=2\ell+1\\
+  \end{cases}
+  \label{ffts}
+\end{eqnarray}
+Now, equation \eqref{ffts} consists of two terms which are both
+Fourier transforms with $N/2$ elements, one of which has a
+modification of the source which depends on $k$. Each transform takes
+$\frac{N}{2}\log \frac{N}{2}$ operations, so we are again left with $N
+\log\frac{N}{2}$ scaling. We can calculate $u_{2\ell},
+\ell=0,\dots,N/4$ and $u_{2\ell+1}, \ell=0,\dots,N/4$ using separate
+(conventional) FFTs, and interlace them afterwards. While the speed saving
+is only in the $\log$ term, the FFT can be done with half the memory (and
+in parallel) which should be worthwhile.
+
+\end{document}
