@@ -21,8 +21,8 @@ write("new transform:");
 pair[] f=sequence(m);
 
 write("even terms:");
-write(f);
 pair[] ge=fft(f,-1);
+write(ge);
 pair zeta=exp(-2*pi*I/n);
 pair[] zetai;
 for(int i=0; i < m; ++i) zetai[i]=zeta^i;
@@ -30,6 +30,7 @@ for(int i=0; i < m; ++i) zetai[i]=zeta^i;
 write();
 write("odd terms:");
 pair[] go=fft(f*zetai,-1);
+write(go);
 pair[] g=new pair[n];
 for(int i=0; i < m; ++i) {
   g[2*i]=ge[i];
