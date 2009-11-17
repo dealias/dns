@@ -11,8 +11,9 @@ write();
 write(gp);
 fp=fft(gp,1);
 write();
+real eps=1e-14;
 // get rid of numerical error
-fp=abs(fp) < 1e-15 ? array(n,0) : fp;
+fp=abs(fp) < eps ? array(n,0) : fp;
 write(fp/n);
 
 write();
@@ -37,8 +38,8 @@ for(int i=0; i < m; ++i) {
 f=fft(g,1);
 // get rid of numerical error
 for(int i=0; i < n; ++i) {
-  if(xpart(f[i].x) < 1e-15) f[i]=(0.0,ypart(f[i]));
-  if(ypart(f[i].y) < 1e-15) f[i]=(xpart(f[i]),0.0);
+  if(abs(f[i].x) < eps) f[i]=(0.0,f[i].y);
+  if(abs(f[i].y) < eps) f[i]=f[i].x;
 }
 write();
 write(f/n);
