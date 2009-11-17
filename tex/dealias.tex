@@ -1,5 +1,7 @@
 \documentclass[12pt]{article}
+\usepackage[dvips]{attachfile2}
 \usepackage{math}
+
 \begin{document}
 
 \topmargin=-1in
@@ -36,8 +38,22 @@ u_{2\ell+1}
 
 These terms need to be computed for $\ell=0,\ldots,N/2-1$.
 So the scaling is $2\fr{N}{2}\log {N/2}=N\log(N/2)$.
-The odd and even components can be computed and multiplied term-by-term
-separately.
+
+
+The odd and even terms of the convolution can be computed and multiplied
+term-by-term separately and transformed back with:
+\bec
+\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+=\sum_{\ell=0}^{N/2-1}\zeta_N^{-2k\ell} u_{2\ell}
++\zeta_N^{-k}\sum_{\ell=0}^{N/2-1}\zeta_N^{-2k\ell} u_{2\ell+1}
+\qquad k=0,\ldots,\fr{N}{2}-1.\\
+\ee
+
+We can therefore compute the convolution with two 1024 blocks (rather than one
+2048 block), to get a dealiased 1024 convolution (with the 2/4 rule).
+
+Also, this will work with complex to real transforms without modification,
+since $\zeta_N^{-k}=\zeta_N^k{}^*$.
 
 The convolution in the Navier--Stokes equations require a $2/3$ padding in
 order to avoid problems with aliasing.  Suppose that the total number of modes
@@ -48,28 +64,25 @@ u_j=\sum_{k=0}^{N-1}\zeta_N^{jk} \hat u_k
 =\sum_{k=0}^{2m-1}\zeta_N^{jk} \hat u_k
 $$
 Then, 
-\begin{eqnarray}
-u_{3\ell}&=& \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} \hat u_k\\
-&=& \sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
-+\sum_{k=m}^{2m-1}\z_{m}^{\ell k} \hat u_k\\
-\label{before}
-&=& \sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
-+\sum_{k=0}^{m-1}\z_{m}^{\ell (k+m)} \hat u_{k+m}\\
-\label{after}
-&=& \sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\hat u_k+\hat u_{k+m}\),
-\end{eqnarray}
-with the fact that $\z_m^m=1$ taking us from equation \ref{before} to
-equation \ref{after}. Equation \ref{after} is a DFT of length $m$,
+\bel
+u_{3\ell}= \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} \hat u_k
+= \sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
++\sum_{k=m}^{2m-1}\z_{m}^{\ell k} \hat u_k
+= \sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
++\sum_{k=0}^{m-1}\z_{m}^{\ell (k+m)} \hat u_{k+m}
+=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\hat u_k+\hat u_{k+m}\).\label{DFTm}
+\eel
+Equation~\ref{DFTm} is a DFT of length $m$,
 each requiring $m\log m$ operations. Following a similar procedure,
-\begin{eqnarray}
-u_{3\ell +1} &=& 
- \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^k \(\hat u_k + \hat u_{k+m}\),\\
-u_{3\ell +2}&=&
+\be
+u_{3\ell +1}=
+ \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^k \(\hat u_k + \hat u_{k+m}\),
+u_{3\ell +2}=
  \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{2k} \(\hat u_k + \hat u_{k+m}\).
-\end{eqnarray}
+\ee
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
 
-TODO: I think that this can be generalized in the folling fashion: if
+TODO: I think that this can be generalized in the following fashion: if
 $m$ of the $N$ modes are non-zero, let $p=N/\gcd(m,N)$. Then we have
 can divide up the DFT into $p$ DFTs of length $m$. Must work out the
 details.
