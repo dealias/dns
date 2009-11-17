@@ -23,13 +23,13 @@ pair[] f=sequence(m);
 write("even terms:");
 write(f);
 pair[] ge=fft(f,-1);
-pair zetan=exp(-2*pi*I/n);
-for(int i=0; i < m; ++i) f[i] *= zetan^i;
+pair zeta=exp(-2*pi*I/n);
+pair[] zetai;
+for(int i=0; i < m; ++i) zetai[i]=zeta^i;
 
 write();
 write("odd terms:");
-write(f);
-pair[] go=fft(f,-1);
+pair[] go=fft(f*zetai,-1);
 pair[] g=new pair[n];
 for(int i=0; i < m; ++i) {
   g[2*i]=ge[i];
