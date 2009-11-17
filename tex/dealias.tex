@@ -63,11 +63,15 @@ equation \ref{after}. Equation \ref{after} is a DFT of length $m$,
 each requiring $m\log m$ operations. Following a similar procedure,
 \begin{eqnarray}
 u_{3\ell +1} &=& 
- \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^k \(\hat u_k\hat u_{k+m}\),\\
+ \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^k \(\hat u_k + \hat u_{k+m}\),\\
 u_{3\ell +2}&=&
- \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{2k} \(\hat u_k\hat u_{k+m}\).
+ \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{2k} \(\hat u_k + \hat u_{k+m}\).
 \end{eqnarray}
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
 
+TODO: I think that this can be generalized in the folling fashion: if
+$m$ of the $N$ modes are non-zero, let $p=N/\gcd(m,N)$. Then we have
+can divide up the DFT into $p$ DFTs of length $m$. Must work out the
+details.
 
 \end{document}
