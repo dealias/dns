@@ -31,16 +31,16 @@ write();
 write("odd terms:");
 pair[] go=fft(f*zetai,-1);
 write(go);
-pair[] g=new pair[n];
-for(int i=0; i < m; ++i) {
-  g[2*i]=ge[i];
-  g[2*i+1]=go[i];
-}
-f=fft(g,1);
+
+pair[] conj(pair[] z) {return map(conj,z);} // TODO: Move to asy.
+
+pair[] f=fft(ge,1)+conj(zetai)*fft(go,1);
+
 // get rid of numerical error
-for(int i=0; i < n; ++i) {
+for(int i=0; i < m; ++i) {
   if(abs(f[i].x) < eps) f[i]=(0.0,f[i].y);
   if(abs(f[i].y) < eps) f[i]=f[i].x;
 }
+
 write();
 write(f/n);
