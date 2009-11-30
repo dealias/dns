@@ -1,46 +1,52 @@
-int m=4, n=2*m;
+// general formulation of p/q padding
 
-write("conventional transform:");
-pair[] fp=sequence(n);
-// "2/4" zero-padding
-for(int i=m; i < n; ++i)
-  fp[i]=0;
-write(fp);
-pair[] gp=fft(fp,-1);
-write();
-write(gp);
-fp=fft(gp,1);
-write();
-real eps=1e-14;
-// get rid of numerical error
-fp=abs(fp) < eps ? array(n,0) : fp;
-write(fp/n);
+int p=2,q=5;
+write((string) p +"/" +(string) q +" padding");
+int m=4;
+int n=q*m;
+real eps=1e-13;
+pair zeta=exp(2*pi*I/n);
 
-write();
-write("new transform:");
-pair[] f=sequence(m);
+pair[] f=sequence(n);
+for(int i=p*m; i < n; ++i)
+  f[i]=0;
+pair[] g=sequence(n);
 
-write("even terms:");
-pair[] ge=fft(f,-1);
-write(ge);
-pair zeta=exp(-2*pi*I/n);
-pair[] zetai;
-for(int i=0; i < m; ++i) zetai[i]=zeta^i;
+for (int r=0; r < q; ++r) {
+  write();
+  write("r="+(string)r);
+  pair[] fm=sequence(m);
+  for (int k=0; k < m; ++k) {
+    for (int k=0; k < m; ++k) {
+      fm[k]=0;
+      for (int a=0; a < p; ++a)
+	fm[k] += f[k+a*m]*zeta^(r*a*m);
+      fm[k] *= zeta^(r*k);
+    }
+  } 
+  write(fm);
+  pair[] gm=fft(fm,1);
+  write();
+    for (int i=0; i < m; ++i) {
+      g[i*q+r]=gm[i];
+    }
+  }
 
-write();
-write("odd terms:");
-pair[] go=fft(f*zetai,-1);
-write(go);
+f=fft(g,-1);
 
-pair[] conj(pair[] z) {return map(conj,z);} // TODO: Move to asy.
-
-pair[] f=fft(ge,1)+conj(zetai)*fft(go,1);
-
-// get rid of numerical error
+// FIXME: why doesn't this work at all? asy error?
 for(int i=0; i < m; ++i) {
   if(abs(f[i].x) < eps) f[i]=(0.0,f[i].y);
   if(abs(f[i].y) < eps) f[i]=f[i].x;
 }
-
-write();
+write(n);
 write(f/n);
+
+pair[] f0=sequence(n);
+for(int i=p*m; i < n; ++i)
+  f0[i]=0;
+real error=0.0;
+for(int i=0; i < n; ++i)
+  error += abs(f0[i]-f[i]/n)^2;
+
+write("error="+(string) sqrt(error));

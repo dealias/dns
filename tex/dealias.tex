@@ -90,11 +90,11 @@ u_{q\ell+r} = \sum_{k=0}^{N-1}\z_N^{(q\ell+r)k} \hat u_k
 = \sum_{k=0}^{mp-1}\z_{mq}^{(q\ell+r)k} \hat u_k
 = \sum_{\a=0}^p \sum_{k=\a m}^{(\a+1)m-1}\z_{mq}^{(q\ell+r)k} \hat u_k
 = \sum_{\a=0}^p \sum_{\k=0}^{m-1}\z_{mq}^{(q\ell+r)(\k+\a m)} \hat u_{\k+\a m}
-= \sum_{\k=0}^{m-1}\z_m^{\ell\k}\z_N^{r\k} \sum_{\a=0}^p\z_q^{r \a} \hat u_{\k+\a m}
+= \sum_{\k=0}^{m-1}\z_m^{\ell\k}\z_N^{r\k} \sum_{\a=0}^p\z_N^{r \a m} \hat u_{\k+\a m}
 \ee .
 Note that, in the last line, we have the choice of which $\z$ to use, since
-$\z_q^{r \a}=\z_N^{r \a q}$. Since there are $m$ choices of $r$ and $q$ choices
-for $\ell$, we are left with $mq=N$ FFTs or length $p$, leaving on the order
+$\z_q^{r \a}=\z_N^{r \a m}$. Since there are $m$ choices of $r$ and $q$ choices
+for $\ell$, we are left with $mq=N$ FFTs of length $p$, leaving on the order
 of $N \log p = N \log (N/q)$ operations.  Again, while the computational cost
 is not significantly increased, savings may be made in terms of memory use
 and parallelizability.
