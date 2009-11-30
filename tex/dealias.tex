@@ -75,10 +75,10 @@ u_{3\ell}= \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} \hat u_k
 Equation~\ref{DFTm} is a DFT of length $m$,
 each requiring $m\log m$ operations. Following a similar procedure,
 with $r=1$ or $r=2$,
-\begin{dmath*}
-u_{3\ell +r}\no{=}
+$$
+u_{3\ell +r}\no=
  \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^k \(\hat u_k + \z_N^{rm}\hat u_{k+m}\)
-\end{dmath*}
+$$
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
 
 In general, consider a ``$p/q$'' padding in which $N=qm$, and only $pm$ modes
