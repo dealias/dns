@@ -62,16 +62,21 @@ is then
 $$
 u_j=\sum_{k=0}^{N-1}\zeta_N^{jk} \hat u_k
 =\sum_{k=0}^{2m-1}\zeta_N^{jk} \hat u_k
-$$ Then, \bel u_{3\ell}= \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} \hat u_k =
-\sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
-+\sum_{k=m}^{2m-1}\z_{m}^{\ell k} \hat u_k =
-\sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k +\sum_{k=0}^{m-1}\z_{m}^{\ell
-  (k+m)} \hat u_{k+m} =\sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\hat u_k+\hat
-u_{k+m}\).\label{DFTm} \eel Equation~\ref{DFTm} is a DFT of length
-$m$, each requiring $m\log m$ operations. Following a similar
-procedure, with $r=1$ or $r=2$,
+$$
+Then, 
+\bel
+u_{3\ell}= \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} \hat u_k
+=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
++\sum_{k=m}^{2m-1}\z_{m}^{\ell k} \hat u_k
+=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
++\sum_{k=0}^{m-1}\z_{m}^{\ell (k+m)} \hat u_{k+m}
+=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\hat u_k+\hat u_{k+m}\).\label{DFTm}
+\eel
+Equation~\ref{DFTm} is a DFT of length $m$,
+each requiring $m\log m$ operations. Following a similar procedure,
+with $r=1$ or $r=2$,
 \begin{dmath*}
-u_{3\ell +r}\hiderel{=}
+u_{3\ell +r}\no{=}
  \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^k \(\hat u_k + \z_N^{rm}\hat u_{k+m}\)
 \end{dmath*}
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
