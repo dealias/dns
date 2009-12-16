@@ -1,6 +1,6 @@
 // general formulation of p/q padding
 
-int p=2,q=5;
+int p=2,q=3;
 write((string) p +"/" +(string) q +" padding");
 int m=4;
 int n=q*m;
@@ -39,8 +39,7 @@ for (int r=0; r < q; ++r) {
 
 f=fft(g,-1);
 
-// FIXME: why doesn't this work at all? asy error?
-for(int i=0; i < m; ++i) {
+for(int i=0; i < n; ++i) {
   if(abs(f[i].x) < eps) f[i]=(0.0,f[i].y);
   if(abs(f[i].y) < eps) f[i]=f[i].x;
 }
