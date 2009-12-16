@@ -1,56 +1,58 @@
-// general formulation of p/q padding
-
 int p=2,q=3;
 write((string) p +"/" +(string) q +" padding");
 int m=4;
 int n=q*m;
-real eps=1e-13;
-pair zeta=exp(2*pi*I/n);
 
-pair[] f=sequence(n);
+pair zeta=exp(-2*pi*I/n);
+pair[][][] Zeta=array(q,array(p,array(m,(0,0))));
 
+for(int r=0; r < q; ++r)
+  for(int a=0; a < p; ++a)
+    for(int k=0; k < m; ++k)
+      Zeta[r][a][k]=zeta^(r*(k+a*m));
+
+pair[] fp=sequence(n);
+
+// p/q zero-padding
 for(int i=p*m; i < n; ++i)
-  f[i]=0;
+  fp[i]=0;
 
-write(f);
+write("input data:");
+write(fp);
+pair[] gp=fft(fp,-1);
+write();
+write("conventional transform:");
+write(gp);
+fp=fft(gp,1);
 write();
 
-pair[] g=sequence(n);
+write("inverse transform:");
+write(fp/n);
 
-for (int r=0; r < q; ++r) {
-  write();
-  write("r="+(string)r);
-  pair[] fm=sequence(m);
-  for (int k=0; k < m; ++k) {
-    for (int k=0; k < m; ++k) {
-      fm[k]=0;
-      for (int a=0; a < p; ++a)
-	fm[k] += f[k+a*m]*zeta^(r*a*m);
-      fm[k] *= zeta^(r*k);
-    }
-  } 
-  write(fm);
-  pair[] gm=fft(fm,1);
-  write();
-    for (int i=0; i < m; ++i) {
-      g[i*q+r]=gm[i];
-    }
-  }
+write();
 
-f=fft(g,-1);
+write("new transform:");
+pair[] f=sequence(p*m);
 
-for(int i=0; i < n; ++i) {
-  if(abs(f[i].x) < eps) f[i]=(0.0,f[i].y);
-  if(abs(f[i].y) < eps) f[i]=f[i].x;
+pair[][] g=array(q,array(m,(0,0)));
+for(int r=0; r < q; ++r) {
+  write("r="+(string) r);
+  for(int a=0; a < p; ++a)
+    for(int k=0; k < m; ++k)
+      g[r][k] += Zeta[r][a][k]*f[k+a*m];
+  g[r]=fft(g[r],-1);
+  write(g[r]);
 }
-write(n);
+
+pair[] conj(pair[] z) {return map(conj,z);} // TODO: Move to asy.
+
+pair[] f=array(p*m,(0,0));
+for(int r=0; r < q; ++r) {
+  g[r]=fft(g[r],1);
+  for(int a=0; a < p; ++a)
+    for(int k=0; k < m; ++k)
+      f[k+a*m] += conj(Zeta[r][a][k])*g[r][k];
+}
+
+write();
 write(f/n);
-
-pair[] f0=sequence(n);
-for(int i=p*m; i < n; ++i)
-  f0[i]=0;
-real error=0.0;
-for(int i=0; i < n; ++i)
-  error += abs(f0[i]-f[i]/n)^2;
-
-write("error="+(string) sqrt(error));

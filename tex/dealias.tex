@@ -46,7 +46,9 @@ multiplied term-by-term, and transformed back:
 \hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{\ell=0}^{N/2-1}\zeta_N^{-2k\ell} u_{2\ell}
 +\zeta_N^{-k}\sum_{\ell=0}^{N/2-1}\zeta_N^{-2k\ell} u_{2\ell+1}
-\qquad k=0,\ldots,\fr{N}{2}-1.\\
+=\sum_{\ell=0}^{N/2-1}\zeta_{N/2}^{-k\ell} u_{2\ell}
++\zeta_N^{-k}\sum_{\ell=0}^{N/2-1}\zeta_{N/2}^{-k\ell} u_{2\ell+1}
+\qquad k=0,\ldots,\fr{N}{2}-1.
 \ee
 
 We can therefore compute the convolution with two 1024 blocks (rather than one
@@ -77,20 +79,24 @@ each requiring $m\log m$ operations. Following a similar procedure,
 with $r=1$ or $r=2$,
 $$
 u_{3\ell +r}\no=
- \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^k \(\hat u_k + \z_N^{rm}\hat u_{k+m}\)
+% \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \(\hat u_k + \z_N^{rm}\hat u_{k+m}\)
+ \sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\z_N^{rk} \hat u_k + \z_N^{r(k+m)}\hat u_{k+m}\)
 $$
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
 
 In general, consider a ``$p/q$'' padding in which $N=qm$, and only $pm$ modes
 are non-zero, with $p$ and $q$ relatively prime. Consider $u_{q\ell+r}$, with
-$\ell=0 \dots q-1$, $r=0 \dots m-1$.
+$\ell=0 \dots m-1$, $r=0 \dots q-1$.
 Then,
 \be
 u_{q\ell+r} = \sum_{k=0}^{N-1}\z_N^{(q\ell+r)k} \hat u_k
-= \sum_{k=0}^{mp-1}\z_{mq}^{(q\ell+r)k} \hat u_k
-= \sum_{\a=0}^p \sum_{k=\a m}^{(\a+1)m-1}\z_{mq}^{(q\ell+r)k} \hat u_k
-= \sum_{\a=0}^p \sum_{\k=0}^{m-1}\z_{mq}^{(q\ell+r)(\k+\a m)} \hat u_{\k+\a m}
-= \sum_{\k=0}^{m-1}\z_m^{\ell\k}\z_N^{r\k} \sum_{\a=0}^p\z_N^{r \a m} \hat u_{\k+\a m}
+= \sum_{k=0}^{pm-1}\z_{qm}^{(q\ell+r)k} \hat u_k
+= \sum_{k=0}^{pm-1}\z_{m}^{\ell k}\z_{N}^{rk} \hat u_k
+= \sum_{\a=0}^{p-1} \sum_{k=\a m}^{(\a+1)m-1}\z_{m}^{\ell k}\z_{N}^{rk} \hat u_k
+= \sum_{\a=0}^{p-1} \sum_{\k=0}^{m-1}\z_{m}^{\ell (\k+\a m)}\z_{N}^{r(\k+\a m)}
+\hat u_{\k+\a m}
+%=  \sum_{\a=0}^{p-1}\z_N^{r \a m} \sum_{\k=0}^{m-1}\z_m^{\ell\k}\z_N^{r\k}\hat u_{\k+\a m}
+=  \sum_{\k=0}^{m-1}\z_m^{\ell\k}\sum_{\a=0}^{p-1}\z_N^{r(\k+\a m)} \hat u_{\k+\a m}
 \ee .
 Note that, in the last line, we have the choice of which $\z$ to use, since
 $\z_q^{r \a}=\z_N^{r \a m}$. Since there are $m$ choices of $r$ and $q$ choices
@@ -98,6 +104,13 @@ for $\ell$, we are left with $mq=N$ FFTs of length $p$, leaving on the order
 of $N \log p = N \log (N/q)$ operations.  Again, while the computational cost
 is not significantly increased, savings may be made in terms of memory use
 and parallelizability.
+
+\be
+\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+=\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-q\ell k} u_{q\ell+r}
+=\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{q\ell+r}
+\qquad k\no =0,\ldots,pm-1.
+\ee
 
 %TODO: I think that this can be generalized in the following fashion:
 %if $m$ of the $N$ modes are non-zero, let $p=N/\gcd(m,N)$. Then we

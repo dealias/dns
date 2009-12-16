@@ -1,5 +1,9 @@
 int m=4, n=2*m;
 
+pair zeta=exp(-2*pi*I/n);
+pair[] zetai;
+for(int i=0; i < m; ++i) zetai[i]=zeta^i;
+
 pair[] fp=sequence(n);
 // "2/4" zero-padding
 for(int i=m; i < n; ++i)
@@ -25,9 +29,6 @@ pair[] f=sequence(m);
 write("even terms:");
 pair[] ge=fft(f,-1);
 write(ge);
-pair zeta=exp(-2*pi*I/n);
-pair[] zetai;
-for(int i=0; i < m; ++i) zetai[i]=zeta^i;
 
 write();
 write("odd terms:");
