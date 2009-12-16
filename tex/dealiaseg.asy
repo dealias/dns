@@ -8,8 +8,13 @@ real eps=1e-13;
 pair zeta=exp(2*pi*I/n);
 
 pair[] f=sequence(n);
+
 for(int i=p*m; i < n; ++i)
   f[i]=0;
+
+write(f);
+write();
+
 pair[] g=sequence(n);
 
 for (int r=0; r < q; ++r) {
