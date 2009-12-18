@@ -65,7 +65,7 @@ $$
 u_j=\sum_{k=0}^{N-1}\zeta_N^{jk} \hat u_k
 =\sum_{k=0}^{2m-1}\zeta_N^{jk} \hat u_k
 $$
-Then, 
+Then 
 \bel
 u_{3\ell}= \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} \hat u_k
 =\sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
@@ -87,7 +87,7 @@ Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
 In general, consider a ``$p/q$'' padding in which $N=qm$, and only $pm$ modes
 are non-zero, with $p$ and $q$ relatively prime. Consider $u_{q\ell+r}$, with
 $\ell=0 \dots m-1$, $r=0 \dots q-1$.
-Then,
+Then
 \be
 u_{q\ell+r} = \sum_{k=0}^{N-1}\z_N^{(q\ell+r)k} \hat u_k
 = \sum_{k=0}^{pm-1}\z_{qm}^{(q\ell+r)k} \hat u_k
@@ -101,9 +101,9 @@ u_{q\ell+r} = \sum_{k=0}^{N-1}\z_N^{(q\ell+r)k} \hat u_k
 Note that, in the last line, we have the choice of which $\z$ to use, since
 $\z_q^{r \a}=\z_N^{r \a m}$. Since there are $m$ choices of $r$ and $q$ choices
 for $\ell$, we are left with $mq=N$ FFTs of length $p$, leaving on the order
-of $N \log p = N \log (N/q)$ operations.  Again, while the computational cost
-is not significantly increased, savings may be made in terms of memory use
-and parallelizability.
+of $N \log p = N \log (N/q)$ operations.  Again, while the computational
+savings is only marginal, this formulation affords signficant improvements
+in memory use and parallelizability.
 
 \be
 \hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j

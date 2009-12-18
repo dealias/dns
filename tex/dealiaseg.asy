@@ -4,11 +4,10 @@ int m=4;
 int n=q*m;
 
 pair zeta=exp(-2*pi*I/n);
-pair[][] Zeta=array(q,array(p*m,(0,0)));
+pair[] Zeta=new pair[n];
 
-for(int r=0; r < q; ++r)
-    for(int k=0; k < p*m; ++k)
-      Zeta[r][k]=zeta^(r*k);
+for(int i=0; i < n; ++i)
+  Zeta[i]=zeta^i;
 
 pair[] fp=sequence(n);
 
@@ -34,27 +33,39 @@ write("new transform:");
 pair[] f=sequence(p*m);
 
 pair[][] g=array(q,array(m,(0,0)));
-for(int r=0; r < q; ++r) {
+write("r="+(string) 0);
+for(int a=0; a < p; ++a) {
+  for(int k=0; k < m; ++k) {
+    int K=k+a*m;
+    g[0][k] += f[K];
+  }
+}
+g[0]=fft(g[0],-1);
+write(g[0]);
+
+for(int r=1; r < q; ++r) {
   write("r="+(string) r);
   for(int a=0; a < p; ++a) {
     for(int k=0; k < m; ++k) {
       int K=k+a*m;
-      g[r][k] += Zeta[r][K]*f[K];
+      g[r][k] += Zeta[r*K % n]*f[K];
     }
   }
   g[r]=fft(g[r],-1);
-  write(g[r]);
 }
 
-pair[] conj(pair[] z) {return map(conj,z);} // TODO: Move to asy.
-
 pair[] f=array(p*m,(0,0));
-for(int r=0; r < q; ++r) {
+g[0]=fft(g[0],1);
+for(int a=0; a < p; ++a)
+  for(int k=0; k < m; ++k)
+    f[k+a*m] += g[0][k];
+
+for(int r=1; r < q; ++r) {
   g[r]=fft(g[r],1);
   for(int a=0; a < p; ++a) {
     for(int k=0; k < m; ++k) {
       int K=k+a*m;
-      f[K] += conj(Zeta[r][K])*g[r][k];
+      f[K] += conj(Zeta[r*K % n])*g[r][k];
     }
   }
 }
