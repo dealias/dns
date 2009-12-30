@@ -118,10 +118,10 @@ in memory use and parallelizability.
 %the details.
 
 \section{2D, 2/3-dealiased transforms}
-Our goal is to apply this to dealiased psuedo-spectral simulations. If we 
+Our goal is to apply this to dealiased pseudospectral simulations. If we 
 avoid moving the $k$-space origin to the middle of the array, the Fourier
 data is sparse, with a square of length $2/3$ being non-zero. Suppose that 
-the first FFT is done in the $x$-direction.  Then, $1/3$ of the transforms
+the first FFT is done in the $x$ direction.  Then, $1/3$ of the transforms
 are zero, and can be ignored. The remaining transforms are $2/3$ dealiased,
 each of which can be done with $n \log (2 n/3)$ operations. This leaves
 the upper $1/3$ modes set to zero.  The final transform, done in the 
@@ -138,7 +138,7 @@ buffer for all necessary transformations.
 \begin{figure}[htbp]
   \begin{center}
     \includegraphics{dealias2d}
-    \caption{Procedur for transforming 2D dealiased arrays.}
+    \caption{Procedure for transforming 2D dealiased arrays.}
     \label{dealias2d}
   \end{center}
 \end{figure}
