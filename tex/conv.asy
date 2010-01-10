@@ -15,7 +15,14 @@ int pm=p*m;
 
 private pair[] shift(pair[] f) 
 {
-  for(int i=0; i < f.length; i += 2)
+  for(int i=1; i < f.length; i += 2)
+    f[i]=-f[i];
+  return f;
+}
+
+private real[] shift(real[] f) 
+{
+  for(int i=1; i < f.length; i += 2)
     f[i]=-f[i];
   return f;
 }
@@ -23,16 +30,17 @@ private pair[] shift(pair[] f)
 // Return the inverse Fourier transform of a Hermitian vector f.
 real[] crfft(pair[] f) 
 {
-  return map(xpart,fft(concat(new pair[]{(0,0)},
-                              map(conj,reverse(f)[0:f.length-1]),f),-1));
+  return map(xpart,shift(fft(concat(map(conj,reverse(f)[0:f.length-1]),
+                                    f[0:f.length-1]),1)));
 }
 
 // Return the non-negative Fourier components of a real vector f.
 pair[] rcfft(real[] f) 
 {
-  return fft(f)[quotient(f.length,2):f.length];
+  return fft(f,-1)[quotient(f.length,2):f.length];
 }
 
+/*
 pair[] e=new pair[] {(1,2),(3,4),(5,6),(7,8)};
 pair[] D=new pair[2*m];
 
@@ -70,6 +78,7 @@ pair[] F=array(m,(0,0));
 pair[] G=array(m,(0,0));
 
 pair[] h=array(pm,(0,0));
+*/
 
 /*
 pair d[];
@@ -138,23 +147,37 @@ write();
 write(h);
 */
 
-
 int n=32;
 
 int np=quotient(n,2)+1;
 
-pair[] fft(pair[] H, pair[] F, pair[] G)
+pair[] convolve(pair[] F, pair[] G)
 {
+  int m=F.length;
+  
+  F=copy(F);
+  G=copy(G);
+  
   for(int i=F.length; i < np; ++i) {
     G[i]=0.0;
     F[i]=0.0;
   }
   
-  write("F");
-  
-  write(crfft(F));
+  return rcfft(shift(crfft(F)*crfft(G))/n)[0:m];
+}	
 
-  return rcfft(crfft(F)*crfft(G)/n);
+pair[] direct(pair[] F, pair[] G)
+{
+  int m=F.length;
+  pair[] H=new pair[m];
+  for(int i=0; i < m; ++i) {
+    pair sum;
+    for(int j=0; j <= i; ++j) sum += F[j]*G[i-j];
+    for(int j=i+1; j < m; ++j) sum += F[j]*conj(G[j-i]);
+    for(int j=1; j < m-i; ++j) sum += conj(F[j])*G[i+j];
+    H[i]=sum;
+  }
+  return H;
 }	
 
 pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
@@ -164,7 +187,7 @@ pair[] g=copy(d);
 
 write();
 
-pair[] h=new pair[f.length];
+write(convolve(f,g));
 write();
+write(direct(f,g));
 
-write(fft(h,f,g));
