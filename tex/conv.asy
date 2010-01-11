@@ -27,17 +27,26 @@ private real[] shift(real[] f)
   return f;
 }
 
-// Return the inverse Fourier transform of a Hermitian vector f.
-real[] crfft(pair[] f) 
+pair[] decompress(pair[] f)
 {
-  return map(xpart,shift(fft(concat(map(conj,reverse(f)[0:f.length-1]),
-                                    f[0:f.length-1]),1)));
+  return concat(map(conj,reverse(f)[0:f.length-1]),f[0:f.length-1]);
+}
+
+pair[] compress(pair[] f)
+{
+  return f[quotient(f.length,2):f.length];
+}
+
+// Return the inverse Fourier transform of a Hermitian vector f.
+real[] crfft(pair[] f)
+{
+  return map(xpart,shift(fft(decompress(f),1)));
 }
 
 // Return the non-negative Fourier components of a real vector f.
 pair[] rcfft(real[] f) 
 {
-  return fft(f,-1)[quotient(f.length,2):f.length];
+  return compress(fft(f,-1));
 }
 
 /*
@@ -74,10 +83,6 @@ write(fft(D,-1));
 pair[] f=copy(d);
 pair[] g=copy(d);
 
-pair[] F=array(m,(0,0));
-pair[] G=array(m,(0,0));
-
-pair[] h=array(pm,(0,0));
 */
 
 /*
@@ -106,46 +111,63 @@ P=shift(P);
 write((fft(P,1)/N)[0:pm]);
 */
 
-/*
-write("r="+(string) 0);
+pair[] convolve0(pair[] f, pair[] g)
+{
+  int m=2*f.length-1;
+  int n=ceil(m*q/p);
+  
+  write("m=",m);
+  write("n=",n);
 
-for(int a=0; a < p; ++a) {
-  for(int k=0; k < m; ++k) {
-    int K=k+a*m;
-    F[k] += f[K];
-    G[k] += g[K];
-  }
-}
+  pair[] F=array(m,(0,0));
+  pair[] G=array(m,(0,0));
 
-F=fft(shift(fft(F,-1)*fft(G,-1)),1)/n;
+  pair[] h=array(pm,(0,0));
 
-for(int a=0; a < p; ++a)
-  for(int k=0; k < m; ++k)
-    h[k+a*m] += F[k];
+  pair[] fd=decompress(f);
+  pair[] gd=decompress(g);
 
-for(int r=1; r < q; ++r) {
-  F=array(m,(0,0));
-  G=array(m,(0,0));
-  write("r="+(string) r);
+  write("r="+(string) 0);
   for(int a=0; a < p; ++a) {
     for(int k=0; k < m; ++k) {
       int K=k+a*m;
-      F[k] += Zeta[r*K % n]*f[K];
-      G[k] += Zeta[r*K % n]*g[K];
+      F[k] += fd[K];
+      G[k] += gd[K];
     }
   }
-  F=fft(shift(fft(F,-1)*fft(G,-1)),1)/n;
-  for(int a=0; a < p; ++a) {
-    for(int k=0; k < m; ++k) {
-      int K=k+a*m;
-      h[K] += conj(Zeta[r*K % n])*F[k];
+
+  F=rcfft(shift(crfft(compress(F))*crfft(compress(G))))/n;
+
+  for(int a=0; a < p; ++a)
+    for(int k=0; k < m; ++k)
+      h[k+a*m] += F[k];
+
+  for(int r=1; r < q; ++r) {
+    F=array(m,(0,0));
+    G=array(m,(0,0));
+    write("r="+(string) r);
+    for(int a=0; a < p; ++a) {
+      for(int k=0; k < m; ++k) {
+        int K=k+a*m;
+        F[k] += Zeta[r*K % n]*fd[K];
+        G[k] += Zeta[r*K % n]*gd[K];
+      }
+    }
+    F=rcfft(shift(crfft(compress(F))*crfft(compress(G))))/n;
+    F=decompress(F);
+    for(int a=0; a < p; ++a) {
+      for(int k=0; k < m; ++k) {
+        int K=k+a*m;
+        h[K] += conj(Zeta[r*K % n])*F[k];
+      }
     }
   }
+  return compress(h);
 }
 
-write();
-write(h);
-*/
+//write();
+//write(h);
+
 
 int n=32;
 
@@ -190,4 +212,5 @@ write();
 write(convolve(f,g));
 write();
 write(direct(f,g));
-
+write();
+write(convolve0(f,g));
