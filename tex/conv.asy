@@ -160,8 +160,8 @@ pair[] convolve0(pair[] f, pair[] g)
       G[k] += Zeta[r*k % n]*g[k];
     }
     
-    real[] Fr=2*map(xpart,fft(F))-xpart(F[0]);
-    real[] Gr=2*map(xpart,fft(G))-xpart(G[0]);
+    real[] Fr=2*map(xpart,fft(F,1))-xpart(F[0]);
+    real[] Gr=2*map(xpart,fft(G,1))-xpart(G[0]);
     F=fft(shift(Fr*Gr),-1)/n;
     for(int k=0; k < m; ++k)
       h[k] += conj(Zeta[r*k % n])*F[k];
