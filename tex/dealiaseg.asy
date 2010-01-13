@@ -65,7 +65,7 @@ for(int r=1; r < q; ++r) {
   for(int a=0; a < p; ++a) {
     for(int k=0; k < m; ++k) {
       int K=k+a*m;
-      f[K] += conj(Zeta[r*K % n])*g[r][k];
+      f[K] += Zeta[-r*K % n]*g[r][k];
     }
   }
 }
