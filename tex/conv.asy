@@ -149,7 +149,7 @@ pair[] convolve0(pair[] f, pair[] g)
   
   //  write(Fr);
   
-  h=fft(shift(Fr*Gr))/n;
+  h=fft(shift(Fr*Gr),-1)/n;
 
   for(int r=1; r < q; ++r) {
     F=array(m,(0,0));
@@ -162,7 +162,7 @@ pair[] convolve0(pair[] f, pair[] g)
     
     real[] Fr=2*map(xpart,fft(F))-xpart(F[0]);
     real[] Gr=2*map(xpart,fft(G))-xpart(G[0]);
-    F=fft(shift(Fr*Gr))/n;
+    F=fft(shift(Fr*Gr),-1)/n;
     for(int k=0; k < m; ++k)
       h[k] += conj(Zeta[r*k % n])*F[k];
   }
