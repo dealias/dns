@@ -2,6 +2,9 @@
 \usepackage[dvips]{attachfile2}
 \usepackage{math}
 
+
+\newcommand{\Fourier}[0]{\mathcal{F}}
+
 \begin{document}
 
 \topmargin=-1in
@@ -10,6 +13,8 @@
 \author{John C. Bowman and Malcolm Roberts}
 \maketitle
 
+\section{1-D Dealiased Fast Fourier Transforms}
+\subsection{$1/2$ Dealiased Data}
 Suppose $N$ is a multiple of $2$. In terms of the $N$th primitive root of unity,
 $$
 \zeta_N\doteq \exp\(\frac{2 \pi i}{N}\),
@@ -54,9 +59,8 @@ multiplied term-by-term, and transformed back:
 We can therefore compute the convolution with two 1024 blocks (rather than one
 2048 block), to get a dealiased 1024 convolution (with the 2/4 rule).
 
-Also, this will work with complex to real transforms without modification,
-since $\zeta_N^{-k}=\zeta_N^k{}^*$.
-
+\newpage
+\subsection{$2/3$ Dealiased Data}
 The convolution in the Navier--Stokes equations require a $2/3$ padding in
 order to avoid problems with aliasing.  Suppose that the total number of modes
 (including zero-padding) is $N=3m$.  The inverse discrete Fourier transform
@@ -77,12 +81,62 @@ u_{3\ell}= \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} \hat u_k
 Equation~\ref{DFTm} is a DFT of length $m$,
 each requiring $m\log m$ operations. Following a similar procedure,
 with $r=1$ or $r=2$,
-$$
+\bel
+\label{dfft23g}
 u_{3\ell +r}\no=
 % \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \(\hat u_k + \z_N^{rm}\hat u_{k+m}\)
  \sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\z_N^{rk} \hat u_k + \z_N^{r(k+m)}\hat u_{k+m}\)
-$$
+\eel
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
+
+\newpage
+\subsubsection{Complex to Real Transforms of 2/3 Dealiased Data}
+
+Consider the cryptic comment
+\begin{quotation}
+  ``Also, this will work with complex to real transforms without modification,
+  since $\zeta_N^{-k}=\zeta_N^k{}^*$.''
+\end{quotation}
+As it turns out, $2/3$ dealiased data works particularly well with the
+Hermiticity condition, $\hat{u}_{-k}=\hat{u}^*_k$, which guarantees
+that the $x$-space data is real-valued. Consider a
+wavenumber-truncated vector ranging from $k=-(m-1)$ to $k=m-1$, which
+has $2m-1$ elements. If the data is arranged as 
+\begin{dmath*}[compact]
+  \{\hat{u}_k\}=
+  \(u_0=0,\,u_1=u|_{k=-(m-1)},\,\dots,\,u_{m}=u|_{k=-1},
+  \,u_{m+1}=u|_{k=0}, \,u_{m+2}=u|_{1},\,\dots,\,u_{2m}=u|_{k=(m-1)},\)
+\end{dmath*}
+then the vector (with $u_0$ a type of padding) has $N=2m$
+elements. Let $\ell=\k+m$. The iFFT of this data is
+\begin{dmath*}
+  \{u_n\}_{n=0}^{2m}
+  =\sum_{\ell=0}^{N-1=2m-1}\z_N^{-\ell n} \hat{u}_\ell
+  =\sum_{\ell=1}^{2m-1}\z_N^{-\ell n} \hat{u}_\ell
+  =\sum_{\ell=1}^{m}\z_N^{-\ell n} \hat{u}_\ell 
+  -\sum_{\ell=m}^{m}\z_N^{-\ell n} \hat{u}_\ell 
+  +\sum_{\ell=m}^{2m-1}\z_N^{-\ell n} \hat{u}_\ell
+  =\sum_{\k=1-m}^0\z_{2m}^{-(\k+m) n} \hat{u}_{\k+m}
+  -\sum_{\k=0}^{0}\z_{2m}^{-(\k+m) n} \hat{u}_{\k+m}
+  +\sum_{\k=0}^{m-1}\z_{2m}^{-(\k+m) n} \hat{u}_{\k+m}
+  =\sum_{\k=1-m}^0\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
+  -\hat{u}_{k=0}
+  +\sum_{\k=0}^{m-1}\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
+  =\sum_{\k=0}^{1-m}\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
+  -\hat{u}_{k=0}
+  +\sum_{\k=0}^{m-1}\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
+  =\sum_{\k=0}^{m-1}\z_{2m}^{-(-\k+m) n} \hat{u}_{k=-\k}
+  -\hat{u}_{k=0}
+  +\sum_{\k=0}^{m-1}\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
+  =\sum_{\k=0}^{m-1}\z_{2m}^{\k n}(-1)^n \hat{u}_{k=-\k}
+  -\hat{u}_{k=0}
+  +\sum_{\k=0}^{m-1}\z_{2m}^{-\k n}(-1)^n \hat{u}_{k=\k}
+  = 2\Re \(\sum_{\k=0}^{m-1}\z_{2m}^{-\k n}(-1)^n \hat{u}_{k=\k} \)-\hat{u}_{k=0}
+\end{dmath*}
+
+
+\newpage
+\subsection{$p/q$ Dealiased Data}
 
 In general, consider a ``$p/q$'' padding in which $N=qm$, and only $pm$ modes
 are non-zero, with $p$ and $q$ relatively prime. Consider $u_{q\ell+r}$, with
@@ -117,6 +171,9 @@ in memory use and parallelizability.
 %have can divide up the DFT into $p$ DFTs of length $m$. Must work out
 %the details.
 
+
+
+
 \section{2D, 2/3-dealiased transforms}
 Our goal is to apply this to dealiased pseudospectral simulations. If we 
 avoid moving the $k$-space origin to the middle of the array, the Fourier
@@ -142,5 +199,6 @@ buffer for all necessary transformations.
     \label{dealias2d}
   \end{center}
 \end{figure}
+
 
 \end{document}
