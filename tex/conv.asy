@@ -121,6 +121,12 @@ pair[] convolve0(pair[] f, pair[] g)
   int m=f.length;
   int n=q*m;
   
+  pair zeta=exp(-2*pi*I/n);
+  pair[] Zeta=new pair[n];
+
+  for(int i=0; i < n; ++i)
+    Zeta[i]=zeta^i;
+
   write("m=",m);
   write("n=",n);
 
@@ -132,15 +138,10 @@ pair[] convolve0(pair[] f, pair[] g)
   write();
   
   write("r="+(string) 0);
-  for(int k=0; k < m; ++k) {
-    F[k] += f[k];
-    G[k] += g[k];
-  }
-
-  real[] Fr=2.0*map(xpart,fft(F))-xpart(F[0]);
-  real[] Gr=2.0*map(xpart,fft(G))-xpart(G[0]);
   
-  // Need to work this out too:
+  real[] Fr=2.0*map(xpart,fft(f))-xpart(f[0]);
+  real[] Gr=2.0*map(xpart,fft(f))-xpart(g[0]);
+  
   F=rcfft(shift(Fr*Gr))/n;
 
   for(int k=0; k < m; ++k)
@@ -154,6 +155,7 @@ pair[] convolve0(pair[] f, pair[] g)
       F[k] += Zeta[r*(m+k) % n]*f[k];
       G[k] += Zeta[r*(m+k) % n]*g[k];
     }
+    
     real[] Fr=2.0*map(xpart,fft(F))-xpart(F[0]);
     real[] Gr=2.0*map(xpart,fft(G))-xpart(G[0]);
     F=rcfft(shift(Fr*Gr))/n;
