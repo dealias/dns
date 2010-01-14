@@ -56,19 +56,23 @@ pair[] convolve0(pair[] f, pair[] g)
   pair[] G=array(m,(0,0));
 
   write("r="+(string) 0);
-  
+
   pair[] pack(pair[] f, pair[] g) {
-    return sequence(new pair(int k) {
-        int K=m-k;
-        if(K == m) K=0;
-        return f[k]+conj(f[K])+I*(g[k]+conj(g[K]));
-      },f.length);
+    pair[] h;
+    h[0]=2(f[0].x,g[0].x);
+    int c=quotient(m,2);
+    for(int k=1; k <= c; ++k) {
+      int K=m-k;
+      pair F=f[k]+conj(f[K]);
+      pair G=g[k]+conj(g[K]);
+      h[k]=F+I*G;
+      h[K]=conj(F-I*G);
+    }
+    return h;
   }
   
   pair[] H=fft(pack(f,g),1)-(f[0].x,g[0].x);
-  real[] Fr=map(xpart,H);
-  real[] Gr=map(ypart,H);
-  pair[] h=fft(Fr*Gr,-1)/n;
+  pair[] h=fft(map(xpart,H)*map(ypart,H),-1)/n;
 
   for(int r=1; r < q; ++r) {
     F=array(m,(0,0));
@@ -79,10 +83,8 @@ pair[] convolve0(pair[] f, pair[] g)
       G[k] += Zeta[r*k]*g[k];
     }
     
-    pair[] H=fft(pack(F,G),1);
-    real[] Fr=map(xpart,H)-xpart(F[0]);
-    real[] Gr=map(ypart,H)-xpart(G[0]);
-    F=fft(Fr*Gr,-1)/n;
+    H=fft(pack(F,G),1)-(F[0].x,G[0].x);
+    F=fft(map(xpart,H)*map(ypart,H),-1)/n;
     for(int k=0; k < m; ++k)
       h[k] += Zeta[-r*k]*F[k];
   }
