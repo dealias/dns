@@ -65,9 +65,9 @@ pair[] convolve0(pair[] f, pair[] g)
       },f.length);
   }
   
-  pair[] H=fft(pack(f,g),1);
-  real[] Fr=map(xpart,H)-xpart(f[0]);
-  real[] Gr=map(ypart,H)-xpart(g[0]);
+  pair[] H=fft(pack(f,g),1)-(f[0].x,g[0].x);
+  real[] Fr=map(xpart,H);
+  real[] Gr=map(ypart,H);
   pair[] h=fft(Fr*Gr,-1)/n;
 
   for(int r=1; r < q; ++r) {
