@@ -57,8 +57,11 @@ pair[] convolve0(pair[] f, pair[] g)
 
   write("r="+(string) 0);
   
-  real[] Fr=2*map(xpart,fft(f,1))-xpart(f[0]);
-  real[] Gr=2*map(xpart,fft(g,1))-xpart(g[0]);
+  pair[] F=sequence(new pair(int k) {return f[k]+conj(f[(m-k) % m]);},f.length);
+  pair[] G=sequence(new pair(int k) {return g[k]+conj(g[(m-k) % m]);},f.length);
+  pair[] H=fft(F+I*G,1);
+  real[] Fr=map(xpart,H)-xpart(f[0]);
+  real[] Gr=map(ypart,H)-xpart(g[0]);
   pair[] h=fft(Fr*Gr,-1)/n;
 
   for(int r=1; r < q; ++r) {
