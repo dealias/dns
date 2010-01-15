@@ -78,10 +78,6 @@ pair[] convolve0(pair[] f, pair[] g)
 
   write("r="+(string) 0);
 
-  pair[] unsym(pair[] f) {
-    return concat(f,map(conj,reverse(f[1:f.length])));
-  }
-
   pair[] sym(pair[] f) {
     int m=f.length;
     int c=quotient(m,2);
@@ -95,7 +91,13 @@ pair[] convolve0(pair[] f, pair[] g)
     return h;
   }
   
-  pair[] h=unsym(rcfft0((crfft0(sym(f))-f[0].x)*(crfft0(sym(g))-g[0].x)))/n;
+  pair[] h=array(m,(0,0));
+
+  F=rcfft0((crfft0(sym(f))-f[0].x)*(crfft0(sym(g))-g[0].x));
+  for(int k=0; k < F.length; ++k)
+    h[k]=F[k];
+  for(int k=F.length; k < m; ++k)
+    h[k]=conj(F[m-k]);
 
   for(int r=1; r < q; ++r) {
     F=array(m,(0,0));
@@ -106,11 +108,13 @@ pair[] convolve0(pair[] f, pair[] g)
       G[k] += Zeta[r*k]*g[k];
     }
     
-    F=unsym(rcfft0((crfft0(sym(F))-F[0].x)*(crfft0(sym(F))-F[0].x)))/n;
-    for(int k=0; k < m; ++k)
+    F=rcfft0((crfft0(sym(F))-F[0].x)*(crfft0(sym(F))-F[0].x));
+    for(int k=0; k < F.length; ++k)
       h[k] += Zeta[-r*k]*F[k];
+    for(int k=F.length; k < m; ++k)
+      h[k] += Zeta[-r*k]*conj(F[m-k]);
   }
-  return h;
+  return h/n;
 }
 
 int n=32;
