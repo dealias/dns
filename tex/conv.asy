@@ -83,21 +83,20 @@ pair[] convolve0(pair[] f, pair[] g)
     int c=quotient(m,2);
     pair[] h=new pair[c+1];
     h[0]=2f[0].x;
-    for(int k=1; k <= c; ++k) {
-      int K=m-k;
-      pair F=f[k]+conj(f[K]);
-      h[k]=F;
-    }
+    for(int k=1; k <= c; ++k)
+      h[k]=f[k]+conj(f[m-k]);
     return h;
   }
   
   pair[] h=array(m,(0,0));
 
   F=rcfft0((crfft0(sym(f))-f[0].x)*(crfft0(sym(g))-g[0].x));
-  for(int k=0; k < F.length; ++k)
-    h[k]=F[k];
-  for(int k=F.length; k < m; ++k)
-    h[k]=conj(F[m-k]);
+  h[0]=F[0];
+  for(int k=1; k < F.length; ++k) {
+    pair Fk=F[k];
+    h[k]=Fk;
+    h[m-k]=conj(Fk);
+  }
 
   for(int r=1; r < q; ++r) {
     F=array(m,(0,0));
@@ -109,10 +108,13 @@ pair[] convolve0(pair[] f, pair[] g)
     }
     
     F=rcfft0((crfft0(sym(F))-F[0].x)*(crfft0(sym(F))-F[0].x));
-    for(int k=0; k < F.length; ++k)
-      h[k] += Zeta[-r*k]*F[k];
-    for(int k=F.length; k < m; ++k)
-      h[k] += Zeta[-r*k]*conj(F[m-k]);
+    h[0] += F[0];
+    pair Zetarm=Zeta[r*m];
+    for(int k=1; k < F.length; ++k) {
+      pair Fk=Zeta[-r*k]*F[k];
+      h[k] += Fk;
+      h[m-k] += conj(Zetarm*Fk);
+    }
   }
   return h/n;
 }
