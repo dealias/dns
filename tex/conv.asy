@@ -31,6 +31,27 @@ real[] crfft(pair[] f)
   return map(xpart,shift(fft(decompress(f),1)));
 }
 
+real[] crfft0(pair[] f)
+{
+  int m=f.length;
+  int L=2m-1;
+  
+  pair[] h=new pair[L];
+  h[0]=f[0];
+  
+  for(int i=1; i < m; ++i) {
+    h[i]=f[i];
+    h[L-i]=conj(f[i]);
+  }
+  
+  return map(xpart,fft(h,-1));
+}
+
+pair[] rcfft0(real[] f)
+{
+  return fft(f,1)[0:quotient(f.length,2)+1];
+}
+
 // Return the non-negative Fourier components of a real vector f.
 pair[] rcfft(real[] f) 
 {
@@ -57,22 +78,24 @@ pair[] convolve0(pair[] f, pair[] g)
 
   write("r="+(string) 0);
 
-  pair[] pack(pair[] f, pair[] g) {
-    pair[] h;
-    h[0]=2(f[0].x,g[0].x);
+  pair[] unsym(pair[] f) {
+    return concat(f,map(conj,reverse(f[1:f.length])));
+  }
+
+  pair[] sym(pair[] f) {
+    int m=f.length;
     int c=quotient(m,2);
+    pair[] h=new pair[c+1];
+    h[0]=2f[0].x;
     for(int k=1; k <= c; ++k) {
       int K=m-k;
       pair F=f[k]+conj(f[K]);
-      pair G=g[k]+conj(g[K]);
-      h[k]=F+I*G;
-      h[K]=conj(F-I*G);
+      h[k]=F;
     }
     return h;
   }
   
-  pair[] H=fft(pack(f,g),1)-(f[0].x,g[0].x);
-  pair[] h=fft(map(xpart,H)*map(ypart,H),-1)/n;
+  pair[] h=unsym(rcfft0((crfft0(sym(f))-f[0].x)*(crfft0(sym(g))-g[0].x)))/n;
 
   for(int r=1; r < q; ++r) {
     F=array(m,(0,0));
@@ -83,8 +106,7 @@ pair[] convolve0(pair[] f, pair[] g)
       G[k] += Zeta[r*k]*g[k];
     }
     
-    H=fft(pack(F,G),1)-(F[0].x,G[0].x);
-    F=fft(map(xpart,H)*map(ypart,H),-1)/n;
+    F=unsym(rcfft0((crfft0(sym(F))-F[0].x)*(crfft0(sym(F))-F[0].x)))/n;
     for(int k=0; k < m; ++k)
       h[k] += Zeta[-r*k]*F[k];
   }
