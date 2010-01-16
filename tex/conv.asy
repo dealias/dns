@@ -61,7 +61,19 @@ pair[] rcfft(real[] f)
 pair[] convolve0(pair[] f, pair[] g)
 {
   int m=f.length;
-  int n=q*m;
+  int c=quotient(m,2);
+  bool even=2*c == m;
+  int M;
+  int start;
+  if(even) {
+    M=m+1;
+    start=2;
+  } else {
+    M=m;
+    start=1;
+  }
+  
+  int n=q*M;
   
   pair zeta=exp(-2*pi*I/n);
   pair[] Zeta=new pair[n];
@@ -70,7 +82,7 @@ pair[] convolve0(pair[] f, pair[] g)
   for(int i=0; i < n; ++i)
     Zeta[i]=zeta^i;
 
-  write("m=",m);
+  write("M=",M);
   write("n=",n);
 
   pair[] F=array(m,(0,0));
@@ -79,23 +91,25 @@ pair[] convolve0(pair[] f, pair[] g)
   write("r="+(string) 0);
 
   pair[] sym(pair[] f) {
-    int m=f.length;
-    int c=quotient(m,2);
     pair[] h=new pair[c+1];
     h[0]=2f[0].x;
-    for(int k=1; k <= c; ++k)
-      h[k]=f[k]+conj(f[m-k]);
+    if(even) 
+      h[1]=f[1];
+    for(int k=start; k <= c; ++k)
+      h[k]=f[k]+conj(f[M-k]);
     return h;
   }
   
-  pair[] h=array(m,(0,0));
-
   F=rcfft0((crfft0(sym(f))-f[0].x)*(crfft0(sym(g))-g[0].x));
+
+  pair[] h=new pair[m];
   h[0]=F[0];
-  for(int k=1; k < F.length; ++k) {
+  if(even)
+    h[1]=F[1];
+  for(int k=start; k <= c; ++k) {
     pair Fk=F[k];
     h[k]=Fk;
-    h[m-k]=conj(Fk);
+    h[M-k]=conj(Fk);
   }
 
   for(int r=1; r < q; ++r) {
@@ -103,17 +117,20 @@ pair[] convolve0(pair[] f, pair[] g)
     G=array(m,(0,0));
     write("r="+(string) r);
     for(int k=0; k < m; ++k) {
-      F[k] += Zeta[r*k]*f[k];
-      G[k] += Zeta[r*k]*g[k];
+      pair Zetark=Zeta[r*k];
+      F[k] += Zetark*f[k];
+      G[k] += Zetark*g[k];
     }
-    
+
     F=rcfft0((crfft0(sym(F))-F[0].x)*(crfft0(sym(F))-F[0].x));
     h[0] += F[0];
-    pair Zetarm=Zeta[r*m];
-    for(int k=1; k < F.length; ++k) {
+    if(even)
+      h[1] += Zeta[-r]*F[1];
+    pair ZetarM=Zeta[r*M];
+    for(int k=start; k <= c; ++k) {
       pair Fk=Zeta[-r*k]*F[k];
       h[k] += Fk;
-      h[m-k] += conj(Zetarm*Fk);
+      h[M-k] += conj(ZetarM*Fk);
     }
   }
   return h/n;
@@ -152,6 +169,7 @@ pair[] direct(pair[] F, pair[] G)
 }	
 
 pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
+pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
 
 pair[] f=copy(d);
 pair[] g=copy(d);
