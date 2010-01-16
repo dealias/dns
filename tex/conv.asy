@@ -31,23 +31,24 @@ real[] crfft(pair[] f)
   return map(xpart,shift(fft(decompress(f),1)));
 }
 
-real[] crfft0(pair[] f)
+real[] crfft0(pair[] f, bool even=true)
 {
   int m=f.length;
-  int L=2m-1;
+  int L=even ? 2m-2 : 2m-1;
   pair[] h=new pair[L];
-
   h[0]=f[0];
-  for(int i=1; i < m; ++i) {
+  for(int i=1; i < m-1; ++i) {
     h[i]=f[i];
     h[L-i]=conj(f[i]);
   }
-  return map(xpart,fft(h,-1));
+  h[m-1]=f[m-1];
+  if(!even) h[m]=conj(f[m-1]);
+  return map(xpart,fft(h,1));
 }
 
 pair[] rcfft0(real[] f)
 {
-  return fft(f,1)[0:quotient(f.length,2)+1];
+  return fft(f,-1)[0:quotient(f.length,2)+1];
 }
 
 // Return the non-negative Fourier components of a real vector f.
@@ -60,18 +61,11 @@ pair[] convolve0(pair[] f, pair[] g)
 {
   int m=f.length;
   int c=quotient(m,2);
-  bool even=2*c == m;
-  int M;
-  int start;
-  if(even) {
-    M=m+1;
-    start=2;
-  } else {
-    M=m;
-    start=1;
-  }
+  bool even=2c == m;
+  int stop=c;
+  if(even) --stop;
   
-  int n=q*M;
+  int n=q*m;
   
   pair zeta=exp(-2*pi*I/n);
   pair[] Zeta=new pair[n];
@@ -80,61 +74,55 @@ pair[] convolve0(pair[] f, pair[] g)
   for(int i=0; i < n; ++i)
     Zeta[i]=zeta^i;
 
-  write("M=",M);
+  write("m=",m);
   write("n=",n);
 
   pair[] F=array(m,(0,0));
   pair[] G=array(m,(0,0));
 
-  write("r="+(string) 0);
-
   pair[] sym(pair[] f) {
     pair[] h=new pair[c+1];
     h[0]=2f[0].x;
-    if(even) 
-      h[1]=f[1];
-    for(int k=start; k <= c; ++k)
-      h[k]=f[k]+conj(f[M-k]);
+    for(int k=1; k <= c; ++k)
+      h[k]=f[k]+conj(f[m-k]);
     return h;
   }
-  
-  F=rcfft0((crfft0(sym(f))-f[0].x)*(crfft0(sym(g))-g[0].x));
+
+  F=rcfft0((crfft0(sym(f),even)-f[0].x)*(crfft0(sym(g),even)-g[0].x));
 
   pair[] h=new pair[m];
-  h[0]=F[0];
-  if(even)
-    h[1]=F[1];
-  for(int k=start; k <= c; ++k) {
+  h[0]=F[0].x;
+  for(int k=1; k <= stop; ++k) {
     pair Fk=F[k];
     h[k]=Fk;
-    h[M-k]=conj(Fk);
+    h[m-k]=conj(Fk);
   }
+  if(even) h[c]=F[c].x;
 
   for(int r=1; r < q; ++r) {
     F=array(m,(0,0));
     G=array(m,(0,0));
-    write("r="+(string) r);
     for(int k=0; k < m; ++k) {
       pair Zetark=Zeta[r*k];
       F[k] += Zetark*f[k];
       G[k] += Zetark*g[k];
     }
 
-    F=rcfft0((crfft0(sym(F))-F[0].x)*(crfft0(sym(F))-F[0].x));
-    h[0] += F[0];
-    if(even)
-      h[1] += Zeta[-r]*F[1];
-    pair ZetarM=Zeta[r*M];
-    for(int k=start; k <= c; ++k) {
+    F=rcfft0((crfft0(sym(F),even)-F[0].x)*(crfft0(sym(F),even)-F[0].x));
+    
+    h[0] += F[0].x;
+    pair Zetarm=Zeta[r*m];
+    for(int k=1; k <= stop; ++k) {
       pair Fk=Zeta[-r*k]*F[k];
       h[k] += Fk;
-      h[M-k] += conj(ZetarM*Fk);
+      h[m-k] += conj(Zetarm*Fk);
     }
+    if(even) h[c] += Zeta[-r*c]*F[c].x;
   }
   return h/n;
 }
 
-int n=34;
+int n=32;
 int np=quotient(n,2)+1;
 
 pair[] convolve(pair[] F, pair[] G)
@@ -149,6 +137,7 @@ pair[] convolve(pair[] F, pair[] G)
     F[i]=0.0;
   }
   
+  return rcfft0((crfft0(F)*crfft0(G))/n)[0:m];
   return rcfft(shift(crfft(F)*crfft(G))/n)[0:m];
 }	
 
@@ -167,7 +156,8 @@ pair[] direct(pair[] F, pair[] G)
 }	
 
 pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
-pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1),3};
+//pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1),3};
+pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
 
 pair[] f=copy(d);
 pair[] g=copy(d);
