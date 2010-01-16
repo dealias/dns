@@ -1,37 +1,8 @@
 int p=2,q=3;
 write((string) p +"/" +(string) q +" padding");
 
-private pair[] shift(pair[] f) 
-{
-  for(int i=1; i < f.length; i += 2)
-    f[i]=-f[i];
-  return f;
-}
-
-private real[] shift(real[] f)
-{
-  for(int i=1; i < f.length; i += 2)
-    f[i]=-f[i];
-  return f;
-}
-
-pair[] decompress(pair[] f)
-{
-  return concat(map(conj,reverse(f)[0:f.length-1]),f[0:f.length-1]);
-}
-
-pair[] compress(pair[] f)
-{
-  return f[quotient(f.length,2):f.length];
-}
-
 // Return the inverse Fourier transform of a Hermitian vector f.
-real[] crfft(pair[] f)
-{
-  return map(xpart,shift(fft(decompress(f),1)));
-}
-
-real[] crfft0(pair[] f, bool even=true)
+real[] crfft(pair[] f, bool even=true)
 {
   int m=f.length;
   int L=even ? 2m-2 : 2m-1;
@@ -46,15 +17,10 @@ real[] crfft0(pair[] f, bool even=true)
   return map(xpart,fft(h,1));
 }
 
-pair[] rcfft0(real[] f)
+// Return the non-negative Fourier spectrum of a real vector f.
+pair[] rcfft(real[] f)
 {
   return fft(f,-1)[0:quotient(f.length,2)+1];
-}
-
-// Return the non-negative Fourier components of a real vector f.
-pair[] rcfft(real[] f) 
-{
-  return compress(fft(f,-1));
 }
 
 pair[] convolve0(pair[] f, pair[] g)
@@ -88,7 +54,7 @@ pair[] convolve0(pair[] f, pair[] g)
     return h;
   }
 
-  F=rcfft0((crfft0(sym(f),even)-f[0].x)*(crfft0(sym(g),even)-g[0].x));
+  F=rcfft((crfft(sym(f),even)-f[0].x)*(crfft(sym(g),even)-g[0].x));
 
   pair[] h=new pair[m];
   h[0]=F[0].x;
@@ -108,7 +74,7 @@ pair[] convolve0(pair[] f, pair[] g)
       G[k] += Zetark*g[k];
     }
 
-    F=rcfft0((crfft0(sym(F),even)-F[0].x)*(crfft0(sym(F),even)-F[0].x));
+    F=rcfft((crfft(sym(F),even)-F[0].x)*(crfft(sym(F),even)-F[0].x));
     
     h[0] += F[0].x;
     pair Zetarm=Zeta[r*m];
@@ -137,8 +103,7 @@ pair[] convolve(pair[] F, pair[] G)
     F[i]=0.0;
   }
   
-  return rcfft0((crfft0(F)*crfft0(G))/n)[0:m];
-  return rcfft(shift(crfft(F)*crfft(G))/n)[0:m];
+  return rcfft((crfft(F)*crfft(G))/n)[0:m];
 }	
 
 pair[] direct(pair[] F, pair[] G)
@@ -157,7 +122,7 @@ pair[] direct(pair[] F, pair[] G)
 
 pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1),3};
-pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
+//pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
 
 pair[] f=copy(d);
 pair[] g=copy(d);
