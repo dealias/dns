@@ -1,7 +1,8 @@
 int p=2,q=3;
 write((string) p +"/" +(string) q +" padding");
 
-// Return the inverse Fourier transform of a Hermitian vector f.
+// Return the inverse Fourier transform of size n for a Hermitian vector f
+// of length (n/2+1). The flag even indicates whether n is even.
 real[] crfft(pair[] f, bool even=true)
 {
   int m=f.length;
@@ -88,12 +89,11 @@ pair[] convolve0(pair[] f, pair[] g)
   return h/n;
 }
 
-int n=32;
-int np=quotient(n,2)+1;
-
 pair[] convolve(pair[] F, pair[] G)
 {
   int m=F.length;
+  int n=quotient((2*m-1)*q,p);
+  int np=quotient(n,2)+1;
   
   F=copy(F);
   G=copy(G);
@@ -102,8 +102,8 @@ pair[] convolve(pair[] F, pair[] G)
     G[i]=0.0;
     F[i]=0.0;
   }
-  
-  return rcfft((crfft(F)*crfft(G))/n)[0:m];
+  bool even=n % 2 == 0;
+  return rcfft((crfft(F,even)*crfft(G,even))/n)[0:m];
 }	
 
 pair[] direct(pair[] F, pair[] G)
