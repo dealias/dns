@@ -35,15 +35,13 @@ real[] crfft0(pair[] f)
 {
   int m=f.length;
   int L=2m-1;
-  
   pair[] h=new pair[L];
+
   h[0]=f[0];
-  
   for(int i=1; i < m; ++i) {
     h[i]=f[i];
     h[L-i]=conj(f[i]);
   }
-  
   return map(xpart,fft(h,-1));
 }
 
@@ -136,7 +134,7 @@ pair[] convolve0(pair[] f, pair[] g)
   return h/n;
 }
 
-int n=32;
+int n=64;
 int np=quotient(n,2)+1;
 
 pair[] convolve(pair[] F, pair[] G)
@@ -169,7 +167,7 @@ pair[] direct(pair[] F, pair[] G)
 }	
 
 pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
-pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
+pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1),3};
 
 pair[] f=copy(d);
 pair[] g=copy(d);
