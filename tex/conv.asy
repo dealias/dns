@@ -66,26 +66,44 @@ pair[] convolve0(pair[] f, pair[] g)
   }
   if(even) h[c]=F[c].x;
 
-  for(int r=1; r < q; ++r) {
-    F=array(m,(0,0));
-    G=array(m,(0,0));
-    for(int k=0; k < m; ++k) {
-      pair Zetark=Zeta[r*k];
-      F[k] += Zetark*f[k];
-      G[k] += Zetark*g[k];
-    }
-
-    F=rcfft((crfft(sym(F),even)-F[0].x)*(crfft(sym(F),even)-F[0].x));
-    
-    h[0] += F[0].x;
-    pair Zetarm=Zeta[r*m];
-    for(int k=1; k <= stop; ++k) {
-      pair Fk=Zeta[-r*k]*F[k];
-      h[k] += Fk;
-      h[m-k] += conj(Zetarm*Fk);
-    }
-    if(even) h[c] += Zeta[-r*c]*F[c].x;
+  F=array(m,(0,0));
+  G=array(m,(0,0));
+  for(int k=0; k < m; ++k) {
+    pair Zetark=Zeta[k];
+    F[k] += Zetark*f[k];
+    G[k] += Zetark*g[k];
   }
+  
+  F=rcfft((crfft(sym(F),even)-F[0].x)*(crfft(sym(F),even)-F[0].x));
+    
+  h[0] += F[0].x;
+  pair Zetarm=Zeta[m];
+  for(int k=1; k <= stop; ++k) {
+    pair Fk=Zeta[-k]*F[k];
+    h[k] += Fk;
+    h[m-k] += conj(Zetarm*Fk);
+  }
+  if(even) h[c] += Zeta[-c]*F[c].x;
+
+  F=array(m,(0,0));
+  G=array(m,(0,0));
+  for(int k=0; k < m; ++k) {
+    pair Zetark=Zeta[-k];
+    F[k] += Zetark*f[k];
+    G[k] += Zetark*g[k];
+  }
+
+  F=rcfft((crfft(sym(F),even)-F[0].x)*(crfft(sym(F),even)-F[0].x));
+    
+  h[0] += F[0].x;
+  pair Zetarm=Zeta[-m];
+  for(int k=1; k <= stop; ++k) {
+    pair Fk=Zeta[k]*F[k];
+    h[k] += Fk;
+    h[m-k] += conj(Zetarm*Fk);
+  }
+  if(even) h[c] += Zeta[c]*F[c].x;
+
   return h/n;
 }
 
@@ -120,9 +138,9 @@ pair[] direct(pair[] F, pair[] G)
   return H;
 }	
 
-pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
+//pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1),3};
-//pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
+pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
 
 pair[] f=copy(d);
 pair[] g=copy(d);
