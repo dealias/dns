@@ -134,7 +134,7 @@ pair[] convolve0(pair[] f, pair[] g)
   return h/n;
 }
 
-int n=64;
+int n=34;
 int np=quotient(n,2)+1;
 
 pair[] convolve(pair[] F, pair[] G)
