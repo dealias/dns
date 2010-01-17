@@ -22,8 +22,8 @@ void timestamp(bool output=true)
 
 int main()
 {	
+//  unsigned int m=4096
   unsigned int m=5376;
-//  unsigned int m=4096;
   unsigned int n=(2*m-1)*3;
   if(n % 2 == 1) ++n;
   n /= 2;
@@ -86,8 +86,8 @@ int main()
   cout << h[0] << endl;
 //  for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
   
-//  FFTWdelete(f);
-//  FFTWdelete(g);
-//  FFTWdelete(h);
+  FFTWdelete(f);
+  FFTWdelete(g);
+  FFTWdelete(h);
 }
 
