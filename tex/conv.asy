@@ -48,19 +48,18 @@ pair[] convolve0(pair[] f, pair[] g)
   real f0=f[0].x;
   real g0=g[0].x;
 
-  pair[] sym(pair[] f) {
-    pair[] h=new pair[c+1];
-    h[0]=2f[0].x;
-    for(int k=1; k <= c; ++k)
-      h[k]=f[k]+conj(f[m-k]);
-    return h;
-  }
-
   pair[] F=new pair[c+1];
   pair[] G=new pair[c+1];
 
+  F[0]=2f0;
+  G[0]=2g0;
+  for(int k=1; k <= c; ++k) {
+    F[k]=f[k]+conj(f[m-k]);
+    G[k]=g[k]+conj(g[m-k]);
+  }
+  
   // r=0:
-  pair[] h=rcfft((crfft(sym(f),even)-f0)*(crfft(sym(g),even)-g0));
+  pair[] h=rcfft((crfft(F,even)-f0)*(crfft(G,even)-g0));
 
   for(int k=1; k <= stop; ++k)
     h[m-k]=conj(h[k]);

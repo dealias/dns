@@ -20,7 +20,7 @@ protected:
   Complex *Zeta;
   Complex *F;
   Complex *G;
-  Complex *B;
+  Complex *B,*C;
 public:  
   convolution(unsigned int n, unsigned int m) : n(n), m(m), n2(n/2) {
     rc=new rcfft1d(n);
@@ -45,7 +45,8 @@ public:
     
     F=FFTWComplex(m);
     G=FFTWComplex(m);
-    B=FFTWComplex(m);
+    B=FFTWComplex(c+1);
+    C=FFTWComplex(c+1);
     
     rc=new rcfft1d(m,(double *)F,G);
     cr=new crfft1d(m,F,(double *)G);
@@ -106,8 +107,8 @@ public:
     if(even) --stop;
   
     // r=0:
-    double F0=f[0].real();
-    double G0=g[0].real();
+    double f0=f[0].real();
+    double g0=g[0].real();
     
     sym(f,h);
 
@@ -117,9 +118,9 @@ public:
     cr->fft(h,G);
     
     for(unsigned int i=0; i < c; i++)
-      F[i]=Complex((F[i].real()-F0)*(G[i].real()-G0),
-                   (F[i].imag()-F0)*(G[i].imag()-G0));
-    F[c]=(F[c].real()-F0)*(G[c].real()-G0);
+      F[i]=Complex((F[i].real()-f0)*(G[i].real()-g0),
+                   (F[i].imag()-f0)*(G[i].imag()-g0));
+    F[c]=(F[c].real()-f0)*(G[c].real()-g0);
 
     rc->fft(F,h);
     
@@ -127,27 +128,21 @@ public:
       h[m-k]=conj(h[k]);
 
     // r=1:
-    F[0]=f[0];
-    G[0]=g[0];
-    for(int k=1; k < m; ++k) {
+    B[0]=2.0*f[0].real();
+    C[0]=2.0*g[0].real();
+    for(int k=1; k <= c; ++k) {
       Complex Zetak=Zeta[k];
-      F[k]=Zetak*f[k];
-      G[k]=Zetak*g[k];
+      B[k]=Zetak*(f[k]+conj(f[m-k]));
+      C[k]=Zetak*(g[k]+conj(g[m-k]));
     }
   
-    F0=F[0].real();
-    G0=G[0].real();
-    
-    sym(F,B);
     cr->fft(B,F);
-    
-    sym(G,B);
-    cr->fft(B,G);
+    cr->fft(C,G);
     
     for(unsigned int i=0; i < c; i++)
-      F[i]=Complex((F[i].real()-F0)*(G[i].real()-G0),
-                   (F[i].imag()-F0)*(G[i].imag()-G0));
-    F[c]=(F[c].real()-F0)*(G[c].real()-G0);
+      F[i]=Complex((F[i].real()-f0)*(G[i].real()-g0),
+                   (F[i].imag()-f0)*(G[i].imag()-g0));
+    F[c]=(F[c].real()-f0)*(G[c].real()-g0);
 
     rc->fft(F,B);
     
@@ -169,9 +164,6 @@ public:
       G[k]=multconj(g[k],Zetamk);
     }
 
-    F0=F[0].real();
-    G0=G[0].real();
-    
     sym(F,B);
     cr->fft(B,F);
     
@@ -179,9 +171,9 @@ public:
     cr->fft(B,G);
     
     for(unsigned int i=0; i < c; i++)
-      F[i]=Complex((F[i].real()-F0)*(G[i].real()-G0),
-                   (F[i].imag()-F0)*(G[i].imag()-G0));
-    F[c]=(F[c].real()-F0)*(G[c].real()-G0);
+      F[i]=Complex((F[i].real()-f0)*(G[i].real()-g0),
+                   (F[i].imag()-f0)*(G[i].imag()-g0));
+    F[c]=(F[c].real()-f0)*(G[c].real()-g0);
 
     rc->fft(F,B);
     
