@@ -28,6 +28,7 @@ pair[] convolve0(pair[] f, pair[] g)
 {
   int m=f.length;
   int c=quotient(m,2);
+  
   bool even=2c == m;
   int stop=c;
   if(even) --stop;
@@ -36,7 +37,7 @@ pair[] convolve0(pair[] f, pair[] g)
   
   pair zeta=exp(2*pi*I/n);
   pair[] Zeta=new pair[n];
-  Zeta.cyclic=true;
+  //  Zeta.cyclic=true;
 
   for(int i=0; i < n; ++i)
     Zeta[i]=zeta^i;
@@ -68,26 +69,31 @@ pair[] convolve0(pair[] f, pair[] g)
   if(even) h[c]=F[c].x;
 
   // r=1:
-  for(int k=0; k < m; ++k) {
+  F[0]=f[0];
+  G[0]=g[0];
+  for(int k=1; k < m; ++k) {
     pair Zetak=Zeta[k];
     F[k]=Zetak*f[k];
     G[k]=Zetak*g[k];
   }
   
+
   F=rcfft((crfft(sym(F),even)-F[0].x)*(crfft(sym(G),even)-G[0].x));
     
   h[0] += F[0].x;
   pair Zetam=Zeta[m];
   for(int k=1; k <= stop; ++k) {
-    pair Fk=Zeta[-k]*F[k];
+    pair Fk=conj(Zeta[k])*F[k];
     h[k] += Fk;
     h[m-k] += conj(Zetam*Fk);
   }
-  if(even) h[c] += Zeta[-c]*F[c].x;
+  if(even) h[c] += conj(Zeta[c])*F[c].x;
 
   // r=2:
-  for(int k=0; k < m; ++k) {
-    pair Zetamk=Zeta[-k];
+  F[0]=f[0];
+  G[0]=g[0];
+  for(int k=1; k < m; ++k) {
+    pair Zetamk=conj(Zeta[k]);
     F[k]=Zetamk*f[k];
     G[k]=Zetamk*g[k];
   }
@@ -136,17 +142,18 @@ pair[] direct(pair[] F, pair[] G)
   return H;
 }	
 
-//pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
+pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1),3};
-pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
+//pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
 
 pair[] f=copy(d);
-pair[] g=copy(d+1);
+//pair[] g=copy(d+1);
+pair[] g=copy(d);
 
 write();
 
-write(convolve(f,g));
-write();
-write(direct(f,g));
+//write(convolve(f,g));
+//write();
+//write(direct(f,g));
 write();
 write(convolve0(f,g));
