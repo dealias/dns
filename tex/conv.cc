@@ -5,12 +5,32 @@ using namespace std;
 
 using namespace std;
 
+#include <time.h>
+#include <sys/times.h>
+
+void timestamp()
+{
+  static const double ticktime=1.0/sysconf(_SC_CLK_TCK);
+  struct tms buf;
+
+  ::times(&buf);
+  static double lasttime=0;
+  cout << (buf.tms_utime-lasttime)*ticktime << endl;
+  lasttime=buf.tms_utime;
+}
+
 int main()
 {	
-  unsigned int m=683;
+  unsigned int m=8192;
   unsigned int n=(2*m-1)*3;
   if(n % 2 == 1) ++n;
   n /= 2;
+  unsigned int log2n;
+  // Choose next power of 2 for maximal efficiency.
+  for(log2n=0; n > (1 << log2n); log2n++);
+  n=1 << log2n;
+  cout << "n=" << n << endl;
+  cout << "m=" << m << endl;
   
   unsigned int np=n/2+1;
   Complex *f=FFTWComplex(np);
@@ -27,28 +47,36 @@ int main()
   for(unsigned int i=0; i < m; i++) f[i]=d[i];
   for(unsigned int i=0; i < m; i++) g[i]=d[i];
   
+  
   convolution convolve(m);
-  for(int i=0; i < 10000; ++i)
+  convolution Convolve(n,m);
+  
+  for(int i=0; i < 1000; ++i)
     convolve.unpadded(h,f,g);
+  cout << endl;
+  timestamp();
   cout << h[0] << endl;
   
-  convolution Convolve(true,m);
-  for(int i=0; i < 10000; ++i) {
+  for(int i=0; i < 1000; ++i) {
     for(unsigned int i=0; i < m; i++) f[i]=d[i];
     for(unsigned int i=0; i < m; i++) g[i]=d[i];
     Convolve.fft(h,f,g);
   }
-    
+
+  cout << endl;
+  timestamp();
   cout << h[0] << endl;
 //  for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
 //  cout << endl;
   
-  /*
   for(unsigned int i=0; i < m; i++) f[i]=d[i];
   for(unsigned int i=0; i < m; i++) g[i]=d[i];
   convolve.direct(h,f,g);
-  for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-  */
+  
+  cout << endl;
+  timestamp();
+  cout << h[0] << endl;
+//  for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
   
 //  FFTWdelete(f);
 //  FFTWdelete(g);

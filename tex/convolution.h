@@ -19,11 +19,7 @@ protected:
   Complex *F;
   Complex *G;
 public:  
-  convolution(bool, unsigned int m) : m(m) {
-    n=(2*m-1)*3;
-    if(n % 2 == 1) ++n;
-    n /= 2;
-    n2=n/2;
+  convolution(unsigned int n, unsigned int m) : n(n), m(m), n2(n/2) {
     rc=new rcfft1d(n);
     cr=new crfft1d(n);
   }
@@ -110,6 +106,7 @@ public:
     double G0=g[0].real();
     
     sym(f,F);
+
     cr->fft(F);
     
     sym(g,G);
