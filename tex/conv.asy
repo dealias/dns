@@ -45,9 +45,6 @@ pair[] convolve0(pair[] f, pair[] g)
   write("m=",m);
   write("n=",n);
 
-  pair[] F=new pair[m];
-  pair[] G=new pair[m];
-
   real f0=f[0].x;
   real g0=g[0].x;
 
@@ -59,6 +56,9 @@ pair[] convolve0(pair[] f, pair[] g)
     return h;
   }
 
+  pair[] F=new pair[c+1];
+  pair[] G=new pair[c+1];
+
   // r=0:
   pair[] h=rcfft((crfft(sym(f),even)-f0)*(crfft(sym(g),even)-g0));
 
@@ -66,19 +66,18 @@ pair[] convolve0(pair[] f, pair[] g)
     h[m-k]=conj(h[k]);
 
   // r=1:
-  F[0]=f0;
-  G[0]=g0;
-  for(int k=1; k < m; ++k) {
+  F[0]=2f0;
+  G[0]=2g0;
+  pair Zetam=Zeta[m];
+  for(int k=1; k <= c; ++k) {
     pair Zetak=Zeta[k];
-    F[k]=Zetak*f[k];
-    G[k]=Zetak*g[k];
+    F[k]=Zetak*(f[k]+conj(Zetam*f[m-k]));
+    G[k]=Zetak*(g[k]+conj(Zetam*g[m-k]));
   }
   
-
-  F=rcfft((crfft(sym(F),even)-f0)*(crfft(sym(G),even)-g0));
+  F=rcfft((crfft(F,even)-f0)*(crfft(G,even)-g0));
     
   h[0] += F[0].x;
-  pair Zetam=Zeta[m];
   for(int k=1; k <= stop; ++k) {
     pair Fk=conj(Zeta[k])*F[k];
     h[k] += Fk;
@@ -87,15 +86,15 @@ pair[] convolve0(pair[] f, pair[] g)
   if(even) h[c] += conj(Zeta[c])*F[c].x;
 
   // r=2:
-  F[0]=f0;
-  G[0]=g0;
-  for(int k=1; k < m; ++k) {
+  F[0]=2f0;
+  G[0]=2g0;
+  for(int k=1; k <= c; ++k) {
     pair Zetamk=conj(Zeta[k]);
-    F[k]=Zetamk*f[k];
-    G[k]=Zetamk*g[k];
+    F[k]=Zetamk*(f[k]+Zetam*conj(f[m-k]));
+    G[k]=Zetamk*(g[k]+Zetam*conj(g[m-k]));
   }
 
-  F=rcfft((crfft(sym(F),even)-f0)*(crfft(sym(G),even)-g0));
+  F=rcfft((crfft(F,even)-f0)*(crfft(G,even)-g0));
     
   h[0] += F[0].x;
   for(int k=1; k <= stop; ++k) {
