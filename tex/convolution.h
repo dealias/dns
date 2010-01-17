@@ -128,7 +128,9 @@ public:
     if(even) h[c]=F[c].real();
 
     // r=1:
-    for(int k=0; k < m; ++k) {
+    F[0]=f[0];
+    G[0]=g[0];
+    for(int k=1; k < m; ++k) {
       Complex Zetak=Zeta[k];
       F[k]=Zetak*f[k];
       G[k]=Zetak*g[k];
@@ -151,19 +153,21 @@ public:
     rc->fft(F);
     
     h[0] += F[0].real();
-    Complex Zetam=Zeta[m];
+    Complex Zetamc=conj(Zeta[m]);
     for(int k=1; k <= stop; ++k) {
-      Complex Fk=conj(Zeta[k])*F[k];
+      Complex Fk=multconj(F[k],Zeta[k]);
       h[k] += Fk;
-      h[m-k] += conj(Zetam*Fk);
+      h[m-k] += multconj(Zetamc,Fk);
     }
-    if(even) h[c] += conj(Zeta[c])*F[c].real();
+    if(even) h[c] += multconj(F[c].real(),Zeta[c]);
 
     // r=2:
-    for(int k=0; k < m; ++k) {
-      Complex Zetamk=conj(Zeta[k]);
-      F[k]=Zetamk*f[k];
-      G[k]=Zetamk*g[k];
+    F[0]=f[0];
+    G[0]=g[0];
+    for(int k=1; k < m; ++k) {
+      Complex Zetamk=Zeta[k];
+      F[k]=multconj(f[k],Zetamk);
+      G[k]=multconj(g[k],Zetamk);
     }
 
     F0=F[0].real();
@@ -183,10 +187,11 @@ public:
     rc->fft(F);
     
     h[0] += F[0].real();
+    Complex Zetam=Zeta[m];
     for(int k=1; k <= stop; ++k) {
       Complex Fk=Zeta[k]*F[k];
       h[k] += Fk;
-      h[m-k] += Zetam*conj(Fk);
+      h[m-k] += multconj(Zetam,Fk);
     }
     if(even) h[c] += Zeta[c]*F[c].real();
 
