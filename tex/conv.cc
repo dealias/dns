@@ -22,9 +22,9 @@ void timestamp(bool output=true)
 
 int main()
 {	
-  unsigned int m=8192;
-//  unsigned int m=5376;
-// 
+//  unsigned int m=8192;
+  unsigned int m=5376;
+ 
 //  Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
 	
 //  unsigned int m=sizeof(d)/sizeof(Complex);
@@ -43,14 +43,13 @@ int main()
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
   Complex *h=FFTWComplex(np);
+  
   Complex *d=FFTWComplex(m);
-
   d[0]=1.0;
   for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
   
   for(unsigned int i=0; i < m; i++) f[i]=d[i];
   for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  
   
   convolution convolve(m);
   convolution Convolve(n,m);

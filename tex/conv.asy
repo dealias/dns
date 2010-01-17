@@ -57,16 +57,10 @@ pair[] convolve0(pair[] f, pair[] g)
   }
 
   // r=0:
-  F=rcfft((crfft(sym(f),even)-f[0].x)*(crfft(sym(g),even)-g[0].x));
+  pair[] h=rcfft((crfft(sym(f),even)-f[0].x)*(crfft(sym(g),even)-g[0].x));
 
-  pair[] h=new pair[m];
-  h[0]=F[0].x;
-  for(int k=1; k <= stop; ++k) {
-    pair Fk=F[k];
-    h[k]=Fk;
-    h[m-k]=conj(Fk);
-  }
-  if(even) h[c]=F[c].x;
+  for(int k=1; k <= stop; ++k)
+    h[m-k]=conj(h[k]);
 
   // r=1:
   F[0]=f[0];

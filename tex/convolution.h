@@ -15,9 +15,12 @@ protected:
   unsigned int c;
   rcfft1d *rc;
   crfft1d *cr;
+  rcfft1d *rco;
+  crfft1d *cro;
   Complex *Zeta;
   Complex *F;
   Complex *G;
+  Complex *B;
 public:  
   convolution(unsigned int n, unsigned int m) : n(n), m(m), n2(n/2) {
     rc=new rcfft1d(n);
@@ -28,9 +31,6 @@ public:
     n=3*m;
     c=m/2;
     
-    rc=new rcfft1d(m);
-    cr=new crfft1d(m);
-
     Zeta=FFTWComplex(m+1);
     Complex product=1.0;
     if(n > 0) {
@@ -45,6 +45,10 @@ public:
     
     F=FFTWComplex(m);
     G=FFTWComplex(m);
+    B=FFTWComplex(m);
+    
+    rc=new rcfft1d(m,(double *)F,G);
+    cr=new crfft1d(m,F,(double *)G);
   }
   
 // Need destructor  
@@ -105,27 +109,22 @@ public:
     double F0=f[0].real();
     double G0=g[0].real();
     
-    sym(f,F);
+    sym(f,h);
 
-    cr->fft(F);
+    cr->fft(h,F);
     
-    sym(g,G);
-    cr->fft(G);
+    sym(g,h);
+    cr->fft(h,G);
     
     for(unsigned int i=0; i < c; i++)
       F[i]=Complex((F[i].real()-F0)*(G[i].real()-G0),
                    (F[i].imag()-F0)*(G[i].imag()-G0));
     F[c]=(F[c].real()-F0)*(G[c].real()-G0);
 
-    rc->fft(F);
+    rc->fft(F,h);
     
-    h[0]=F[0].real();
-    for(int k=1; k <= stop; ++k) {
-      Complex Fk=F[k];
-      h[k]=Fk;
-      h[m-k]=conj(Fk);
-    }
-    if(even) h[c]=F[c].real();
+    for(int k=1; k <= stop; ++k)
+      h[m-k]=conj(h[k]);
 
     // r=1:
     F[0]=f[0];
@@ -139,27 +138,27 @@ public:
     F0=F[0].real();
     G0=G[0].real();
     
-    sym(F,F);
-    cr->fft(F);
+    sym(F,B);
+    cr->fft(B,F);
     
-    sym(G,G);
-    cr->fft(G);
+    sym(G,B);
+    cr->fft(B,G);
     
     for(unsigned int i=0; i < c; i++)
       F[i]=Complex((F[i].real()-F0)*(G[i].real()-G0),
                    (F[i].imag()-F0)*(G[i].imag()-G0));
     F[c]=(F[c].real()-F0)*(G[c].real()-G0);
 
-    rc->fft(F);
+    rc->fft(F,B);
     
-    h[0] += F[0].real();
+    h[0] += B[0].real();
     Complex Zetamc=conj(Zeta[m]);
     for(int k=1; k <= stop; ++k) {
-      Complex Fk=multconj(F[k],Zeta[k]);
-      h[k] += Fk;
-      h[m-k] += multconj(Zetamc,Fk);
+      Complex Bk=multconj(B[k],Zeta[k]);
+      h[k] += Bk;
+      h[m-k] += multconj(Zetamc,Bk);
     }
-    if(even) h[c] += multconj(F[c].real(),Zeta[c]);
+    if(even) h[c] += multconj(B[c].real(),Zeta[c]);
 
     // r=2:
     F[0]=f[0];
@@ -173,27 +172,27 @@ public:
     F0=F[0].real();
     G0=G[0].real();
     
-    sym(F,F);
-    cr->fft(F);
+    sym(F,B);
+    cr->fft(B,F);
     
-    sym(G,G);
-    cr->fft(G);
+    sym(G,B);
+    cr->fft(B,G);
     
     for(unsigned int i=0; i < c; i++)
       F[i]=Complex((F[i].real()-F0)*(G[i].real()-G0),
                    (F[i].imag()-F0)*(G[i].imag()-G0));
     F[c]=(F[c].real()-F0)*(G[c].real()-G0);
 
-    rc->fft(F);
+    rc->fft(F,B);
     
-    h[0] += F[0].real();
+    h[0] += B[0].real();
     Complex Zetam=Zeta[m];
     for(int k=1; k <= stop; ++k) {
-      Complex Fk=Zeta[k]*F[k];
-      h[k] += Fk;
-      h[m-k] += multconj(Zetam,Fk);
+      Complex Bk=Zeta[k]*B[k];
+      h[k] += Bk;
+      h[m-k] += multconj(Zetam,Bk);
     }
-    if(even) h[c] += Zeta[c]*F[c].real();
+    if(even) h[c] += Zeta[c]*B[c].real();
 
     double ninv=1.0/n;
     for(int i=0; i < m; ++i)
