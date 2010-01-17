@@ -46,6 +46,7 @@ public:
     even=2.0*c == m;
     if(!even) Zetam *= zeta;
     
+    // Work arrays:
     F=FFTWComplex(c+1);
     G=FFTWComplex(c+1);
     B=FFTWComplex(c+1);
@@ -96,13 +97,6 @@ public:
     fft0(H,F,G);
   }	
 
-  // out and in may coincide
-  void sym(Complex *in, Complex *out) {
-    out[0]=2.0*in[0].real();
-    for(int k=1; k <= c; ++k)
-      out[k]=in[k]+conj(in[m-k]);
-  }
-
   void unpadded(Complex *h, Complex *f, Complex *g) {
     int stop=even ? c-1 : c;
   
@@ -110,18 +104,20 @@ public:
     double f0=f[0].real();
     double g0=g[0].real();
     
-    sym(f,h);
-
-    cr->fft(h,F);
+    B[0]=2.0*f0;
+    for(int k=1; k <= c; ++k)
+      B[k]=f[k]+conj(f[m-k]);
+    cr->fft(B,F);
     
-    sym(g,h);
-    cr->fft(h,G);
+    B[0]=2.0*g0;
+    for(int k=1; k <= c; ++k)
+      B[k]=g[k]+conj(g[m-k]);
+    cr->fft(B,G);
     
     for(unsigned int i=0; i < c; i++)
       F[i]=Complex((F[i].real()-f0)*(G[i].real()-g0),
                    (F[i].imag()-f0)*(G[i].imag()-g0));
     F[c]=(F[c].real()-f0)*(G[c].real()-g0);
-
     rc->fft(F,h);
     
     for(int k=1; k <= stop; ++k)
@@ -129,25 +125,23 @@ public:
 
     // r=1:
     B[0]=2.0*f0;
+    Complex Zetamc=conj(Zetam);
     for(int k=1; k <= c; ++k)
-      B[k]=Zeta[k]*(f[k]+conj(Zetam*f[m-k]));
-
+      B[k]=Zeta[k]*(f[k]+multconj(Zetamc,f[m-k]));
     cr->fft(B,F);
     
     B[0]=2.0*g0;
     for(int k=1; k <= c; ++k)
-      B[k]=Zeta[k]*(g[k]+conj(Zetam*g[m-k]));
+      B[k]=Zeta[k]*(g[k]+multconj(Zetamc,g[m-k]));
     cr->fft(B,G);
     
     for(unsigned int i=0; i < c; i++)
       F[i]=Complex((F[i].real()-f0)*(G[i].real()-g0),
                    (F[i].imag()-f0)*(G[i].imag()-g0));
     F[c]=(F[c].real()-f0)*(G[c].real()-g0);
-
     rc->fft(F,B);
     
     h[0] += B[0].real();
-    Complex Zetamc=conj(Zetam);
     for(int k=1; k <= stop; ++k) {
       Complex Bk=multconj(B[k],Zeta[k]);
       h[k] += Bk;
@@ -170,7 +164,6 @@ public:
       F[i]=Complex((F[i].real()-f0)*(G[i].real()-g0),
                    (F[i].imag()-f0)*(G[i].imag()-g0));
     F[c]=(F[c].real()-f0)*(G[c].real()-g0);
-
     rc->fft(F,B);
     
     h[0] += B[0].real();
