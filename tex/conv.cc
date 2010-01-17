@@ -22,8 +22,8 @@ void timestamp(bool output=true)
 
 int main()
 {	
-//  unsigned int m=4096
-  unsigned int m=5376;
+  unsigned int m=8192;
+//  unsigned int m=5376;
   unsigned int n=(2*m-1)*3;
   if(n % 2 == 1) ++n;
   n /= 2;

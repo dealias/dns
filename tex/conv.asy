@@ -36,10 +36,10 @@ pair[] convolve0(pair[] f, pair[] g)
   int n=q*m;
   
   pair zeta=exp(2*pi*I/n);
-  pair[] Zeta=new pair[n];
+  pair[] Zeta=new pair[m+1];
   //  Zeta.cyclic=true;
 
-  for(int i=0; i < n; ++i)
+  for(int i=0; i <= m; ++i)
     Zeta[i]=zeta^i;
 
   write("m=",m);
@@ -152,8 +152,8 @@ pair[] g=copy(d);
 
 write();
 
-//write(convolve(f,g));
-//write();
-//write(direct(f,g));
+write(convolve(f,g));
+write();
+write(direct(f,g));
 write();
 write(convolve0(f,g));

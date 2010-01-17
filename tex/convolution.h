@@ -31,13 +31,13 @@ public:
     rc=new rcfft1d(m);
     cr=new crfft1d(m);
 
-    Zeta=FFTWComplex(n);
+    Zeta=FFTWComplex(m+1);
     Complex product=1.0;
     if(n > 0) {
       Zeta[0]=product;
       double arg=2.0*M_PI/n;
       Complex zeta=Complex(cos(arg),sin(arg));
-      for(unsigned int i=1; i < n; ++i) {
+      for(unsigned int i=1; i <= m; ++i) {
         product *= zeta;
         Zeta[i]=product;
       }
