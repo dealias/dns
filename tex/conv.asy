@@ -30,17 +30,21 @@ pair[] convolve0(pair[] f, pair[] g)
   int c=quotient(m,2);
   
   bool even=2c == m;
-  int stop=c;
-  if(even) --stop;
+  int stop=even ? c-1 : c;
   
   int n=q*m;
   
   pair zeta=exp(2*pi*I/n);
-  pair[] Zeta=new pair[m+1];
-  //  Zeta.cyclic=true;
+  pair[] Zeta=new pair[c+1];
 
-  for(int i=0; i <= m; ++i)
-    Zeta[i]=zeta^i;
+  pair product=Zeta[0]=1;
+  for(int i=1; i <= c; ++i) {
+    product *= zeta;
+    Zeta[i]=product;
+  }
+  
+  pair Zetam=Zeta[c]*Zeta[c];
+  if(!even) Zetam *= zeta;
 
   write("m=",m);
   write("n=",n);
@@ -67,7 +71,6 @@ pair[] convolve0(pair[] f, pair[] g)
   // r=1:
   F[0]=2f0;
   G[0]=2g0;
-  pair Zetam=Zeta[m];
   for(int k=1; k <= c; ++k) {
     pair Zetak=Zeta[k];
     F[k]=Zetak*(f[k]+conj(Zetam*f[m-k]));
