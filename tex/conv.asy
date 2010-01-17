@@ -34,7 +34,7 @@ pair[] convolve0(pair[] f, pair[] g)
   
   int n=q*m;
   
-  pair zeta=exp(-2*pi*I/n);
+  pair zeta=exp(2*pi*I/n);
   pair[] Zeta=new pair[n];
   Zeta.cyclic=true;
 
