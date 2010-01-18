@@ -98,16 +98,17 @@ public:
 
   void unpadded(Complex *h, Complex *f, Complex *g) {
     int stop=even ? c-1 : c;
-  double f0=f[0].real();
-    double g0=g[0].real();
+    
+    Complex f0(f[0].real(),-f[0].real());
+    Complex g0(g[0].real(),-g[0].real());
 
     // r=0:
-    B[0]=(f[0].real(),-f[0].real());
+    B[0]=f0;
     for(int k=1; k <= c; ++k)
       B[k]=f[k]+conj(f[m-k]);
     cr->fft(B,F);
     
-    B[0]=(g[0].real(),-g[0].real());
+    B[0]=g0;
     for(int k=1; k <= c; ++k)
       B[k]=g[k]+conj(g[m-k]);
     cr->fft(B,G);
@@ -123,20 +124,20 @@ public:
 
     // r=1:
     static const Complex Zetamc=Complex(-0.5,-0.5*sqrt(3.0));
-    B[0]=2.0*f0;
+    B[0]=f0;
     for(int k=1; k <= c; ++k)
       B[k]=Zeta[k]*(f[k]+multconj(Zetamc,f[m-k]));
     cr->fft(B,F);
     
-    B[0]=2.0*g0;
+    B[0]=g0;
     for(int k=1; k <= c; ++k)
       B[k]=Zeta[k]*(g[k]+multconj(Zetamc,g[m-k]));
     cr->fft(B,G);
     
     for(unsigned int i=0; i < c; i++)
-      F[i]=Complex((F[i].real()-f0)*(G[i].real()-g0),
-                   (F[i].imag()-f0)*(G[i].imag()-g0));
-    F[c]=(F[c].real()-f0)*(G[c].real()-g0);
+      F[i]=Complex(F[i].real()*G[i].real(),
+                   F[i].imag()*G[i].imag());
+    F[c]=F[c].real()*G[c].real();
     rc->fft(F,B);
     
     h[0] += B[0].real();
@@ -149,20 +150,20 @@ public:
 
     // r=2:
     static const Complex Zetam=conj(Zetamc);
-    B[0]=2.0*f0;
+    B[0]=f0;
     for(int k=1; k <= c; ++k)
       B[k]=multconj(f[k]+Zetam*conj(f[m-k]),Zeta[k]);
     cr->fft(B,F);
 
-    B[0]=2.0*g0;
+    B[0]=g0;
     for(int k=1; k <= c; ++k)
       B[k]=multconj(g[k]+Zetam*conj(g[m-k]),Zeta[k]);
     cr->fft(B,G);
     
     for(unsigned int i=0; i < c; i++)
-      F[i]=Complex((F[i].real()-f0)*(G[i].real()-g0),
-                   (F[i].imag()-f0)*(G[i].imag()-g0));
-    F[c]=(F[c].real()-f0)*(G[c].real()-g0);
+      F[i]=Complex(F[i].real()*G[i].real(),
+                   F[i].imag()*G[i].imag());
+    F[c]=F[c].real()*G[c].real();
     rc->fft(F,B);
     
     h[0] += B[0].real();

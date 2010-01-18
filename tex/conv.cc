@@ -22,8 +22,10 @@ void timestamp(bool output=true)
 
 int main()
 {	
+//  unsigned int m=2731;
+  unsigned int m=4096;
 //  unsigned int m=5461;
-  unsigned int m=8192;
+//  unsigned int m=8192;
 //  unsigned int m=5376;
  
 //  Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
