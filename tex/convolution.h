@@ -99,10 +99,10 @@ public:
   void unpadded(Complex *h, Complex *f, Complex *g) {
     int stop=even ? c-1 : c;
   
-    // r=0:
     double f0=f[0].real();
     double g0=g[0].real();
     
+    // r=0:
     B[0]=2.0*f0;
     for(int k=1; k <= c; ++k)
       B[k]=f[k]+conj(f[m-k]);
@@ -123,8 +123,8 @@ public:
       h[m-k]=conj(h[k]);
 
     // r=1:
-    B[0]=2.0*f0;
     static const Complex Zetamc=(-0.5,-0.5*sqrt(3.0));
+    B[0]=2.0*f0;
     for(int k=1; k <= c; ++k)
       B[k]=Zeta[k]*(f[k]+multconj(Zetamc,f[m-k]));
     cr->fft(B,F);
@@ -149,8 +149,8 @@ public:
     if(even) h[c] += multconj(B[c].real(),Zeta[c]);
 
     // r=2:
+    static const Complex Zetam=conj(Zetamc);
     B[0]=2.0*f0;
-    static const Complex Zetam=(-0.5,0.5*sqrt(3.0));
     for(int k=1; k <= c; ++k)
       B[k]=multconj(f[k]+Zetam*conj(f[m-k]),Zeta[k]);
     cr->fft(B,F);

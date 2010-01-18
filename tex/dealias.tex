@@ -46,7 +46,7 @@ So the scaling is $2\fr{N}{2}\log {N/2}=N\log(N/2)$.
 
 
 The odd and even terms of the convolution can be separately computed,
-multiplied term-by-term, and transformed back:
+multiplied term-by-term, and transformed back to Fourier space:
 \bec
 \hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{\ell=0}^{N/2-1}\zeta_N^{-2k\ell} u_{2\ell}
@@ -88,6 +88,14 @@ u_{3\ell +r}\no=
  \sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\z_N^{rk} \hat u_k + \z_N^{r(k+m)}\hat u_{k+m}\)
 \eel
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
+
+The forward Fourier transform appears as
+\be
+\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+=\sum_{r=0}^{2}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
+=\sum_{r=0}^{2}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
+\qquad k\no =0,\ldots,pm-1.
+\ee
 
 \newpage
 \subsubsection{Complex to Real Transforms of 2/3 Dealiased Data}
@@ -159,6 +167,7 @@ of $N \log p = N \log (N/q)$ operations.  Again, while the computational
 savings is only marginal, this formulation affords signficant improvements
 in memory use and parallelizability.
 
+The forward Fourier transform appears as
 \be
 \hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-q\ell k} u_{q\ell+r}
