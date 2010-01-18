@@ -1,3 +1,5 @@
+// Optimize zetam
+
 #include "fftw++.h"
 
 #ifndef __convolution_h__
@@ -18,7 +20,6 @@ protected:
   rcfft1d *rco;
   crfft1d *cro;
   Complex *Zeta;
-  Complex Zetam;
   Complex *F;
   Complex *G;
   Complex *B;
@@ -42,9 +43,7 @@ public:
       product *= zeta;
       Zeta[i]=product;
     }
-    Zetam=Zeta[c]*Zeta[c];
     even=2.0*c == m;
-    if(!even) Zetam *= zeta;
     
     // Work arrays:
     F=FFTWComplex(c+1);
@@ -125,7 +124,7 @@ public:
 
     // r=1:
     B[0]=2.0*f0;
-    Complex Zetamc=conj(Zetam);
+    static const Complex Zetamc=(-0.5,-0.5*sqrt(3.0));
     for(int k=1; k <= c; ++k)
       B[k]=Zeta[k]*(f[k]+multconj(Zetamc,f[m-k]));
     cr->fft(B,F);
@@ -151,6 +150,7 @@ public:
 
     // r=2:
     B[0]=2.0*f0;
+    static const Complex Zetam=(-0.5,0.5*sqrt(3.0));
     for(int k=1; k <= c; ++k)
       B[k]=multconj(f[k]+Zetam*conj(f[m-k]),Zeta[k]);
     cr->fft(B,F);

@@ -43,8 +43,7 @@ pair[] convolve0(pair[] f, pair[] g)
     Zeta[i]=product;
   }
   
-  pair Zetam=Zeta[c]*Zeta[c];
-  if(!even) Zetam *= zeta;
+  pair Zetam=(-0.5,0.5*sqrt(3.0));
 
   write("m=",m);
   write("n=",n);

@@ -2,7 +2,7 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
-// Compile with: g++ conv.cc fftw++.cc -lfftw3
+// Compile with: g++ -g -O3 conv.cc fftw++.cc -lfftw3
 
 using namespace std;
 
@@ -22,8 +22,9 @@ void timestamp(bool output=true)
 
 int main()
 {	
-//  unsigned int m=8192;
-  unsigned int m=5376;
+//  unsigned int m=5461;
+  unsigned int m=8192;
+//  unsigned int m=5376;
  
 //  Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
 	
