@@ -1,7 +1,7 @@
 include graph;
 size(200,150,IgnoreAspect);
 
-scale(Log,Linear);
+scale(Log,Log);
 real[] mp,p,mu,u;
 
 file fin=input("padded").line();
