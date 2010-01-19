@@ -2,7 +2,8 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
-// Compile with: g++ -g -O3 conv.cc fftw++.cc -lfftw3
+// Compile with:
+// g++ -g -O3 -msse2 -march=native -mfpmath=sse conv.cc fftw++.cc -lfftw3
 
 using namespace std;
 
@@ -22,8 +23,8 @@ void timestamp(bool output=true)
 
 int main()
 {	
-//  unsigned int m=2731;
-  unsigned int m=4096;
+  unsigned int m=2731;
+//  unsigned int m=4096;
 //  unsigned int m=5461;
 //  unsigned int m=8192;
 //  unsigned int m=5376;
