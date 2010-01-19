@@ -61,6 +61,7 @@ int main()
   
   for(int i=0; i < 1000; ++i)
     convolve.unpadded(h,f,g);
+  
   cout << endl;
   cout << "Unpadded:" << endl;
   timestamp();
@@ -68,6 +69,7 @@ int main()
 //  for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
   
   for(int i=0; i < 1000; ++i) {
+    // FFTW out-of-place cr routines destroy the input arrays.
     for(unsigned int i=0; i < m; i++) f[i]=d[i];
     for(unsigned int i=0; i < m; i++) g[i]=d[i];
     Convolve.fft(h,f,g);

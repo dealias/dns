@@ -1,5 +1,3 @@
-// Optimize zetam
-
 #include "fftw++.h"
 
 #ifndef __convolution_h__
@@ -20,14 +18,16 @@ protected:
   rcfft1d *rco;
   crfft1d *cro;
   Complex *Zeta;
-  Complex *F;
-  Complex *G;
+  double *F;
+  double *G;
   Complex *B;
   bool even;
 public:  
   convolution(unsigned int n, unsigned int m) : n(n), m(m), n2(n/2) {
-    rc=new rcfft1d(n);
-    cr=new crfft1d(n);
+    F=FFTWdouble(n);
+    G=FFTWdouble(n+2);
+    rc=new rcfft1d(n,F,(Complex *) G);
+    cr=new crfft1d(n,(Complex *) G,F);
   }
   
   convolution(unsigned int m) : m(m) {
@@ -46,38 +46,16 @@ public:
     even=2.0*c == m;
     
     // Work arrays:
-    F=FFTWComplex(c+1);
-    G=FFTWComplex(c+1);
+    F=FFTWdouble(m);
+    G=FFTWdouble(m);
     B=FFTWComplex(c+1);
     
-    rc=new rcfft1d(m,(double *)F,B);
-    cr=new crfft1d(m,B,(double *)G);
+    rc=new rcfft1d(m,F,B);
+    cr=new crfft1d(m,B,G);
   }
   
 // Need destructor  
   
-// Compute H = F (*) G, where F and G are the non-negative Fourier
-// components of real functions f and g, respectively. Dealiasing via
-// zero-padding is implemented automatically.
-//
-// Arrays F[n/2+1], g[n/2+1] must be distinct.
-// Input F[i] (0 <= i < m), where 3*m <= n, g[i] (0 <= i < n/2).
-// Output H[i] = F (*) G  (0 <= i < m), F[i]=f[i], g[i] (0 <= i < n/2).
-//
-// Array H[n/2+1] can coincide with either F or g, in which case the output H
-// subsumes F or g, respectively.
-
-  void fft0(Complex *H, Complex *F, Complex *g) {
-    for(unsigned int i=m; i <= n2; i++) F[i]=0.0;
-    cr->fft(F);
-  
-    double ninv=1.0/n;
-    for(unsigned int i=0; i < n2; i++)
-      H[i]=Complex(F[i].real()*g[i].real()*ninv,F[i].imag()*g[i].imag()*ninv);
-	
-    rc->fft(H);
-  }
-
 // Compute H = F (*) G, where F and G are the non-negative Fourier
 // components of real functions f and g, respectively. Dealiasing via
 // zero-padding is implemented automatically.
@@ -89,13 +67,20 @@ public:
 // Array H[n/2+1] can coincide with either F or G, in which case the output H
 // subsumes f or g, respectively.
 
-  void fft(Complex *H, Complex *F, Complex *G) {
-    for(unsigned int i=m; i <= n2; i++) G[i]=0.0;
-    cr->fft(G);
+  void fft(Complex *h, Complex *f, Complex *g) {
+    for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
+    cr->fft(f,F);
+  
+    for(unsigned int i=m; i <= n2; i++) g[i]=0.0;
+    cr->fft(g,G);
 	
-    fft0(H,F,G);
-  }	
-
+    double ninv=1.0/n;
+    for(unsigned int i=0; i < n; ++i)
+      F[i] *= G[i]*ninv;
+	
+    rc->fft(F,h);
+  }
+  
   void unpadded(Complex *h, Complex *f, Complex *g) {
     int stop=even ? c-1 : c;
     
@@ -113,10 +98,8 @@ public:
       B[k]=g[k]+conj(g[m-k]);
     cr->fft(B,G);
     
-    for(unsigned int i=0; i < c; i++)
-      F[i]=Complex(F[i].real()*G[i].real(),
-                   F[i].imag()*G[i].imag());
-    F[c]=F[c].real()*G[c].real();
+    for(unsigned int i=0; i < m; i++)
+      F[i] *= G[i];
     rc->fft(F,h);
     
     for(int k=1; k <= stop; ++k)
@@ -134,10 +117,8 @@ public:
       B[k]=Zeta[k]*(g[k]+multconj(Zetamc,g[m-k]));
     cr->fft(B,G);
     
-    for(unsigned int i=0; i < c; i++)
-      F[i]=Complex(F[i].real()*G[i].real(),
-                   F[i].imag()*G[i].imag());
-    F[c]=F[c].real()*G[c].real();
+    for(unsigned int i=0; i < m; i++)
+      F[i] *= G[i];
     rc->fft(F,B);
     
     h[0] += B[0].real();
@@ -160,10 +141,8 @@ public:
       B[k]=multconj(g[k]+Zetam*conj(g[m-k]),Zeta[k]);
     cr->fft(B,G);
     
-    for(unsigned int i=0; i < c; i++)
-      F[i]=Complex(F[i].real()*G[i].real(),
-                   F[i].imag()*G[i].imag());
-    F[c]=F[c].real()*G[c].real();
+    for(unsigned int i=0; i < m; i++)
+      F[i] *= G[i];
     rc->fft(F,B);
     
     h[0] += B[0].real();
