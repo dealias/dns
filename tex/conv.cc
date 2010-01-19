@@ -4,6 +4,8 @@ using namespace std;
 
 // Compile with:
 // g++ -g -O3 -msse2 -march=native -mfpmath=sse conv.cc fftw++.cc -lfftw3
+// usage: aout [int m]
+// optionally specifies the size of m.
 
 using namespace std;
 
@@ -21,9 +23,13 @@ void timestamp(bool output=true)
   lasttime=buf.tms_utime;
 }
 
-int main()
-{	
+int main(int argc, char* argv[])
+{
   unsigned int m=2731;
+  // 
+  if (argc ==2) {
+    m=atoi(argv[1]);
+  }
 //  unsigned int m=4096;
 //  unsigned int m=5461;
 //  unsigned int m=8192;
