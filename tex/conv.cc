@@ -25,16 +25,19 @@ void timestamp(bool output=true)
 
 int main(int argc, char* argv[])
 {
-  unsigned int m=2731;
-  // 
-  if (argc ==2) {
+  unsigned int m=4096;
+//  unsigned int m=2731;
+  
+  int pad=0;
+  
+  if (argc >= 2) {
     m=atoi(argv[1]);
   }
-//  unsigned int m=4096;
-//  unsigned int m=5461;
-//  unsigned int m=8192;
-//  unsigned int m=5376;
  
+  if (argc >= 1) {
+    pad=atoi(argv[2]);
+  }
+  
 //  Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
 	
 //  unsigned int m=sizeof(d)/sizeof(Complex);
@@ -49,7 +52,8 @@ int main(int argc, char* argv[])
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
   
-  unsigned int np=n/2+1;
+  unsigned int np=pad ? n/2+1 : m;
+    
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
   Complex *h=FFTWComplex(np);
@@ -58,46 +62,54 @@ int main(int argc, char* argv[])
   d[0]=1.0;
   for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
   
-  for(unsigned int i=0; i < m; i++) f[i]=d[i];
-  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  
-  convolution convolve(m);
-  convolution Convolve(n,m);
-  
-  timestamp(false);
-  
-  for(int i=0; i < 1000; ++i)
-    convolve.unpadded(h,f,g);
-  
-  cout << endl;
-  cout << "Unpadded:" << endl;
-  timestamp();
-  cout << h[0] << endl;
-//  for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-  
-  for(int i=0; i < 1000; ++i) {
-    // FFTW out-of-place cr routines destroy the input arrays.
+  if(!pad) {
+    convolution convolve(m);
+    timestamp(false);
     for(unsigned int i=0; i < m; i++) f[i]=d[i];
     for(unsigned int i=0; i < m; i++) g[i]=d[i];
-    Convolve.fft(h,f,g);
+  
+    for(int i=0; i < 1000; ++i)
+      convolve.unpadded(h,f,g);
+    cout << "Unpadded:" << endl;
+    timestamp();
+    cout << h[0] << endl;
+    if(m < 100) 
+      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
   }
 
-  cout << endl;
-  cout << "Padded:" << endl;
-  timestamp();
-  cout << h[0] << endl;
-//  for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-  cout << endl;
   
+  if(pad) {
+    cout << endl;
+    timestamp(false);
+    convolution Convolve(n,m);
+    for(int i=0; i < 1000; ++i) {
+      // FFTW out-of-place cr routines destroy the input arrays.
+      for(unsigned int i=0; i < m; i++) f[i]=d[i];
+      for(unsigned int i=0; i < m; i++) g[i]=d[i];
+      Convolve.fft(h,f,g);
+    }
+    cout << "Padded:" << endl;
+    timestamp();
+    cout << h[0] << endl;
+    if(m < 100) 
+      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+    cout << endl;
+  }
+  
+#if 1 
+  timestamp(false);
   for(unsigned int i=0; i < m; i++) f[i]=d[i];
   for(unsigned int i=0; i < m; i++) g[i]=d[i];
+  convolution convolve(m);
   convolve.direct(h,f,g);
   
   cout << endl;
   cout << "Direct/1000:" << endl;
   timestamp();
   cout << h[0] << endl;
-//  for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+  if(m < 100) 
+    for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+#endif  
   
   FFTWdelete(f);
   FFTWdelete(g);

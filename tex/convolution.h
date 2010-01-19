@@ -102,9 +102,6 @@ public:
       F[i] *= G[i];
     rc->fft(F,h);
     
-    for(int k=1; k <= stop; ++k)
-      h[m-k]=conj(h[k]);
-
     // r=1:
     static const Complex Zetamc=Complex(-0.5,-0.5*sqrt(3.0));
     B[0]=f0;
@@ -121,16 +118,16 @@ public:
       F[i] *= G[i];
     rc->fft(F,B);
     
+    static const Complex Zetam=conj(Zetamc);
     h[0] += B[0].real();
     for(int k=1; k <= stop; ++k) {
       Complex Bk=multconj(B[k],Zeta[k]);
+      h[m-k]=conj(h[k]+Zetam*Bk);
       h[k] += Bk;
-      h[m-k] += multconj(Zetamc,Bk);
     }
     if(even) h[c] += multconj(B[c].real(),Zeta[c]);
 
     // r=2:
-    static const Complex Zetam=conj(Zetamc);
     B[0]=f0;
     for(int k=1; k <= c; ++k)
       B[k]=multconj(f[k]+Zetam*conj(f[m-k]),Zeta[k]);

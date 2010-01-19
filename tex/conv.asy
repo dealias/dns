@@ -77,8 +77,8 @@ pair[] convolve0(pair[] f, pair[] g)
   h[0] += B[0].x;
   for(int k=1; k <= stop; ++k) {
     pair Bk=conj(Zeta[k])*B[k];
+    h[m-k]=conj(h[k]+Zetam*Bk);
     h[k] += Bk;
-    h[m-k] += conj(Zetam*Bk);
   }
   if(even) h[c] += conj(Zeta[c])*B[c].x;
 
