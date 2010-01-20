@@ -65,13 +65,9 @@ int main(int argc, char* argv[])
   if(!pad) {
     convolution convolve(m);
     timestamp(false);
-    for(unsigned int i=0; i < m; i++) f[i]=d[i];
-    for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  
     for(int i=0; i < 1000; ++i) {
-      
-    for(unsigned int i=0; i < m; i++) f[i]=d[i];
-    for(unsigned int i=0; i < m; i++) g[i]=d[i];
+      for(unsigned int i=0; i < m; i++) f[i]=d[i];
+      for(unsigned int i=0; i < m; i++) g[i]=d[i];
       convolve.unpadded(h,f,g);
     }
     

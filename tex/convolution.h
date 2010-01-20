@@ -17,9 +17,8 @@ protected:
   crfft1d *cr;
   rcfft1d *rco;
   crfft1d *cro;
-  double *F;
-  double *G;
-  Complex *B,*C,*E,*H;
+  double *F,*G;
+  Complex *B,*C;
   Complex zeta;
   bool even;
 public:  
@@ -41,12 +40,11 @@ public:
     
     // Work arrays:
     F=FFTWdouble(m);
-    G=FFTWdouble(m);
     B=FFTWComplex(c+1);
     C=FFTWComplex(c+1);
     
     rc=new rcfft1d(m,F,B);
-    cr=new crfft1d(m,B,G);
+    cr=new crfft1d(m,B,F);
   }
   
 // Need destructor  
@@ -87,19 +85,10 @@ public:
     h[0]=f[0]=g[0]=f0;
     B[0]=C[0]=g0;
     static const Complex Zetamc=Complex(-0.5,-0.5*sqrt(3.0));
-    Complex fk=f[1];
-    Complex fmk=conj(f[m-1]);
-    h[1]=fk+fmk;
-    const Complex Zetakm=zeta*Zetamc;
-    Complex gk=g[1];
-    Complex gmk=conj(g[m-1]);
-    f[1]=fk*zeta+fmk*Zetakm;
-    g[1]=multconj(fk,zeta)+multconj(fmk,Zetakm);
-    B[1]=zeta*(gk+gmk*Zetamc);
-    C[1]=multconj(gk,zeta)+multconj(gmk,Zetakm);
+    Complex A1=g[1]+conj(g[m-1]);
     
-    Complex Zetak=zeta*zeta;
-    for(int k=2; k <= c; ++k) {
+    Complex Zetak=zeta;
+    for(int k=1; k <= c; ++k) {
       Complex fk=f[k];
       Complex fmk=conj(f[m-k]);
       h[k]=fk+fmk;
@@ -114,31 +103,33 @@ public:
       Zetak *= zeta;
     }
     
+    Complex fcm1=f[c-1];
+    Complex fc=f[c];
+    double *H=(double *)(f+c-1);
+    
     // r=0:
     cr->fft(h,F);
     A[0]=g0;
-    A[1]=gk+gmk;
-    cr->fft(A,G);
-    
+    A[1]=A1;
+    cr->fft(A,H);
     for(unsigned int i=0; i < m; i++)
-      F[i] *= G[i];
+      F[i] *= H[i];
     rc->fft(F,h);
     
     // r=1:
-    
+    f[c-1]=fcm1;
+    f[c]=fc;
     cr->fft(f,F);
-    cr->fft(B,G);
-    
+    cr->fft(B,H);
     for(unsigned int i=0; i < m; i++)
-      F[i] *= G[i];
+      F[i] *= H[i];
     rc->fft(F,B);
     
     // r=2:
     cr->fft(g,F);
-    cr->fft(C,G);
-    
+    cr->fft(C,H);
     for(unsigned int i=0; i < m; i++)
-      F[i] *= G[i];
+      F[i] *= H[i];
     rc->fft(F,C);
     
     double ninv=1.0/n;
