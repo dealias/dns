@@ -11,14 +11,15 @@ using namespace std;
 
 #include <sys/time.h>
 
-void timestamp(bool output=true)
+inline double seconds()
 {
   static timeval lasttime;
   timeval tv;
   gettimeofday(&tv,NULL);
-  if(output) cout << tv.tv_sec-lasttime.tv_sec+
-               ((double) tv.tv_usec-lasttime.tv_usec)/1000000.0 << endl;
+  double seconds=tv.tv_sec-lasttime.tv_sec+
+    ((double) tv.tv_usec-lasttime.tv_usec)/1000000.0;
   lasttime=tv;
+  return seconds;
 }
 
 int main(int argc, char* argv[])
@@ -60,54 +61,70 @@ int main(int argc, char* argv[])
   d[0]=1.0;
   for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
   
-  if(!pad) {
-    convolution convolve(m);
-    timestamp(false);
-    for(int i=0; i < 1000; ++i) {
-      for(unsigned int i=0; i < m; i++) f[i]=d[i];
-      for(unsigned int i=0; i < m; i++) g[i]=d[i];
-      convolve.unpadded(h,f,g);
-    }
-    
-    cout << "Unpadded:" << endl;
-    timestamp();
-    cout << h[0] << endl;
-    if(m < 100) 
-      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+  unsigned int N=1000;
+  
+  double offset=0.0;
+  seconds();
+  for(int i=0; i < N; ++i) {
+    seconds();
+    offset += seconds();
   }
 
+  double sum=0.0;
+  if(!pad) {
+    convolution convolve(m);
+    for(int i=0; i < N; ++i) {
+      for(unsigned int i=0; i < m; i++) f[i]=d[i];
+      for(unsigned int i=0; i < m; i++) g[i]=d[i];
+      seconds();
+      convolve.unpadded(h,f,g);
+      sum += seconds();
+    }
+    
+    cout << endl;
+    cout << "Unpadded:" << endl;
+    cout << (sum-offset)/N << endl;
+    if(m < 100) 
+      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+    else cout << h[0] << endl;
+  }
   
   if(pad) {
-    cout << endl;
-    timestamp(false);
+    sum=0.0;
     convolution Convolve(n,m);
-    for(int i=0; i < 1000; ++i) {
+    for(int i=0; i < N; ++i) {
       // FFTW out-of-place cr routines destroy the input arrays.
       for(unsigned int i=0; i < m; i++) f[i]=d[i];
       for(unsigned int i=0; i < m; i++) g[i]=d[i];
+      seconds();
       Convolve.fft(h,f,g);
+      sum += seconds();
     }
+    cout << endl;
     cout << "Padded:" << endl;
-    timestamp();
-    cout << h[0] << endl;
+    cout << (sum-offset)/N << endl;
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+    else cout << h[0] << endl;
     cout << endl;
   }
   
 #if 1 
-  timestamp(false);
+  sum=0.0;
   for(unsigned int i=0; i < m; i++) f[i]=d[i];
   for(unsigned int i=0; i < m; i++) g[i]=d[i];
   convolution convolve(m);
+  seconds();
   convolve.direct(h,f,g);
+  sum +=seconds();
   
   cout << endl;
-  cout << "Direct/1000:" << endl;
-  timestamp();
-  cout << h[0] << endl;
+  cout << "Direct:" << endl;
+  cout << (sum-offset)/N << endl;
+
   if(m < 100) 
     for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+  else cout << h[0] << endl;
 #endif  
   
   FFTWdelete(f);
