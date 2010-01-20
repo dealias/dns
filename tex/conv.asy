@@ -91,15 +91,15 @@ pair[] convolve0(pair[] f, pair[] g)
 
   B=rcfft(crfft(F,even)*crfft(G,even));
     
-  h[0] += B[0].x;
+  real ninv=1/n;
+  h[0]=(h[0]+B[0].x)*ninv;
   for(int k=1; k <= stop; ++k) {
     pair Bk=Zeta[k]*B[k];
-    h[k] += Bk;
-    h[m-k] += Zetam*conj(Bk);
+    h[k]=(h[k]+Bk)*ninv;
+    h[m-k]=(h[m-k]+Zetam*conj(Bk))*ninv;
   }
-  if(even) h[c] += Zeta[c]*B[c].x;
-
-  return h/n;
+  if(even) h[c]=(h[c]+Zeta[c]*B[c].x)*ninv;
+  return h;
 }
 
 pair[] convolve(pair[] F, pair[] G)

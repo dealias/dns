@@ -142,17 +142,14 @@ public:
       F[i] *= G[i];
     rc->fft(F,B);
     
-    h[0] += B[0].real();
+    double ninv=1.0/n;
+    h[0]=(h[0]+B[0].real())*ninv;
     for(int k=1; k <= stop; ++k) {
       Complex Bk=Zeta[k]*B[k];
-      h[k] += Bk;
-      h[m-k] += multconj(Zetam,Bk);
+      h[k]=(h[k]+Bk)*ninv;
+      h[m-k]=(h[m-k]+multconj(Zetam,Bk))*ninv;
     }
-    if(even) h[c] += Zeta[c]*B[c].real();
-
-    double ninv=1.0/n;
-    for(int i=0; i < m; ++i)
-      h[i] *= ninv;
+    if(even) h[c]=(h[c]+Zeta[c]*B[c].real())*ninv;
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
