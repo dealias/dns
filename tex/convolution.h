@@ -17,11 +17,10 @@ protected:
   crfft1d *cr;
   rcfft1d *rco;
   crfft1d *cro;
-  Complex *Zeta;
   double *F;
   double *G;
-  Complex *B;
-  Complex *C;
+  Complex *A,*B,*C,*D,*E,*H;
+  Complex zeta;
   bool even;
 public:  
   convolution(unsigned int n, unsigned int m) : n(n), m(m), n2(n/2) {
@@ -35,25 +34,23 @@ public:
     n=3*m;
     c=m/2;
     
-    Zeta=FFTWComplex(c+1);
-    
     double arg=2.0*M_PI/n;
-    Complex zeta=Complex(cos(arg),sin(arg));
-    Complex product=Zeta[0]=1.0;
-    for(unsigned int i=1; i <= c; ++i) {
-      product *= zeta;
-      Zeta[i]=product;
-    }
+    zeta=Complex(cos(arg),sin(arg));
+
     even=2.0*c == m;
     
     // Work arrays:
     F=FFTWdouble(m);
     G=FFTWdouble(m);
+    A=FFTWComplex(c+1);
     B=FFTWComplex(c+1);
     C=FFTWComplex(c+1);
+    D=FFTWComplex(c+1);
+    E=FFTWComplex(c+1);
+    H=FFTWComplex(c+1);
     
-    rc=new rcfft1d(m,F,B);
-    cr=new crfft1d(m,C,G);
+    rc=new rcfft1d(m,F,A);
+    cr=new crfft1d(m,B,G);
   }
   
 // Need destructor  
@@ -89,49 +86,46 @@ public:
     Complex f0(f[0].real(),-f[0].real());
     Complex g0(g[0].real(),-g[0].real());
 
-    // r=0:
-    B[0]=f0;
-    for(int k=1; k <= c; ++k)
-      B[k]=f[k]+conj(f[m-k]);
-    cr->fft(B,F);
+    A[0]=B[0]=C[0]=f0;
+    D[0]=E[0]=H[0]=g0;
+    Complex Zetak=zeta;
+    static const Complex Zetamc=Complex(-0.5,-0.5*sqrt(3.0));
+    Complex Zetakm=zeta*Zetamc;
+    for(int k=1; k <= c; ++k) {
+      Complex fk=f[k];
+      Complex fmk=conj(f[m-k]);
+      A[k]=fk+fmk;
+      B[k]=fk*Zetak+fmk*Zetakm;
+      C[k]=multconj(fk,Zetak)+multconj(fmk,Zetakm);
+      Complex gk=g[k];
+      Complex gmk=conj(g[m-k]);
+      D[k]=gk+gmk;
+      E[k]=gk*Zetak+gmk*Zetakm;
+      H[k]=multconj(gk,Zetak)+multconj(gmk,Zetakm);
+      Zetak *= zeta;
+      Zetakm *= zeta;
+    }
     
-    B[0]=g0;
-    for(int k=1; k <= c; ++k)
-      B[k]=g[k]+conj(g[m-k]);
-    cr->fft(B,G);
+    // r=0:
+    // Use mcrff1d instead:
+    cr->fft(A,F);
+    cr->fft(D,G);
     
     for(unsigned int i=0; i < m; i++)
       F[i] *= G[i];
     rc->fft(F,h);
     
     // r=1:
-    static const Complex Zetamc=Complex(-0.5,-0.5*sqrt(3.0));
-    B[0]=f0;
-    for(int k=1; k <= c; ++k)
-      B[k]=Zeta[k]*(f[k]+multconj(Zetamc,f[m-k]));
     cr->fft(B,F);
-    
-    B[0]=g0;
-    for(int k=1; k <= c; ++k)
-      B[k]=Zeta[k]*(g[k]+multconj(Zetamc,g[m-k]));
-    cr->fft(B,G);
+    cr->fft(E,G);
     
     for(unsigned int i=0; i < m; i++)
       F[i] *= G[i];
     rc->fft(F,B);
     
-    static const Complex Zetam=conj(Zetamc);
-
     // r=2:
-    C[0]=f0;
-    for(int k=1; k <= c; ++k)
-      C[k]=multconj(f[k]+Zetam*conj(f[m-k]),Zeta[k]);
     cr->fft(C,F);
-
-    C[0]=g0;
-    for(int k=1; k <= c; ++k)
-      C[k]=multconj(g[k]+Zetam*conj(g[m-k]),Zeta[k]);
-    cr->fft(C,G);
+    cr->fft(H,G);
     
     for(unsigned int i=0; i < m; i++)
       F[i] *= G[i];
@@ -139,13 +133,15 @@ public:
     
     double ninv=1.0/n;
     h[0]=(h[0].real()+B[0].real()+C[0].real())*ninv;
+    Zetak=zeta;
     for(int k=1; k <= stop; ++k) {
-      Complex Bk=multconj(B[k],Zeta[k]);
-      Complex Ck=Zeta[k]*C[k];
-      h[m-k]=conj(h[k]+Zetam*Bk+Zetamc*Ck)*ninv;
+      Complex Bk=multconj(B[k],Zetak);
+      Complex Ck=Zetak*C[k];
+      Zetak *= zeta;
+      h[m-k]=conj(h[k]+multconj(Bk,Zetamc)+Zetamc*Ck)*ninv;
       h[k]=(h[k]+Bk+Ck)*ninv;
     }
-    if(even) h[c]=(h[c]+multconj(B[c].real(),Zeta[c])+Zeta[c]*C[c].real())*ninv;
+    if(even) h[c]=(h[c]+multconj(B[c].real(),Zetak)+Zetak*C[c].real())*ninv;
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
