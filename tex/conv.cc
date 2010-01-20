@@ -9,18 +9,16 @@ using namespace std;
 
 using namespace std;
 
-#include <time.h>
-#include <sys/times.h>
+#include <sys/time.h>
 
 void timestamp(bool output=true)
 {
-  static const double ticktime=1.0/sysconf(_SC_CLK_TCK);
-  struct tms buf;
-
-  ::times(&buf);
-  static double lasttime=0;
-  if(output) cout << (buf.tms_utime-lasttime)*ticktime << endl;
-  lasttime=buf.tms_utime;
+  static timeval lasttime;
+  timeval tv;
+  gettimeofday(&tv,NULL);
+  if(output) cout << tv.tv_sec-lasttime.tv_sec+
+               ((double) tv.tv_usec-lasttime.tv_usec)/1000000.0 << endl;
+  lasttime=tv;
 }
 
 int main(int argc, char* argv[])

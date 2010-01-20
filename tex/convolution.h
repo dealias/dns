@@ -103,9 +103,10 @@ public:
       Zetak *= zeta;
     }
     
-    Complex fcm1=f[c-1];
-    Complex fc=f[c];
-    double *H=(double *)(f+c-1);
+    Complex *p=f+c;
+    Complex fc=*p;
+    Complex fcm1=*(--p);
+    double *H=(double *)p;
     
     // r=0:
     cr->fft(h,F);
