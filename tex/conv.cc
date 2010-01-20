@@ -68,8 +68,13 @@ int main(int argc, char* argv[])
     for(unsigned int i=0; i < m; i++) f[i]=d[i];
     for(unsigned int i=0; i < m; i++) g[i]=d[i];
   
-    for(int i=0; i < 1000; ++i)
+    for(int i=0; i < 1000; ++i) {
+      
+//    for(unsigned int i=0; i < m; i++) f[i]=d[i];
+//    for(unsigned int i=0; i < m; i++) g[i]=d[i];
       convolve.unpadded(h,f,g);
+    }
+    
     cout << "Unpadded:" << endl;
     timestamp();
     cout << h[0] << endl;

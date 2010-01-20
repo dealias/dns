@@ -42,6 +42,8 @@ public:
     // Work arrays:
     F=FFTWdouble(m);
     G=FFTWdouble(m);
+    
+    // Store over f,g,h:
     A=FFTWComplex(c+1);
     B=FFTWComplex(c+1);
     C=FFTWComplex(c+1);
@@ -90,11 +92,11 @@ public:
     D[0]=E[0]=H[0]=g0;
     Complex Zetak=zeta;
     static const Complex Zetamc=Complex(-0.5,-0.5*sqrt(3.0));
-    Complex Zetakm=zeta*Zetamc;
     for(int k=1; k <= c; ++k) {
       Complex fk=f[k];
       Complex fmk=conj(f[m-k]);
       A[k]=fk+fmk;
+      const Complex Zetakm=Zetak*Zetamc;
       B[k]=fk*Zetak+fmk*Zetakm;
       C[k]=multconj(fk,Zetak)+multconj(fmk,Zetakm);
       Complex gk=g[k];
@@ -103,7 +105,6 @@ public:
       E[k]=gk*Zetak+gmk*Zetakm;
       H[k]=multconj(gk,Zetak)+multconj(gmk,Zetakm);
       Zetak *= zeta;
-      Zetakm *= zeta;
     }
     
     // r=0:
