@@ -77,8 +77,8 @@ public:
   void unpadded(Complex *h, Complex *f, Complex *g) {
     int stop=even ? c-1 : c;
     
-    Complex f0(f[0].real(),-f[0].real());
-    Complex g0(g[0].real(),-g[0].real());
+    double f0=f[0].real();
+    double g0=g[0].real();
 
     Complex *A=h+c-1;
     

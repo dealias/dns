@@ -54,8 +54,8 @@ pair[] convolve0(pair[] f, pair[] g)
   pair[] B=new pair[c+1];
 
   // r=0:
-  F[0]=(f[0].x,-f[0].x);
-  G[0]=(g[0].x,-g[0].x);
+  F[0]=f[0].x;
+  G[0]=g[0].x;
   for(int k=1; k <= c; ++k) {
     F[k]=f[k]+conj(f[m-k]);
     G[k]=g[k]+conj(g[m-k]);
@@ -132,8 +132,8 @@ pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
 
 pair[] f=copy(d);
-//pair[] g=copy(d+1);
 pair[] g=copy(d);
+//pair[] g=copy(d+1);
 
 write();
 
