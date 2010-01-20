@@ -108,7 +108,6 @@ public:
     }
     
     // r=0:
-    // Use mcrff1d instead:
     cr->fft(A,F);
     cr->fft(D,G);
     
@@ -134,15 +133,15 @@ public:
     
     double ninv=1.0/n;
     h[0]=(h[0].real()+B[0].real()+C[0].real())*ninv;
-    Zetak=zeta;
+    Zetak=zeta*ninv;
     for(int k=1; k <= stop; ++k) {
       Complex Bk=multconj(B[k],Zetak);
       Complex Ck=Zetak*C[k];
       Zetak *= zeta;
-      h[m-k]=conj(h[k]+multconj(Bk,Zetamc)+Zetamc*Ck)*ninv;
-      h[k]=(h[k]+Bk+Ck)*ninv;
+      h[m-k]=conj(h[k]*ninv+multconj(Bk,Zetamc)+Zetamc*Ck);
+      h[k]=h[k]*ninv+Bk+Ck;
     }
-    if(even) h[c]=(h[c]+multconj(B[c].real(),Zetak)+Zetak*C[c].real())*ninv;
+    if(even) h[c]=h[c]*ninv+multconj(B[c].real(),Zetak)+Zetak*C[c].real();
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
