@@ -19,7 +19,7 @@ protected:
   crfft1d *cro;
   double *F;
   double *G;
-  Complex *A,*B,*C,*D,*E,*H;
+  Complex *B,*C,*E,*H;
   Complex zeta;
   bool even;
 public:  
@@ -42,16 +42,10 @@ public:
     // Work arrays:
     F=FFTWdouble(m);
     G=FFTWdouble(m);
-    
-    // Store over f,g,h:
-    A=FFTWComplex(c+1);
     B=FFTWComplex(c+1);
     C=FFTWComplex(c+1);
-    D=FFTWComplex(c+1);
-    E=FFTWComplex(c+1);
-    H=FFTWComplex(c+1);
     
-    rc=new rcfft1d(m,F,A);
+    rc=new rcfft1d(m,F,B);
     cr=new crfft1d(m,B,G);
   }
   
@@ -88,44 +82,60 @@ public:
     Complex f0(f[0].real(),-f[0].real());
     Complex g0(g[0].real(),-g[0].real());
 
-    A[0]=B[0]=C[0]=f0;
-    D[0]=E[0]=H[0]=g0;
-    Complex Zetak=zeta;
+    Complex *A=h+c-1;
+    
+    h[0]=f[0]=g[0]=f0;
+    B[0]=C[0]=g0;
     static const Complex Zetamc=Complex(-0.5,-0.5*sqrt(3.0));
-    for(int k=1; k <= c; ++k) {
+    Complex fk=f[1];
+    Complex fmk=conj(f[m-1]);
+    h[1]=fk+fmk;
+    const Complex Zetakm=zeta*Zetamc;
+    Complex gk=g[1];
+    Complex gmk=conj(g[m-1]);
+    f[1]=fk*zeta+fmk*Zetakm;
+    g[1]=multconj(fk,zeta)+multconj(fmk,Zetakm);
+    B[1]=zeta*(gk+gmk*Zetamc);
+    C[1]=multconj(gk,zeta)+multconj(gmk,Zetakm);
+    
+    Complex Zetak=zeta*zeta;
+    for(int k=2; k <= c; ++k) {
       Complex fk=f[k];
       Complex fmk=conj(f[m-k]);
-      A[k]=fk+fmk;
+      h[k]=fk+fmk;
       const Complex Zetakm=Zetak*Zetamc;
-      B[k]=fk*Zetak+fmk*Zetakm;
-      C[k]=multconj(fk,Zetak)+multconj(fmk,Zetakm);
+      f[k]=fk*Zetak+fmk*Zetakm;
       Complex gk=g[k];
       Complex gmk=conj(g[m-k]);
-      D[k]=gk+gmk;
-      E[k]=gk*Zetak+gmk*Zetakm;
-      H[k]=multconj(gk,Zetak)+multconj(gmk,Zetakm);
+      g[k]=multconj(fk,Zetak)+multconj(fmk,Zetakm);
+      A[k]=gk+gmk;
+      B[k]=gk*Zetak+gmk*Zetakm;
+      C[k]=multconj(gk,Zetak)+multconj(gmk,Zetakm);
       Zetak *= zeta;
     }
     
     // r=0:
-    cr->fft(A,F);
-    cr->fft(D,G);
+    cr->fft(h,F);
+    A[0]=g0;
+    A[1]=gk+gmk;
+    cr->fft(A,G);
     
     for(unsigned int i=0; i < m; i++)
       F[i] *= G[i];
     rc->fft(F,h);
     
     // r=1:
-    cr->fft(B,F);
-    cr->fft(E,G);
+    
+    cr->fft(f,F);
+    cr->fft(B,G);
     
     for(unsigned int i=0; i < m; i++)
       F[i] *= G[i];
     rc->fft(F,B);
     
     // r=2:
-    cr->fft(C,F);
-    cr->fft(H,G);
+    cr->fft(g,F);
+    cr->fft(C,G);
     
     for(unsigned int i=0; i < m; i++)
       F[i] *= G[i];
