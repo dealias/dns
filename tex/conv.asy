@@ -44,6 +44,7 @@ pair[] convolve0(pair[] f, pair[] g)
   }
   
   pair Zetam=(-0.5,0.5*sqrt(3.0));
+  pair Zetamc=conj(Zetam);
 
   write("m=",m);
   write("n=",n);
@@ -74,14 +75,6 @@ pair[] convolve0(pair[] f, pair[] g)
   
   B=rcfft(crfft(F,even)*crfft(G,even));
     
-  h[0] += B[0].x;
-  for(int k=1; k <= stop; ++k) {
-    pair Bk=conj(Zeta[k])*B[k];
-    h[m-k]=conj(h[k]+Zetam*Bk);
-    h[k] += Bk;
-  }
-  if(even) h[c] += conj(Zeta[c])*B[c].x;
-
   // r=2:
   for(int k=1; k <= c; ++k) {
     pair Zetamk=conj(Zeta[k]);
@@ -89,16 +82,17 @@ pair[] convolve0(pair[] f, pair[] g)
     G[k]=Zetamk*(g[k]+Zetam*conj(g[m-k]));
   }
 
-  B=rcfft(crfft(F,even)*crfft(G,even));
+  F=rcfft(crfft(F,even)*crfft(G,even));
     
   real ninv=1/n;
-  h[0]=(h[0]+B[0].x)*ninv;
+  h[0]=(h[0].x+B[0].x+F[0].x)*ninv;
   for(int k=1; k <= stop; ++k) {
-    pair Bk=Zeta[k]*B[k];
-    h[k]=(h[k]+Bk)*ninv;
-    h[m-k]=(h[m-k]+Zetam*conj(Bk))*ninv;
+    pair Bk=conj(Zeta[k])*B[k];
+    pair Fk=Zeta[k]*F[k];
+    h[m-k]=conj(h[k]+Zetam*Bk+Zetamc*Fk)*ninv;
+    h[k]=(h[k]+Bk+Fk)*ninv;
   }
-  if(even) h[c]=(h[c]+Zeta[c]*B[c].x)*ninv;
+  if(even) h[c]=(h[c].x+conj(Zeta[c])*B[c].x+Zeta[c]*F[c].x)*ninv;
   return h;
 }
 

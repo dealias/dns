@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     m=atoi(argv[1]);
   }
  
-  if (argc >= 1) {
+  if (argc >= 3) {
     pad=atoi(argv[2]);
   }
   
