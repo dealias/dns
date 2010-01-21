@@ -39,12 +39,12 @@ public:
     even=2.0*c == m;
     
     // Work arrays:
-    F=FFTWdouble(m);
     A=FFTWComplex(c+1);
     B=FFTWComplex(c+1);
+    double *b=(double *) B;
     
-    rc=new rcfft1d(m,F,A);
-    cr=new crfft1d(m,A,F);
+    rc=new rcfft1d(m,b,A);
+    cr=new crfft1d(m,A,b);
   }
   
 // Need destructor  
@@ -74,6 +74,7 @@ public:
     rc->fft(F,h);
   }
   
+  // Note: input arrays f and g are destroyed.
   void unpadded(Complex *h, Complex *f, Complex *g) {
     int stop=even ? c-1 : c;
     
@@ -101,29 +102,32 @@ public:
       Zetak *= zeta;
     }
     
-    double *D=(double *) A;
+    Complex fc=f[c];
+    double *F=(double *)(f+c);
+    double *G=(double *) A;
     
     // r=-1:
     cr->fft(A,F);
-    cr->fft(B,D);
+    cr->fft(B,G);
     for(unsigned int i=0; i < m; i++)
-      F[i] *= D[i];
+      F[i] *= G[i];
     rc->fft(F,B);
     
     // r=0:
     cr->fft(h,F);
     C[0]=g0;
     C[1]=C1;
-    cr->fft(C,D);
+    cr->fft(C,G);
     for(unsigned int i=0; i < m; i++)
-      F[i] *= D[i];
+      F[i] *= G[i];
     rc->fft(F,h);
     
     // r=1:
+    f[c]=fc;
     cr->fft(f,F);
-    cr->fft(g,D);
+    cr->fft(g,G);
     for(unsigned int i=0; i < m; i++)
-      F[i] *= D[i];
+      F[i] *= G[i];
     rc->fft(F,g);
     
     double ninv=1.0/n;
