@@ -7,6 +7,9 @@ using namespace std;
 // usage: aout [int m]
 // optionally specifies the size of m.
 
+// Number of iterations.
+unsigned int N=1000;
+  
 using namespace std;
 
 #include <sys/time.h>
@@ -60,8 +63,6 @@ int main(int argc, char* argv[])
   Complex *d=FFTWComplex(m);
   d[0]=1.0;
   for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
-  
-  unsigned int N=1000;
   
   double offset=0.0;
   seconds();
