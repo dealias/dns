@@ -140,7 +140,7 @@ public:
       h[m-k]=conj(h[k]*ninv+multconj(gk,Zetamc)+Zetamc*Bk);
       h[k]=h[k]*ninv+gk+Bk;
     }
-    if(even) h[c]=h[c]*ninv+multconj(g[c].real(),Zetak)+Zetak*B[c].real();
+    if(even) h[c]=h[c].real()*ninv+g[c].real()*conj(Zetak)+B[c].real()*Zetak;
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier

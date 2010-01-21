@@ -92,7 +92,7 @@ pair[] convolve0(pair[] f, pair[] g)
     h[m-k]=conj(h[k]+Zetam*Bk+Zetamc*Fk)*ninv;
     h[k]=(h[k]+Bk+Fk)*ninv;
   }
-  if(even) h[c]=(h[c].x+conj(Zeta[c])*B[c].x+Zeta[c]*F[c].x)*ninv;
+  if(even) h[c]=(h[c].x+B[c].x*conj(Zeta[c])+F[c].x*Zeta[c])*ninv;
   return h;
 }
 
