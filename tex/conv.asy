@@ -28,10 +28,7 @@ pair[] convolve0(pair[] f, pair[] g)
 {
   int m=f.length;
   int c=quotient(m,2);
-  
   bool even=2c == m;
-  int stop=even ? c-1 : c;
-  
   int n=q*m;
   
   pair zeta=exp(2*pi*I/n);
@@ -63,9 +60,6 @@ pair[] convolve0(pair[] f, pair[] g)
   
   pair[] h=rcfft(crfft(F,even)*crfft(G,even));
 
-  for(int k=1; k <= stop; ++k)
-    h[m-k]=conj(h[k]);
-
   // r=1:
   for(int k=1; k <= c; ++k) {
     pair Zetak=Zeta[k];
@@ -84,6 +78,7 @@ pair[] convolve0(pair[] f, pair[] g)
 
   F=rcfft(crfft(F,even)*crfft(G,even));
     
+  int stop=m-c-1;
   real ninv=1/n;
   h[0]=(h[0].x+B[0].x+F[0].x)*ninv;
   for(int k=1; k <= stop; ++k) {

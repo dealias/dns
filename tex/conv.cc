@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
   
   if(pad) {
     sum=0.0;
-    convolution Convolve(n,m);
+    convolution Convolve(n,m,true);
     for(int i=0; i < N; ++i) {
       // FFTW out-of-place cr routines destroy the input arrays.
       for(unsigned int i=0; i < m; i++) f[i]=d[i];

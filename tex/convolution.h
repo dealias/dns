@@ -11,22 +11,26 @@ class convolution {
 protected:
   unsigned int n;
   unsigned int m;
-  unsigned int n2;
   unsigned int c;
   rcfft1d *rc;
   crfft1d *cr;
-  rcfft1d *rco;
-  crfft1d *cro;
   double *F,*G;
   Complex *A,*B;
   Complex zeta;
-  bool even;
 public:  
-  convolution(unsigned int n, unsigned int m) : n(n), m(m), n2(n/2) {
-    F=FFTWdouble(n);
-    G=FFTWdouble(n+2);
-    rc=new rcfft1d(n,F,(Complex *) G);
-    cr=new crfft1d(n,(Complex *) G,F);
+  convolution(unsigned int n, unsigned int m, bool compact=false) :
+    n(n), m(m) {
+    if(compact) {
+      F=NULL;
+      G=NULL;
+      rc=new rcfft1d(n);
+      cr=new crfft1d(n);
+    } else {
+      F=FFTWdouble(n);
+      G=FFTWdouble(n+2);
+      rc=new rcfft1d(n,F,(Complex *) G);
+      cr=new crfft1d(n,(Complex *) G,F);
+    }
   }
   
   convolution(unsigned int m) : m(m) {
@@ -36,8 +40,6 @@ public:
     double arg=2.0*M_PI/n;
     zeta=Complex(cos(arg),sin(arg));
 
-    even=2.0*c == m;
-    
     // Work arrays:
     A=FFTWComplex(c+1);
     B=FFTWComplex(c+1);
@@ -61,23 +63,38 @@ public:
 // subsumes f or g, respectively.
 
   void fft(Complex *h, Complex *f, Complex *g) {
-    for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
-    cr->fft(f,F);
-  
-    for(unsigned int i=m; i <= n2; i++) g[i]=0.0;
-    cr->fft(g,G);
-	
+    unsigned int n2=n/2;
     double ninv=1.0/n;
-    for(unsigned int i=0; i < n; ++i)
-      F[i] *= G[i]*ninv;
+    if(F) {
+      for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
+      cr->fft(f,F);
+  
+      for(unsigned int i=m; i <= n2; i++) g[i]=0.0;
+      cr->fft(g,G);
+      
+      for(unsigned int i=0; i < n; ++i)
+        F[i] *= G[i]*ninv;
 	
-    rc->fft(F,h);
+      rc->fft(F,h);
+    } else {
+      for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
+      cr->fft(f);
+  
+      for(unsigned int i=m; i <= n2; i++) g[i]=0.0;
+      cr->fft(g);
+	
+      double *F=(double *) f;
+      double *G=(double *) g;
+      double *H=(double *) h;
+      for(unsigned int i=0; i < n; ++i)
+        H[i]=F[i]*G[i]*ninv;
+	
+      rc->fft(h);
+    }
   }
   
   // Note: input arrays f and g are destroyed.
   void unpadded(Complex *h, Complex *f, Complex *g) {
-    int stop=even ? c-1 : c;
-    
     double f0=f[0].real();
     double g0=g[0].real();
 
@@ -133,6 +150,7 @@ public:
     double ninv=1.0/n;
     h[0]=(h[0].real()+g[0].real()+B[0].real())*ninv;
     Zetak=zeta*ninv;
+    int stop=m-c-1;
     for(int k=1; k <= stop; ++k) {
       Complex gk=multconj(g[k],Zetak);
       Complex Bk=Zetak*B[k];
@@ -140,7 +158,8 @@ public:
       h[m-k]=conj(h[k]*ninv+multconj(gk,Zetamc)+Zetamc*Bk);
       h[k]=h[k]*ninv+gk+Bk;
     }
-    if(even) h[c]=h[c].real()*ninv+g[c].real()*conj(Zetak)+B[c].real()*Zetak;
+    if(2*c == m) 
+      h[c]=h[c].real()*ninv+g[c].real()*conj(Zetak)+B[c].real()*Zetak;
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
