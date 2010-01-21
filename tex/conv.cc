@@ -65,7 +65,9 @@ int main(int argc, char* argv[])
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
   Complex *h=FFTWComplex(np);
-  
+  Complex pseudoh[m];
+
+
   Complex *d=FFTWComplex(m);
   d[0]=1.0;
   for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
@@ -94,6 +96,7 @@ int main(int argc, char* argv[])
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
+    for(unsigned int i=0; i < m; i++) pseudoh[i]=h[i];
   }
   
   if(pad) {
@@ -114,6 +117,7 @@ int main(int argc, char* argv[])
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
     cout << endl;
+    for(unsigned int i=0; i < m; i++) pseudoh[i]=h[i];
   }
   
 #if 1 
@@ -132,6 +136,14 @@ int main(int argc, char* argv[])
   if(m < 100) 
     for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
   else cout << h[0] << endl;
+
+  // test accuracy of convolution methods:
+  double error=0.0;
+  for(unsigned int i=0; i < m; i++) 
+    error += abs2(h[i]-pseudoh[i]);
+  cout << "error="<<error<<endl;
+  if (error > 1e-12)
+    cerr << "Caution! error="<<error<<endl;
 #endif  
   
   FFTWdelete(f);
