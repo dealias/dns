@@ -4,6 +4,12 @@ using namespace std;
 
 // Compile with:
 // g++ -g -O3 -msse2 -march=native -mfpmath=sse conv.cc fftw++.cc -lfftw3
+//
+// g++ -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native -msse2 -mfpmath=sse conv.cc fftw++.cc -lfftw3
+//
+// g++ -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -mpentiumpro -msse2 -mfpmath=sse conv.cc fftw++.cc -lfftw3 -I$HOME/include -L$HOME/lib
+//
+//
 // usage: aout [int m]
 // optionally specifies the size of m.
 
