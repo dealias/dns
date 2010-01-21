@@ -75,11 +75,11 @@ pair[] convolve0(pair[] f, pair[] g)
   
   B=rcfft(crfft(F,even)*crfft(G,even));
     
-  // r=2:
+  // r=-1:
   for(int k=1; k <= c; ++k) {
-    pair Zetamk=conj(Zeta[k]);
-    F[k]=Zetamk*(f[k]+Zetam*conj(f[m-k]));
-    G[k]=Zetamk*(g[k]+Zetam*conj(g[m-k]));
+    pair Zetakc=conj(Zeta[k]);
+    F[k]=Zetakc*(f[k]+Zetam*conj(f[m-k]));
+    G[k]=Zetakc*(g[k]+Zetam*conj(g[m-k]));
   }
 
   F=rcfft(crfft(F,even)*crfft(G,even));

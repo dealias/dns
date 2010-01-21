@@ -126,7 +126,7 @@ public:
       F[i] *= H[i];
     rc->fft(F,B);
     
-    // r=2:
+    // r=-1:
     cr->fft(g,F);
     cr->fft(C,H);
     for(unsigned int i=0; i < m; i++)
