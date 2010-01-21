@@ -121,17 +121,16 @@ int main(int argc, char* argv[])
   }
   
 #if 1 
-  sum=0.0;
   for(unsigned int i=0; i < m; i++) f[i]=d[i];
   for(unsigned int i=0; i < m; i++) g[i]=d[i];
   convolution convolve(m);
   seconds();
   convolve.direct(h,f,g);
-  sum +=seconds();
+  sum=seconds();
   
   cout << endl;
   cout << "Direct:" << endl;
-  cout << (sum-offset)/N << endl;
+  cout << sum-offset/N << endl;
 
   if(m < 100) 
     for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
