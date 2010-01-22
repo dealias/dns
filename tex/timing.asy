@@ -15,8 +15,8 @@ a=transpose(a);
 mu=a[0]; u=a[1];
 
 marker mark=marker(scale(0.8mm)*unitcircle);
-draw(graph(mp,p,p>0),Pen(0),"Padded",mark);
-draw(graph(mu,u,u>0),Pen(1),"Unpadded",mark);
+draw(graph(mp,p,p>0,Spline),Pen(0),"Padded",mark);
+draw(graph(mu,u,u>0,Spline),Pen(1),"Unpadded",mark);
 
 xaxis("$m$",BottomTop,LeftTicks);
 yaxis("time",LeftRight,RightTicks);
