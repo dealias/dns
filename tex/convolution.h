@@ -18,13 +18,14 @@ protected:
   Complex *A,*B;
   Complex zeta;
 public:  
-  convolution(unsigned int n, unsigned int m, bool compact=false) :
+  // Pass a temporary work array f to save memory.
+  convolution(unsigned int n, unsigned int m, Complex *f=NULL) :
     n(n), m(m) {
-    if(compact) {
+    if(f) {
       F=NULL;
       G=NULL;
-      rc=new rcfft1d(n);
-      cr=new crfft1d(n);
+      rc=new rcfft1d(n,f);
+      cr=new crfft1d(n,f);
     } else {
       F=FFTWdouble(n);
       G=FFTWdouble(n+2);
