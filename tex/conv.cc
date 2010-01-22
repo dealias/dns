@@ -15,6 +15,7 @@ using namespace std;
 
 // Number of iterations.
 unsigned int N=1000;
+unsigned int m=4096;
   
 using namespace std;
 
@@ -31,11 +32,19 @@ inline double seconds()
   return seconds;
 }
 
+inline void init(Complex *f, Complex *g) 
+{
+  f[0]=1.0;
+  for(unsigned int i=1; i < m-1; i++) f[i]=Complex(3.0,2.0);
+  f[m-1]=3.0;
+  g[0]=2.0;
+  for(unsigned int i=1; i < m-1; i++) g[i]=Complex(5.0,3.0);
+  g[m-1]=2.0;
+}
+
+
 int main(int argc, char* argv[])
 {
-  unsigned int m=4096;
-//  unsigned int m=2731;
-  
   int pad=0;
   
   if (argc >= 2) {
@@ -64,13 +73,18 @@ int main(int argc, char* argv[])
     
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
-  Complex *h=FFTWComplex(np);
+  Complex *h;
+  if(pad) h=f;
+  else h=FFTWComplex(np);
+#ifdef TEST  
   Complex pseudoh[m];
+#endif
 
-
+  /*
   Complex *d=FFTWComplex(m);
   d[0]=1.0;
   for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
+  */
   
   double offset=0.0;
   seconds();
@@ -83,8 +97,7 @@ int main(int argc, char* argv[])
   if(!pad) {
     convolution convolve(m);
     for(int i=0; i < N; ++i) {
-      for(unsigned int i=0; i < m; i++) f[i]=d[i];
-      for(unsigned int i=0; i < m; i++) g[i]=d[i];
+      init(f,g);
       seconds();
       convolve.unpadded(h,f,g);
       sum += seconds();
@@ -93,10 +106,13 @@ int main(int argc, char* argv[])
     cout << endl;
     cout << "Unpadded:" << endl;
     cout << (sum-offset)/N << endl;
+    cout << endl;
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
+#ifdef TEST    
     for(unsigned int i=0; i < m; i++) pseudoh[i]=h[i];
+#endif    
   }
   
   if(pad) {
@@ -104,8 +120,7 @@ int main(int argc, char* argv[])
     convolution Convolve(n,m,true);
     for(int i=0; i < N; ++i) {
       // FFTW out-of-place cr routines destroy the input arrays.
-      for(unsigned int i=0; i < m; i++) f[i]=d[i];
-      for(unsigned int i=0; i < m; i++) g[i]=d[i];
+      init(f,g);
       seconds();
       Convolve.fft(h,f,g);
       sum += seconds();
@@ -113,40 +128,45 @@ int main(int argc, char* argv[])
     cout << endl;
     cout << "Padded:" << endl;
     cout << (sum-offset)/N << endl;
+    cout << endl;
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
     cout << endl;
+#ifdef TEST    
     for(unsigned int i=0; i < m; i++) pseudoh[i]=h[i];
+#endif
   }
   
-#if 1 
-  for(unsigned int i=0; i < m; i++) f[i]=d[i];
-  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  convolution convolve(m);
-  seconds();
-  convolve.direct(h,f,g);
-  sum=seconds();
+  if(!pad) {
+    convolution convolve(m);
+    init(f,g);
+    seconds();
+    convolve.direct(h,f,g);
+    sum=seconds();
   
-  cout << endl;
-  cout << "Direct:" << endl;
-  cout << sum-offset/N << endl;
+    cout << endl;
+    cout << "Direct:" << endl;
+    cout << sum-offset/N << endl;
+    cout << endl;
 
-  if(m < 100) 
-    for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-  else cout << h[0] << endl;
+    if(m < 100) 
+      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+    else cout << h[0] << endl;
 
-  // test accuracy of convolution methods:
-  double error=0.0;
-  for(unsigned int i=0; i < m; i++) 
-    error += abs2(h[i]-pseudoh[i]);
-  cout << "error="<<error<<endl;
-  if (error > 1e-12)
-    cerr << "Caution! error="<<error<<endl;
-#endif  
+    // test accuracy of convolution methods:
+    double error=0.0;
+#ifdef TEST    
+    for(unsigned int i=0; i < m; i++) 
+      error += abs2(h[i]-pseudoh[i]);
+    cout << "error="<<error<<endl;
+    if (error > 1e-12)
+      cerr << "Caution! error="<<error<<endl;
+#endif
+  }
   
   FFTWdelete(f);
   FFTWdelete(g);
-  FFTWdelete(h);
+  if(!pad) FFTWdelete(h);
 }
 
