@@ -97,7 +97,7 @@ The forward Fourier transform appears as
 \ee
 
 \newpage
-\subsubsection{Complex to Real Transforms of 2/3 Dealiased Data}
+\subsubsection{1D Complex to Real Transforms of 2/3 Dealiased Data}
 
 Consider the cryptic comment
 \begin{quotation}
@@ -105,7 +105,7 @@ Consider the cryptic comment
   since $\zeta_N^{-k}=\zeta_N^k{}^*$.''
 \end{quotation}
 As it turns out, $2/3$ dealiased data works particularly well with the
-Hermiticity condition, $\hat{u}_{m-k}=\hat{u}^*_k$, which guarantees
+Hermiticity condition, $\hat{u}_{-k}=\hat{u}^*_k$, which guarantees
 that the $x$-space data is real-valued. Consider a
 wavenumber-truncated vector ranging from $k=-(m-1)$ to $k=m-1$, which
 has $2m-1$ elements.
@@ -130,6 +130,28 @@ and the forwards transform becomes
 =\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =0,\ldots,m-1.
 \ee
+
+\subsubsection{2D Complex to Real Transforms of 2/3 Dealiased Data}
+The Hermiticity condition is now $\hat{u}_{-k,-\ell}=\hat{u}^*_{k,\ell}$.
+The procedure is analagous as in 1D,
+where we interpret each index as a vector, add dot products,
+and split the two-dimensional sum into lower and upper halfs, using the
+change of variables $\vk=(m,m)+\vk'$.
+\begin{comment}
+\bec
+u_{3u+r,3v+s}\no=\sum_{k=-m-1}^{m-1}\sum_{\ell=-m-1}^{m-1}
+\z_{m}^{u k} \z_{m}^{v \ell} \z_N^{rk} \z_N^{s\ell} \hat u_{k,\ell}
+=\sum_{k=-m-1}^{m-1}\z_{m}^{u k}\z_N^{rk}  
+\sum_{\ell=1}^{m-1} \z_{m}^{v \ell} \z_N^{s(\ell'-m)} \hat u_{k,\ell'-m}
++\sum_{k=-m-1}^{m-1}\z_{m}^{u k}\z_N^{rk}
+\sum_{\ell=0}^{m-1} \z_{m}^{v \ell} \z_N^{s\ell} \hat u_{k,\ell}
+=\sum_{k=-m-1}^{m-1}\z_{m}^{-u k}\z_N^{-rk}  
+\sum_{\ell=1}^{m-1} \z_{m}^{v \ell} \z_N^{-s(m-\ell')} \hat u_{k,m-\ell'}^*
++\sum_{k=-m-1}^{m-1}\z_{m}^{u k}\z_N^{rk}
+\sum_{\ell=0}^{m-1} \z_{m}^{v \ell} \z_N^{s\ell} \hat u_{k,\ell}
+\ee
+\end{comment}
+
 
 \newpage
 \subsection{$p/q$ Dealiased Data}
