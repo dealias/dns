@@ -123,7 +123,7 @@ where
 $$
 w_k=\z_N^{rk} \(\hat u_k-\half \hat u_0\d_{k,0}\).
 $$
-and the forwards transform becomes
+The forwards transform becomes
 \be
 \hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
@@ -136,7 +136,7 @@ The Hermiticity condition is now $\hat{u}_{-k,-\ell}=\hat{u}^*_{k,\ell}$.
 The procedure is analagous as in 1D,
 where we interpret each index as a vector, add dot products,
 split the two-dimensional sum into lower and upper halves, and use the
-change of variables $\vk=(m,m)+\vk'$.
+change of variables $\vk=(m_x,m_y)+\vk'$.
 \begin{comment}
 \bec
 u_{3u+r,3v+s}\no=\sum_{k=-m-1}^{m-1}\sum_{\ell=-m-1}^{m-1}
