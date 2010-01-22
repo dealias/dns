@@ -14,9 +14,12 @@ real[][] a=fin.dimension(0,0);
 a=transpose(a);
 mu=a[0]; u=a[1];
 
-marker mark=marker(scale(0.8mm)*unitcircle);
-draw(graph(mp,p,p>0,Spline),Pen(0),"Padded",mark);
-draw(graph(mu,u,u>0,Spline),Pen(1),"Unpadded",mark);
+guide g=scale(0.4mm)*unitcircle;
+
+marker mark0=marker(g,Fill(Pen(0)));
+marker mark1=marker(g,Fill(Pen(1)));
+draw(graph(mp,p,p>0,Spline),Pen(0),"Padded",mark0);
+draw(graph(mu,u,u>0,Spline),Pen(1),"Unpadded",mark1);
 
 xaxis("$m$",BottomTop,LeftTicks);
 yaxis("time",LeftRight,RightTicks);
