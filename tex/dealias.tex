@@ -84,7 +84,6 @@ with $r=1$ or $r=2$,
 \bel
 \label{dfft23g}
 u_{3\ell +r}\no=
-% \sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \(\hat u_k + \z_N^{rm}\hat u_{k+m}\)
  \sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\z_N^{rk} \hat u_k + \z_N^{r(k+m)}\hat u_{k+m}\)
 \eel
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
@@ -106,42 +105,31 @@ Consider the cryptic comment
   since $\zeta_N^{-k}=\zeta_N^k{}^*$.''
 \end{quotation}
 As it turns out, $2/3$ dealiased data works particularly well with the
-Hermiticity condition, $\hat{u}_{-k}=\hat{u}^*_k$, which guarantees
+Hermiticity condition, $\hat{u}_{m-k}=\hat{u}^*_k$, which guarantees
 that the $x$-space data is real-valued. Consider a
 wavenumber-truncated vector ranging from $k=-(m-1)$ to $k=m-1$, which
-has $2m-1$ elements. If the data is arranged as 
-\begin{dmath*}[compact]
-  \{\hat{u}_k\}=
-  \(u_0=0,\,u_1=u|_{k=-(m-1)},\,\dots,\,u_{m}=u|_{k=-1},
-  \,u_{m+1}=u|_{k=0}, \,u_{m+2}=u|_{1},\,\dots,\,u_{2m}=u|_{k=(m-1)},\)
-\end{dmath*}
-then the vector (with $u_0$ a type of padding) has $N=2m$
-elements. Let $\ell=\k+m$. The iFFT of this data is
-\begin{dmath*}
-  \{u_n\}_{n=0}^{2m}
-  =\sum_{\ell=0}^{N-1=2m-1}\z_N^{-\ell n} \hat{u}_\ell
-  =\sum_{\ell=1}^{2m-1}\z_N^{-\ell n} \hat{u}_\ell
-  =\sum_{\ell=1}^{m}\z_N^{-\ell n} \hat{u}_\ell 
-  -\sum_{\ell=m}^{m}\z_N^{-\ell n} \hat{u}_\ell 
-  +\sum_{\ell=m}^{2m-1}\z_N^{-\ell n} \hat{u}_\ell
-  =\sum_{\k=1-m}^0\z_{2m}^{-(\k+m) n} \hat{u}_{\k+m}
-  -\sum_{\k=0}^{0}\z_{2m}^{-(\k+m) n} \hat{u}_{\k+m}
-  +\sum_{\k=0}^{m-1}\z_{2m}^{-(\k+m) n} \hat{u}_{\k+m}
-  =\sum_{\k=1-m}^0\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
-  -\hat{u}_{k=0}
-  +\sum_{\k=0}^{m-1}\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
-  =\sum_{\k=0}^{1-m}\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
-  -\hat{u}_{k=0}
-  +\sum_{\k=0}^{m-1}\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
-  =\sum_{\k=0}^{m-1}\z_{2m}^{-(-\k+m) n} \hat{u}_{k=-\k}
-  -\hat{u}_{k=0}
-  +\sum_{\k=0}^{m-1}\z_{2m}^{-(\k+m) n} \hat{u}_{k=\k}
-  =\sum_{\k=0}^{m-1}\z_{2m}^{\k n}(-1)^n \hat{u}_{k=-\k}
-  -\hat{u}_{k=0}
-  +\sum_{\k=0}^{m-1}\z_{2m}^{-\k n}(-1)^n \hat{u}_{k=\k}
-  = 2\Re \(\sum_{\k=0}^{m-1}\z_{2m}^{-\k n}(-1)^n \hat{u}_{k=\k} \)-\hat{u}_{k=0}
-\end{dmath*}
+has $2m-1$ elements.
 
+The backwards (complex-to-real) transform becomes, on letting $k'=m+k$,
+\bec
+u_{3\ell +r}\no=\sum_{k=-m-1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k'=1}^{m-1}\z_{m}^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
++\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k=1}^{m-1}\z_{m}^{\ell k} \z_N^{-r(m-k)} \hat u_{m-k}^*
++\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \(w_k+w_{m-k}^*\),
+\ee
+where
+$$
+w_k=\z_N^{rk} \(\hat u_k-\half \hat u_0\d_{k,0}\).
+$$
+and the forwards transform becomes
+\be
+\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
+=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
+\qquad k\no =0,\ldots,m-1.
+\ee
 
 \newpage
 \subsection{$p/q$ Dealiased Data}

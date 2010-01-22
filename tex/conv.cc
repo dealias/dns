@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
   Complex *h;
-  if(pad) h=f;
+  if(pad) h=g;
   else h=FFTWComplex(np);
 #ifdef TEST  
   Complex pseudoh[m];
