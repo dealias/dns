@@ -1,10 +1,30 @@
 int p=1,q=2;
 write((string) p +"/" +(string) q +" padding");
 
-/*
 pair[] convolve0(pair[] f, pair[] g)
 {
-}*/
+  int m=f.length;
+  int n=quotient(m*q,p);
+  
+  pair zeta=exp(2*pi*I/n);
+  pair[] Zeta=new pair[n];
+
+  for(int i=0; i < n; ++i)
+    Zeta[i]=zeta^i;
+
+  for(int k=0; k < m; ++k) {
+    f[k+m]=conj(Zeta[k])*f[k];
+    g[k+m]=conj(Zeta[k])*g[k];
+  }
+  
+  f=concat(fft(fft(f[0:m],-1)*fft(g[0:m],-1),1),
+           fft(fft(f[m:2m],-1)*fft(g[m:2m],-1),1));
+
+  for(int k=0; k < m; ++k)
+    f[k]=(f[k]+Zeta[k]*f[k+m])/n;
+
+  return f[0:m];
+}
 
 pair[] convolve(pair[] F, pair[] G)
 {
@@ -45,4 +65,4 @@ write(convolve(f,g));
 write();
 write(direct(f,g));
 write();
-//write(convolve0(f,g));
+write(convolve0(f,g));

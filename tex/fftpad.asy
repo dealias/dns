@@ -87,7 +87,7 @@ pair[] fftpadinv(pair[] f)
 }
 
 // Unrolled scrambled version for p=2, q=3.
-pair[] fftpad0(pair[] f)
+pair[] ffttwothirds(pair[] f)
 {
   pair zetamc=conj(Zeta[m]);
   for(int k=0; k < m; ++k) {
@@ -107,7 +107,7 @@ pair[] fftpad0(pair[] f)
 }
 
 // Unrolled scrambled version for p=2, q=3.
-pair[] fftpadinv0(pair[] f)
+pair[] ffttwothirdsinv(pair[] f)
 {
   f=concat(fft(f[0:m],1),fft(f[m:2m],1),concat(fft(f[2m:3m],1)));
   pair zetam=Zeta[m];
@@ -123,9 +123,40 @@ pair[] fftpadinv0(pair[] f)
   return f;
 }
 
+// Unrolled scrambled version for p=1, q=2.
+pair[] ffthalf(pair[] f)
+{
+  for(int k=0; k < m; ++k)
+    f[k+m]=conj(Zeta[k])*f[k];
+  f=concat(fft(f[0:m],-1),fft(f[m:2m],-1));
+  return f;
+}
+
+// Unrolled scrambled version for p=2, q=3.
+pair[] ffthalfinv(pair[] f)
+{
+  f=concat(fft(f[0:m],1),fft(f[m:2m],1));
+  for(int k=0; k < m; ++k)
+    f[k] += Zeta[k]*f[k+m];
+  return f;
+}
+
 pair[] f=sequence(p*m);
 write(f);
 write();
 
-write((fftpadinv0(fftpad0(f))/n)[0:p*m]);
+//write((ffttwothirdsinv(ffttwothirds(f))/n)[0:p*m]);
+
+p=1;
+q=2;
+m=8;
+n=q*m;
+
+pair zeta=exp(2*pi*I/n);
+
+for(int i=0; i < n; ++i)
+  Zeta[i]=zeta^i;
+
+pair[] f=sequence(p*m);
+write((ffthalfinv(ffthalf(f))/n)[0:p*m]);
 
