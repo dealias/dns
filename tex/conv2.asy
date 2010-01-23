@@ -1,7 +1,7 @@
 import math;
 
 int nx=4;
-int ny=5;
+int ny=4;
 
 real[][] f=new real[nx][ny];
 
@@ -84,7 +84,7 @@ pair[][] rcfft2d(real[][] f)
 
 for(int i=0; i < nx; ++i) 
   for(int j=0; j < ny; ++j)
-    f[i][j]=unitrand();
+    f[i][j]=i+j;
 
 
 write(f);
@@ -92,4 +92,33 @@ write();
 
 real ninv=1/(nx*ny);
 
-write(ninv*crfft2d(rcfft2d(f),false));
+//write(ninv*crfft2d(rcfft2d(f),ny % 2 == 0));
+
+pair[][] pad(pair[][] f)
+{
+  int nx=f.length;
+  int ny=f[0].length;
+  
+  int Nx=floor(quotient(nx*3,2));
+  int Ny=floor(quotient(ny*3,2));
+
+  pair[][] g=array(Nx,array(Ny,(0,0)));
+  for(int i=0; i < nx; ++i)
+    for(int j=0; j < ny; ++j)
+      g[i][j]=f[i][j];
+  return g;
+}
+
+pair[][] unpad(pair[][] f)
+{
+  return f[0:nx][0:ny];
+}
+
+
+write();
+
+real[][] F=crfft2d(pad(f));
+real[][] G=crfft2d(pad(f));
+
+for(int i=0; i < F.length; ++i)
+  for(int j=0; i < F[0].length; ++i)
