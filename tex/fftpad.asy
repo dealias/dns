@@ -117,8 +117,8 @@ pair[] fftpadinv0(pair[] f)
     pair fkmm=f[k+2m];
     pair z1=Zeta[k];
     pair z2=z1*zetam;
-    f[k]=z1*fk+conj(z1)*fkm+f[2m+k];
-    f[m+k]=z2*fk+conj(z2)*fkm+f[2m+k];
+    f[k]=z1*fk+conj(z1)*fkm+fkmm;
+    f[k+m]=z2*fk+conj(z2)*fkm+fkmm;
   }
   return f;
 }
