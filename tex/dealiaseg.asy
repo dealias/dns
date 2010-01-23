@@ -33,17 +33,8 @@ write("new transform:");
 pair[] f=sequence(p*m);
 
 pair[][] g=array(q,array(m,(0,0)));
-write("r="+(string) 0);
-for(int a=0; a < p; ++a) {
-  for(int k=0; k < m; ++k) {
-    int K=k+a*m;
-    g[0][k] += f[K];
-  }
-}
-g[0]=fft(g[0],-1);
-write(g[0]);
 
-for(int r=1; r < q; ++r) {
+for(int r=0; r < q; ++r) {
   write("r="+(string) r);
   for(int a=0; a < p; ++a) {
     for(int k=0; k < m; ++k) {
@@ -51,16 +42,17 @@ for(int r=1; r < q; ++r) {
       g[r][k] += Zeta[r*K % n]*f[K];
     }
   }
-  g[r]=fft(g[r],-1);
 }
 
-pair[] f=array(p*m,(0,0));
-g[0]=fft(g[0],1);
-for(int a=0; a < p; ++a)
-  for(int k=0; k < m; ++k)
-    f[k+a*m] += g[0][k];
+for(int k=1; k < m; ++k)
+  write("HI:",Zeta[0],-Zeta[k]-Zeta[n-k]);
+  
+for(int r=0; r < q; ++r)
+  g[r]=fft(g[r],-1);
 
-for(int r=1; r < q; ++r) {
+pair[] f=array(p*m,(0,0));
+
+for(int r=0; r < q; ++r) {
   g[r]=fft(g[r],1);
   for(int a=0; a < p; ++a) {
     for(int k=0; k < m; ++k) {
