@@ -62,6 +62,30 @@ pair[] fftpad(pair[] f)
   return h;
 }
 
+// return an fft with p*m data padded to n.
+pair[] fftpadinv(pair[] f)
+{
+  pair[] F=new pair[m];
+  pair[] h=new pair[p*m];
+
+  for(int k=0; k < p*m; ++k)
+    h[k]=0.0;
+
+  for(int r=0; r < q; ++r) {
+    for(int i=0; i < m; ++i)
+      F[i]=f[q*i+r];
+
+    F=fft(F,1);
+    for(int a=0; a < p; ++a) {
+      for(int k=0; k < m; ++k) {
+        int K=k+a*m;
+        h[K] += Zeta[r*K % n]*F[k];
+      }
+    }
+  }
+  return h;
+}
+
 // Unrolled scrambled version for p=2, q=3.
 pair[] fftpad0(pair[] f)
 {
@@ -97,30 +121,6 @@ pair[] fftpadinv0(pair[] f)
     f[m+k]=z2*fk+conj(z2)*fkm+f[2m+k];
   }
   return f;
-}
-
-// return an fft with p*m data padded to n.
-pair[] fftpadinv(pair[] f)
-{
-  pair[] F=new pair[m];
-  pair[] h=new pair[p*m];
-
-  for(int k=0; k < p*m; ++k)
-    h[k]=0.0;
-
-  for(int r=0; r < q; ++r) {
-    for(int i=0; i < m; ++i)
-      F[i]=f[q*i+r];
-
-    F=fft(F,1);
-    for(int a=0; a < p; ++a) {
-      for(int k=0; k < m; ++k) {
-        int K=k+a*m;
-        h[K] += Zeta[r*K % n]*F[k];
-      }
-    }
-  }
-  return h;
 }
 
 pair[] f=sequence(p*m);
