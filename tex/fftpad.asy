@@ -127,5 +127,5 @@ pair[] f=sequence(p*m);
 write(f);
 write();
 
-write(fftpadinv0(fftpad0(f))/n);
+write((fftpadinv0(fftpad0(f))/n)[0:p*m]);
 
