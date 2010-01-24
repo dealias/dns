@@ -86,13 +86,12 @@ for(int i=0; i < nx; ++i)
   for(int j=0; j < ny; ++j)
     f[i][j]=i+j;
 
-
 write(f);
 write();
 
 real ninv=1/(nx*ny);
 
-//write(ninv*crfft2d(rcfft2d(f),ny % 2 == 0));
+write(ninv*crfft2d(rcfft2d(f),ny % 2 == 0));
 
 pair[][] pad(pair[][] f)
 {
@@ -111,14 +110,8 @@ pair[][] pad(pair[][] f)
 
 pair[][] unpad(pair[][] f)
 {
-  return f[0:nx][0:ny];
+  pair[][] F=new pair[f.length][];
+  for(int i=0; i < nx; ++i)
+    F[i]=f[i][0:ny];
+  return F;
 }
-
-
-write();
-
-real[][] F=crfft2d(pad(f));
-real[][] G=crfft2d(pad(f));
-
-for(int i=0; i < F.length; ++i)
-  for(int j=0; i < F[0].length; ++i)

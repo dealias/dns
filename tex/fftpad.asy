@@ -132,7 +132,7 @@ pair[] ffthalf(pair[] f)
   return f;
 }
 
-// Unrolled scrambled version for p=2, q=3.
+// Unrolled scrambled version for p=1, q=2.
 pair[] ffthalfinv(pair[] f)
 {
   f=concat(fft(f[0:m],1),fft(f[m:2m],1));
