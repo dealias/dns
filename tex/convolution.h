@@ -244,8 +244,8 @@ public:
     double im=0.0;
     for(unsigned int k=0; k < m; ++k) {
       Complex *p=f+k;
-      Complex fk=*p;
       Complex *q=g+k;
+      Complex fk=*p;
       Complex gk=*q;
       p += m;
       p->re=re*fk.re-im*fk.im;
@@ -265,8 +265,8 @@ public:
     
     for(unsigned int k=0; k < n; ++k) {
       Complex *p=f+k;
-      Complex fk=*p;
       Complex *q=g+k;
+      Complex fk=*p;
       Complex gk=*q;
       p->re=fk.re*gk.re-fk.im*gk.im;
       p->im=fk.re*gk.im+fk.im*gk.re;
