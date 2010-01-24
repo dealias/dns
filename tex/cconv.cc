@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
     cerr << "Caution! error="<<error<<endl;
 #endif    
   
-  FFTWdelete(f);
-  FFTWdelete(g);
+//  FFTWdelete(f);
+//  FFTWdelete(g);
 }
 
