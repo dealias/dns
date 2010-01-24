@@ -3,11 +3,11 @@ using namespace std;
 #include "convolution.h"
 
 // Compile with:
-// g++ -g -O3 -msse2 -march=native -mfpmath=sse conv.cc fftw++.cc -lfftw3
+// g++ -g -O3 -msse2 -march=native -mfpmath=sse cconv.cc fftw++.cc -lfftw3
 //
-// g++ -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native -msse2 -mfpmath=sse conv.cc fftw++.cc -lfftw3
+// g++ -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3
 //
-// g++ -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -mpentiumpro -msse2 -mfpmath=sse conv.cc fftw++.cc -lfftw3 -I$HOME/include -L$HOME/lib
+// g++ -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -mpentiumpro -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3 -I$HOME/include -L$HOME/lib
 //
 //
 // usage: aout [int m]
@@ -15,8 +15,12 @@ using namespace std;
 
 // Number of iterations.
 unsigned int N=1000;
-unsigned int m=4096;
   
+Complex d[]={Complex(-5,3),Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
+
+unsigned int m=sizeof(d)/sizeof(Complex);
+unsigned int n=2*m;
+
 using namespace std;
 
 #include <sys/time.h>
@@ -34,12 +38,10 @@ inline double seconds()
 
 inline void init(Complex *f, Complex *g) 
 {
-  f[0]=1.0;
-  for(unsigned int i=1; i < m-1; i++) f[i]=Complex(3.0,2.0);
-  f[m-1]=3.0;
-  g[0]=2.0;
-  for(unsigned int i=1; i < m-1; i++) g[i]=Complex(5.0,3.0);
-  g[m-1]=2.0;
+//  for(unsigned int i=0; i < m; i++) f[i]=d[i];
+//  for(unsigned int i=0; i < m; i++) g[i]=d[i];
+  for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
+  for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
 }
 
 int main(int argc, char* argv[])
@@ -54,12 +56,7 @@ int main(int argc, char* argv[])
     pad=atoi(argv[2]);
   }
   
-//  Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
-	
-//  unsigned int m=sizeof(d)/sizeof(Complex);
-  unsigned int n=(2*m-1)*3;
-  if(n % 2 == 1) ++n;
-  n /= 2;
+  n=2*m;
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
   // Choose next power of 2 for maximal efficiency.
@@ -68,23 +65,13 @@ int main(int argc, char* argv[])
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
   
-  unsigned int np=pad ? n/2+1 : m;
-    
-  Complex *f=FFTWComplex(np);
-  Complex *g=FFTWComplex(np);
-  Complex *h;
-  if(pad) h=g;
-  else h=FFTWComplex(np);
+  Complex *f=FFTWComplex(n);
+  Complex *g=FFTWComplex(n);
+  Complex *h=f;
 #ifdef TEST  
   Complex pseudoh[m];
 #endif
 
-  /*
-  Complex *d=FFTWComplex(m);
-  d[0]=1.0;
-  for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
-  */
-  
   double offset=0.0;
   seconds();
   for(int i=0; i < N; ++i) {
@@ -94,7 +81,7 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(!pad) {
-    convolution convolve(m);
+    cconvolution convolve(m,f);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
@@ -116,7 +103,7 @@ int main(int argc, char* argv[])
   
   if(pad) {
     sum=0.0;
-    convolution Convolve(n,m,f);
+    cconvolution Convolve(n,m,f);
     for(int i=0; i < N; ++i) {
       // FFTW out-of-place cr routines destroy the input arrays.
       init(f,g);
@@ -137,35 +124,33 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  if(!pad) {
-    convolution convolve(m);
-    init(f,g);
-    seconds();
-    convolve.direct(h,f,g);
-    sum=seconds();
+  cconvolution convolve(m,f);
+  init(f,g);
+  h=FFTWComplex(n);
+  seconds();
+  convolve.direct(h,f,g);
+  sum=seconds();
   
-    cout << endl;
-    cout << "Direct:" << endl;
-    cout << sum-offset/N << endl;
-    cout << endl;
+  cout << endl;
+  cout << "Direct:" << endl;
+  cout << sum-offset/N << endl;
+  cout << endl;
 
-    if(m < 100) 
-      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-    else cout << h[0] << endl;
+  if(m < 100) 
+    for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+  else cout << h[0] << endl;
 
-    // test accuracy of convolution methods:
-    double error=0.0;
+  // test accuracy of convolution methods:
+  double error=0.0;
 #ifdef TEST    
-    for(unsigned int i=0; i < m; i++) 
-      error += abs2(h[i]-pseudoh[i]);
-    cout << "error="<<error<<endl;
-    if (error > 1e-12)
-      cerr << "Caution! error="<<error<<endl;
-#endif
-  }
+  for(unsigned int i=0; i < m; i++) 
+    error += abs2(h[i]-pseudoh[i]);
+  cout << "error="<<error<<endl;
+  if (error > 1e-12)
+    cerr << "Caution! error="<<error<<endl;
+#endif    
   
   FFTWdelete(f);
   FFTWdelete(g);
-  if(!pad) FFTWdelete(h);
 }
 

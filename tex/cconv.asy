@@ -7,22 +7,26 @@ pair[] convolve0(pair[] f, pair[] g)
   int n=quotient(m*q,p);
   
   pair zeta=exp(2*pi*I/n);
-  pair[] Zeta=new pair[n];
 
-  for(int i=0; i < n; ++i)
-    Zeta[i]=zeta^i;
-
+  pair Zetak=1.0;
   for(int k=0; k < m; ++k) {
-    f[k+m]=conj(Zeta[k])*f[k];
-    g[k+m]=conj(Zeta[k])*g[k];
+    f[k+m]=conj(Zetak)*f[k];
+    g[k+m]=conj(Zetak)*g[k];
+    Zetak *= zeta;
   }
   
   f=concat(fft(fft(f[0:m],-1)*fft(g[0:m],-1),1),
            fft(fft(f[m:2m],-1)*fft(g[m:2m],-1),1));
 
-  for(int k=0; k < m; ++k)
-    f[k]=(f[k]+Zeta[k]*f[k+m])/n;
+  Zetak=1.0;
+  for(int k=0; k < m; ++k) {
+    f[k]=(f[k]+Zetak*f[k+m])/n;
+    Zetak *= zeta;
+  }
 
+  write(f[0]);
+  
+  
   return f[0:m];
 }
 
