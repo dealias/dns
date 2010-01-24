@@ -240,6 +240,10 @@ public:
   
   // Note: input arrays f and g are destroyed.
   void unpadded(Complex *h, Complex *f, Complex *g) {
+    // Work arrays:
+    Complex *u=f+m; 
+    Complex *v=g+m;
+    
     double re=1.0;
     double im=0.0;
     for(unsigned int k=0; k < m; ++k) {
@@ -247,10 +251,10 @@ public:
       Complex *q=g+k;
       Complex fk=*p;
       Complex gk=*q;
-      Complex *P=p+m;
+      Complex *P=u+k;
       P->re=re*fk.re-im*fk.im;
       P->im=im*fk.re+re*fk.im;
-      Complex *Q=q+m;
+      Complex *Q=v+k;
       Q->re=re*gk.re-im*gk.im;
       Q->im=im*gk.re+re*gk.im;
       double temp=re*c+im*s; 
@@ -259,11 +263,11 @@ public:
     }  
     
     Forwards->fft(f);
-    Forwards->fft(f+m);
+    Forwards->fft(u);
     Forwards->fft(g);
-    Forwards->fft(g+m);
+    Forwards->fft(v);
     
-    for(unsigned int k=0; k < n; ++k) {
+    for(unsigned int k=0; k < m; ++k) {
       Complex *p=f+k;
       Complex *q=g+k;
       Complex fk=*p;
@@ -273,15 +277,25 @@ public:
     }
     
     Backwards->fft(f);
-    Backwards->fft(f+m);
+    
+    for(unsigned int k=0; k < m; ++k) {
+      Complex *p=u+k;
+      Complex *q=v+k;
+      Complex fk=*p;
+      Complex gk=*q;
+      p->re=fk.re*gk.re-fk.im*gk.im;
+      p->im=fk.re*gk.im+fk.im*gk.re;
+    }
+    
+    Backwards->fft(u);
     
     double ninv=1.0/n;
     re=ninv;
     im=0.0;
-    Complex *stop=f+m;
-    for(Complex *p=f; p < stop; ++p) {
+    for(unsigned int k=0; k < m; ++k) {
+      Complex *p=f+k;
       Complex fk=*p;
-      Complex fkm=*(p+m);
+      Complex fkm=*(u+k);
       p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
       p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
       double temp=re*c-im*s;
