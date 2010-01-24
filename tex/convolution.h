@@ -203,9 +203,9 @@ public:
     n=2*m;
     
     double arg=2.0*M_PI/n;
-    zeta=Complex(cos(arg),sin(arg));
     c=cos(arg);
     s=sin(arg);
+    zeta=Complex(c,s);
 
     Backwards=new fft1d(m,1,f);
     Forwards=new fft1d(m,-1,f);
