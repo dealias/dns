@@ -1,31 +1,10 @@
 import math;
+import utils;
 
 int nx=3;
 int ny=3;
 
 real[][] f=new real[nx][ny];
-
-pair[][] operator *(pair[][] a, pair b)
-{
-  int n=a.length;
-  pair[][] m=new pair[n][];
-  for(int i=0; i < n; ++i)
-    m[i]=a[i]*b;
-  return m;
-}
-
-pair[][] operator *(pair b, pair[][] a)
-{
-  return a*b;
-}
-
-pair[][] operator cast(real[][] f) 
-{
-  pair[][] F=new pair[f.length][];
-  for(int i=0; i < f.length; ++i)
-    F[i]=(pair[]) f[i];
-  return F;
-}
 
 for(int i=0; i < nx; ++i) 
   for(int j=0; j < ny; ++j)
@@ -135,17 +114,6 @@ pair[][] direct(pair[][] F, pair[][] G)
   return H;
 }	
 
-real error(pair[][] f_good, pair[][] f) {
-  real error=0;
-  for (int i=0; i < f.length; ++i) {
-    for (int j=0; j < f[i].length; ++j) {
-      if (error < abs(f_good[i][j]-f[i][j]))
-	error=abs(f_good[i][j]-f[i][j]);
-    }
-  }
-  return error;
-}
-
 write("direct:");
 pair[][] f_direct=direct(f,f);
 write(f_direct);
@@ -162,7 +130,7 @@ real ninv=1/(F.length*F[0].length);
 write("padded:");
 pair[][] f_padded=ninv*unpad(fft(F,-1));
 //write(f_padded);
-write("error="+(string)error(f_direct,f_padded));
+write("error="+(string)maxerror(f_direct,f_padded));
 
 write();
 
@@ -196,5 +164,5 @@ real ninv=1/(F.length*F[0].length);
 write("unpadded:");
 pair[][] f_unpadded=ninv*ffthalfinv(F);
 //write(f_unpadded);
-write("error="+(string)error(f_direct,f_unpadded));
+write("error="+(string)maxerror(f_direct,f_unpadded));
 
