@@ -16,31 +16,6 @@ write();
 
 real ninv=1/(nx*ny);
 
-pair[][] pad(pair[][] f)
-{
-  int nx=f.length;
-  int ny=f[0].length;
-  
-  int Nx=2*nx;
-  int Ny=2*ny;
-  //  int Nx=floor(quotient(nx*3,2));
-  //  int Ny=floor(quotient(ny*3,2));
-
-  pair[][] g=array(Nx,array(Ny,(0,0)));
-  for(int i=0; i < nx; ++i)
-    for(int j=0; j < ny; ++j)
-      g[i][j]=f[i][j];
-  return g;
-}
-
-pair[][] unpad(pair[][] f)
-{
-  pair[][] F=new pair[f.length][];
-  for(int i=0; i < nx; ++i)
-    F[i]=f[i][0:ny];
-  return F;
-}
-
 int n;
 int m;
 pair[] Zeta;
@@ -94,7 +69,7 @@ pair[][] ffthalfinv(pair[][] a)
     A[k]=ffthalfinv(v);
     ++k;
   }
-  return unpad(transpose(A));
+  return unpad(transpose(A),nx,ny);
 }
 
 pair[][] direct(pair[][] F, pair[][] G)
@@ -118,8 +93,8 @@ write("direct:");
 pair[][] f_direct=direct(f,f);
 write(f_direct);
 
-pair[][] F=fft(pad(f),1);
-pair[][] G=fft(pad(f),1);
+pair[][] F=fft(pad(f,nx,ny),1);
+pair[][] G=fft(pad(f,nx,ny),1);
 
 for(int i=0; i < F.length; ++i)
   for(int j=0; j < F[0].length; ++j)
@@ -128,7 +103,7 @@ for(int i=0; i < F.length; ++i)
 write();
 real ninv=1/(F.length*F[0].length);
 write("padded:");
-pair[][] f_padded=ninv*unpad(fft(F,-1));
+pair[][] f_padded=ninv*unpad(fft(F,-1),nx,ny);
 //write(f_padded);
 write("error="+(string)maxerror(f_direct,f_padded));
 

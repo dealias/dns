@@ -31,3 +31,28 @@ real maxerror(pair[][] f, pair[][] g) {
   }
   return e;
 }
+
+pair[][] pad(pair[][] f,int nx, int ny)
+{
+  int nx=f.length;
+  int ny=f[0].length;
+  
+  int Nx=2*nx;
+  int Ny=2*ny;
+  //  int Nx=floor(quotient(nx*3,2));
+  //  int Ny=floor(quotient(ny*3,2));
+
+  pair[][] g=array(Nx,array(Ny,(0,0)));
+  for(int i=0; i < nx; ++i)
+    for(int j=0; j < ny; ++j)
+      g[i][j]=f[i][j];
+  return g;
+}
+
+pair[][] unpad(pair[][] f,int nx, int ny)
+{
+  pair[][] F=new pair[f.length][];
+  for(int i=0; i < nx; ++i)
+    F[i]=f[i][0:ny];
+  return F;
+}
