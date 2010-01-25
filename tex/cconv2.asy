@@ -30,6 +30,7 @@ pair[][] operator cast(real[][] f)
 for(int i=0; i < nx; ++i) 
   for(int j=0; j < ny; ++j)
     f[i][j]=i+j;
+//    f[i][j]=unitrand();
 
 write(f);
 write();
@@ -83,7 +84,7 @@ pair[] ffthalfinv(pair[] f)
   return f[0:m];
 }
 
-pair[][] ffthalf(pair[][] a, int sign=1)
+pair[][] ffthalf(pair[][] a)
 {
   pair[][] A=new pair[a.length][];
   int k=0;
@@ -100,7 +101,7 @@ pair[][] ffthalf(pair[][] a, int sign=1)
   return transpose(A);
 }
 
-pair[][] ffthalfinv(pair[][] a, int sign=1)
+pair[][] ffthalfinv(pair[][] a)
 {
   pair[][] A=new pair[a.length][];
   int k=0;
@@ -134,9 +135,8 @@ pair[][] direct(pair[][] F, pair[][] G)
   return H;
 }	
 
+write("direct:");
 write(direct(f,f));
-write();
-write(pad(f));
 
 pair[][] F=fft(pad(f),1);
 pair[][] G=fft(pad(f),1);
@@ -147,6 +147,7 @@ for(int i=0; i < F.length; ++i)
 
 write();
 real ninv=1/(F.length*F[0].length);
+write("padded:");
 write(ninv*unpad(fft(F,-1)));
 
 write();
@@ -168,6 +169,6 @@ for(int i=0; i < F.length; ++i)
   for(int j=0; j < F[0].length; ++j)
     F[i][j] *= G[i][j];
 
-write();
 real ninv=1/(F.length*F[0].length);
+write("unpadded:");
 write(ninv*ffthalfinv(F));

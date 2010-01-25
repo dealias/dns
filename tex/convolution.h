@@ -1,3 +1,4 @@
+#include "Array.h"
 #include "fftw++.h"
 
 #ifndef __convolution_h__
@@ -190,7 +191,6 @@ protected:
   unsigned int m;
   fft1d *Backwards;
   fft1d *Forwards;
-  Complex zeta;
   double c,s;
 public:  
   cconvolution(unsigned int n, unsigned int m, Complex *f) :
@@ -205,7 +205,6 @@ public:
     double arg=2.0*M_PI/n;
     c=cos(arg);
     s=sin(arg);
-    zeta=Complex(c,s);
 
     Backwards=new fft1d(m,1,f);
     Forwards=new fft1d(m,-1,f);
@@ -225,10 +224,10 @@ public:
 // subsumes f or g, respectively.
 
   void fft(Complex *h, Complex *f, Complex *g) {
-    for(unsigned int i=m; i <= n; i++) f[i]=0.0;
+    for(unsigned int i=m; i < n; i++) f[i]=0.0;
     Backwards->fft(f);
   
-    for(unsigned int i=m; i <= n; i++) g[i]=0.0;
+    for(unsigned int i=m; i < n; i++) g[i]=0.0;
     Backwards->fft(g);
       
     double ninv=1.0/n;
@@ -239,22 +238,17 @@ public:
   }
   
   // Note: input arrays f and g are destroyed.
-  void unpadded(Complex *h, Complex *f, Complex *g) {
-    // Work arrays:
-    Complex *u=f+m; 
-    Complex *v=g+m;
-    
+  // u is a temporary work array of size n.
+  void unpadded(Complex *h, Complex *f, Complex *g, Complex *u) {
     double re=1.0;
     double im=0.0;
     for(unsigned int k=0; k < m; ++k) {
-      Complex *p=f+k;
-      Complex *q=g+k;
-      Complex fk=*p;
-      Complex gk=*q;
       Complex *P=u+k;
+      Complex *Q=P+m;
+      Complex fk=*(f+k);
+      Complex gk=*(g+k);
       P->re=re*fk.re-im*fk.im;
       P->im=im*fk.re+re*fk.im;
-      Complex *Q=v+k;
       Q->re=re*gk.re-im*gk.im;
       Q->im=im*gk.re+re*gk.im;
       double temp=re*c+im*s; 
@@ -265,13 +259,12 @@ public:
     Forwards->fft(f);
     Forwards->fft(u);
     Forwards->fft(g);
-    Forwards->fft(v);
+    Forwards->fft(u+m);
     
     for(unsigned int k=0; k < m; ++k) {
       Complex *p=f+k;
-      Complex *q=g+k;
       Complex fk=*p;
-      Complex gk=*q;
+      Complex gk=*(g+k);
       p->re=fk.re*gk.re-fk.im*gk.im;
       p->im=fk.re*gk.im+fk.im*gk.re;
     }
@@ -280,9 +273,8 @@ public:
     
     for(unsigned int k=0; k < m; ++k) {
       Complex *p=u+k;
-      Complex *q=v+k;
       Complex fk=*p;
-      Complex gk=*q;
+      Complex gk=*(p+m);
       p->re=fk.re*gk.re-fk.im*gk.im;
       p->im=fk.re*gk.im+fk.im*gk.re;
     }
@@ -318,6 +310,189 @@ public:
       Complex sum=0.0;
       for(unsigned int j=0; j <= i; j++) sum += F[j]*G[i-j];
       H[i]=sum;
+    }
+  }	
+
+};
+
+// Compute the virtual m-padded complex Fourier transform of a complex
+// vector of length m.
+//
+// In-place usage:
+//
+//   ffthalf Backward(m,stride);
+//   Backward.fft(in);
+//
+// Notes:
+//   stride is the spacing between the elements of each Complex vector;
+//
+class ffthalf {
+  unsigned int n;
+  unsigned int m;
+  unsigned int stride;
+  unsigned int dist;
+  mfft1d *Backwards;
+  mfft1d *Forwards;
+  Complex zeta;
+  double c,s;
+
+public:  
+  ffthalf(unsigned int m, unsigned int stride=1,
+          Complex *f=NULL) : m(m), stride(stride) {
+    n=2*m;
+    double arg=2.0*M_PI/n;
+    c=cos(arg);
+    s=sin(arg);
+    
+     // TODO: Standardize sign convention.
+    Backwards=new mfft1d(m,-1,1,stride,m,f);
+    Forwards=new mfft1d(m,1,1,stride,m,f);
+  }
+  
+  void backwards(Complex *f, Complex *u) {
+    double re=1.0;
+    double im=0.0;
+    for(unsigned int k=0; k < m; k += stride) {
+      Complex *P=u+k;
+      Complex *p=f+k;
+      Complex fk=*p;
+      P->re=re*fk.re-im*fk.im;
+      P->im=im*fk.re+re*fk.im;
+      double temp=re*c+im*s; 
+      im=-re*s+im*c;
+      re=temp;
+    }  
+    
+    Forwards->fft(f);
+    Forwards->fft(u);
+  }
+  
+  void forwards(Complex *f, Complex *u) {
+    Backwards->fft(f);
+    Backwards->fft(u);
+
+    double ninv=1.0/n;
+    double re=ninv;
+    double im=0.0;
+    for(unsigned int k=0; k < m; k += stride) {
+      Complex *p=f+k;
+      Complex fk=*p;
+      Complex fkm=*(u+k);
+      p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
+      p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+      double temp=re*c-im*s;
+      im=re*s+im*c;
+      re=temp;
+    }
+  }
+};
+  
+class cconvolution2 {
+protected:
+  unsigned int n;
+  unsigned int m;
+  fft2d *Backwards;
+  fft2d *Forwards;
+  cconvolution *C;
+  ffthalf *fftpad;
+  array2<Complex> u,v;
+  Complex *work;
+public:  
+  cconvolution2(unsigned int n, unsigned int m, array2<Complex>& f) :
+    n(n), m(m) {
+    Backwards=new fft2d(1,f);
+    Forwards=new fft2d(-1,f);
+  }
+  
+  cconvolution2(unsigned int m, array2<Complex>& f) : m(m) {
+    n=2*m;
+    work=FFTWComplex(n);
+    size_t align=sizeof(Complex);
+    u.Allocate(m,m,align);
+    v.Allocate(m,m,align);
+    fftpad=new ffthalf(m,m,work);
+    C=new cconvolution(m,work);
+    
+//    Backwards=new fft1d(m,1,f);
+//    Forwards=new fft1d(m,-1,f);
+  }
+  
+// Need destructor  
+  
+// Compute H = F (*) G, where F and G are the non-negative Fourier
+// components of real functions f and g, respectively. Dealiasing via
+// zero-padding is implemented automatically.
+//
+// Arrays F[n/2+1], G[n/2+1] must be distinct.
+// Input F[i], G[i] (0 <= i < m), where 3*m <= n.
+// Output H[i] = F (*) G  (0 <= i < m), F[i]=f[i], G[i]=g[i] (0 <= i < n/2).
+//
+// Array H[n/2+1] can coincide with either F or G, in which case the output H
+// subsumes f or g, respectively.
+
+  void fft(array2<Complex>& h, array2<Complex>& f, array2<Complex>& g) {
+    for(unsigned int i=0; i < m; i++) 
+      for(unsigned int j=m; j < n; j++)
+      f[i][j]=0.0;
+    
+    for(unsigned int i=m; i < n; i++) 
+      for(unsigned int j=0; j < n; j++)
+      f[i][j]=0.0;
+    
+    Backwards->fft(f);
+  
+    for(unsigned int i=0; i < m; i++) 
+      for(unsigned int j=m; j < n; j++)
+      g[i][j]=0.0;
+    
+    for(unsigned int i=m; i < n; i++) 
+      for(unsigned int j=0; j < n; j++)
+      g[i][j]=0.0;
+    
+    Backwards->fft(g);
+    
+    double ninv=1.0/(n*n);
+    for(unsigned int i=0; i < n; ++i)
+      for(unsigned int j=0; j < n; ++j)
+        f[i][j] *= g[i][j]*ninv;
+	
+    Forwards->fft(f);
+  }
+  
+  // Note: input arrays f and g are destroyed.
+  void unpadded(array2<Complex>& h, array2<Complex>& f, array2<Complex>& g) {
+    for(unsigned int j=0; j < m; ++j)
+      fftpad->backwards(f()+j,u()+j);
+    for(unsigned int j=0; j < m; ++j)
+      fftpad->backwards(g()+j,v()+j);
+    
+    for(unsigned int i=0; i < m; ++i)
+      C->unpadded(f[i],f[i],g[i],work);
+    for(unsigned int i=0; i < m; ++i)
+      C->unpadded(u[i],u[i],v[i],work);
+    
+    for(unsigned int j=0; j < m; ++j)
+      fftpad->forwards(f()+j,u()+j);
+  }
+  
+// Compute H = F (*) G, where F and G contain the non-negative Fourier
+// components of real functions f and g, respectively, via direct convolution
+// instead of a Fast Fourier Transform technique.
+//
+// Input F[i], G[i] (0 <= i < m).
+// Output H[i] = F (*) G  (0 <= i < m), F and G unchanged.
+//
+// Array H[m] must be distinct from F[m] and G[m].
+
+  void direct(array2<Complex>& H, array2<Complex>& F, array2<Complex>& G) {
+    for(unsigned int i=0; i < m; ++i) {
+      for(unsigned int j=0; j < n; ++j) {
+        Complex sum=0.0;
+        for(unsigned int k=0; k <= i; ++k)
+          for(unsigned int p=0; p <= j; ++p)
+            sum += F[k][p]*G[i-k][j-p];
+        H[i][j]=sum;
+      }
     }
   }	
 

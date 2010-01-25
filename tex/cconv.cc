@@ -65,9 +65,11 @@ int main(int argc, char* argv[])
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
   
-  Complex *f=FFTWComplex(n);
-  Complex *g=FFTWComplex(n);
+  int np=pad ? n : m;
+  Complex *f=FFTWComplex(np);
+  Complex *g=FFTWComplex(np);
   Complex *h=f;
+  Complex *work=FFTWComplex(n);
 #ifdef TEST  
   Complex pseudoh[m];
 #endif
@@ -85,7 +87,7 @@ int main(int argc, char* argv[])
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(h,f,g);
+      convolve.unpadded(h,f,g,work);
       sum += seconds();
     }
     
