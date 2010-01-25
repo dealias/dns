@@ -429,18 +429,18 @@ public:
 
   void pad(Complex *f) {
     for(unsigned int i=0; i < m;) {
-      unsigned int ni=n*i;
+      unsigned int j=n*i+m;
       ++i;
       unsigned int nip=n*i;
-      for(unsigned int j=ni+m; j < nip; j++)
+      for(; j < nip; ++j)
         f[j]=0.0;
     }
     
     for(unsigned int i=m; i < n;) {
-      unsigned int ni=n*i;
+      unsigned int j=n*i;
       ++i;
       unsigned int nip=n*i;
-      for(unsigned int j=ni; j < nip; j++)
+      for(; j < nip; ++j)
         f[j]=0.0;
     }
   }
@@ -453,7 +453,7 @@ public:
     Backwards->fft(g);
     
     unsigned int n2=n*n;
-    double ninv=1.0/(n2);
+    double ninv=1.0/n2;
     for(unsigned int i=0; i < n2; ++i)
         f[i] *= g[i]*ninv;
 	
