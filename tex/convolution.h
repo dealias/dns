@@ -525,8 +525,8 @@ public:
     yBackwards=new mfft1d(n,1,n,1,n,f);
     xForwards=new mfft1d(n,-1,m,n,1,f);
     yForwards=new mfft1d(n,-1,n,1,n,f);
-    Backwards=new fft2d(n,n,1,f);
-    Forwards=new fft2d(n,n,-1,f);
+//    Backwards=new fft2d(n,n,1,f);
+//    Forwards=new fft2d(n,n,-1,f);
   }
   
   cconvolution2(unsigned int m, Complex *f) : m(m) {
@@ -578,7 +578,9 @@ public:
     yBackwards->fft(f);
   
     pad(g);
-    Backwards->fft(g);
+//    Backwards->fft(g);
+    xBackwards->fft(g);
+    yBackwards->fft(g);
     
     unsigned int n2=n*n;
     double ninv=1.0/n2;
