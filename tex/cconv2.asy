@@ -135,8 +135,20 @@ pair[][] direct(pair[][] F, pair[][] G)
   return H;
 }	
 
+real error(pair[][] f_good, pair[][] f) {
+  real error=0;
+  for (int i=0; i < f.length; ++i) {
+    for (int j=0; j < f[i].length; ++j) {
+      if (error < abs(f_good[i][j]-f[i][j]))
+	error=abs(f_good[i][j]-f[i][j]);
+    }
+  }
+  return error;
+}
+
 write("direct:");
-write(direct(f,f));
+pair[][] f_direct=direct(f,f);
+write(f_direct);
 
 pair[][] F=fft(pad(f),1);
 pair[][] G=fft(pad(f),1);
@@ -148,7 +160,9 @@ for(int i=0; i < F.length; ++i)
 write();
 real ninv=1/(F.length*F[0].length);
 write("padded:");
-write(ninv*unpad(fft(F,-1)));
+pair[][] f_padded=ninv*unpad(fft(F,-1));
+//write(f_padded);
+write("error="+(string)error(f_direct,f_padded));
 
 write();
 
@@ -180,4 +194,7 @@ for(int i=0; i < F.length; ++i)
 
 real ninv=1/(F.length*F[0].length);
 write("unpadded:");
-write(ninv*ffthalfinv(F));
+pair[][] f_unpadded=ninv*ffthalfinv(F);
+//write(f_unpadded);
+write("error="+(string)error(f_direct,f_unpadded));
+
