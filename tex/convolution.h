@@ -397,7 +397,7 @@ protected:
   fft2d *Forwards;
   cconvolution *C;
   ffthalf *fftpad;
-  array2<Complex> u,v;
+  Complex *u,*v;
   Complex *work;
 public:  
   cconvolution2(unsigned int n, unsigned int m, array2<Complex>& f) :
@@ -408,10 +408,9 @@ public:
   
   cconvolution2(unsigned int m, array2<Complex>& f) : m(m) {
     n=2*m;
+    u=FFTWComplex(m*m);
+    v=FFTWComplex(m*m);
     work=FFTWComplex(n);
-    size_t align=sizeof(Complex);
-    u.Allocate(m,m,align);
-    v.Allocate(m,m,align);
     fftpad=new ffthalf(m,m,work);
     C=new cconvolution(m,work);
     
@@ -432,49 +431,52 @@ public:
 // Array H[n/2+1] can coincide with either F or G, in which case the output H
 // subsumes f or g, respectively.
 
-  void fft(array2<Complex>& h, array2<Complex>& f, array2<Complex>& g) {
-    for(unsigned int i=0; i < m; i++) 
+  void fft(Complex *h, Complex *f, Complex *g) {
+    for(unsigned int i=0; i < m; i++)
       for(unsigned int j=m; j < n; j++)
-      f[i][j]=0.0;
+        f[n*i+j]=0.0;
     
     for(unsigned int i=m; i < n; i++) 
       for(unsigned int j=0; j < n; j++)
-      f[i][j]=0.0;
+        f[n*i+j]=0.0;
     
     Backwards->fft(f);
   
     for(unsigned int i=0; i < m; i++) 
       for(unsigned int j=m; j < n; j++)
-      g[i][j]=0.0;
+      g[n*i+j]=0.0;
     
     for(unsigned int i=m; i < n; i++) 
       for(unsigned int j=0; j < n; j++)
-      g[i][j]=0.0;
+      g[n*i+j]=0.0;
     
     Backwards->fft(g);
     
-    double ninv=1.0/(n*n);
-    for(unsigned int i=0; i < n; ++i)
-      for(unsigned int j=0; j < n; ++j)
-        f[i][j] *= g[i][j]*ninv;
+    unsigned int n2=n*n;
+    double ninv=1.0/(n2);
+    for(unsigned int i=0; i < n2; ++i)
+        f[i] *= g[i]*ninv;
 	
     Forwards->fft(f);
   }
   
   // Note: input arrays f and g are destroyed.
-  void unpadded(array2<Complex>& f, array2<Complex>& g) {
+  void unpadded(Complex *f, Complex *g) {
+    // Optimize loops
     for(unsigned int j=0; j < m; ++j)
-      fftpad->backwards(f()+j,u()+j);
+      fftpad->backwards(f+j,u+j);
     for(unsigned int j=0; j < m; ++j)
-      fftpad->backwards(g()+j,v()+j);
+      fftpad->backwards(g+j,v+j);
     
-    for(unsigned int i=0; i < m; ++i)
-      C->unpadded(f[i],g[i],work);
-    for(unsigned int i=0; i < m; ++i)
-      C->unpadded(u[i],v[i],work);
+    // Optimize ninv
+    unsigned int m2=m*m;
+    for(unsigned int i=0; i < m2; i += m)
+      C->unpadded(f+i,g+i,work);
+    for(unsigned int i=0; i < m2; i += m)
+      C->unpadded(u+i,v+i,work);
     
     for(unsigned int j=0; j < m; ++j)
-      fftpad->forwards(f()+j,u()+j);
+      fftpad->forwards(f+j,u+j);
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
