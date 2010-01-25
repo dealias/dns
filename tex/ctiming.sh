@@ -1,7 +1,7 @@
 #!/bin/bash
 
 start=2
-stop=6
+stop=8
 if [ "$1" != "" ]; then
     stop=$1
 fi

@@ -336,8 +336,8 @@ class ffthalf {
   double c,s;
 
 public:  
-  ffthalf(unsigned int m, unsigned int stride=1,
-          Complex *f=NULL) : m(m), stride(stride) {
+  ffthalf(unsigned int m, unsigned int stride, Complex *f) : m(m),
+                                                             stride(stride) {
     n=2*m;
     double arg=2.0*M_PI/n;
     c=cos(arg);
@@ -410,11 +410,8 @@ public:
     u=FFTWComplex(m*m);
     v=FFTWComplex(m*m);
     work=FFTWComplex(n);
-    fftpad=new ffthalf(m,m,work);
+    fftpad=new ffthalf(m,m,u);
     C=new cconvolution(m,work);
-    
-//    Backwards=new fft1d(m,1,f);
-//    Forwards=new fft1d(m,-1,f);
   }
   
 // Need destructor  
@@ -470,7 +467,7 @@ public:
       fftpad->backwards(f+j,u+j);
     for(unsigned int j=0; j < m; ++j)
       fftpad->backwards(g+j,v+j);
-    
+
     // Optimize ninv
     unsigned int m2=m*m;
     for(unsigned int i=0; i < m2; i += m)
