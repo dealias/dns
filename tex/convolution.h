@@ -205,8 +205,8 @@ public:
     c=cos(arg);
     s=sin(arg);
 
-    Backwards=new fft1d(m,1,f);
-    Forwards=new fft1d(m,-1,f);
+    Forwards=new fft1d(m,1,f);
+    Backwards=new fft1d(m,-1,f);
   }
   
 // Need destructor  
@@ -255,10 +255,10 @@ public:
       re=temp;
     }  
     
-    Forwards->fft(f);
-    Forwards->fft(u);
-    Forwards->fft(g);
-    Forwards->fft(u+m);
+    Backwards->fft(f);
+    Backwards->fft(u);
+    Backwards->fft(g);
+    Backwards->fft(u+m);
     
     for(unsigned int k=0; k < m; ++k) {
       Complex *p=f+k;
@@ -268,7 +268,7 @@ public:
       p->im=fk.re*gk.im+fk.im*gk.re;
     }
     
-    Backwards->fft(f);
+    Forwards->fft(f);
     
     for(unsigned int k=0; k < m; ++k) {
       Complex *p=u+k;
@@ -278,7 +278,7 @@ public:
       p->im=fk.re*gk.im+fk.im*gk.re;
     }
     
-    Backwards->fft(u);
+    Forwards->fft(u);
     
     double ninv=1.0/n;
     re=ninv;
@@ -312,6 +312,109 @@ public:
     }
   }	
 
+};
+
+// Untested!
+class mcconvolution {
+protected:
+  unsigned int n;
+  unsigned int m;
+  unsigned int M;
+  unsigned int stride;
+  mfft1d *Backwards;
+  mfft1d *Forwards;
+  double c,s;
+public:  
+  mcconvolution(unsigned int m, unsigned int M, unsigned int stride,
+                Complex *f) : m(m), M(M), stride(stride) {
+    n=2*m;
+    
+    double arg=2.0*M_PI/n;
+    c=cos(arg);
+    s=sin(arg);
+
+    Backwards=new mfft1d(m,-1,M,stride,1,f);
+    Forwards=new mfft1d(m,1,M,stride,1,f);
+  }
+  
+  // Note: input arrays f and g are destroyed.
+  // u is a temporary work array of size n*M.
+  void unpadded(Complex *f, Complex *g, Complex *u) {
+    double re=1.0;
+    double im=0.0;
+    unsigned int stop=m*stride;
+    unsigned int mM=m*M;
+    
+    for(unsigned int k=0; k < stop; k += stride) {
+      Complex *uk=u+k;
+      Complex *Fk=f+k;
+      Complex *Gk=g+k;
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *P=uk+i;
+        Complex *Q=P+mM;
+        Complex fk=*(Fk+i);
+        Complex gk=*(Gk+i);
+        P->re=re*fk.re-im*fk.im;
+        P->im=im*fk.re+re*fk.im;
+        Q->re=re*gk.re-im*gk.im;
+        Q->im=im*gk.re+re*gk.im;
+      }  
+      double temp=re*c+im*s; 
+      im=-re*s+im*c;
+      re=temp;
+    }
+    
+    Forwards->fft(f);
+    Forwards->fft(u);
+    Forwards->fft(g);
+    Forwards->fft(u+mM);
+    
+    for(unsigned int k=0; k < stop; k += stride) {
+      Complex *fk=f+k;
+      Complex *Gk=g+k;
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fk+i;
+        Complex fk=*p;
+        Complex gk=*(Gk+i);
+        p->re=fk.re*gk.re-fk.im*gk.im;
+        p->im=fk.re*gk.im+fk.im*gk.re;
+      }
+    }
+    
+    Backwards->fft(f);
+    
+    for(unsigned int k=0; k < stop; k += stride) {
+      Complex *uk=u+k;
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=uk+i;
+        Complex fk=*p;
+        Complex gk=*(p+mM);
+        p->re=fk.re*gk.re-fk.im*gk.im;
+        p->im=fk.re*gk.im+fk.im*gk.re;
+      }
+    }
+    
+    
+    Backwards->fft(u);
+    
+    double ninv=1.0/n;
+    re=ninv;
+    im=0.0;
+    for(unsigned int k=0; k < stop; k += stride) {
+      Complex *uk=u+k;
+      Complex *fk=f+k;
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fk+i;
+        Complex fk=*p;
+        Complex fkm=*(uk+i);
+        p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
+        p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+      }
+      double temp=re*c-im*s;
+      im=re*s+im*c;
+      re=temp;
+    }
+  }
 };
 
 // Compute the virtual m-padded complex Fourier transform of M complex
@@ -409,6 +512,8 @@ protected:
   ffthalf *fftpad;
   Complex *u,*v;
   Complex *work;
+//  mcconvolution *MC;
+//  Complex *mwork;
 public:  
   cconvolution2(unsigned int n, unsigned int m, Complex *f) :
     n(n), m(m) {
@@ -423,6 +528,8 @@ public:
     work=FFTWComplex(n);
     fftpad=new ffthalf(m,m,m,u);
     C=new cconvolution(m,work);
+//    mwork=FFTWComplex(2*m*m);
+//    MC=new mcconvolution(m,m,m,mwork);
   }
   
 // Need destructor  
@@ -476,8 +583,8 @@ public:
     fftpad->backwards(f,u);
     fftpad->backwards(g,v);
 
-    // Optimize ninv
-    // Optimize loops
+//    MC->unpadded(f,g,mwork);
+//    MC->unpadded(u,v,mwork);
     unsigned int m2=m*m;
     for(unsigned int i=0; i < m2; i += m)
       C->unpadded(f+i,g+i,work);
