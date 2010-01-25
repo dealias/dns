@@ -344,7 +344,7 @@ public:
     c=cos(arg);
     s=sin(arg);
     
-     // TODO: Standardize sign convention.
+    // TODO: Standardize signs
     Backwards=new mfft1d(m,-1,1,stride,1,f);
     Forwards=new mfft1d(m,1,1,stride,1,f);
   }
@@ -352,7 +352,8 @@ public:
   void backwards(Complex *f, Complex *u) {
     double re=1.0;
     double im=0.0;
-    for(unsigned int k=0; k < m; k += stride) {
+    unsigned int stop=m*stride;
+    for(unsigned int k=0; k < stop; k += stride) {
       Complex *P=u+k;
       Complex *p=f+k;
       Complex fk=*p;
@@ -363,18 +364,19 @@ public:
       re=temp;
     }  
     
-    Forwards->fft(f);
-    Forwards->fft(u);
+    Backwards->fft(f);
+    Backwards->fft(u);
   }
   
   void forwards(Complex *f, Complex *u) {
-    Backwards->fft(f);
-    Backwards->fft(u);
+    Forwards->fft(f);
+    Forwards->fft(u);
 
     double ninv=1.0/n;
     double re=ninv;
     double im=0.0;
-    for(unsigned int k=0; k < m; k += stride) {
+    unsigned int stop=m*stride;
+    for(unsigned int k=0; k < stop; k += stride) {
       Complex *p=f+k;
       Complex fk=*p;
       Complex fkm=*(u+k);
@@ -473,14 +475,6 @@ public:
     
     for(unsigned int j=0; j < m; ++j)
       fftpad->forwards(f()+j,u()+j);
-    
-    double ninv=2.0/n;
-    
-    unsigned int m2=m*m;
-    Complex *p=f();
-    for(unsigned int i=0; i < m2; ++i)
-      p[i] *= ninv;
-	
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier

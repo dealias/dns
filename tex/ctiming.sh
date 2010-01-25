@@ -1,6 +1,7 @@
 #!/bin/bash
 
-stop=13
+start=2
+stop=6
 if [ "$1" != "" ]; then
     stop=$1
 fi
@@ -9,7 +10,7 @@ rm -rf padded unpadded
 touch padded unpadded
 
 echo Timing:
-for (( i=7; i<=$stop; i++ ))
+for (( i=$start; i<=$stop; i++ ))
 do
     echo $i
     m=$(asy -c "2^$i")

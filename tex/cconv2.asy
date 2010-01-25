@@ -1,7 +1,7 @@
 import math;
 
-int nx=4;
-int ny=4;
+int nx=3;
+int ny=3;
 
 real[][] f=new real[nx][ny];
 
@@ -161,6 +161,15 @@ Zeta=new pair[n];
 
 for(int i=0; i < n; ++i)
   Zeta[i]=zeta^i;
+
+
+write("f:");
+write(f[0]);
+write();
+write("ffthalf(f):");
+write(ffthalf(f[0]));
+write();
+
 
 pair[][] F=ffthalf(f);
 pair[][] G=ffthalf(f);
