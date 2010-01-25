@@ -1,4 +1,3 @@
-#include "Array.h"
 #include "fftw++.h"
 
 #ifndef __convolution_h__
@@ -400,13 +399,13 @@ protected:
   Complex *u,*v;
   Complex *work;
 public:  
-  cconvolution2(unsigned int n, unsigned int m, array2<Complex>& f) :
+  cconvolution2(unsigned int n, unsigned int m, Complex *f) :
     n(n), m(m) {
-    Backwards=new fft2d(1,f);
-    Forwards=new fft2d(-1,f);
+    Backwards=new fft2d(n,n,1,f);
+    Forwards=new fft2d(n,n,-1,f);
   }
   
-  cconvolution2(unsigned int m, array2<Complex>& f) : m(m) {
+  cconvolution2(unsigned int m, Complex *f) : m(m) {
     n=2*m;
     u=FFTWComplex(m*m);
     v=FFTWComplex(m*m);
@@ -431,25 +430,29 @@ public:
 // Array H[n/2+1] can coincide with either F or G, in which case the output H
 // subsumes f or g, respectively.
 
-  void fft(Complex *h, Complex *f, Complex *g) {
-    for(unsigned int i=0; i < m; i++)
-      for(unsigned int j=m; j < n; j++)
-        f[n*i+j]=0.0;
+  void pad(Complex *f) {
+    for(unsigned int i=0; i < m;) {
+      unsigned int ni=n*i;
+      ++i;
+      unsigned int nip=n*i;
+      for(unsigned int j=ni+m; j < nip; j++)
+        f[j]=0.0;
+    }
     
-    for(unsigned int i=m; i < n; i++) 
-      for(unsigned int j=0; j < n; j++)
-        f[n*i+j]=0.0;
-    
+    for(unsigned int i=m; i < n;) {
+      unsigned int ni=n*i;
+      ++i;
+      unsigned int nip=n*i;
+      for(unsigned int j=ni; j < nip; j++)
+        f[j]=0.0;
+    }
+  }
+  
+  void fft(Complex *f, Complex *g) {
+    pad(f);
     Backwards->fft(f);
   
-    for(unsigned int i=0; i < m; i++) 
-      for(unsigned int j=m; j < n; j++)
-      g[n*i+j]=0.0;
-    
-    for(unsigned int i=m; i < n; i++) 
-      for(unsigned int j=0; j < n; j++)
-      g[n*i+j]=0.0;
-    
+    pad(g);
     Backwards->fft(g);
     
     unsigned int n2=n*n;
@@ -488,14 +491,14 @@ public:
 //
 // Array H[m] must be distinct from F[m] and G[m].
 
-  void direct(array2<Complex>& H, array2<Complex>& F, array2<Complex>& G) {
+  void direct(Complex *H, Complex *F, Complex *G) {
     for(unsigned int i=0; i < m; ++i) {
       for(unsigned int j=0; j < m; ++j) {
         Complex sum=0.0;
         for(unsigned int k=0; k <= i; ++k)
           for(unsigned int p=0; p <= j; ++p)
-            sum += F[k][p]*G[i-k][j-p];
-        H[i][j]=sum;
+            sum += F[k*m+p]*G[(i-k)*m+j-p];
+        H[i*m+j]=sum;
       }
     }
   }	
