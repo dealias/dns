@@ -506,6 +506,10 @@ class cconvolution2 {
 protected:
   unsigned int n;
   unsigned int m;
+  mfft1d *xBackwards;
+  mfft1d *yBackwards;
+  mfft1d *xForwards;
+  mfft1d *yForwards;
   fft2d *Backwards;
   fft2d *Forwards;
   cconvolution *C;
@@ -517,6 +521,10 @@ protected:
 public:  
   cconvolution2(unsigned int n, unsigned int m, Complex *f) :
     n(n), m(m) {
+    xBackwards=new mfft1d(n,1,m,n,1,f);
+    yBackwards=new mfft1d(n,1,n,1,n,f);
+    xForwards=new mfft1d(n,-1,m,n,1,f);
+    yForwards=new mfft1d(n,-1,n,1,n,f);
     Backwards=new fft2d(n,n,1,f);
     Forwards=new fft2d(n,n,-1,f);
   }
@@ -565,7 +573,9 @@ public:
   
   void fft(Complex *f, Complex *g) {
     pad(f);
-    Backwards->fft(f);
+//    Backwards->fft(f);
+    xBackwards->fft(f);
+    yBackwards->fft(f);
   
     pad(g);
     Backwards->fft(g);
@@ -575,7 +585,9 @@ public:
     for(unsigned int i=0; i < n2; ++i)
         f[i] *= g[i]*ninv;
 	
-    Forwards->fft(f);
+//    Forwards->fft(f);
+    yForwards->fft(f);
+    xForwards->fft(f);
   }
   
   // Note: input arrays f and g are destroyed.
