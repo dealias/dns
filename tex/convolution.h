@@ -314,12 +314,14 @@ public:
 
 };
 
-// Compute the virtual m-padded complex Fourier transform of a complex
-// vector of length m.
+// Compute the virtual m-padded complex Fourier transform of M complex
+// vectors, each of length m.
+// Before calling fft(), the arrays in and out (which may coincide) must be
+// allocated as Complex[M*m].
 //
 // In-place usage:
 //
-//   ffthalf Backward(m,stride);
+//   ffthalf Backward(m,M,stride);
 //   Backward.fft(in);
 //
 // Notes:
@@ -328,6 +330,7 @@ public:
 class ffthalf {
   unsigned int n;
   unsigned int m;
+  unsigned int M;
   unsigned int stride;
   unsigned int dist;
   mfft1d *Backwards;
@@ -336,16 +339,16 @@ class ffthalf {
   double c,s;
 
 public:  
-  ffthalf(unsigned int m, unsigned int stride, Complex *f) : m(m),
-                                                             stride(stride) {
+  ffthalf(unsigned int m, unsigned int M,
+          unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
     n=2*m;
     double arg=2.0*M_PI/n;
     c=cos(arg);
     s=sin(arg);
     
     // TODO: Standardize signs
-    Backwards=new mfft1d(m,-1,1,stride,1,f);
-    Forwards=new mfft1d(m,1,1,stride,1,f);
+    Backwards=new mfft1d(m,-1,M,stride,1,f);
+    Forwards=new mfft1d(m,1,M,stride,1,f);
   }
   
   void backwards(Complex *f, Complex *u) {
@@ -353,15 +356,17 @@ public:
     double im=0.0;
     unsigned int stop=m*stride;
     for(unsigned int k=0; k < stop; k += stride) {
-      Complex *P=u+k;
-      Complex *p=f+k;
-      Complex fk=*p;
-      P->re=re*fk.re-im*fk.im;
-      P->im=im*fk.re+re*fk.im;
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *P=u+k+i;
+        Complex *p=f+k+i;
+        Complex fk=*p;
+        P->re=re*fk.re-im*fk.im;
+        P->im=im*fk.re+re*fk.im;
+      }
       double temp=re*c+im*s; 
       im=-re*s+im*c;
       re=temp;
-    }  
+    }
     
     Backwards->fft(f);
     Backwards->fft(u);
@@ -376,11 +381,13 @@ public:
     double im=0.0;
     unsigned int stop=m*stride;
     for(unsigned int k=0; k < stop; k += stride) {
-      Complex *p=f+k;
-      Complex fk=*p;
-      Complex fkm=*(u+k);
-      p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
-      p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=f+k+i;
+        Complex fk=*p;
+        Complex fkm=*(u+k+i);
+        p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
+        p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+      }
       double temp=re*c-im*s;
       im=re*s+im*c;
       re=temp;
@@ -410,7 +417,7 @@ public:
     u=FFTWComplex(m*m);
     v=FFTWComplex(m*m);
     work=FFTWComplex(n);
-    fftpad=new ffthalf(m,m,u);
+    fftpad=new ffthalf(m,m,m,u);
     C=new cconvolution(m,work);
   }
   
@@ -462,21 +469,18 @@ public:
   
   // Note: input arrays f and g are destroyed.
   void unpadded(Complex *f, Complex *g) {
-    // Optimize loops
-    for(unsigned int j=0; j < m; ++j)
-      fftpad->backwards(f+j,u+j);
-    for(unsigned int j=0; j < m; ++j)
-      fftpad->backwards(g+j,v+j);
+    fftpad->backwards(f,u);
+    fftpad->backwards(g,v);
 
     // Optimize ninv
+    // Optimize loops
     unsigned int m2=m*m;
     for(unsigned int i=0; i < m2; i += m)
       C->unpadded(f+i,g+i,work);
     for(unsigned int i=0; i < m2; i += m)
       C->unpadded(u+i,v+i,work);
     
-    for(unsigned int j=0; j < m; ++j)
-      fftpad->forwards(f+j,u+j);
+    fftpad->forwards(f,u);
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
