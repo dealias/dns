@@ -356,9 +356,11 @@ public:
     double im=0.0;
     unsigned int stop=m*stride;
     for(unsigned int k=0; k < stop; k += stride) {
+      Complex *fk=f+k;
+      Complex *uk=u+k;
       for(unsigned int i=0; i < M; ++i) {
-        Complex *P=u+k+i;
-        Complex *p=f+k+i;
+        Complex *P=uk+i;
+        Complex *p=fk+i;
         Complex fk=*p;
         P->re=re*fk.re-im*fk.im;
         P->im=im*fk.re+re*fk.im;
@@ -381,10 +383,12 @@ public:
     double im=0.0;
     unsigned int stop=m*stride;
     for(unsigned int k=0; k < stop; k += stride) {
+      Complex *uk=u+k;
+      Complex *fk=f+k;
       for(unsigned int i=0; i < M; ++i) {
-        Complex *p=f+k+i;
+        Complex *p=fk+i;
         Complex fk=*p;
-        Complex fkm=*(u+k+i);
+        Complex fkm=*(uk+i);
         p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
       }
