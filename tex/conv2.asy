@@ -37,8 +37,8 @@ real[][] crfft2d(pair[][] f, bool even=true)
     if(!even) h[i][my]=conj(f[nx-i][my-1]);
   }
   
-  write(h);
   write();
+  write(h);
   h=fft(h,1);
   
   real[][] H=new real[nx][L];
@@ -57,7 +57,7 @@ pair[][] rcfft2d(real[][] f)
   pair[][] F=fft((pair[][]) f,-1);
 
   for(int i=0; i < F.length; ++i)
-  F[i]=F[i][0:my];
+    F[i]=F[i][0:my];
   return F;
 }
 
@@ -65,32 +65,13 @@ for(int i=0; i < nx; ++i)
   for(int j=0; j < ny; ++j)
     f[i][j]=i+j;
 
+write("Input:");
 write(f);
-write();
+
 
 real ninv=1/(nx*ny);
+real[][] g=ninv*crfft2d(rcfft2d(f),ny % 2 == 0);
 
-write(ninv*crfft2d(rcfft2d(f),ny % 2 == 0));
-
-pair[][] pad(pair[][] f)
-{
-  int nx=f.length;
-  int ny=f[0].length;
-  
-  int Nx=floor(quotient(nx*3,2));
-  int Ny=floor(quotient(ny*3,2));
-
-  pair[][] g=array(Nx,array(Ny,(0,0)));
-  for(int i=0; i < nx; ++i)
-    for(int j=0; j < ny; ++j)
-      g[i][j]=f[i][j];
-  return g;
-}
-
-pair[][] unpad(pair[][] f)
-{
-  pair[][] F=new pair[f.length][];
-  for(int i=0; i < nx; ++i)
-    F[i]=f[i][0:ny];
-  return F;
-}
+write();
+write(g);
+write("error="+(string)maxerror(g,f));
