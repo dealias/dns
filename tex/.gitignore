@@ -2,6 +2,7 @@
 /*.dvi
 /*.log
 /.wisdom
+/attic
 /a.out
 /Complex.h
 /dealias.asy
