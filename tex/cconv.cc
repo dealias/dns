@@ -3,11 +3,11 @@ using namespace std;
 #include "convolution.h"
 
 // Compile with:
-// g++ -g -O3 -msse2 -march=native -mfpmath=sse cconv.cc fftw++.cc -lfftw3
+// g++ -g -O3 -DNDEBUG -msse2 -march=native -mfpmath=sse cconv.cc fftw++.cc -lfftw3
 //
-// g++ -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3
+// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3
 //
-// g++ -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -mpentiumpro -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3 -I$HOME/include -L$HOME/lib
+// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -mpentiumpro -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3 -I$HOME/include -L$HOME/lib
 //
 //
 // usage: aout [int m]
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(h,f,g,work);
+      convolve.unpadded(f,g,work);
       sum += seconds();
     }
     

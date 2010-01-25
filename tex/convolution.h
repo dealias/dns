@@ -239,7 +239,7 @@ public:
   
   // Note: input arrays f and g are destroyed.
   // u is a temporary work array of size n.
-  void unpadded(Complex *h, Complex *f, Complex *g, Complex *u) {
+  void unpadded(Complex *f, Complex *g, Complex *u) {
     double re=1.0;
     double im=0.0;
     for(unsigned int k=0; k < m; ++k) {
@@ -345,8 +345,8 @@ public:
     s=sin(arg);
     
      // TODO: Standardize sign convention.
-    Backwards=new mfft1d(m,-1,1,stride,m,f);
-    Forwards=new mfft1d(m,1,1,stride,m,f);
+    Backwards=new mfft1d(m,-1,1,stride,1,f);
+    Forwards=new mfft1d(m,1,1,stride,1,f);
   }
   
   void backwards(Complex *f, Complex *u) {
@@ -460,19 +460,27 @@ public:
   }
   
   // Note: input arrays f and g are destroyed.
-  void unpadded(array2<Complex>& h, array2<Complex>& f, array2<Complex>& g) {
+  void unpadded(array2<Complex>& f, array2<Complex>& g) {
     for(unsigned int j=0; j < m; ++j)
       fftpad->backwards(f()+j,u()+j);
     for(unsigned int j=0; j < m; ++j)
       fftpad->backwards(g()+j,v()+j);
     
     for(unsigned int i=0; i < m; ++i)
-      C->unpadded(f[i],f[i],g[i],work);
+      C->unpadded(f[i],g[i],work);
     for(unsigned int i=0; i < m; ++i)
-      C->unpadded(u[i],u[i],v[i],work);
+      C->unpadded(u[i],v[i],work);
     
     for(unsigned int j=0; j < m; ++j)
       fftpad->forwards(f()+j,u()+j);
+    
+    double ninv=2.0/n;
+    
+    unsigned int m2=m*m;
+    Complex *p=f();
+    for(unsigned int i=0; i < m2; ++i)
+      p[i] *= ninv;
+	
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
@@ -486,7 +494,7 @@ public:
 
   void direct(array2<Complex>& H, array2<Complex>& F, array2<Complex>& G) {
     for(unsigned int i=0; i < m; ++i) {
-      for(unsigned int j=0; j < n; ++j) {
+      for(unsigned int j=0; j < m; ++j) {
         Complex sum=0.0;
         for(unsigned int k=0; k <= i; ++k)
           for(unsigned int p=0; p <= j; ++p)
