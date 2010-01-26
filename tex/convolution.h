@@ -337,7 +337,7 @@ public:
     Forwards=new mfft1d(m,1,M,stride,dist,f);
   }
   
-    // Special case optimized for stride=1.
+  // Special case optimized for stride=1.
   void unpadded1(Complex *f, Complex *g, Complex *u) {
     unsigned int istop=M*dist;
     unsigned int mM=m*M;
@@ -585,6 +585,7 @@ class cconvolution2 {
 protected:
   unsigned int n;
   unsigned int m;
+  bool prune;
   mfft1d *xBackwards;
   mfft1d *yBackwards;
   mfft1d *xForwards;
@@ -596,14 +597,18 @@ protected:
   Complex *u,*v;
   Complex *work;
 public:  
-  cconvolution2(unsigned int n, unsigned int m, Complex *f) :
-    n(n), m(m) {
-    xBackwards=new mfft1d(n,1,m,n,1,f);
-    yBackwards=new mfft1d(n,1,n,1,n,f);
-    xForwards=new mfft1d(n,-1,m,n,1,f);
-    yForwards=new mfft1d(n,-1,n,1,n,f);
-//    Backwards=new fft2d(n,n,1,f);
-//    Forwards=new fft2d(n,n,-1,f);
+  // Set prune=true to skip Fourier transforming zero rows.
+  cconvolution2(unsigned int n, unsigned int m, Complex *f, bool prune=false) :
+    n(n), m(m), prune(prune) {
+    if(prune) {
+      xBackwards=new mfft1d(n,1,m,n,1,f);
+      yBackwards=new mfft1d(n,1,n,1,n,f);
+      xForwards=new mfft1d(n,-1,m,n,1,f);
+      yForwards=new mfft1d(n,-1,n,1,n,f);
+    } else {
+      Backwards=new fft2d(n,n,1,f);
+      Forwards=new fft2d(n,n,-1,f);
+    }
   }
   
   cconvolution2(unsigned int m, Complex *f) : m(m) {
@@ -648,23 +653,30 @@ public:
   
   void fft(Complex *f, Complex *g) {
     pad(f);
-//    Backwards->fft(f);
-    xBackwards->fft(f);
-    yBackwards->fft(f);
+    if(prune) {
+      xBackwards->fft(f);
+      yBackwards->fft(f);
+    } else
+      Backwards->fft(f);
   
     pad(g);
-//    Backwards->fft(g);
-    xBackwards->fft(g);
-    yBackwards->fft(g);
+    if(prune) {
+      xBackwards->fft(g);
+      yBackwards->fft(g);
+    } else
+      Backwards->fft(g);
     
     unsigned int n2=n*n;
     double ninv=1.0/n2;
     for(unsigned int i=0; i < n2; ++i)
-        f[i] *= g[i]*ninv;
+      f[i] *= g[i]*ninv;
 	
-//    Forwards->fft(f);
-    yForwards->fft(f);
-    xForwards->fft(f);
+    if(prune) {
+      yForwards->fft(f);
+      xForwards->fft(f);
+    } else {
+      Forwards->fft(f);
+    }
   }
   
   // Note: input arrays f and g are destroyed.
