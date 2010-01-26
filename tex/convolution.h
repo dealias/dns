@@ -311,45 +311,125 @@ public:
       H[i]=sum;
     }
   }	
-
 };
 
-// Untested!
 class mcconvolution {
 protected:
   unsigned int n;
   unsigned int m;
   unsigned int M;
   unsigned int stride;
+  unsigned int dist;
   mfft1d *Backwards;
   mfft1d *Forwards;
   double c,s;
 public:  
   mcconvolution(unsigned int m, unsigned int M, unsigned int stride,
-                Complex *f) : m(m), M(M), stride(stride) {
+                unsigned int dist, Complex *f) : m(m), M(M), stride(stride),
+                                                 dist(dist) {
     n=2*m;
     
     double arg=2.0*M_PI/n;
     c=cos(arg);
     s=sin(arg);
 
-    Backwards=new mfft1d(m,-1,M,stride,1,f);
-    Forwards=new mfft1d(m,1,M,stride,1,f);
+    Backwards=new mfft1d(m,-1,M,stride,dist,f);
+    Forwards=new mfft1d(m,1,M,stride,dist,f);
   }
   
+    // Special case optimized for stride=1.
+  void unpadded1(Complex *f, Complex *g, Complex *u) {
+    unsigned int istop=M*dist;
+    unsigned int mM=m*M;
+    for(unsigned int i=0; i < istop; i += dist) {
+      double re=1.0;
+      double im=0.0;
+      Complex *Gi=g+i;
+      Complex *Fi=f+i;
+      Complex *ui=u+i;
+      for(unsigned int k=0; k < m; ++k) {
+        Complex *P=ui+k;
+        Complex *Q=P+mM;
+        Complex fk=*(Fi+k);
+        Complex gk=*(Gi+k);
+        P->re=re*fk.re-im*fk.im;
+        P->im=im*fk.re+re*fk.im;
+        Q->re=re*gk.re-im*gk.im;
+        Q->im=im*gk.re+re*gk.im;
+        double temp=re*c+im*s; 
+        im=-re*s+im*c;
+        re=temp;
+      }  
+    }
+    
+    Forwards->fft(f);
+    Forwards->fft(u);
+    Forwards->fft(g);
+    Forwards->fft(u+mM);
+    
+    for(unsigned int i=0; i < istop; i += dist) {
+      Complex *fi=f+i;
+      Complex *Gi=g+i;
+      for(unsigned int k=0; k < m; ++k) {
+        Complex *p=fi+k;
+        Complex fk=*p;
+        Complex gk=*(Gi+k);
+        p->re=fk.re*gk.re-fk.im*gk.im;
+        p->im=fk.re*gk.im+fk.im*gk.re;
+      }
+    }
+    
+    Backwards->fft(f);
+    
+    for(unsigned int i=0; i < istop; i += dist) {
+      Complex *ui=u+i;
+      for(unsigned int k=0; k < m; ++k) {
+        Complex *p=ui+k;
+        Complex fk=*p;
+        Complex gk=*(p+mM);
+        p->re=fk.re*gk.re-fk.im*gk.im;
+        p->im=fk.re*gk.im+fk.im*gk.re;
+      }
+    }
+    
+    Backwards->fft(u);
+    
+    double ninv=1.0/n;
+    for(unsigned int i=0; i < istop; i += dist) {
+      Complex *ui=u+i;
+      Complex *fi=f+i;
+      double re=ninv;
+      double im=0.0;
+      for(unsigned int k=0; k < m; ++k) {
+        Complex *p=fi+k;
+        Complex fk=*p;
+        Complex fkm=*(ui+k);
+        p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
+        p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+        double temp=re*c-im*s;
+        im=re*s+im*c;
+        re=temp;
+      }
+    }
+  }
+
   // Note: input arrays f and g are destroyed.
   // u is a temporary work array of size n*M.
   void unpadded(Complex *f, Complex *g, Complex *u) {
+    if(stride == 1) {
+      unpadded1(f,g,u);
+      return;
+    }
     double re=1.0;
     double im=0.0;
-    unsigned int stop=m*stride;
+    unsigned int kstop=m*stride;
+    unsigned int istop=M*dist;
     unsigned int mM=m*M;
-    
-    for(unsigned int k=0; k < stop; k += stride) {
-      Complex *uk=u+k;
-      Complex *Fk=f+k;
+    for(unsigned int k=0; k < kstop; k += stride) {
       Complex *Gk=g+k;
-      for(unsigned int i=0; i < M; ++i) {
+      Complex *Fk=f+k;
+      Complex *uk=u+k;
+      for(unsigned int i=0; i < istop; i += dist) {
         Complex *P=uk+i;
         Complex *Q=P+mM;
         Complex fk=*(Fk+i);
@@ -369,10 +449,10 @@ public:
     Forwards->fft(g);
     Forwards->fft(u+mM);
     
-    for(unsigned int k=0; k < stop; k += stride) {
+    for(unsigned int k=0; k < kstop; k += stride) {
       Complex *fk=f+k;
       Complex *Gk=g+k;
-      for(unsigned int i=0; i < M; ++i) {
+      for(unsigned int i=0; i < istop; i += dist) {
         Complex *p=fk+i;
         Complex fk=*p;
         Complex gk=*(Gk+i);
@@ -383,9 +463,9 @@ public:
     
     Backwards->fft(f);
     
-    for(unsigned int k=0; k < stop; k += stride) {
+    for(unsigned int k=0; k < kstop; k += stride) {
       Complex *uk=u+k;
-      for(unsigned int i=0; i < M; ++i) {
+      for(unsigned int i=0; i < istop; i += dist) {
         Complex *p=uk+i;
         Complex fk=*p;
         Complex gk=*(p+mM);
@@ -394,16 +474,15 @@ public:
       }
     }
     
-    
     Backwards->fft(u);
     
     double ninv=1.0/n;
     re=ninv;
     im=0.0;
-    for(unsigned int k=0; k < stop; k += stride) {
+    for(unsigned int k=0; k < kstop; k += stride) {
       Complex *uk=u+k;
       Complex *fk=f+k;
-      for(unsigned int i=0; i < M; ++i) {
+      for(unsigned int i=0; i < istop; i += dist) {
         Complex *p=fk+i;
         Complex fk=*p;
         Complex fkm=*(uk+i);
@@ -516,8 +595,6 @@ protected:
   ffthalf *fftpad;
   Complex *u,*v;
   Complex *work;
-//  mcconvolution *MC;
-//  Complex *mwork;
 public:  
   cconvolution2(unsigned int n, unsigned int m, Complex *f) :
     n(n), m(m) {
@@ -536,8 +613,6 @@ public:
     work=FFTWComplex(n);
     fftpad=new ffthalf(m,m,m,u);
     C=new cconvolution(m,work);
-//    mwork=FFTWComplex(2*m*m);
-//    MC=new mcconvolution(m,m,m,mwork);
   }
   
 // Need destructor  
@@ -597,8 +672,6 @@ public:
     fftpad->backwards(f,u);
     fftpad->backwards(g,v);
 
-//    MC->unpadded(f,g,mwork);
-//    MC->unpadded(u,v,mwork);
     unsigned int m2=m*m;
     for(unsigned int i=0; i < m2; i += m)
       C->unpadded(f+i,g+i,work);
@@ -628,7 +701,6 @@ public:
       }
     }
   }	
-
 };
 
 #endif
