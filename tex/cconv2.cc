@@ -8,12 +8,10 @@ using namespace std;
 using namespace Array;
 
 // For FFTW_NO_SIMD:
-// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native cconv2.cc fftw++.cc -lfftw3
+// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math cconv2.cc fftw++.cc -lfftw3 -march=native
 //
 // Without FFTW_NO_SIMD:
-// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native -msse2 -mfpmath=sse cconv2.cc fftw++.cc -lfftw3
-//
-// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -mpentiumpro -msse2 -mfpmath=sse cconv2.cc fftw++.cc -lfftw3 -I$HOME/include -L$HOME/lib
+// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse cconv2.cc fftw++.cc -lfftw3 -march=native
 //
 //
 // usage: aout [int m]
