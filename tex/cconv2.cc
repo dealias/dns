@@ -7,7 +7,10 @@ using namespace std;
 
 using namespace Array;
 
-// Compile with:
+// For FFTW_NO_SIMD:
+// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native cconv2.cc fftw++.cc -lfftw3
+//
+// Without FFTW_NO_SIMD:
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -march=native -msse2 -mfpmath=sse cconv2.cc fftw++.cc -lfftw3
 //
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -mpentiumpro -msse2 -mfpmath=sse cconv2.cc fftw++.cc -lfftw3 -I$HOME/include -L$HOME/lib
@@ -50,6 +53,9 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
 
 int main(int argc, char* argv[])
 {
+  // Turn off
+  fftw::effort |= FFTW_NO_SIMD;
+  
   int pad=0;
   
   if (argc >= 2) {
