@@ -205,8 +205,8 @@ public:
     c=cos(arg);
     s=sin(arg);
 
-    Forwards=new fft1d(m,1,f);
     Backwards=new fft1d(m,-1,f);
+    Forwards=new fft1d(m,1,f);
   }
   
 // Need destructor  
