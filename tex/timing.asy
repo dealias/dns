@@ -12,7 +12,7 @@ mp=a[0]; p=a[1];
 file fin=input("pruned").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);
-if(a.length > 2) {
+if(a.length > 1) {
   mP=a[0]; P=a[1];
 }
 
