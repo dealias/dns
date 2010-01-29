@@ -26,7 +26,7 @@ pair[] rcfft(real[] f, int sign=-1)
 
 // Unrolled scrambled cr version for p=2, q=3
 // with n=3m; m even for now
-// f has length m+1, u is a work array of length m/2+1.
+// f has length m, u is a work array of length m/2+1.
 real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
 {
   int m=f.length;
@@ -47,31 +47,38 @@ real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
   
   pair zeta3c=(-0.5,-0.5*sqrt(3.0));
 
-  real f0=f[0].x;
-  u[0]=f0;
-  f[m]=f0;
+  real F0=f[0].x;
+  u[0]=F0;
   
-  for(int k=1; k < c; ++k) {
+  pair fc=f[c];
+  pair fmk=conj(f[m-1]);
+  for(int k=1; k < c;) {
     pair fk=f[k];
-    pair fmk=conj(f[m-k]);
     f[k]=fk+fmk;
     pair zetak=Zeta[k];
     pair A=zetak*(fk.x+zeta3c*fmk.x);
     pair B=I*zetak*(fk.y+zeta3c*fmk.y);
-    f[m-k]=A+B;
     u[k]=conj(A-B);
+    ++k;
+    fmk=conj(f[m-k]);
+    f[m-k]=A+B;
   }
-
-  pair fk=f[c];
-  real A=fk.x;
+  
+  real A=fc.x;
+  real B=sqrt(3)*fc.y;
+  fc=f[c];
   f[c]=2.0*A;
-  real B=sqrt(3)*fk.y;
   u[c]=A+B;
   A -= B;
 
   real[] f0=crfft(f[0:c+1],even);
-  f[c]=A;
-  real[] f1=crfft(f[c:m+1],even,-1);
+  //  real fcm1=f[c-1];
+
+  f[c-1]=A;
+  f[c]=fc;
+  f[m-1]=F0;
+  real[] f1=crfft(f[c-1:m],even,-1);
+  //  f[m-1]=fcm1; // This is where we will store f0[c-1] in scrambled format.
 
   // Not necessary for convolution.
   for(int i=1; i < m; i += 2)
@@ -270,7 +277,6 @@ write();
 int c=quotient(f.length,2);
 pair[] u=new pair[c+1];
 //write(fftpad(f,u));
-write(f);
 write();
 
 write(fftpad(f,u));
