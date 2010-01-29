@@ -496,7 +496,7 @@ public:
   }
 };
 
-// Compute the virtual m-padded complex Fourier transform of M complex
+// Compute the scrambled virtual m-padded complex Fourier transform of M complex
 // vectors, each of length m.
 // Before calling fft(), the arrays in and out (which may coincide) must be
 // allocated as Complex[M*m].
