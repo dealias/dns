@@ -37,14 +37,6 @@ real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
   int n=3*m;
 
   pair zeta=exp(2*pi*I/n);
-  pair[] Zeta=new pair[c+1];
-
-  pair product=Zeta[0]=1;
-  for(int i=1; i <= c; ++i) {
-    product *= zeta;
-    Zeta[i]=product;
-  }
-  
   pair zeta3c=(-0.5,-0.5*sqrt(3.0));
 
   real F0=f[0].x;
@@ -52,12 +44,13 @@ real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
   
   pair fc=f[c];
   pair fmk=conj(f[m-1]);
+  pair Zetak=zeta;
   for(int k=1; k < c;) {
     pair fk=f[k];
     f[k]=fk+fmk;
-    pair zetak=Zeta[k];
-    pair A=zetak*(fk.x+zeta3c*fmk.x);
-    pair B=I*zetak*(fk.y+zeta3c*fmk.y);
+    pair A=Zetak*(fk.x+zeta3c*fmk.x);
+    pair B=I*Zetak*(fk.y+zeta3c*fmk.y);
+    Zetak *= zeta;
     u[k]=conj(A-B);
     ++k;
     fmk=conj(f[m-k]);
@@ -105,7 +98,7 @@ real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
 }
 
 // Unrolled scrambled rc version for p=2, q=3
-// with n=3m; m even for now
+// with n=3m
 // f has length 3m.
 pair[] fftpadinv(real[] f, bool unscramble=true)
 {
@@ -115,15 +108,9 @@ pair[] fftpadinv(real[] f, bool unscramble=true)
   int m=quotient(n,3);
   assert(n == 3m);
   int c=quotient(m,2);
+  bool even=2c == m;
   
   pair zeta=exp(2*pi*I/n);
-  pair[] Zeta=new pair[m+1];
-
-  pair product=Zeta[0]=1;
-  for(int i=1; i <= c; ++i) {
-    product *= zeta;
-    Zeta[i]=product;
-  }
   
   pair[] f0=rcfft(f[0:m]);
   pair[] f1=rcfft(f[m:2m]);
@@ -132,21 +119,22 @@ pair[] fftpadinv(real[] f, bool unscramble=true)
   pair[] F=new pair[m];
 
   pair zeta3=(-0.5,0.5*sqrt(3.0));
-  pair zeta3c=(-0.5,-0.5*sqrt(3.0));
+  pair zeta3c=conj(zeta3);
 
   int stop=m-c-1;
   real ninv=1/n;
   F[0]=(f0[0].x+f1[0].x+f2[0].x)*ninv;
+  pair Zetak=zeta*ninv;
   for(int k=1; k <= stop; ++k) {
     pair f0k=f0[k];
-    pair f1k=conj(Zeta[k])*f1[k];
-    pair f2k=Zeta[k]*f2[k];
-    F[k]=(f0k+f1k+f2k)*ninv;
-    F[m-k]=conj(f0k+zeta3*f1k+zeta3c*f2k)*ninv;
+    pair f1k=conj(Zetak)*f1[k];
+    pair f2k=Zetak*f2[k];
+    Zetak *= zeta;
+    F[k]=f0k*ninv+f1k+f2k;
+    F[m-k]=conj(f0k)*ninv+zeta3c*conj(f1k)+zeta3*conj(f2k);
   }
-  bool even=true;
   
-  if(even) F[c]=(f0[c].x+f1[c].x*conj(Zeta[c])+f2[c].x*Zeta[c])*ninv;
+  if(even) F[c]=(f0[c].x-f1[c].x*zeta3-f2[c].x*conj(zeta3))*ninv;
 
   return F;
 }
@@ -276,8 +264,9 @@ write();
 
 int c=quotient(f.length,2);
 pair[] u=new pair[c+1];
-//write(fftpad(f,u));
-write();
 
-write(fftpad(f,u));
-//write(fftpadinv(fftpad(f,u,false),false));
+write();
+write(f);
+write();
+//write(fftpad(f,u));
+write(fftpadinv(fftpad(f,u,false),false));
