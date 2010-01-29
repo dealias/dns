@@ -94,11 +94,12 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(!pad) {
-    convolution convolve(m);
+    Complex *u=FFTWComplex(2*m);
+    convolution convolve(m,u);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(h,f,g);
+      convolve.unpadded(f,g,u,u+m);
       sum += seconds();
     }
     

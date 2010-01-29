@@ -153,7 +153,6 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   pair zeta=exp(2*pi*I/n);
   pair zetac=conj(zeta);
   pair zeta3=(-0.5,0.5*sqrt(3.0));
-  pair zeta3c=conj(zeta3);
 
   real f0=f[0].x;
   real g0=g[0].x;
@@ -228,6 +227,7 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   int stop=m-c-1;
   real ninv=1/n;
   F[0]=(f0[0].x+f1[0].x+f2[0].x)*ninv;
+  pair zeta3c=conj(zeta3);
   pair Zetak=zeta*ninv;
 
   for(int k=1; k < stop; ++k) {
