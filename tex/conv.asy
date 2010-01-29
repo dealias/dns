@@ -27,7 +27,7 @@ pair[] rcfft(real[] f, int sign=-1)
 // Unrolled scrambled cr version for p=2, q=3
 // with n=3m; m even for now
 // f has length m+1, u is a work array of length m/2+1.
-real[] fftpad(pair[] f, pair[] u)
+real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
 {
   int m=f.length;
   int c=quotient(m,2);
@@ -54,43 +54,45 @@ real[] fftpad(pair[] f, pair[] u)
   for(int k=1; k < c; ++k) {
     pair fk=f[k];
     pair fmk=conj(f[m-k]);
-    u[k]=fk+fmk;
+    f[k]=fk+fmk;
     pair zetak=Zeta[k];
     pair A=zetak*(fk.x+zeta3c*fmk.x);
     pair B=I*zetak*(fk.y+zeta3c*fmk.y);
-    f[k]=A+B;
-    f[m-k]=conj(A-B);
+    f[m-k]=A+B;
+    u[k]=conj(A-B);
   }
 
   pair fk=f[c];
-  u[c]=2.0*fk.x;
-  pair A=fk.x;
-  pair B=-sqrt(3)*fk.y;
-  pair fc=A+B;
-  f[c]=A-B;
+  real A=fk.x;
+  f[c]=2.0*A;
+  real B=-sqrt(3)*fk.y;
+  u[c]=A-B;
+  A += B;
 
-  real[] f2=crfft(f[c:m+1],even,-1);
+  real[] f0=crfft(f[0:c+1],even);
+  f[c]=A;
+  real[] f1=crfft(f[c:m+1],even,-1);
 
   // Not necessary for convolution.
   for(int i=1; i < m; i += 2)
-    f2[i]=-f2[i];
+    f1[i]=-f1[i];
 
-  f[c]=fc;
-  real[] f1=crfft(f[0:c+1],even);
-  real[] f0=crfft(u,even);
-  //  real[] h=concat(f1,f2,f0);
+  real[] f2=crfft(u,even);
   
-  // unscramble
-  real[] h=new real[3c];
+  real[] h;
   
-  h[0]=f0[0];
-  h[1]=f1[0];
-  h[3*m-1]=f2[0];
-  for(int i=1; i < m; ++i) {
-    h[3*i-1]=f2[i];
-    h[3*i]=f0[i];
-    h[3*i+1]=f1[i];
+  if(unscramble) {
+    h=new real[3c];
+  
+    h[0]=f0[0];
+    h[1]=f1[0];
+    h[3*m-1]=f2[0];
+    for(int i=1; i < m; ++i) {
+      h[3*i-1]=f2[i];
+      h[3*i]=f0[i];
+      h[3*i+1]=f1[i];
     }
+  } else h=concat(f0,f1,f2);
   
   return h;
 }
@@ -98,8 +100,10 @@ real[] fftpad(pair[] f, pair[] u)
 // Unrolled scrambled rc version for p=2, q=3
 // with n=3m; m even for now
 // f has length 3m.
-pair[] fftpadinv(real[] f)
+pair[] fftpadinv(real[] f, bool unscramble=true)
 {
+  assert(!unscramble); // Not yet implemented
+  
   int n=f.length;
   int m=quotient(n,3);
   assert(n == 3m);
@@ -114,9 +118,9 @@ pair[] fftpadinv(real[] f)
     Zeta[i]=product;
   }
   
-  pair[] f1=rcfft(f[0:m]);
-  pair[] f2=rcfft(f[m:2m]);
-  pair[] f0=rcfft(f[2m:n]);
+  pair[] f0=rcfft(f[0:m]);
+  pair[] f1=rcfft(f[m:2m]);
+  pair[] f2=rcfft(f[2m:n]);
 
   pair[] F=new pair[m];
 
@@ -270,4 +274,4 @@ write(f);
 write();
 
 write(fftpad(f,u));
-//write(fftpadinv(fftpad(f,u)));
+//write(fftpadinv(fftpad(f,u,false),false));
