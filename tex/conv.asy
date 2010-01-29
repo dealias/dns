@@ -65,9 +65,9 @@ real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
   pair fk=f[c];
   real A=fk.x;
   f[c]=2.0*A;
-  real B=-sqrt(3)*fk.y;
-  u[c]=A-B;
-  A += B;
+  real B=sqrt(3)*fk.y;
+  u[c]=A+B;
+  A -= B;
 
   real[] f0=crfft(f[0:c+1],even);
   f[c]=A;
