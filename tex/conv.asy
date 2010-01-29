@@ -203,8 +203,8 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   real[] g0=crfft(g[0:c+1],even);
   f0 *= g0;
   pair[] f0=rcfft(f0);
-  // pair overlap0=f[c-1];
-  // real overlap1=f[c].x;
+  pair overlap0=f0[c-1];
+  real overlap1=f0[c].x;
 
   f[c-1]=A;
   f[c]=fc;
@@ -219,18 +219,17 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   real[] f2=crfft(u,even);
   real[] g2=crfft(v,even);
   f2 *= g2;
-  
   pair[] f2=rcfft(f2);
 
   pair[] F=new pair[m];
 
   pair zeta3=conj(zeta3c);
-
   int stop=m-c-1;
   real ninv=1/n;
   F[0]=(f0[0].x+f1[0].x+f2[0].x)*ninv;
   pair Zetak=zeta*ninv;
-  for(int k=1; k <= stop; ++k) {
+
+  for(int k=1; k < stop; ++k) {
     pair f0k=f0[k]*ninv;
     pair f1k=conj(Zetak)*f1[k];
     //    pair f1k=conj(Zetak)*f1[k-1];
@@ -239,8 +238,18 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
     F[k]=f0k+f1k+f2k;
     F[m-k]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
   }
+
+  assert(even);
   
-  if(even) F[c]=(f0[c].x-f1[c].x*zeta3-f2[c].x*conj(zeta3))*ninv;
+  //  pair f0k=f0[c-1]*ninv;
+  pair f0k=overlap0*ninv;
+  pair f1k=conj(Zetak)*f1[c-1];
+  pair f2k=Zetak*f2[c-1];
+  F[c-1]=f0k+f1k+f2k;
+  F[c+1]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
+  
+  //  if(even) F[c]=(f0[c].x-f1[c].x*zeta3-f2[c].x*conj(zeta3))*ninv;
+  if(even) F[c]=(overlap1-f1[c].x*zeta3-f2[c].x*conj(zeta3))*ninv;
 
   return F;
 }
