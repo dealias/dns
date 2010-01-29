@@ -49,16 +49,15 @@ real[] fftpad(pair[] f, pair[] u)
   real f0=f[0].x;
   u[0]=f0;
   f[m]=f0;
-  real fc=f[c].x;
   for(int k=1; k <= c; ++k) {
     pair fk=f[k];
     pair fmk=conj(f[m-k]);
-    f[k]=fk+fmk;
+    u[k]=fk+fmk;
     pair zetak=Zeta[k];
     pair A=zetak*(fk.x+zeta3c*fmk.x);
     pair B=I*zetak*(fk.y+zeta3c*fmk.y);
-    f[m-k]=A+B;
-    u[k]=conj(A-B);
+    f[k]=A+B;
+    f[m-k]=conj(A-B);
   }
 
   /* Unrolled loop for k=c:
@@ -68,11 +67,14 @@ real[] fftpad(pair[] f, pair[] u)
   u[c]=fc;
   */
   
-  real[] f1=crfft(f[c:m+1],even,-1);
-  f[c]=2.0*fc;
-  real[] f0=crfft(f[0:c+1],even);
-  real[] f2=crfft(u,even);
-
+  pair fc=f[c];
+  real[] f2=crfft(f[c:m+1],even,-1);
+  f[c]=fc;
+  real[] f1=crfft(f[0:c+1],even);
+  real[] f0=crfft(u,even);
+  //  real[] h=concat(f0,f1,f2);
+  
+  //  /* unscramble
   real[] h=new real[3c];
   
   h[0]=f0[0];
@@ -81,10 +83,11 @@ real[] fftpad(pair[] f, pair[] u)
   int sign=1;
   for(int i=1; i < c; ++i) {
     sign *= -1;
-    h[3*i-1]=f2[i];
+    h[3*i-1]=sign*f2[i];
     h[3*i]=f0[i];
-    h[3*i+1]=sign*f1[i];
+    h[3*i+1]=f1[i];
   }
+  //  */
   
   return h;
 }
