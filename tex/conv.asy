@@ -74,20 +74,19 @@ real[] fftpad(pair[] f, pair[] u)
   real[] f0=crfft(u,even);
   //  real[] h=concat(f0,f1,f2);
   
-  //  /* unscramble
+  // unscramble
   real[] h=new real[3c];
   
   h[0]=f0[0];
   h[1]=f1[0];
-  h[3*c-1]=f2[c];
+  h[3*m-1]=f2[0];
   int sign=1;
-  for(int i=1; i < c; ++i) {
+  for(int i=1; i < m; ++i) {
     sign *= -1;
     h[3*i-1]=sign*f2[i];
     h[3*i]=f0[i];
     h[3*i+1]=f1[i];
   }
-  //  */
   
   return h;
 }
@@ -176,7 +175,7 @@ pair[] convolve(pair[] F, pair[] G)
   bool even=n % 2 == 0;
   write(n);
   
-  write("F=",crfft(F,even)[0:3quotient(m,2)]);
+  write("F=",crfft(F,even));
 
   return rcfft((crfft(F,even)*crfft(G,even))/n)[0:m];
 }	
