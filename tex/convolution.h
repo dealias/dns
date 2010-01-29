@@ -156,8 +156,9 @@ public:
       Complex gk=multconj(g[k],Zetak);
       Complex Bk=Zetak*B[k];
       Zetak *= zeta;
-      h[m-k]=conj(h[k]*ninv+multconj(gk,Zetamc)+Zetamc*Bk);
-      h[k]=h[k]*ninv+gk+Bk;
+      Complex hk=h[k]*ninv;
+      h[m-k]=conj(hk+multconj(gk,Zetamc)+Zetamc*Bk);
+      h[k]=hk+gk+Bk;
     }
     if(2*c == m) 
       h[c]=h[c].real()*ninv+g[c].real()*conj(Zetak)+B[c].real()*Zetak;
@@ -237,13 +238,13 @@ public:
   }
   
   // Note: input arrays f and g are destroyed.
-  // u is a temporary work array of size n.
-  void unpadded(Complex *f, Complex *g, Complex *u) {
+  // u and v are temporary work arrays each of size m.
+  void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
     double re=1.0;
     double im=0.0;
     for(unsigned int k=0; k < m; ++k) {
       Complex *P=u+k;
-      Complex *Q=P+m;
+      Complex *Q=v+k;
       Complex fk=*(f+k);
       Complex gk=*(g+k);
       P->re=re*fk.re-im*fk.im;
@@ -258,7 +259,7 @@ public:
     Backwards->fft(f);
     Backwards->fft(u);
     Backwards->fft(g);
-    Backwards->fft(u+m);
+    Backwards->fft(v);
     
     for(unsigned int k=0; k < m; ++k) {
       Complex *p=f+k;
@@ -273,7 +274,7 @@ public:
     for(unsigned int k=0; k < m; ++k) {
       Complex *p=u+k;
       Complex fk=*p;
-      Complex gk=*(p+m);
+      Complex gk=*(v+k);
       p->re=fk.re*gk.re-fk.im*gk.im;
       p->im=fk.re*gk.im+fk.im*gk.re;
     }
@@ -685,10 +686,11 @@ public:
     fftpad->backwards(g,v);
 
     unsigned int m2=m*m;
+    Complex *work2=work+m;
     for(unsigned int i=0; i < m2; i += m)
-      C->unpadded(f+i,g+i,work);
+      C->unpadded(f+i,g+i,work,work2);
     for(unsigned int i=0; i < m2; i += m)
-      C->unpadded(u+i,v+i,work);
+      C->unpadded(u+i,v+i,work,work2);
     
     fftpad->forwards(f,u);
   }
