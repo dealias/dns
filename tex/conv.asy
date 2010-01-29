@@ -151,7 +151,9 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   int n=3*m;
   
   pair zeta=exp(2*pi*I/n);
-  pair zeta3c=(-0.5,-0.5*sqrt(3.0));
+  pair zetac=conj(zeta);
+  pair zeta3=(-0.5,0.5*sqrt(3.0));
+  pair zeta3c=conj(zeta3);
 
   real f0=f[0].x;
   real g0=g[0].x;
@@ -164,23 +166,23 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   pair gc=g[c];
   pair gmk=conj(g[m1]);
   g[m1]=g0;
-  pair Zetak=zeta;
+  pair Zetak=zetac;
   for(int k=1; k < c; ++k) {
     pair fk=f[k];
     f[k]=fk+fmk;
-    pair A=Zetak*(fk.x+zeta3c*fmk.x);
-    pair B=I*Zetak*(fk.y+zeta3c*fmk.y);
-    u[k]=conj(A-B);
+    pair A=Zetak*(fk.x+zeta3*fmk.x);
+    pair B=-I*Zetak*(fk.y+zeta3*fmk.y);
+    u[k]=A-B;
     int mk=m1-k;
     fmk=conj(f[mk]);
-    f[mk]=A+B;
+    f[mk]=A+B; // Store conjugate of desired quantity in reverse order.
 
     pair gk=g[k];
     g[k]=gk+gmk;
-    A=Zetak*(gk.x+zeta3c*gmk.x);
-    B=I*Zetak*(gk.y+zeta3c*gmk.y);
-    Zetak *= zeta;
-    v[k]=conj(A-B);
+    A=Zetak*(gk.x+zeta3*gmk.x);
+    B=-I*Zetak*(gk.y+zeta3*gmk.y);
+    Zetak *= zetac;
+    v[k]=A-B;
     gmk=conj(g[mk]);
     g[mk]=A+B;
   }
@@ -208,10 +210,10 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
 
   f[c-1]=A;
   f[c]=fc;
-  real[] f1=crfft(f[c-1:m],even,-1);
+  real[] f1=crfft(f[c-1:m],even);
   g[c-1]=C;
   g[c]=gc;
-  real[] g1=crfft(g[c-1:m],even,-1);
+  real[] g1=crfft(g[c-1:m],even);
   f1 *= g1;
   pair[] f1=rcfft(f1);
   // Data is shifted down by 1 complex.
@@ -223,7 +225,6 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
 
   pair[] F=new pair[m];
 
-  pair zeta3=conj(zeta3c);
   int stop=m-c-1;
   real ninv=1/n;
   F[0]=(f0[0].x+f1[0].x+f2[0].x)*ninv;
