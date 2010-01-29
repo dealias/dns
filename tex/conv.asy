@@ -50,7 +50,8 @@ real[] fftpad(pair[] f, pair[] u)
   real f0=f[0].x;
   u[0]=f0;
   f[m]=f0;
-  for(int k=1; k <= c; ++k) {
+  
+  for(int k=1; k < c; ++k) {
     pair fk=f[k];
     pair fmk=conj(f[m-k]);
     u[k]=fk+fmk;
@@ -61,26 +62,24 @@ real[] fftpad(pair[] f, pair[] u)
     f[m-k]=conj(A-B);
   }
 
-  /* Unrolled loop for k=c:
   pair fk=f[c];
-  f[c]=2.0*fk.x;
-  pair fc=fk.x+I*fk.y*sqrt(3.0);
-  u[c]=fc;
-  */
-  
-  //  pair fc=f[c];
+  u[c]=2.0*fk.x;
+  pair A=fk.x;
+  pair B=-sqrt(3)*fk.y;
+  pair fc=A+B;
+  f[c]=A-B;
+
   real[] f2=crfft(f[c:m+1],even,-1);
 
   // Not necessary for convolution.
   for(int i=1; i < m; i += 2)
     f2[i]=-f2[i];
 
-  //  f[c]=fc;
+  f[c]=fc;
   real[] f1=crfft(f[0:c+1],even);
   real[] f0=crfft(u,even);
-  real[] h=concat(f1,f2,f0);
+  //  real[] h=concat(f1,f2,f0);
   
-  /*
   // unscramble
   real[] h=new real[3c];
   
@@ -91,14 +90,14 @@ real[] fftpad(pair[] f, pair[] u)
     h[3*i-1]=f2[i];
     h[3*i]=f0[i];
     h[3*i+1]=f1[i];
-    }*/
+    }
   
   return h;
 }
 
 // Unrolled scrambled rc version for p=2, q=3
 // with n=3m; m even for now
-// f has length m+1, u is a work array of length m/2+1.
+// f has length 3m.
 pair[] fftpadinv(real[] f)
 {
   int n=f.length;
@@ -141,6 +140,8 @@ pair[] fftpadinv(real[] f)
   return F;
 }
 
+// f and g have length m.
+// u is a work array of length m/2+1.
 pair[] convolve0(pair[] f, pair[] g)
 {
   int m=f.length;
@@ -246,7 +247,7 @@ pair[] direct(pair[] F, pair[] G)
 }	
 
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
-pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1),3};
+pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,1),(-3,-1),(1,2),(2,1),(3,1),3};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
 
 pair[] f=copy(d);
@@ -268,4 +269,5 @@ pair[] u=new pair[c+1];
 write(f);
 write();
 
-write(fftpadinv(fftpad(f,u)));
+write(fftpad(f,u));
+//write(fftpadinv(fftpad(f,u)));
