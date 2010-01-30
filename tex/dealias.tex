@@ -131,6 +131,16 @@ The forwards transform becomes
 \qquad k\no =0,\ldots,m-1.
 \ee
 
+Note: without the hermiticity condition, the backwards transform is
+\bec
+u_{3\ell +r}\no=\sum_{k=-m-1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k'=1}^{m-1}\z_{m}^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
++\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \(w_{k,r}+w_{k-m,r}\),
+\ee
+
+
+
 \subsubsection{2D Complex to Real Transforms of 2/3 Dealiased Data}
 The Hermiticity condition is now $\hat{u}_{-k,-\ell}=\hat{u}^*_{k,\ell}$.
 The procedure is analagous as in 1D,
