@@ -98,7 +98,6 @@ public:
     bool even=m % 2 == 0;
     if(!even) _exit(1);
     
-    
     u[0]=f0;
     v[0]=g0;
     Complex fc=f[c];
@@ -174,7 +173,7 @@ public:
     rc->fft(u);
 
     unsigned int stop=m-c-1;
-    double ninv=1/n;
+    double ninv=1.0/n;
     f[0]=(f[0].re+f[c-1].re+u[0].re)*ninv;
     Zetak=zeta*ninv;
 

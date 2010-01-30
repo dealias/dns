@@ -108,10 +108,10 @@ int main(int argc, char* argv[])
     cout << (sum-offset)/N << endl;
     cout << endl;
     if(m < 100) 
-      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-    else cout << h[0] << endl;
+      for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
+    else cout << f[0] << endl;
 #ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=h[i];
+    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
 #endif    
   }
   
