@@ -15,7 +15,6 @@ using namespace std;
 
 // Number of iterations.
 unsigned int N=1000;
-unsigned int m=4096;
   
 using namespace std;
 
@@ -32,14 +31,22 @@ inline double seconds()
   return seconds;
 }
 
+Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,1),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1),3};
+
+unsigned int m=sizeof(d)/sizeof(Complex);
+	
 inline void init(Complex *f, Complex *g) 
 {
+  for(unsigned int i=0; i < m; i++) f[i]=d[i];
+  for(unsigned int i=0; i < m; i++) g[i]=d[i];
+  /*
   f[0]=1.0;
   for(unsigned int i=1; i < m-1; i++) f[i]=Complex(3.0,2.0);
   f[m-1]=3.0;
   g[0]=2.0;
   for(unsigned int i=1; i < m-1; i++) g[i]=Complex(5.0,3.0);
   g[m-1]=2.0;
+  */
 }
 
 int main(int argc, char* argv[])
@@ -54,8 +61,6 @@ int main(int argc, char* argv[])
     pad=atoi(argv[2]);
   }
   
-//  Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
-	
 //  unsigned int m=sizeof(d)/sizeof(Complex);
   unsigned int n=(2*m-1)*3;
   if(n % 2 == 1) ++n;

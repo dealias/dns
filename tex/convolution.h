@@ -110,7 +110,8 @@ public:
     Complex zetac=conj(zeta);
     Complex Zetak=zetac;
     
-    static const Complex zeta3(-0.5,0.5*sqrt(3.0));
+    static const double sqrt3=sqrt(3.0);
+    static const Complex zeta3(-0.5,0.5*sqrt3);
     static const Complex zeta3c=conj(zeta3);
     static const Complex I(0,1);
 
@@ -135,7 +136,7 @@ public:
     }
   
     double A=fc.re;
-    double B=sqrt(3)*fc.im;
+    double B=sqrt3*fc.im;
     fc=f[c];
     f[c]=2.0*A;
     u[c]=A+B;
@@ -143,14 +144,16 @@ public:
 
     cr->fft(f);
     double C=gc.re;
-    B=sqrt(3)*gc.im;
+    B=sqrt3*gc.im;
     gc=g[c];
     g[c]=2.0*C;
     v[c]=C+B;
     C -= B;
     cr->fft(g);
-    for(int i=0; i < c+1; ++i)
-      f[i] *= g[i];
+    double *F=(double *) f;
+    double *G=(double *) g;
+    for(int i=0; i <= m; ++i)
+      F[i] *= G[i];
     rc->fft(f);
     Complex overlap0=f[c-1];
     double overlap1=f[c].re;
@@ -161,15 +164,19 @@ public:
     g[c-1]=C;
     g[c]=gc;
     cr->fft(g+c-1);
-    for(int i=c-1; i < m; ++i)
-      f[i] *= g[i];
+    F=(double *) (f+c-1);
+    G=(double *) (g+c-1);
+    for(int i=0; i <= m; ++i)
+      F[i] *= G[i];
     rc->fft(f+c-1);
     // Data is shifted down by 1 complex.
 
     cr->fft(u);
     cr->fft(v);
-    for(int i=0; i < c+1; ++i)
-      u[i] *= v[i];
+    F=(double *) u;
+    G=(double *) v;
+    for(int i=0; i <= m; ++i)
+      F[i] *= G[i];
     rc->fft(u);
 
     unsigned int stop=m-c-1;
@@ -179,7 +186,7 @@ public:
 
     for(unsigned k=1; k < stop; ++k) {
       Complex f0k=f[k]*ninv;
-      Complex f1k=conj(Zetak)*f[c-2+k];
+      Complex f1k=conj(Zetak)*f[c-1+k];
       Complex f2k=Zetak*u[k];
       Zetak *= zeta;
       f[k]=f0k+f1k+f2k;
