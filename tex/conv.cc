@@ -2,6 +2,8 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
+#define TEST 1
+
 // Compile with:
 // g++ -g -O3 -msse2 -march=native -mfpmath=sse conv.cc fftw++.cc -lfftw3
 //
@@ -14,7 +16,7 @@ using namespace std;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=10000;
+unsigned int N=1000;
   
 using namespace std;
 
@@ -142,6 +144,7 @@ int main(int argc, char* argv[])
 #endif
   }
   
+//  if(false)
   if(!pad) {
     convolution convolve(m);
     init(f,g);
@@ -159,8 +162,9 @@ int main(int argc, char* argv[])
     else cout << h[0] << endl;
 
     // test accuracy of convolution methods:
-    double error=0.0;
 #ifdef TEST    
+    double error=0.0;
+    cout << endl;
     for(unsigned int i=0; i < m; i++) 
       error += abs2(h[i]-pseudoh[i]);
     cout << "error="<<error<<endl;

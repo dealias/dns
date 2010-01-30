@@ -102,10 +102,10 @@ public:
     v[0]=g0;
     Complex fc=f[c];
     unsigned int m1=m-1;
-    Complex fmk=conj(f[m1]);
+    Complex fmk=f[m1];
     f[m1]=f0;
     Complex gc=g[c];
-    Complex gmk=conj(g[m1]);
+    Complex gmk=g[m1];
     g[m1]=g0;
     Complex zetac=conj(zeta);
     Complex Zetak=zetac;
@@ -117,21 +117,21 @@ public:
 
     for(unsigned int k=1; k < c; ++k) {
       Complex fk=f[k];
-      f[k]=fk+fmk;
+      f[k]=fk+conj(fmk);
       Complex A=Zetak*(fk.re+zeta3*fmk.re);
-      Complex B=-I*Zetak*(fk.im+zeta3*fmk.im);
+      Complex B=-I*Zetak*(fk.im-zeta3*fmk.im);
       u[k]=A-B;
       int mk=m1-k;
-      fmk=conj(f[mk]);
+      fmk=f[mk];
       f[mk]=A+B;
 
       Complex gk=g[k];
-      g[k]=gk+gmk;
+      g[k]=gk+conj(gmk);
       A=Zetak*(gk.re+zeta3*gmk.re);
-      B=-I*Zetak*(gk.im+zeta3*gmk.im);
+      B=-I*Zetak*(gk.im-zeta3*gmk.im);
       Zetak *= zetac;
       v[k]=A-B;
-      gmk=conj(g[mk]);
+      gmk=g[mk];
       g[mk]=A+B;
     }
   
@@ -171,8 +171,8 @@ public:
     F=(double *) f1;
     G=(double *) g1;
     for(int i=0; i <= m; ++i)
-      F[i] *= G[i];
-    rc->fft(f1);
+      G[i] *= F[i];
+    rc->fft(g1);
     // Data is shifted down by 1 complex.
 
     cr->fft(u);
@@ -185,27 +185,25 @@ public:
 
     unsigned int stop=m-c-1;
     double ninv=1.0/n;
-    f[0]=(f[0].re+f1[0].re+u[0].re)*ninv;
+    f[0]=(f[0].re+g1[0].re+u[0].re)*ninv;
     Zetak=zeta*ninv;
 
     for(unsigned k=1; k < stop; ++k) {
       Complex f0k=f[k]*ninv;
-      Complex f1k=conj(Zetak)*f1[k];
+      Complex f1k=conj(Zetak)*g1[k];
       Complex f2k=Zetak*u[k];
       Zetak *= zeta;
       f[k]=f0k+f1k+f2k;
-      u[k]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
+      f[m-k]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
     }
     
     Complex f0k=overlap0*ninv;
-    Complex f1k=conj(Zetak)*f1[stop];
+    Complex f1k=conj(Zetak)*g1[stop];
     Complex f2k=Zetak*u[cm1];
     f[cm1]=f0k+f1k+f2k;
     f[c+1]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
   
-    if(even) f[c]=(overlap1-f1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
-    for(unsigned k=1; k < stop; ++k)
-      f[m-k]=u[k];
+    if(even) f[c]=(overlap1-g1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
