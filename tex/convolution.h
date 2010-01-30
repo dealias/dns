@@ -135,10 +135,6 @@ public:
       g[mk]=A+B;
     }
   
-    for(unsigned int k=0; k < m; ++k)
-      cout << f[k] << endl;
-    
-
     double A=fc.re;
     double B=sqrt3*fc.im;
     fc=f[c];
@@ -147,6 +143,7 @@ public:
     A -= B;
 
     cr->fft(f);
+
     double C=gc.re;
     B=sqrt3*gc.im;
     gc=g[c];
@@ -159,20 +156,23 @@ public:
     for(int i=0; i <= m; ++i)
       F[i] *= G[i];
     rc->fft(f);
-    Complex overlap0=f[c-1];
+    unsigned int cm1=c-1;
+    Complex overlap0=f[cm1];
     double overlap1=f[c].re;
 
-    f[c-1]=A;
+    f[cm1]=A;
     f[c]=fc;
-    cr->fft(f+c-1);
-    g[c-1]=C;
+    Complex *f1=f+cm1;
+    Complex *g1=g+cm1;
+    cr->fft(f1);
+    g[cm1]=C;
     g[c]=gc;
-    cr->fft(g+c-1);
-    F=(double *) (f+c-1);
-    G=(double *) (g+c-1);
+    cr->fft(g1);
+    F=(double *) f1;
+    G=(double *) g1;
     for(int i=0; i <= m; ++i)
       F[i] *= G[i];
-    rc->fft(f+c-1);
+    rc->fft(f1);
     // Data is shifted down by 1 complex.
 
     cr->fft(u);
@@ -185,25 +185,27 @@ public:
 
     unsigned int stop=m-c-1;
     double ninv=1.0/n;
-    f[0]=(f[0].re+f[c-1].re+u[0].re)*ninv;
+    f[0]=(f[0].re+f1[0].re+u[0].re)*ninv;
     Zetak=zeta*ninv;
 
     for(unsigned k=1; k < stop; ++k) {
       Complex f0k=f[k]*ninv;
-      Complex f1k=conj(Zetak)*f[c-1+k];
+      Complex f1k=conj(Zetak)*f1[k];
       Complex f2k=Zetak*u[k];
       Zetak *= zeta;
       f[k]=f0k+f1k+f2k;
-      f[m-k]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
+      u[k]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
     }
-
+    
     Complex f0k=overlap0*ninv;
-    Complex f1k=conj(Zetak)*f[m-2];
-    Complex f2k=Zetak*u[c-1];
-    f[c-1]=f0k+f1k+f2k;
+    Complex f1k=conj(Zetak)*f1[stop];
+    Complex f2k=Zetak*u[cm1];
+    f[cm1]=f0k+f1k+f2k;
     f[c+1]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
   
-    if(even) f[c]=(overlap1-f[m-1].re*zeta3-u[c].re*conj(zeta3))*ninv;
+    if(even) f[c]=(overlap1-f1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
+    for(unsigned k=1; k < stop; ++k)
+      f[m-k]=u[k];
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier

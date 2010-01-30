@@ -186,10 +186,6 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
     g[mk]=A+B;
   }
   
-  write(f);
-  write();
-
-  
 
   real A=fc.x;
   real B=sqrt(3)*fc.y;
@@ -221,6 +217,7 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   f1 *= g1;
   pair[] f1=rcfft(f1);
   // Data is shifted down by 1 complex.
+  
 
   real[] f2=crfft(u,even);
   real[] g2=crfft(v,even);
@@ -238,7 +235,6 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   for(int k=1; k < stop; ++k) {
     pair f0k=f0[k]*ninv;
     pair f1k=conj(Zetak)*f1[k];
-    //    pair f1k=conj(Zetak)*f1[k-1];
     pair f2k=Zetak*f2[k];
     Zetak *= zeta;
     F[k]=f0k+f1k+f2k;
@@ -247,7 +243,6 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
 
   assert(even);
   
-  //  pair f0k=f0[c-1]*ninv;
   pair f0k=overlap0*ninv;
   pair f1k=conj(Zetak)*f1[c-1];
   pair f2k=Zetak*f2[c-1];
