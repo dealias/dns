@@ -3,10 +3,10 @@ using namespace std;
 #include "convolution.h"
 
 // For FFTW_NO_SIMD:
-// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math cconv2.cc fftw++.cc -lfftw3 -march=native
+// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math cconv.cc fftw++.cc -lfftw3 -march=native
 //
 // Without FFTW_NO_SIMD:
-// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse cconv2.cc fftw++.cc -lfftw3 -march=native
+// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3 -march=native
 //
 //
 // usage: aout [int m]
@@ -83,12 +83,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(!pad) {
-    Complex *u=FFTWComplex(n);
+    Complex *u=FFTWComplex(m);
+    Complex *v=FFTWComplex(m);
     cconvolution convolve(m,f);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(f,g,u);
+      convolve.unpadded(f,g,u,v);
       sum += seconds();
     }
     
