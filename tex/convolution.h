@@ -129,12 +129,16 @@ public:
       g[k]=gk+gmk;
       A=Zetak*(gk.re+zeta3*gmk.re);
       B=-I*Zetak*(gk.im+zeta3*gmk.im);
-      Zetak *= zeta;
+      Zetak *= zetac;
       v[k]=A-B;
       gmk=conj(g[mk]);
       g[mk]=A+B;
     }
   
+    for(unsigned int k=0; k < m; ++k)
+      cout << f[k] << endl;
+    
+
     double A=fc.re;
     double B=sqrt3*fc.im;
     fc=f[c];
