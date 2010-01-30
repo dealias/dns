@@ -5,8 +5,8 @@ if [ "$1" != "" ]; then
     stop=$1
 fi
 
-rm -rf padded unpadded
-touch padded unpadded
+rm -rf padded unpadded pruned
+touch padded unpadded pruned
 
 echo Timing:
 for (( i=7; i<=$stop; i++ ))

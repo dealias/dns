@@ -91,6 +91,7 @@ public:
   }
   
   // Note: input arrays f and g are destroyed.
+  // u and v are temporary work arrays each of size m/2+1.
   void unpadded( Complex *f, Complex *g, Complex *u, Complex *v) {
     double f0=f[0].re;
     double g0=g[0].re;
