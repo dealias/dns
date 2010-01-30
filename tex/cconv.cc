@@ -128,31 +128,33 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  cconvolution convolve(m,f);
-  init(f,g);
-  h=FFTWComplex(n);
-  seconds();
-  convolve.direct(h,f,g);
-  sum=seconds();
+  if(false) {
+    cconvolution convolve(m,f);
+    init(f,g);
+    h=FFTWComplex(n);
+    seconds();
+    convolve.direct(h,f,g);
+    sum=seconds();
   
-  cout << endl;
-  cout << "Direct:" << endl;
-  cout << sum-offset/N << endl;
-  cout << endl;
+    cout << endl;
+    cout << "Direct:" << endl;
+    cout << sum-offset/N << endl;
+    cout << endl;
 
-  if(m < 100) 
-    for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-  else cout << h[0] << endl;
+    if(m < 100) 
+      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
+    else cout << h[0] << endl;
 
-  // test accuracy of convolution methods:
-  double error=0.0;
+    // test accuracy of convolution methods:
+    double error=0.0;
 #ifdef TEST    
-  for(unsigned int i=0; i < m; i++) 
-    error += abs2(h[i]-pseudoh[i]);
-  cout << "error="<<error<<endl;
-  if (error > 1e-12)
-    cerr << "Caution! error="<<error<<endl;
+    for(unsigned int i=0; i < m; i++) 
+      error += abs2(h[i]-pseudoh[i]);
+    cout << "error="<<error<<endl;
+    if (error > 1e-12)
+      cerr << "Caution! error="<<error<<endl;
 #endif    
+  }
   
 //  FFTWdelete(f);
 //  FFTWdelete(g);

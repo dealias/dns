@@ -35,6 +35,7 @@ public:
   
   convolution(unsigned int m) : m(m) {}
   
+  // f must be allocated as m/2+1 Complex entries.
   convolution(unsigned int m, Complex *f) : m(m) {
     n=3*m;
     c=m/2;
@@ -92,7 +93,7 @@ public:
   
   // Note: input arrays f and g are destroyed.
   // u and v are temporary work arrays each of size m/2+1.
-  void unpadded( Complex *f, Complex *g, Complex *u, Complex *v) {
+  void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
     double f0=f[0].re;
     double g0=g[0].re;
 
@@ -803,5 +804,127 @@ public:
     }
   }	
 };
+
+#if 0
+class convolution2 {
+protected:
+  unsigned int n;
+  unsigned int m;
+  bool prune;
+  mfft1d *xBackwards;
+  mfft1d *yBackwards;
+  mfft1d *xForwards;
+  mfft1d *yForwards;
+  fft2d *Backwards;
+  fft2d *Forwards;
+  convolution *C;
+  ffttwothirds *fftpad;
+  Complex *u,*v;
+  Complex *work;
+public:  
+  // Set prune=true to skip Fourier transforming zero rows.
+  convolution2(unsigned int n, unsigned int m, Complex *f, bool prune=false) :
+    n(n), m(m), prune(prune) {
+    if(prune) {
+      xBackwards=new mfft1d(n,1,m,n,1,f);
+      yBackwards=new mfft1d(n,1,n,1,n,f);
+      xForwards=new mfft1d(n,-1,m,n,1,f);
+      yForwards=new mfft1d(n,-1,n,1,n,f);
+    } else {
+      Backwards=new fft2d(n,n,1,f);
+      Forwards=new fft2d(n,n,-1,f);
+    }
+  }
+  
+  convolution2(unsigned int m, Complex *f) : m(m) {
+    n=3*m;
+    u=FFTWComplex(m*m);
+    v=FFTWComplex(m*m);
+    work=FFTWComplex(n);
+    fftpad=new ffthalf(m,m,m,u);
+    C=new cconvolution(m,work);
+  }
+  
+// Need destructor  
+  
+// Compute H = F (*) G, where F and G are the non-negative Fourier
+// components of real functions f and g, respectively. Dealiasing via
+// zero-padding is implemented automatically.
+//
+// Arrays F[n/2+1], G[n/2+1] must be distinct.
+// Input F[i], G[i] (0 <= i < m), where 3*m <= n.
+// Output H[i] = F (*) G  (0 <= i < m), F[i]=f[i], G[i]=g[i] (0 <= i < n/2).
+//
+// Array H[n/2+1] can coincide with either F or G, in which case the output H
+// subsumes f or g, respectively.
+
+  void pad(Complex *f) {
+  }
+  
+  void fft(Complex *f, Complex *g) {
+    pad(f);
+    if(prune) {
+      xBackwards->fft(f);
+      yBackwards->fft(f);
+    } else
+      Backwards->fft(f);
+  
+    pad(g);
+    if(prune) {
+      xBackwards->fft(g);
+      yBackwards->fft(g);
+    } else
+      Backwards->fft(g);
+    
+    unsigned int n2=n*n;
+    double ninv=1.0/n2;
+    for(unsigned int i=0; i < n2; ++i)
+      f[i] *= g[i]*ninv;
+	
+    if(prune) {
+      yForwards->fft(f);
+      xForwards->fft(f);
+    } else {
+      Forwards->fft(f);
+    }
+  }
+  
+  // Note: input arrays f and g are destroyed.
+  void unpadded(Complex *f, Complex *g) {
+    fftpad->backwards(f,u);
+    fftpad->backwards(g,v);
+
+    unsigned int m2=m*m;
+    Complex *work2=work+m;
+    for(unsigned int i=0; i < m2; i += m)
+      C->unpadded(f+i,g+i,work,work2);
+    for(unsigned int i=0; i < m2; i += m)
+      C->unpadded(u+i,v+i,work,work2);
+    
+    fftpad->forwards(f,u);
+  }
+  
+// Compute H = F (*) G, where F and G contain the non-negative Fourier
+// components of real functions f and g, respectively, via direct convolution
+// instead of a Fast Fourier Transform technique.
+//
+// Input F[i], G[i] (0 <= i < m).
+// Output H[i] = F (*) G  (0 <= i < m), F and G unchanged.
+//
+// Array H[m] must be distinct from F[m] and G[m].
+
+  void direct(Complex *H, Complex *F, Complex *G) {
+    for(unsigned int i=0; i < m; ++i) {
+      for(unsigned int j=0; j < m; ++j) {
+        Complex sum=0.0;
+        for(unsigned int k=0; k <= i; ++k)
+          for(unsigned int p=0; p <= j; ++p)
+            sum += F[k*m+p]*G[(i-k)*m+j-p];
+        H[i*m+j]=sum;
+      }
+    }
+  }	
+};
+#endif
 
 #endif
