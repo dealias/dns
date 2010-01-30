@@ -14,7 +14,7 @@ using namespace std;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=1;
+unsigned int N=10000;
   
 using namespace std;
 
@@ -37,16 +37,14 @@ unsigned int m=sizeof(d)/sizeof(Complex);
 	
 inline void init(Complex *f, Complex *g) 
 {
-  for(unsigned int i=0; i < m; i++) f[i]=d[i];
-  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  /*
+//  for(unsigned int i=0; i < m; i++) f[i]=d[i];
+//  for(unsigned int i=0; i < m; i++) g[i]=d[i];
   f[0]=1.0;
   for(unsigned int i=1; i < m-1; i++) f[i]=Complex(3.0,2.0);
   f[m-1]=3.0;
   g[0]=2.0;
   for(unsigned int i=1; i < m-1; i++) g[i]=Complex(5.0,3.0);
   g[m-1]=2.0;
-  */
 }
 
 int main(int argc, char* argv[])
@@ -78,7 +76,7 @@ int main(int argc, char* argv[])
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
   Complex *h;
-  if(pad) h=g;
+  if(pad) h=f;
   else h=FFTWComplex(np);
 #ifdef TEST  
   Complex pseudoh[m];
@@ -99,12 +97,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(!pad) {
-    Complex *u=FFTWComplex(2*m);
+    Complex *u=FFTWComplex(m+2);
+    unsigned int c=m/2;
     convolution convolve(m,u);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(f,g,u,u+m);
+      convolve.unpadded(f,g,u,u+c+1);
       sum += seconds();
     }
     
@@ -170,8 +169,8 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  FFTWdelete(f);
-  FFTWdelete(g);
-  if(!pad) FFTWdelete(h);
+//  FFTWdelete(f);
+//  FFTWdelete(g);
+//  if(!pad) FFTWdelete(h);
 }
 

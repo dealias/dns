@@ -282,7 +282,7 @@ public:
   }
   
   // Note: input arrays f and g are destroyed.
-  // u and v are temporary work arrays each of size m.
+  // u and v are temporary work arrays each of size m/2+1.
   void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
     double re=1.0;
     double im=0.0;

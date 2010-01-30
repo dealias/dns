@@ -140,7 +140,7 @@ pair[] fftpadinv(real[] f, bool unscramble=true)
 }
 
 // f and g have length m.
-// u and v are work arrays of length m/2+1.
+// u and v are work arrays each of length m/2+1.
 pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
 {
   int m=f.length;
