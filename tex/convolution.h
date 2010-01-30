@@ -113,7 +113,8 @@ public:
     g[m1]=g0;
     
     static const double sqrt3=sqrt(3.0);
-    static const Complex zeta3(-0.5,0.5*sqrt3);
+    static const double hsqrt3=0.5*sqrt3;
+    static const Complex zeta3(-0.5,hsqrt3);
     static const Complex zeta3c=conj(zeta3);
     static const Complex I(0,1);
 
@@ -124,12 +125,12 @@ public:
     
     for(unsigned int k=1; k < c; ++k) {
       Complex *p=f+k;
-      double re=zeta3.re*fmkre+p->re;
-      double im=zeta3.im*fmkre;
+      double re=-0.5*fmkre+p->re;
+      double im=hsqrt3*fmkre;
       double Are=Re*re-Im*im;
       double Aim=Re*im+Im*re;
-      re=zeta3.re*fmkim-p->im;
-      im=zeta3.im*fmkim;
+      re=-0.5*fmkim-p->im;
+      im=hsqrt3*fmkim;
       p->re += fmkre;
       p->im -= fmkim;
       double Bim=Re*re-Im*im;
@@ -145,12 +146,12 @@ public:
       p->im=Aim+Bim;
 
       p=g+k;
-      re=zeta3.re*gmkre+p->re;
-      im=zeta3.im*gmkre;
+      re=-0.5*gmkre+p->re;
+      im=hsqrt3*gmkre;
       Are=Re*re-Im*im;
       Aim=Re*im+Im*re;
-      re=zeta3.re*gmkim-p->im;
-      im=zeta3.im*gmkim;
+      re=-0.5*gmkim-p->im;
+      im=hsqrt3*gmkim;
       p->re += gmkre;
       p->im -= gmkim;
       Bim=Re*re-Im*im;
@@ -229,15 +230,15 @@ public:
       double f0re=p->re*ninv;
       double f0im=p->im*ninv;
       double f1re=Re*q->re+Im*q->im;
-      double f1im=Re*q->im-Im*q->re;
       double f2re=Re*r->re-Im*r->im;
+      double sre=f1re+f2re;
+      double f1im=Re*q->im-Im*q->re;
       double f2im=Re*r->im+Im*r->re;
-      p->re=f0re+f1re+f2re;
-      p->im=f0im+f1im+f2im;
-      s->re=f0re+zeta3c.re*f1re+zeta3c.im*f1im
-        +zeta3.re*f2re+zeta3.im*f2im;
-      s->im=-f0im-zeta3c.re*f1im+zeta3c.im*f1re
-        -zeta3.re*f2im+zeta3.im*f2re;
+      double sim=f1im+f2im;
+      p->re=f0re+sre;
+      p->im=f0im+sim;
+      s->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
+      s->im=-f0im+0.5*sim-hsqrt3*(f1re-f2re);
       double temp=Re*Cos-Im*Sin; 
       Im=Re*Sin+Im*Cos;
       Re=temp;
@@ -249,26 +250,7 @@ public:
     Complex f2k=Zetak*u[cm1];
     f[cm1]=f0k+f1k+f2k;
     f[c+1]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
-  
-/*
-  double f0re=overlap0.re*ninv;
-  double f0im=overlap0.im*ninv;
-  Complex *q=g1+stop;
-  double f1re=Re*q->re+Im*q->im;
-  double f1im=Re*q->im-Im*q->re;
-  Complex *r=u+cm1;
-  double f2re=Re*r->re-Im*r->im;
-  double f2im=Re*r->im+Im*r->re;
-    
-  Complex *p=f+cm1;
-  Complex *s=f+c+1;
-  p->re=f0re+f1re+f2re;
-  p->im=f0im+f1im+f2im;
-  s->re=f0re+zeta3c.re*f1re+zeta3c.im*f1im
-  +zeta3.re*f2re+zeta3.im*f2im;
-  s->im=-f0im-zeta3c.re*f1im+zeta3c.im*f1re
-  -zeta3.re*f2im+zeta3.im*f2re;
-*/
+
     if(even) f[c]=(overlap1-g1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
   }
   
