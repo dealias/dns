@@ -70,7 +70,6 @@ int main(int argc, char* argv[])
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
   Complex *h=f;
-  Complex *work=FFTWComplex(n);
 #ifdef TEST  
   Complex pseudoh[m];
 #endif
@@ -84,11 +83,12 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(!pad) {
+    Complex *u=FFTWComplex(n);
     cconvolution convolve(m,f);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(f,g,work);
+      convolve.unpadded(f,g,u);
       sum += seconds();
     }
     

@@ -114,9 +114,6 @@ public:
     
     static const double sqrt3=sqrt(3.0);
     static const double hsqrt3=0.5*sqrt3;
-    static const Complex zeta3(-0.5,hsqrt3);
-    static const Complex zeta3c=conj(zeta3);
-    static const Complex I(0,1);
 
     double Cos=zeta.re;
     double Sin=zeta.im;
@@ -138,8 +135,7 @@ public:
       p=u+k;
       p->re=Are-Bre;
       p->im=Aim-Bim;
-      int mk=m1-k;
-      p=f+mk;
+      p=f+m1-k;
       fmkre=p->re;
       fmkim=p->im;
       p->re=Are+Bre;
@@ -159,7 +155,7 @@ public:
       p=v+k;
       p->re=Are-Bre;
       p->im=Aim-Bim;
-      p=g+mk;
+      p=g+m1-k;
       gmkre=p->re;
       gmkim=p->im;
       p->re=Are+Bre;
@@ -207,7 +203,6 @@ public:
     for(int i=0; i <= m; ++i)
       G[i] *= F[i];
     rc->fft(g1);
-    // Data is shifted down by 1 complex.
 
     cr->fft(u);
     cr->fft(v);
@@ -249,7 +244,8 @@ public:
     Complex f1k=conj(Zetak)*g1[stop];
     Complex f2k=Zetak*u[cm1];
     f[cm1]=f0k+f1k+f2k;
-    f[c+1]=conj(f0k)+zeta3c*conj(f1k)+zeta3*conj(f2k);
+    static const Complex zeta3(-0.5,hsqrt3);
+    f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
 
     if(even) f[c]=(overlap1-g1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
   }

@@ -77,9 +77,7 @@ int main(int argc, char* argv[])
     
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
-  Complex *h;
-  if(pad) h=f;
-  else h=FFTWComplex(np);
+  Complex *h=f;
 #ifdef TEST  
   Complex pseudoh[m];
 #endif
@@ -144,10 +142,11 @@ int main(int argc, char* argv[])
 #endif
   }
   
-//  if(false)
+  if(false)
   if(!pad) {
     convolution convolve(m);
     init(f,g);
+    h=FFTWComplex(n);
     seconds();
     convolve.direct(h,f,g);
     sum=seconds();
