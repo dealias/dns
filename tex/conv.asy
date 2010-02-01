@@ -256,7 +256,7 @@ pair[] convolve(pair[] F, pair[] G)
 {
   int m=F.length;
   int n=quotient((2*m-1)*q,p);
-  n += 2;
+  //  n += 2;
   int np=quotient(n,2)+1;
   
   F=copy(F);
@@ -267,9 +267,8 @@ pair[] convolve(pair[] F, pair[] G)
     F[i]=0.0;
   }
   bool even=n % 2 == 0;
-  //  write(n);
   
-  write("F=",crfft(F,even));
+  //  write("F=",crfft(F,even));
 
   return rcfft((crfft(F,even)*crfft(G,even))/n)[0:m];
 }	
@@ -312,7 +311,7 @@ write();
 
 write();
 f=copy(d);
-write(f);
-write();
+//write(f);
+//write();
 //write(fftpad(f,u));
-write(fftpadinv(fftpad(f,u,false),false));
+//write(fftpadinv(fftpad(f,u,false),false));
