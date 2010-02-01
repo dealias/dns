@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
     unsigned int c=m/2;
     Complex *u=FFTWComplex(c+1);
     Complex *v=FFTWComplex(c+1);
-    convolution convolve(m,u);
+    convolution convolve(m,u,v);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();

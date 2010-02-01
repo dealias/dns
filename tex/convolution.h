@@ -15,7 +15,8 @@ protected:
   rcfft1d *rc, *rco;
   crfft1d *cr, *cro;
   double *F,*G;
-  Complex zeta;
+  double Cos;
+  double Sin;
 public:  
   // Pass a temporary work array f to save memory.
   convolution(unsigned int n, unsigned int m, Complex *f=NULL) :
@@ -35,20 +36,20 @@ public:
   
   convolution(unsigned int m) : m(m) {}
   
-  // f must be allocated as m/2+1 Complex entries.
-  convolution(unsigned int m, Complex *f) : m(m) {
+  // u and v must be each allocated as m/2+1 Complex values.
+  convolution(unsigned int m, Complex *u, Complex *v) : m(m) {
     n=3*m;
     c=m/2;
     double arg=2.0*M_PI/n;
-    zeta=Complex(cos(arg),sin(arg));
+    Cos=cos(arg);
+    Sin=sin(arg);
 
-    rc=new rcfft1d(m,f);
-    cr=new crfft1d(m,f);
+    rc=new rcfft1d(m,u);
+    cr=new crfft1d(m,u);
     
-    double *g=FFTWdouble(m);
-    rco=new rcfft1d(m,g,f);
-    cro=new crfft1d(m,f,g);
-    FFTWdelete(g);
+    double *U=(double *) u;
+    rco=new rcfft1d(m,U,v);
+    cro=new crfft1d(m,v,U);
   }
   
 // Need destructor  
@@ -123,8 +124,6 @@ public:
     static const double sqrt3=sqrt(3.0);
     static const double hsqrt3=0.5*sqrt3;
 
-    double Cos=zeta.re;
-    double Sin=zeta.im;
     double Re=Cos;
     double Im=-Sin;
     
@@ -638,7 +637,6 @@ class ffthalf {
   unsigned int dist;
   mfft1d *Backwards;
   mfft1d *Forwards;
-  Complex zeta;
   double c,s;
 
 public:  
