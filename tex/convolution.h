@@ -186,7 +186,7 @@ public:
     C -= B;
     
     // FFTs, convolutions, and inverse FFTs
-    // six of nine transforms done out-of-place
+    // seven of nine transforms are out-of-place
     // r=-1:
     cr->fft(u);
     cr->fft(v);
@@ -197,10 +197,10 @@ public:
     rco->fft(v,U); // v is now free
 
     // r=0:
-    cr->fft(f);
-    double *F=(double *) f;
     V=(double *) v;
-    cro->fft(g,V);
+    cro->fft(f,V);
+    double *F=(double *) f;
+    cro->fft(g,F);
     for(int i=0; i < m; ++i)
       V[i] *= F[i];
     rco->fft(V,f);
