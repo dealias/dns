@@ -187,7 +187,7 @@ public:
     
     // FFTs, convolutions, and inverse FFTs
     // six of nine transforms done out-of-place
-    // r=-1
+    // r=-1:
     cr->fft(u);
     cr->fft(v);
     double *U=(double *) u;
@@ -196,6 +196,7 @@ public:
       V[i] *= U[i];
     rco->fft(v,U); // v is now free
 
+    // r=0:
     cr->fft(f);
     double *F=(double *) f;
     V=(double *) v;
@@ -203,11 +204,11 @@ public:
     for(int i=0; i < m; ++i)
       V[i] *= F[i];
     rco->fft(V,f);
-
     unsigned int cm1=c-1;
     Complex overlap0=f[cm1];
     double overlap1=f[c].re;
 
+    // r=1:
     f[cm1]=A;
     f[c]=fc;
     Complex *f1=f+cm1;
@@ -215,7 +216,6 @@ public:
     G=(double *) g;
     g[cm1]=C;
     g[c]=gc;
-
     V=(double *) v;
     cro->fft(g1,V);
     cro->fft(f1,G);
