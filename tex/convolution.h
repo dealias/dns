@@ -39,7 +39,6 @@ public:
   convolution(unsigned int m, Complex *f) : m(m) {
     n=3*m;
     c=m/2;
-    
     double arg=2.0*M_PI/n;
     zeta=Complex(cos(arg),sin(arg));
 
@@ -100,6 +99,8 @@ public:
     bool even=m % 2 == 0;
     if(!even) _exit(1);
     
+
+    // Arrange input data
     u[0]=f0;
     v[0]=g0;
     Complex fc=f[c];
@@ -174,6 +175,17 @@ public:
     u[c]=A+B;
     A -= B;
 
+    // FFTs, convolutions, and inverse FFTs
+    // r=-1
+    cr->fft(u);
+    cr->fft(v);
+    F=(double *) u;
+    G=(double *) v;
+    for(int i=0; i <= m; ++i)
+      F[i] *= G[i];
+    rc->fft(u); // convolution calculated
+    // v is now free
+
     cr->fft(f);
 
     double C=gc.re;
@@ -182,12 +194,25 @@ public:
     g[c]=2.0*C;
     v[c]=C+B;
     C -= B;
-    cr->fft(g);
     double *F=(double *) f;
+#define _sneaky 1
+#ifdef _sneaky
+    // one of three transforms done out-of-place
+    double *G=(double *) v;
+    crfft1d Backward(m,g,G);     // move to constructor?
+    Backward.fft(g,G);
+    for(int i=0; i <= m; ++i)
+      F[i] *= G[i];
+    //    rcfft1d Forward(m,G,f);     // move to constructor?
+    //    Forward.fft(G,f);
+    rc->fft(f);
+#else
     double *G=(double *) g;
+    cr->fft(g);
     for(int i=0; i <= m; ++i)
       F[i] *= G[i];
     rc->fft(f);
+#endif
     unsigned int cm1=c-1;
     Complex overlap0=f[cm1];
     double overlap1=f[c].re;
@@ -199,20 +224,26 @@ public:
     cr->fft(f1);
     g[cm1]=C;
     g[c]=gc;
-    cr->fft(g1);
+
+#ifdef _sneaky
+    // two of three transforms out-of-place
     F=(double *) f1;
+    G=(double *) v;
+    crfft1d Backwardd(m,g1,G);     // move to constructor?
+    Backwardd.fft(g1,G);
+    for(int i=0; i <= m; ++i)
+      F[i] *= G[i];
+    rcfft1d Forwardd(m,G,g1);     // move to constructor?
+    Forwardd.fft(F,g1);
+#else
+    cr->fft(g1);
     G=(double *) g1;
+    F=(double *) f1;
     for(int i=0; i <= m; ++i)
       G[i] *= F[i];
     rc->fft(g1);
+#endif
 
-    cr->fft(u);
-    cr->fft(v);
-    F=(double *) u;
-    G=(double *) v;
-    for(int i=0; i <= m; ++i)
-      F[i] *= G[i];
-    rc->fft(u);
 
     unsigned int stop=m-c-1;
     double ninv=1.0/n;

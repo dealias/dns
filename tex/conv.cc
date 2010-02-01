@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  if(false)
+  //  if(false)
   if(!pad) {
     convolution convolve(m);
     init(f,g);
@@ -163,7 +163,7 @@ int main(int argc, char* argv[])
     else cout << h[0] << endl;
 
     // test accuracy of convolution methods:
-#ifdef TEST    
+#ifdef TEST
     double error=0.0;
     cout << endl;
     for(unsigned int i=0; i < m; i++) 
