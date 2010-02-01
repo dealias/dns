@@ -136,9 +136,16 @@ Note: without the hermiticity condition, the backwards transform is
 u_{3\ell +r}\no=\sum_{k=-m-1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
 =\sum_{k'=1}^{m-1}\z_{m}^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
 +\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \(w_{k,r}+w_{k-m,r}\).
+=\sum_{k=0}^{m-1}\z_{m}^{\ell k} w_{k,r},
 \ee
-
+where
+$$
+\w_{k,r}=\z_N^{rk}
+\cases{
+u_0&$k=0$\cr
+u_k+u_{k-m}&$1\le k\le m-1$,\cr
+}
+$$
 
 
 \subsubsection{2D Complex to Real Transforms of 2/3 Dealiased Data}
