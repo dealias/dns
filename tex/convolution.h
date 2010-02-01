@@ -105,7 +105,6 @@ public:
     bool even=m % 2 == 0;
     if(!even) _exit(1);
     
-
     // Arrange input data
     u[0]=f0;
     v[0]=g0;
@@ -178,28 +177,28 @@ public:
     f[c]=2.0*A;
     u[c]=A+B;
     A -= B;
-
-    // FFTs, convolutions, and inverse FFTs
-    // r=-1
-    cr->fft(u);
-    cr->fft(v);
-    F=(double *) u;
-    G=(double *) v;
-    for(int i=0; i < m; ++i)
-      F[i] *= G[i];
-    rc->fft(u); // convolution calculated
-    // v is now free
-
-    cr->fft(f);
+    
     double C=gc.re;
     B=sqrt3*gc.im;
     gc=g[c];
     g[c]=2.0*C;
     v[c]=C+B;
     C -= B;
-    double *F=(double *) f;
-// four of nine transforms done out-of-place
+    
+    // FFTs, convolutions, and inverse FFTs
+    // six of nine transforms done out-of-place
+    // r=-1
+    cr->fft(u);
+    cr->fft(v);
+    double *U=(double *) u;
     double *V=(double *) v;
+    for(int i=0; i < m; ++i)
+      V[i] *= U[i];
+    rco->fft(v,U); // v is now free
+
+    cr->fft(f);
+    double *F=(double *) f;
+    V=(double *) v;
     cro->fft(g,V);
     for(int i=0; i < m; ++i)
       V[i] *= F[i];
@@ -213,25 +212,25 @@ public:
     f[c]=fc;
     Complex *f1=f+cm1;
     Complex *g1=g+cm1;
-    cr->fft(f1);
+    G=(double *) g;
     g[cm1]=C;
     g[c]=gc;
 
-    F=(double *) f1;
-    G=(double *) v;
-    cro->fft(g1,G);
+    V=(double *) v;
+    cro->fft(g1,V);
+    cro->fft(f1,G);
     for(int i=0; i < m; ++i)
-      F[i] *= G[i];
-    rco->fft(F,g1);
+      G[i] *= V[i];
+    rco->fft(G,v);
 
     unsigned int stop=m-c-1;
     double ninv=1.0/n;
-    f[0]=(f[0].re+g1[0].re+u[0].re)*ninv;
+    f[0]=(f[0].re+v[0].re+u[0].re)*ninv;
     Re=Cos*ninv;
     Im=Sin*ninv;
     for(unsigned k=1; k < stop; ++k) {
       Complex *p=f+k;
-      Complex *q=g1+k;
+      Complex *q=v+k;
       Complex *r=u+k;
       Complex *s=f+m-k;
       double f0re=p->re*ninv;
@@ -253,13 +252,13 @@ public:
     
     Complex Zetak=Complex(Re,Im);
     Complex f0k=overlap0*ninv;
-    Complex f1k=conj(Zetak)*g1[stop];
+    Complex f1k=conj(Zetak)*v[stop];
     Complex f2k=Zetak*u[cm1];
     f[cm1]=f0k+f1k+f2k;
     static const Complex zeta3(-0.5,hsqrt3);
     f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
 
-    if(even) f[c]=(overlap1-g1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
+    if(even) f[c]=(overlap1-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
