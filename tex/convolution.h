@@ -186,7 +186,7 @@ public:
     cr->fft(v);
     F=(double *) u;
     G=(double *) v;
-    for(int i=0; i <= m; ++i)
+    for(int i=0; i < m; ++i)
       F[i] *= G[i];
     rc->fft(u); // convolution calculated
     // v is now free
@@ -206,13 +206,13 @@ public:
     double *V=(double *) v;
     double *G=(double *) g;
     cro->fft(g,V);
-    for(int i=0; i <= m; ++i)
+    for(int i=0; i < m; ++i)
       G[i] = F[i]*V[i];
     rco->fft(G,f);
 #else
     double *G=(double *) g;
     cr->fft(g);
-    for(int i=0; i <= m; ++i)
+    for(int i=0; i < m; ++i)
       F[i] *= G[i];
     rc->fft(f);
 #endif
@@ -233,14 +233,14 @@ public:
     F=(double *) f1;
     G=(double *) v;
     cro->fft(g1,G);
-    for(int i=0; i <= m; ++i)
+    for(int i=0; i < m; ++i)
       F[i] *= G[i];
     rco->fft(F,g1);
 #else
     cr->fft(g1);
     G=(double *) g1;
     F=(double *) f1;
-    for(int i=0; i <= m; ++i)
+    for(int i=0; i < m; ++i)
       G[i] *= F[i];
     rc->fft(g1);
 #endif
