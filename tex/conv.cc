@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  //  if(false)
+  if(false)
   if(!pad) {
     convolution convolve(m);
     init(f,g);

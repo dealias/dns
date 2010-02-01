@@ -41,12 +41,14 @@ public:
     c=m/2;
     double arg=2.0*M_PI/n;
     zeta=Complex(cos(arg),sin(arg));
-    double *g;
 
     rc=new rcfft1d(m,f);
     cr=new crfft1d(m,f);
+    
+    double *g=FFTWdouble(m);
     rco=new rcfft1d(m,g,f);
-    cro=new crfft1d(m,f,g); // FIXME
+    cro=new crfft1d(m,f,g);
+    FFTWdelete(g);
   }
   
 // Need destructor  
@@ -203,11 +205,7 @@ public:
     // two of three transforms done out-of-place
     double *V=(double *) v;
     double *G=(double *) g;
-    { // problem code.
-      crfft1d Backward(m,g,V);     // move to constructor?
-      Backward.fft(g,V);
-      //cro->fft(g,V); // FIXME: why won't this work?
-    }
+    cro->fft(g,V);
     for(int i=0; i <= m; ++i)
       G[i] = F[i]*V[i];
     rco->fft(G,f);
@@ -234,11 +232,7 @@ public:
     // two of three transforms out-of-place
     F=(double *) f1;
     G=(double *) v;
-    { //problem code
-      crfft1d Backwardd(m,g1,G);     // move to constructor?
-      Backwardd.fft(g1,G);
-      //cro->fft(g1,G); // FIXME: why won't this work?
-    }
+    cro->fft(g1,G);
     for(int i=0; i <= m; ++i)
       F[i] *= G[i];
     rco->fft(F,g1);
