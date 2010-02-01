@@ -12,8 +12,8 @@ protected:
   unsigned int n;
   unsigned int m;
   unsigned int c;
-  rcfft1d *rc;
-  crfft1d *cr;
+  rcfft1d *rc, *rco;
+  crfft1d *cr, *cro;
   double *F,*G;
   Complex zeta;
 public:  
@@ -41,9 +41,12 @@ public:
     c=m/2;
     double arg=2.0*M_PI/n;
     zeta=Complex(cos(arg),sin(arg));
+    double *g;
 
     rc=new rcfft1d(m,f);
     cr=new crfft1d(m,f);
+    rco=new rcfft1d(m,g,f);
+    cro=new crfft1d(m,f,g); // FIXME
   }
   
 // Need destructor  
@@ -198,14 +201,16 @@ public:
 #define _sneaky 1
 #ifdef _sneaky
     // two of three transforms done out-of-place
-    double *G=(double *) v;
-    double *Gd=(double *) g;
-    crfft1d Backward(m,g,G);     // move to constructor?
-    Backward.fft(g,G);
+    double *V=(double *) v;
+    double *G=(double *) g;
+    { // problem code.
+      crfft1d Backward(m,g,V);     // move to constructor?
+      Backward.fft(g,V);
+      //cro->fft(g,V); // FIXME: why won't this work?
+    }
     for(int i=0; i <= m; ++i)
-      Gd[i] = F[i]*G[i];
-    rcfft1d Forward(m,Gd,f);     // move to constructor?
-    Forward.fft(Gd,f);
+      G[i] = F[i]*V[i];
+    rco->fft(G,f);
 #else
     double *G=(double *) g;
     cr->fft(g);
@@ -229,12 +234,14 @@ public:
     // two of three transforms out-of-place
     F=(double *) f1;
     G=(double *) v;
-    crfft1d Backwardd(m,g1,G);     // move to constructor?
-    Backwardd.fft(g1,G);
+    { //problem code
+      crfft1d Backwardd(m,g1,G);     // move to constructor?
+      Backwardd.fft(g1,G);
+      //cro->fft(g1,G); // FIXME: why won't this work?
+    }
     for(int i=0; i <= m; ++i)
       F[i] *= G[i];
-    rcfft1d Forwardd(m,G,g1);     // move to constructor?
-    Forwardd.fft(F,g1);
+    rco->fft(F,g1);
 #else
     cr->fft(g1);
     G=(double *) g1;
