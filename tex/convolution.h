@@ -197,15 +197,15 @@ public:
     double *F=(double *) f;
 #define _sneaky 1
 #ifdef _sneaky
-    // one of three transforms done out-of-place
+    // two of three transforms done out-of-place
     double *G=(double *) v;
+    double *Gd=(double *) g;
     crfft1d Backward(m,g,G);     // move to constructor?
     Backward.fft(g,G);
     for(int i=0; i <= m; ++i)
-      F[i] *= G[i];
-    //    rcfft1d Forward(m,G,f);     // move to constructor?
-    //    Forward.fft(G,f);
-    rc->fft(f);
+      Gd[i] = F[i]*G[i];
+    rcfft1d Forward(m,Gd,f);     // move to constructor?
+    Forward.fft(Gd,f);
 #else
     double *G=(double *) g;
     cr->fft(g);
