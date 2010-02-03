@@ -2,6 +2,8 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
+#define TEST 1
+
 // For FFTW_NO_SIMD:
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math cconv.cc fftw++.cc -lfftw3 -march=native
 //
@@ -128,7 +130,7 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  if(false) {
+  if(true) {
     cconvolution convolve(m,f);
     init(f,g);
     h=FFTWComplex(n);

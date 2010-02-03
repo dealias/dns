@@ -46,10 +46,11 @@ public:
 
     rc=new rcfft1d(m,u);
     cr=new crfft1d(m,u);
-    
+
     double *U=(double *) u;
     rco=new rcfft1d(m,U,v);
     cro=new crfft1d(m,v,U);
+
   }
   
 // Need destructor  
@@ -282,29 +283,35 @@ public:
 
 };
 
+
+// calculates a the convolution of two complex, non-Hermitian vectors
 class cconvolution {
-protected:
+ protected:
   unsigned int n;
   unsigned int m;
-  fft1d *Backwards;
-  fft1d *Forwards;
+  fft1d *Backwards, *Backwardso;
+  fft1d *Forwards, *Forwardso;
   double c,s;
-public:  
-  cconvolution(unsigned int n, unsigned int m, Complex *f) :
-    n(n), m(m) {
+ public:  
+ cconvolution(unsigned int n, unsigned int m, Complex *f) :
+  n(n), m(m) {
     Backwards=new fft1d(n,1,f);
     Forwards=new fft1d(n,-1,f);
   }
   
-  cconvolution(unsigned int m, Complex *f) : m(m) {
+ cconvolution(unsigned int m, Complex *f) : m(m) {
     n=2*m;
-    
     double arg=2.0*M_PI/n;
     c=cos(arg);
     s=sin(arg);
 
     Backwards=new fft1d(m,-1,f);
     Forwards=new fft1d(m,1,f);
+    
+    Complex *G=(Complex *)FFTWComplex(m);
+    Backwardso=new fft1d(m,-1,f,G);
+    Forwardso=new fft1d(m,1,G,f);
+    FFTWdelete(G);
   }
   
 // Need destructor  
@@ -355,29 +362,25 @@ public:
     
     Backwards->fft(u);
     Backwards->fft(v);
-    
     for(unsigned int k=0; k < m; ++k) {
-      Complex *p=u+k;
-      Complex uk=*p;
-      Complex vk=*(v+k);
+      Complex uk=*(u+k);
+      Complex *p=v+k;
+      Complex vk=*p;
       p->re=uk.re*vk.re-uk.im*vk.im;
       p->im=uk.re*vk.im+uk.im*vk.re;
     }
-    
-    Forwards->fft(u);
-    
-    Backwards->fft(f);
-    Backwards->fft(g);
-    
+    Forwardso->fft(v,u);
+
+    Backwardso->fft(f,v);
+    Backwardso->fft(g,f);
     for(unsigned int k=0; k < m; ++k) {
-      Complex *p=f+k;
-      Complex fk=*p;
-      Complex gk=*(g+k);
-      p->re=fk.re*gk.re-fk.im*gk.im;
-      p->im=fk.re*gk.im+fk.im*gk.re;
+      Complex *p=v+k;
+      Complex vk=*p;
+      Complex fk=*(f+k);
+      p->re=vk.re*fk.re-vk.im*fk.im;
+      p->im=vk.re*fk.im+vk.im*fk.re;
     }
-    
-    Forwards->fft(f);
+    Forwardso->fft(v,f);
     
     double ninv=1.0/n;
     re=ninv;
