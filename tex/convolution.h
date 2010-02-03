@@ -353,10 +353,21 @@ public:
       re=temp;
     }  
     
-    Backwards->fft(f);
     Backwards->fft(u);
-    Backwards->fft(g);
     Backwards->fft(v);
+    
+    for(unsigned int k=0; k < m; ++k) {
+      Complex *p=u+k;
+      Complex uk=*p;
+      Complex vk=*(v+k);
+      p->re=uk.re*vk.re-uk.im*vk.im;
+      p->im=uk.re*vk.im+uk.im*vk.re;
+    }
+    
+    Forwards->fft(u);
+    
+    Backwards->fft(f);
+    Backwards->fft(g);
     
     for(unsigned int k=0; k < m; ++k) {
       Complex *p=f+k;
@@ -367,16 +378,6 @@ public:
     }
     
     Forwards->fft(f);
-    
-    for(unsigned int k=0; k < m; ++k) {
-      Complex *p=u+k;
-      Complex fk=*p;
-      Complex gk=*(v+k);
-      p->re=fk.re*gk.re-fk.im*gk.im;
-      p->im=fk.re*gk.im+fk.im*gk.re;
-    }
-    
-    Forwards->fft(u);
     
     double ninv=1.0/n;
     re=ninv;
