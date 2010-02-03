@@ -363,9 +363,9 @@ class cconvolution {
     Backwards->fft(u);
     Backwards->fft(v);
     for(unsigned int k=0; k < m; ++k) {
-      Complex uk=*(u+k);
       Complex *p=v+k;
       Complex vk=*p;
+      Complex uk=*(u+k);
       p->re=uk.re*vk.re-uk.im*vk.im;
       p->im=uk.re*vk.im+uk.im*vk.re;
     }
