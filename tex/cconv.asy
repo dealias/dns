@@ -42,31 +42,35 @@ pair[] cfftpad(pair[] f, pair[] u, bool unscramble=true)
 
   pair Zetak=zeta;
   pair fk=f[0];
-  pair fmk=f[m];
-  u[0]=f[m]=f[0]=f[m-1];
+  int m1=m-1;
+  pair fm1=f[m1];
+  u[0]=f[0]=fm1;
   for(int k=1; k < m-1; ++k) {
+    int mk=m1+k;
+    pair fmk=f[mk];
     pair C=fk+fmk;
     pair A=Zetak*(fmk.x+zeta3c*fk.x);
     pair B=I*Zetak*(fmk.y+zeta3c*fk.y);
     Zetak *= zeta;
     fk=f[k];
-    int mk=m+k;
-    fmk=f[mk];
     f[k]=C;
-    u[k]=conj(A-B);
     f[mk]=A+B;
+    u[k]=conj(A-B);
   }
 
-  int k=m-1;
+  int k=m1;
+  int mk=m1+k;
+  pair fmk=f[mk];
   pair C=fk+fmk;
   pair A=Zetak*(fmk.x+zeta3c*fk.x);
   pair B=I*Zetak*(fmk.y+zeta3c*fk.y);
-  int mk=m+k;
   f[k]=C;
-  u[k]=conj(A-B);
   f[mk]=A+B;
+  u[k]=conj(A-B);
   
   pair[] f0=fft(f[0:m]);
+  f[m-1]=fm1;
+  
   pair[] f1=fft(f[m-1:2m-1]);
   pair[] f2=fft(u);
   
@@ -138,14 +142,12 @@ write();
 
 int m=quotient(f.length+1,2);
 assert(2m-1 == f.length);
-pair[] F=copy(f);
 
-for(int i=2m-1; i < 3m; ++i)
-  F[i]=0.0;
+int c=quotient(m,2);
+pair[] F=concat(f[m-1:2m-1],array(7,(0,0)),f[0:m-1]);
+//write(F);
 
 F=fft(F);
-for(int i=1; i < F.length; i += 2)
-  F[i] *= -1;
 
 write(F);
 write();

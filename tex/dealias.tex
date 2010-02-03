@@ -112,7 +112,7 @@ has $2m-1$ elements.
 
 The backwards (complex-to-real) transform becomes, on letting $k'=m+k$,
 \bec
-u_{3\ell +r}\no=\sum_{k=-m-1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
+u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
 =\sum_{k'=1}^{m-1}\z_{m}^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
 +\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
 =\sum_{k=1}^{m-1}\z_{m}^{\ell k} \z_N^{-r(m-k)} \hat u_{m-k}^*
@@ -133,7 +133,7 @@ The forwards transform becomes
 
 Note: without the hermiticity condition, the backwards transform is
 \bec
-u_{3\ell +r}\no=\sum_{k=-m-1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
+u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
 =\sum_{k'=1}^{m-1}\z_{m}^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
 +\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
 =\sum_{k=0}^{m-1}\z_{m}^{\ell k} w_{k,r},
