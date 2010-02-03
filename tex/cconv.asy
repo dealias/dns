@@ -92,6 +92,40 @@ pair[] cfftpad(pair[] f, pair[] u, bool unscramble=true)
   return h;
 }
 
+pair[] cfftpadinv(pair[] f, bool unscramble=true)
+{
+  int n=f.length;
+  int m=quotient(n,3);
+  
+  assert(n == 3m);
+
+  assert(!unscramble); // Not yet implemented
+
+  pair zeta=exp(2*pi*I/n);
+
+  pair[] f0=fft(f[0:m],-1);
+  pair[] f1=fft(f[m:2m],-1);
+  pair[] f2=fft(f[2m:n],-1);
+
+  pair zeta3=(-0.5,0.5*sqrt(3.0));
+
+  pair[] F=new pair[2m-1];
+
+  real ninv=1/n;
+  F[m-1]=(f0[0]+f1[0]+f2[0])*ninv;
+  pair Zetak=zeta*ninv;
+  for(int k=1; k < m; ++k) {
+    pair f0k=f0[k]*ninv;
+    pair f1k=conj(Zetak)*f1[k];
+    pair f2k=Zetak*f2[k];
+    Zetak *= zeta;
+    F[k-1]=f0k+zeta3*f1k+conj(zeta3)*f2k;
+    F[m+k-1]=f0k+f1k+f2k;
+  }
+
+  return F;
+}
+
 pair[] convolve(pair[] F, pair[] G)
 {
   int p=1,q=2;
@@ -147,9 +181,9 @@ int c=quotient(m,2);
 pair[] F=concat(f[m-1:2m-1],array(7,(0,0)),f[0:m-1]);
 //write(F);
 
-F=fft(F);
+//F=fft(F);
 
-write(F);
+//write(F);
 write();
 
 
@@ -157,5 +191,8 @@ int m=quotient(f.length+1,2);
 pair[] u=new pair[m];
 
 int p=2,q=3;
-write(cfftpad(f,u));
+//write(cfftpad(f,u));
+//write();
+f=copy(d);
+write(cfftpadinv(cfftpad(f,u,false),false));
 

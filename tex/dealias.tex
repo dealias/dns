@@ -146,6 +146,13 @@ w_{k,r}=
 \z_N^{rk}(\hat u_k+\z_3^{-r}\hat u_{k-m})&if $1\le k\le m-1$.\cr
 }
 $$
+and the forwards transform is
+\be
+\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
+\qquad k\no =-m+1,\ldots,m-1.
+\ee
+
 
 
 \subsubsection{2D Complex to Real Transforms of 2/3 Dealiased Data}

@@ -15,7 +15,7 @@ using namespace std;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=1000;
+unsigned int N=10000;
   
 Complex d[]={Complex(-5,3),Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
 
@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  if(true) {
+  if(false) {
     cconvolution convolve(m,f);
     init(f,g);
     h=FFTWComplex(n);
