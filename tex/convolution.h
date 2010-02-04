@@ -7,6 +7,9 @@
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
+static const double sqrt3=sqrt(3.0);
+static const double hsqrt3=0.5*sqrt3;
+
 class convolution {
 protected:
   unsigned int n;
@@ -121,9 +124,6 @@ public:
     double gmkim=gmk.im;
     g[m1]=g0;
     
-    static const double sqrt3=sqrt(3.0);
-    static const double hsqrt3=0.5*sqrt3;
-
     double Re=Cos;
     double Im=-Sin;
     
@@ -137,8 +137,8 @@ public:
       im=hsqrt3*fmkim;
       p->re += fmkre;
       p->im -= fmkim;
-      double Bim=Re*re-Im*im;
       double Bre=-Re*im-Im*re;
+      double Bim=Re*re-Im*im;
       p=u+k;
       p->re=Are-Bre;
       p->im=Aim-Bim;
@@ -157,8 +157,8 @@ public:
       im=hsqrt3*gmkim;
       p->re += gmkre;
       p->im -= gmkim;
-      Bim=Re*re-Im*im;
       Bre=-Re*im-Im*re;
+      Bim=Re*re-Im*im;
       p=v+k;
       p->re=Are-Bre;
       p->im=Aim-Bim;
@@ -229,11 +229,12 @@ public:
     f[0]=(f[0].re+v[0].re+u[0].re)*ninv;
     Re=Cos*ninv;
     Im=Sin*ninv;
+    Complex *fm=f+m;
     for(unsigned k=1; k < stop; ++k) {
       Complex *p=f+k;
       Complex *q=v+k;
       Complex *r=u+k;
-      Complex *s=f+m-k;
+      Complex *s=fm-k;
       double f0re=p->re*ninv;
       double f0im=p->im*ninv;
       double f1re=Re*q->re+Im*q->im;
@@ -707,7 +708,7 @@ class ffttwothirds {
   unsigned int dist;
   fft1d *Backwards;
   fft1d *Forwards;
-  double c,s;
+  double Cos,Sin;
   Complex zeta;
 
 public:  
@@ -715,8 +716,8 @@ public:
                unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
     n=3*m;
     double arg=2.0*M_PI/n;
-    c=cos(arg);
-    s=sin(arg);
+    Cos=cos(arg);
+    Sin=sin(arg);
     zeta=Complex(cos(arg),sin(arg));
     
     Backwards=new fft1d(m,1,f);
@@ -724,36 +725,53 @@ public:
   }
   
   void backwards(Complex *f, Complex *u) {
-    double re=1.0;
-    double im=0.0;
+    double Re=Cos;
+    double Im=Sin;
 //    unsigned int stop=m*stride;
-    static Complex zeta3c(-0.5,-0.5*sqrt(3.0));
-    Complex Zetak=zeta;
-    Complex fk=f[0];
+    Complex fk0=f[0];
+    double fkre=fk0.re;
+    double fkim=fk0.im;
     unsigned int m1=m-1;
     Complex fm1=f[m1];
     u[0]=f[0]=fm1;
     Complex I(0,1);
     for(unsigned int k=1; k < m-1; ++k) {
       unsigned int mk=m1+k;
-      Complex fmk=f[mk];
-      Complex C=fk+fmk;
-      Complex A=Zetak*(fmk.re+zeta3c*fk.re);
-      Complex B=I*Zetak*(fmk.im+zeta3c*fk.im);
-      Zetak *= zeta;
-      fk=f[k];
-      f[k]=C;
-      f[mk]=A+B;
-      u[k]=conj(A-B);
+      Complex *p=f+mk;
+      double fmkre=p->re;
+      double re=-0.5*fkre+fmkre;
+      double im=-hsqrt3*fkre;
+      double Are=Re*re-Im*im;
+      double Aim=Re*im+Im*re;
+      re=p->im-0.5*fkim;
+      im=-hsqrt3*fkim;
+      double Bre=-Re*im-Im*re;
+      double Bim=Re*re-Im*im;
+      re=fkre+fmkre;
+      im=fkim+p->im;
+      p->re=Are+Bre;
+      p->im=Aim+Bim;
+      p=f+k;
+      fkre=p->re;
+      fkim=p->im;
+      p->re=re;
+      p->im=im;
+      p=u+k;
+      p->re=Are-Bre;
+      p->im=Bim-Aim;
+      double temp=Re*Cos-Im*Sin;
+      Im=Re*Sin+Im*Cos;
+      Re=temp;
     }
 
     unsigned int k=m1;
     unsigned int mk=m1+k;
     Complex fmk=f[mk];
-    Complex C=fk+fmk;
-    Complex A=Zetak*(fmk.re+zeta3c*fk.re);
-    Complex B=I*Zetak*(fmk.im+zeta3c*fk.im);
-    f[k]=C;
+    Complex Zetak=Complex(Re,Im);
+    static Complex zeta3c(-0.5,-hsqrt3);
+    Complex A=Zetak*(fmk.re+zeta3c*fkre);
+    Complex B=I*Zetak*(fmk.im+zeta3c*fkim);
+    f[k]=Complex(fkre,fkim)+fmk;
     f[mk]=A+B;
     u[k]=conj(A-B);
   
@@ -765,27 +783,40 @@ public:
   }
   
   void forwards(Complex *f, Complex *u) {
-    Forwards->fft(f+m-1);
-    Complex fm1=f[m-1];
-    f[m-1]=u[m];
+    unsigned int m1=m-1;
+    Complex *fm1=f+m1;
+    Forwards->fft(fm1);
+    Complex overlap0=*fm1;
+    *fm1=u[m];
     Forwards->fft(f);
     Forwards->fft(u);
-    static Complex zeta3c(-0.5,-0.5*sqrt(3.0));
 
     double ninv=1.0/n;
-    unsigned int m1=m-1;
-    fm1=(f[0]+fm1+u[0])*ninv;
-    Complex Zetak=zeta*ninv;
-  
+    overlap0=(f[0]+overlap0+u[0])*ninv;
+    double Re=Cos*ninv;
+    double Im=Sin*ninv;
     for(int k=1; k < m; ++k) {
-      Complex f0k=f[k]*ninv;
-      Complex f1k=conj(Zetak)*f[m1+k];
-      Complex f2k=Zetak*u[k];
-      Zetak *= zeta;
-      f[k-1]=f0k+conj(zeta3c)*f1k+zeta3c*f2k;
-      f[m1+k]=f0k+f1k+f2k;
+      Complex *p=f+k;
+      Complex *q=fm1+k;
+      Complex *r=u+k;
+      double f0re=p->re*ninv;
+      double f0im=p->im*ninv;
+      double f1re=Re*q->re+Im*q->im;
+      double f2re=Re*r->re-Im*r->im;
+      double sre=f1re+f2re;
+      double f1im=Re*q->im-Im*q->re;
+      double f2im=Re*r->im+Im*r->re;
+      double sim=f1im+f2im;
+      --p;
+      p->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
+      p->im=f0im-0.5*sim+hsqrt3*(f1re-f2re);
+      q->re=f0re+sre;
+      q->im=f0im+sim;
+      double temp=Re*Cos-Im*Sin;
+      Im=Re*Sin+Im*Cos;
+      Re=temp;
     }
-    f[m1]=fm1;
+    f[m1]=overlap0;
   }
 };
   

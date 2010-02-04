@@ -91,13 +91,9 @@ int main(int argc, char* argv[])
     ffttwothirds fftpad(m,1,1,f);
     fftpad.backwards(f,u);
     fftpad.forwards(f,u);
-    cout << "HI" << endl;
+
     for(int i=0; i < 2*m-1; ++i)
       cout << f[i] << endl;
-    cout << "u" << endl;
-    for(int i=0; i <= m; ++i)
-      cout << u[i] << endl;
-    cout << "BYE" << endl;
   }
   
   double sum=0.0;
