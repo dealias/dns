@@ -343,6 +343,7 @@ class cconvolution {
   
   // Note: input arrays f and g are destroyed.
   // u and v are temporary work arrays each of size m.
+  // 1/2 padding
   void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
     double re=1.0;
     double im=0.0;
@@ -600,16 +601,17 @@ public:
 
 // Compute the scrambled virtual m-padded complex Fourier transform of M complex
 // vectors, each of length m.
-// Before calling fft(), the arrays in and out (which may coincide) must be
-// allocated as Complex[M*m].
+// Before calling fft(), the arrays in and out (which may coincide), along
+// with the array u, must be allocated as Complex[M*m].
 //
 // In-place usage:
 //
-//   ffthalf Backward(m,M,stride);
-//   Backward.fft(in);
+//   ffthalf fftpad(m,M,stride);
+//   fftpad.backwards(in,u);
+//   fftpad.forwards(in,u);
 //
 // Notes:
-//   stride is the spacing between the elements of each Complex vector;
+//   stride is the spacing between the elements of each Complex vector.
 //
 class ffthalf {
   unsigned int n;
@@ -679,6 +681,111 @@ public:
       im=re*s+im*c;
       re=temp;
     }
+  }
+};
+  
+// Compute the scrambled virtual m-padded complex Fourier transform of M complex
+// vectors, each of length 2m-1.
+// Before calling fft(), the arrays in and out (which may coincide)
+// must be allocated as Complex[M*(2m-1)].
+// The array u must be allocated as Complex[M*(m+1)].
+//
+// In-place usage:
+//
+//   ffttwothirds fftpad(m,M,stride);
+//   fftpad.backwards(in,u);
+//   fftpad.forwards(in,u);
+//
+// Notes:
+//   stride is the spacing between the elements of each Complex vector.
+//
+class ffttwothirds {
+  unsigned int n;
+  unsigned int m;
+  unsigned int M;
+  unsigned int stride;
+  unsigned int dist;
+  fft1d *Backwards;
+  fft1d *Forwards;
+  double c,s;
+  Complex zeta;
+
+public:  
+  ffttwothirds(unsigned int m, unsigned int M,
+               unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
+    n=3*m;
+    double arg=2.0*M_PI/n;
+    c=cos(arg);
+    s=sin(arg);
+    zeta=Complex(cos(arg),sin(arg));
+    
+    Backwards=new fft1d(m,1,f);
+    Forwards=new fft1d(m,-1,f);
+  }
+  
+  void backwards(Complex *f, Complex *u) {
+    double re=1.0;
+    double im=0.0;
+//    unsigned int stop=m*stride;
+    static Complex zeta3c(-0.5,-0.5*sqrt(3.0));
+    Complex Zetak=zeta;
+    Complex fk=f[0];
+    unsigned int m1=m-1;
+    Complex fm1=f[m1];
+    u[0]=f[0]=fm1;
+    Complex I(0,1);
+    for(unsigned int k=1; k < m-1; ++k) {
+      unsigned int mk=m1+k;
+      Complex fmk=f[mk];
+      Complex C=fk+fmk;
+      Complex A=Zetak*(fmk.re+zeta3c*fk.re);
+      Complex B=I*Zetak*(fmk.im+zeta3c*fk.im);
+      Zetak *= zeta;
+      fk=f[k];
+      f[k]=C;
+      f[mk]=A+B;
+      u[k]=conj(A-B);
+    }
+
+    unsigned int k=m1;
+    unsigned int mk=m1+k;
+    Complex fmk=f[mk];
+    Complex C=fk+fmk;
+    Complex A=Zetak*(fmk.re+zeta3c*fk.re);
+    Complex B=I*Zetak*(fmk.im+zeta3c*fk.im);
+    f[k]=C;
+    f[mk]=A+B;
+    u[k]=conj(A-B);
+  
+    Backwards->fft(f);
+    u[m]=f[m-1]; // Store extra value here.
+    f[m-1]=fm1;
+    Backwards->fft(f+m-1);
+    Backwards->fft(u);
+  }
+  
+  void forwards(Complex *f, Complex *u) {
+    Forwards->fft(f+m-1);
+    Complex fm1=f[m-1];
+    f[m-1]=u[m];
+    Forwards->fft(f);
+    Forwards->fft(u);
+    static Complex zeta3c(-0.5,-0.5*sqrt(3.0));
+
+    double ninv=1.0/n;
+    unsigned int m1=m-1;
+    fm1=(f[0]+fm1+u[0])*ninv;
+    Complex Zetak=zeta*ninv;
+  
+    for(int k=1; k < m; ++k) {
+      Complex f0k=f[k]*ninv;
+      Complex f1k=conj(Zetak)*f[m1+k];
+      Complex f2k=Zetak*u[k];
+      Zetak *= zeta;
+      f[k-1]=f0k+conj(zeta3c)*f1k+zeta3c*f2k;
+      f[m1+k]=f0k+f1k+f2k;
+    }
+    f[m1]=fm1;
   }
 };
   
