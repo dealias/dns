@@ -39,10 +39,10 @@ inline double seconds()
 
 inline void init(Complex *f, Complex *g) 
 {
-//  for(unsigned int i=0; i < m; i++) f[i]=d[i];
-//  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
-  for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
+  for(unsigned int i=0; i < m; i++) f[i]=d[i];
+  for(unsigned int i=0; i < m; i++) g[i]=d[i];
+//  for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
+//  for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
 }
 
 int main(int argc, char* argv[])
@@ -83,6 +83,23 @@ int main(int argc, char* argv[])
     offset += seconds();
   }
 
+  {
+    init(f,g);
+    int m0=m;
+    int m=(m0+1)/2;
+    Complex *u=FFTWComplex(m+1);
+    ffttwothirds fftpad(m,1,1,f);
+    fftpad.backwards(f,u);
+    fftpad.forwards(f,u);
+    cout << "HI" << endl;
+    for(int i=0; i < 2*m-1; ++i)
+      cout << f[i] << endl;
+    cout << "u" << endl;
+    for(int i=0; i <= m; ++i)
+      cout << u[i] << endl;
+    cout << "BYE" << endl;
+  }
+  
   double sum=0.0;
   if(!pad) {
     Complex *u=FFTWComplex(m);

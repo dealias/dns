@@ -35,7 +35,6 @@ pair[] cfftpad(pair[] f, pair[] u, bool unscramble=true)
   int m=quotient(f.length+1,2);
   assert(2m-1 == f.length);
   int n=3*m;
-  bool even=m % 2 == 0;
 
   pair zeta=exp(2*pi*I/n);
   pair zeta3c=(-0.5,-0.5*sqrt(3.0));
@@ -194,5 +193,11 @@ int p=2,q=3;
 //write(cfftpad(f,u));
 //write();
 f=copy(d);
-write(cfftpadinv(cfftpad(f,u,false),false));
+write(f);
+
+write();
+
+write(cfftpad(f,u,false));
+
+//write(cfftpadinv(cfftpad(f,u,false),false));
 
