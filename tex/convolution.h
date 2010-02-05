@@ -605,8 +605,6 @@ public:
 // Before calling fft(), the arrays in and out (which may coincide), along
 // with the array u, must be allocated as Complex[M*m].
 //
-// In-place usage:
-//
 //   ffthalf fftpad(m,M,stride);
 //   fftpad.backwards(in,u);
 //   fftpad.forwards(in,u);
@@ -690,8 +688,7 @@ public:
 // Before calling fft(), the arrays in and out (which may coincide)
 // must be allocated as Complex[M*(2m-1)].
 // The array u must be allocated as Complex[M*(m+1)].
-//
-// In-place usage:
+// The array work must be allocated as Complex[M].
 //
 //   ffttwothirds fftpad(m,M,stride);
 //   fftpad.backwards(in,u);
@@ -706,79 +703,93 @@ class ffttwothirds {
   unsigned int M;
   unsigned int stride;
   unsigned int dist;
-  fft1d *Backwards;
-  fft1d *Forwards;
+  mfft1d *Backwards;
+  mfft1d *Forwards;
   double Cos,Sin;
   Complex zeta;
-
 public:  
-  ffttwothirds(unsigned int m, unsigned int M,
-               unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
+  ffttwothirds(unsigned int m, unsigned int M, unsigned int stride,
+               Complex *f) : m(m), M(M), stride(stride) {
     n=3*m;
     double arg=2.0*M_PI/n;
     Cos=cos(arg);
     Sin=sin(arg);
     zeta=Complex(cos(arg),sin(arg));
     
-    Backwards=new fft1d(m,1,f);
-    Forwards=new fft1d(m,-1,f);
+    Backwards=new mfft1d(m,1,M,stride,1,f);
+    Forwards=new mfft1d(m,-1,M,stride,1,f);
   }
   
   void backwards(Complex *f, Complex *u) {
     double Re=Cos;
     double Im=Sin;
-//    unsigned int stop=m*stride;
     Complex fk0=f[0];
     double fkre=fk0.re;
     double fkim=fk0.im;
     unsigned int m1=m-1;
-    Complex fm1=f[m1];
-    u[0]=f[0]=fm1;
-    Complex I(0,1);
-    for(unsigned int k=1; k < m-1; ++k) {
+    unsigned int m1stride=m1*stride;
+    Complex *fm1stride=f+m1stride;
+    for(unsigned int i=0; i < M; ++i) {
+      u[i]=f[i]=fm1stride[i];
+    }
+    
+    unsigned int stop=m1stride;
+    for(unsigned int k=stride; k < stop; k += stride) {
+      Complex *uk=u+k;
+      Complex *fk=f+k;
       unsigned int mk=m1+k;
-      Complex *p=f+mk;
-      double fmkre=p->re;
-      double re=-0.5*fkre+fmkre;
-      double im=-hsqrt3*fkre;
-      double Are=Re*re-Im*im;
-      double Aim=Re*im+Im*re;
-      re=p->im-0.5*fkim;
-      im=-hsqrt3*fkim;
-      double Bre=-Re*im-Im*re;
-      double Bim=Re*re-Im*im;
-      re=fkre+fmkre;
-      im=fkim+p->im;
-      p->re=Are+Bre;
-      p->im=Aim+Bim;
-      p=f+k;
-      fkre=p->re;
-      fkim=p->im;
-      p->re=re;
-      p->im=im;
-      p=u+k;
-      p->re=Are-Bre;
-      p->im=Bim-Aim;
+      Complex *fmk=f+mk;
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fmk+i;
+        double fmkre=p->re;
+        double re=-0.5*fkre+fmkre;
+        double im=-hsqrt3*fkre;
+        double Are=Re*re-Im*im;
+        double Aim=Re*im+Im*re;
+        re=p->im-0.5*fkim;
+        im=-hsqrt3*fkim;
+        double Bre=-Re*im-Im*re;
+        double Bim=Re*re-Im*im;
+        re=fkre+fmkre;
+        im=fkim+p->im;
+        p->re=Are+Bre;
+        p->im=Aim+Bim;
+        p=fk+i;
+        fkre=p->re;
+        fkim=p->im;
+        p->re=re;
+        p->im=im;
+        p=uk+i;
+        p->re=Are-Bre;
+        p->im=Bim-Aim;
+      }
       double temp=Re*Cos-Im*Sin;
       Im=Re*Sin+Im*Cos;
       Re=temp;
     }
-
-    unsigned int k=m1;
-    unsigned int mk=m1+k;
-    Complex fmk=f[mk];
-    Complex Zetak=Complex(Re,Im);
-    static Complex zeta3c(-0.5,-hsqrt3);
-    Complex A=Zetak*(fmk.re+zeta3c*fkre);
-    Complex B=I*Zetak*(fmk.im+zeta3c*fkim);
-    f[k]=Complex(fkre,fkim)+fmk;
-    f[mk]=A+B;
-    u[k]=conj(A-B);
-  
+      
+    Complex *uk=u+m1stride;
+    Complex *fk=fm1stride;
+    unsigned int mk=m1+m1stride;
+    Complex *p=f+mk;
+    for(unsigned int i=0; i < M; ++i) {
+      Complex fmk=p[i];
+      Complex Zetak=Complex(Re,Im);
+      static Complex zeta3c(-0.5,-hsqrt3);
+      Complex A=Zetak*(fmk.re+zeta3c*fkre);
+      Complex B=Complex(0,1)*Zetak*(fmk.im+zeta3c*fkim);
+      f[m1stride+i]=Complex(fkre,fkim)+fmk;
+      f[mk+i]=A+B;
+      u[m1stride+i]=conj(A-B);
+    }
+      
     Backwards->fft(f);
-    u[m]=f[m-1]; // Store extra value here.
-    f[m-1]=fm1;
-    Backwards->fft(f+m-1);
+    for(unsigned int i=0; i < M; ++i) {
+      u[stride*m+i]=f[stride*(m-1)+i]; // Store extra value here.
+      f[stride*(m-1)+i]=u[i];
+    }
+    
+    Backwards->fft(f+(m-1)*stride);
     Backwards->fft(u);
   }
   
@@ -802,10 +813,10 @@ public:
       double f0re=p->re*ninv;
       double f0im=p->im*ninv;
       double f1re=Re*q->re+Im*q->im;
-      double f2re=Re*r->re-Im*r->im;
-      double sre=f1re+f2re;
       double f1im=Re*q->im-Im*q->re;
+      double f2re=Re*r->re-Im*r->im;
       double f2im=Re*r->im+Im*r->re;
+      double sre=f1re+f2re;
       double sim=f1im+f2im;
       --p;
       p->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
