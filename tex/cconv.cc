@@ -84,16 +84,22 @@ int main(int argc, char* argv[])
   }
 
   {
+    int L=m;
+    Complex *f=FFTWComplex(2*L);
+    Complex *g=FFTWComplex(2*L);
     init(f,g);
-    int m0=m;
-    int m=(m0+1)/2;
-    Complex *u=FFTWComplex(m+1);
+    init(f+L,g+L);
+    int m=(L+1)/2;
+    Complex *u=FFTWComplex(2*(m+1));
     ffttwothirds fftpad(m,1,1,f);
     fftpad.backwards(f,u);
     fftpad.forwards(f,u);
 
     for(int i=0; i < 2*m-1; ++i)
       cout << f[i] << endl;
+//    cout << endl;
+//    for(int i=0; i < 2*m-1; ++i)
+//      cout << f[2*i+1] << endl;
   }
   
   double sum=0.0;

@@ -722,14 +722,11 @@ public:
   void backwards(Complex *f, Complex *u) {
     double Re=Cos;
     double Im=Sin;
-    Complex fk0=f[0];
-    double fkre=fk0.re;
-    double fkim=fk0.im;
     unsigned int m1=m-1;
     unsigned int m1stride=m1*stride;
     Complex *fm1stride=f+m1stride;
     for(unsigned int i=0; i < M; ++i)
-      u[i]=f[i]=fm1stride[i];
+      u[i]=fm1stride[i];
     
     unsigned int mstride=m*stride;
     for(unsigned int k=stride; k < mstride; k += stride) {
@@ -737,38 +734,41 @@ public:
       Complex *fk=f+k;
       Complex *fmk=f+m1stride+k;
       for(unsigned int i=0; i < M; ++i) {
+        Complex *q=f+i;
+        double fkre=q->re;
+        double fkim=q->im;
         Complex *p=fmk+i;
         double fmkre=p->re;
+        double fmkim=p->im;
         double re=-0.5*fkre+fmkre;
         double im=-hsqrt3*fkre;
         double Are=Re*re-Im*im;
         double Aim=Re*im+Im*re;
-        re=p->im-0.5*fkim;
+        re=fmkim-0.5*fkim;
         im=-hsqrt3*fkim;
         double Bre=-Re*im-Im*re;
         double Bim=Re*re-Im*im;
-        re=fkre+fmkre;
-        im=fkim+p->im;
         p->re=Are+Bre;
         p->im=Aim+Bim;
-        p=fk+i;
-        fkre=p->re;
-        fkim=p->im;
-        p->re=re;
-        p->im=im;
         p=uk+i;
         p->re=Are-Bre;
         p->im=Bim-Aim;
+        p=fk+i;
+        q->re=p->re;
+        q->im=p->im;
+        p->re=fkre+fmkre;
+        p->im=fkim+fmkim;
       }
       double temp=Re*Cos-Im*Sin;
       Im=Re*Sin+Im*Cos;
       Re=temp;
     }
-      
+    
     Backwards->fft(f);
+    Complex *umstride=u+mstride;
     for(unsigned int i=0; i < M; ++i) {
-      u[mstride+i]=fm1stride[i]; // Store extra value here.
-      f[m1stride+i]=u[i];
+      umstride[i]=fm1stride[i]; // Store extra value here.
+      fm1stride[i]=u[i];
     }
     
     Backwards->fft(fm1stride);

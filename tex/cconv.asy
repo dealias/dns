@@ -40,22 +40,21 @@ pair[] cfftpad(pair[] f, pair[] u, bool unscramble=true)
   pair zeta3c=(-0.5,-0.5*sqrt(3.0));
 
   pair Zetak=zeta;
-  pair fk=f[0];
   int m1=m-1;
-  u[0]=f[0]=f[m1];
+  u[0]=f[m1];
   for(int k=1; k < m; ++k) {
     int mk=m1+k;
     pair fmk=f[mk];
-    pair C=fk+fmk;
+    pair fk=f[0];
     pair A=Zetak*(fmk.x+zeta3c*fk.x);
     pair B=I*Zetak*(fmk.y+zeta3c*fk.y);
-    Zetak *= zeta;
-    fk=f[k];
-    f[k]=C;
     f[mk]=A+B;
     u[k]=conj(A-B);
+    Zetak *= zeta;
+    f[0]=f[k];
+    f[k]=fk+fmk;
   }
-
+  
   pair[] f0=fft(f[0:m]);
   f[m-1]=u[0];
   pair[] f1=fft(f[m-1:2m-1]);
