@@ -687,7 +687,7 @@ public:
 // vectors, each of length 2m-1.
 // Before calling fft(), the arrays in and out (which may coincide)
 // must be allocated as Complex[M*(2m-1)].
-// The array u must be allocated as Complex[M*(m+2)].
+// The array u must be allocated as Complex[M*(m+1)].
 //
 //   ffttwothirds fftpad(m,M,stride);
 //   fftpad.backwards(in,u);
@@ -776,40 +776,53 @@ public:
   }
   
   void forwards(Complex *f, Complex *u) {
-    unsigned int m1=m-1;
-    Complex *fm1=f+m1;
-    Forwards->fft(fm1);
-    u[m+1]=*fm1;
-    *fm1=u[m];
+    unsigned int m1stride=(m-1)*stride;
+    Complex *fm1stride=f+m1stride;
+    Forwards->fft(fm1stride);
+    unsigned int mstride=m1stride+stride;
+    Complex *umstride=u+mstride;
+    for(unsigned int i=0; i < M; ++i) {
+      Complex temp=umstride[i];
+      umstride[i]=fm1stride[i];
+      fm1stride[i]=temp;
+    }
+    
     Forwards->fft(f);
     Forwards->fft(u);
 
     double ninv=1.0/n;
-    u[m+1]=(u[m+1]+f[0]+u[0])*ninv;
+    for(unsigned int i=0; i < M; ++i)
+      umstride[i]=(umstride[i]+f[i]+u[i])*ninv;
     double Re=Cos*ninv;
     double Im=Sin*ninv;
-    for(int k=1; k < m; ++k) {
-      Complex *p=f+k;
-      Complex *q=fm1+k;
-      Complex *r=u+k;
-      double f0re=p->re*ninv;
-      double f0im=p->im*ninv;
-      double f1re=Re*q->re+Im*q->im;
-      double f1im=Re*q->im-Im*q->re;
-      double f2re=Re*r->re-Im*r->im;
-      double f2im=Re*r->im+Im*r->re;
-      double sre=f1re+f2re;
-      double sim=f1im+f2im;
-      --p;
-      p->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
-      p->im=f0im-0.5*sim+hsqrt3*(f1re-f2re);
-      q->re=f0re+sre;
-      q->im=f0im+sim;
+    for(unsigned int k=stride; k < mstride; k += stride) {
+      Complex *fk=f+k;
+      Complex *fm1k=fm1stride+k;
+      Complex *uk=u+k;
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fk+i;
+        Complex *q=fm1k+i;
+        Complex *r=uk+i;
+        double f0re=p->re*ninv;
+        double f0im=p->im*ninv;
+        double f1re=Re*q->re+Im*q->im;
+        double f1im=Re*q->im-Im*q->re;
+        double f2re=Re*r->re-Im*r->im;
+        double f2im=Re*r->im+Im*r->re;
+        double sre=f1re+f2re;
+        double sim=f1im+f2im;
+        p -= stride;
+        p->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
+        p->im=f0im-0.5*sim+hsqrt3*(f1re-f2re);
+        q->re=f0re+sre;
+        q->im=f0im+sim;
+      }
       double temp=Re*Cos-Im*Sin;
       Im=Re*Sin+Im*Cos;
       Re=temp;
     }
-    f[m1]=u[m+1];
+    for(unsigned int i=0; i < M; ++i)
+      fm1stride[i]=umstride[i];
   }
 };
   
