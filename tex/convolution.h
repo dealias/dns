@@ -126,7 +126,6 @@ public:
     
     double Re=Cos;
     double Im=-Sin;
-    
     for(unsigned int k=1; k < c; ++k) {
       Complex *p=f+k;
       double re=-0.5*fmkre+p->re;
@@ -720,8 +719,6 @@ public:
   }
   
   void backwards(Complex *f, Complex *u) {
-    double Re=Cos;
-    double Im=Sin;
     unsigned int m1=m-1;
     unsigned int m1stride=m1*stride;
     Complex *fm1stride=f+m1stride;
@@ -729,6 +726,8 @@ public:
       u[i]=fm1stride[i];
     
     unsigned int mstride=m*stride;
+    double Re=Cos;
+    double Im=Sin;
     for(unsigned int k=stride; k < mstride; k += stride) {
       Complex *uk=u+k;
       Complex *fk=f+k;
