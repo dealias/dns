@@ -687,8 +687,7 @@ public:
 // vectors, each of length 2m-1.
 // Before calling fft(), the arrays in and out (which may coincide)
 // must be allocated as Complex[M*(2m-1)].
-// The array u must be allocated as Complex[M*(m+1)].
-// The array work must be allocated as Complex[M].
+// The array u must be allocated as Complex[M*(m+2)].
 //
 //   ffttwothirds fftpad(m,M,stride);
 //   fftpad.backwards(in,u);
@@ -780,13 +779,13 @@ public:
     unsigned int m1=m-1;
     Complex *fm1=f+m1;
     Forwards->fft(fm1);
-    Complex overlap0=*fm1;
+    u[m+1]=*fm1;
     *fm1=u[m];
     Forwards->fft(f);
     Forwards->fft(u);
 
     double ninv=1.0/n;
-    overlap0=(f[0]+overlap0+u[0])*ninv;
+    u[m+1]=(u[m+1]+f[0]+u[0])*ninv;
     double Re=Cos*ninv;
     double Im=Sin*ninv;
     for(int k=1; k < m; ++k) {
@@ -810,7 +809,7 @@ public:
       Im=Re*Sin+Im*Cos;
       Re=temp;
     }
-    f[m1]=overlap0;
+    f[m1]=u[m+1];
   }
 };
   

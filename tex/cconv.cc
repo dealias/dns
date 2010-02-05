@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     init(f,g);
     int m0=m;
     int m=(m0+1)/2;
-    Complex *u=FFTWComplex(m+1);
+    Complex *u=FFTWComplex(m+2);
     ffttwothirds fftpad(m,1,1,f);
     fftpad.backwards(f,u);
     fftpad.forwards(f,u);
