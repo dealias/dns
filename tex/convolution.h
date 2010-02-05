@@ -729,16 +729,14 @@ public:
     unsigned int m1=m-1;
     unsigned int m1stride=m1*stride;
     Complex *fm1stride=f+m1stride;
-    for(unsigned int i=0; i < M; ++i) {
+    for(unsigned int i=0; i < M; ++i)
       u[i]=f[i]=fm1stride[i];
-    }
     
-    unsigned int stop=m1stride;
+    unsigned int stop=m*stride;
     for(unsigned int k=stride; k < stop; k += stride) {
       Complex *uk=u+k;
       Complex *fk=f+k;
-      unsigned int mk=m1+k;
-      Complex *fmk=f+mk;
+      Complex *fmk=f+m1stride+k;
       for(unsigned int i=0; i < M; ++i) {
         Complex *p=fmk+i;
         double fmkre=p->re;
@@ -768,25 +766,10 @@ public:
       Re=temp;
     }
       
-    Complex *uk=u+m1stride;
-    Complex *fk=fm1stride;
-    unsigned int mk=m1+m1stride;
-    Complex *p=f+mk;
-    for(unsigned int i=0; i < M; ++i) {
-      Complex fmk=p[i];
-      Complex Zetak=Complex(Re,Im);
-      static Complex zeta3c(-0.5,-hsqrt3);
-      Complex A=Zetak*(fmk.re+zeta3c*fkre);
-      Complex B=Complex(0,1)*Zetak*(fmk.im+zeta3c*fkim);
-      f[m1stride+i]=Complex(fkre,fkim)+fmk;
-      f[mk+i]=A+B;
-      u[m1stride+i]=conj(A-B);
-    }
-      
     Backwards->fft(f);
     for(unsigned int i=0; i < M; ++i) {
-      u[stride*m+i]=f[stride*(m-1)+i]; // Store extra value here.
-      f[stride*(m-1)+i]=u[i];
+      u[stride*m+i]=f[m1stride+i]; // Store extra value here.
+      f[m1stride+i]=u[i];
     }
     
     Backwards->fft(f+(m-1)*stride);
