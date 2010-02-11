@@ -1069,16 +1069,30 @@ public:
 // Array H[m] must be distinct from F[m] and G[m].
 
   void direct(Complex *H, Complex *F, Complex *G) {
-    for(unsigned int i=0; i < m; ++i) {
-      for(unsigned int j=0; j < m; ++j) {
+    int mx=2*m-1;
+    int my=m;
+    // TODO: Shift origin.
+    for(unsigned int i=0; i < mx; ++i) {
+      for(unsigned int j=0; j < my; ++j) {
         Complex sum=0.0;
         for(unsigned int k=0; k <= i; ++k)
           for(unsigned int p=0; p <= j; ++p)
-            sum += F[k*m+p]*G[(i-k)*m+j-p];
+            sum += F[k*my+p]*G[(i-k)*my+j-p];
+        
+        for(unsigned int k=0; k < i; ++k)
+          for(unsigned int p=j; p < my; ++p)
+            sum += F[k*my+p]*conj(G[(mx+k-i)*my+p-j]);
+          
+        for(unsigned int k=1; k <= i; ++k)
+          for(unsigned int p=0; p < my-j; ++p)
+            sum += conj(F[(mx-k)*my+p])*G[(i-k)*my+j+p];
+          
+            
         H[i*m+j]=sum;
       }
     }
   }	
+
 };
 #endif
 

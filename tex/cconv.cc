@@ -2,7 +2,7 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
-#define TEST 1
+//#define TEST 1
 
 // For FFTW_NO_SIMD:
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math cconv.cc fftw++.cc -lfftw3 -march=native
@@ -39,10 +39,10 @@ inline double seconds()
 
 inline void init(Complex *f, Complex *g) 
 {
-  for(unsigned int i=0; i < m; i++) f[i]=d[i];
-  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-//  for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
-//  for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
+//  for(unsigned int i=0; i < m; i++) f[i]=d[i];
+//  for(unsigned int i=0; i < m; i++) g[i]=d[i];
+  for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
+  for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
 }
 
 int main(int argc, char* argv[])
@@ -83,7 +83,8 @@ int main(int argc, char* argv[])
     offset += seconds();
   }
 
-  {
+  if(false) 
+    {
     int L=m;
     Complex *f=FFTWComplex(2*L);
     for(unsigned int i=0; i < L; i++) f[2*i]=d[i];
