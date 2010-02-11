@@ -604,14 +604,14 @@ public:
 // Before calling fft(), the arrays in and out (which may coincide), along
 // with the array u, must be allocated as Complex[M*m].
 //
-//   ffthalf fftpad(m,M,stride);
+//   fftpad fftpad(m,M,stride);
 //   fftpad.backwards(in,u);
 //   fftpad.forwards(in,u);
 //
 // Notes:
 //   stride is the spacing between the elements of each Complex vector.
 //
-class ffthalf {
+class fftpad {
   unsigned int n;
   unsigned int m;
   unsigned int M;
@@ -622,7 +622,7 @@ class ffthalf {
   double c,s;
 
 public:  
-  ffthalf(unsigned int m, unsigned int M,
+  fftpad(unsigned int m, unsigned int M,
           unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
     n=2*m;
     double arg=2.0*M_PI/n;
@@ -688,14 +688,14 @@ public:
 // must be allocated as Complex[M*(2m-1)].
 // The array u must be allocated as Complex[M*(m+1)].
 //
-//   ffttwothirds fftpad(m,M,stride);
+//   fft0pad fftpad(m,M,stride);
 //   fftpad.backwards(in,u);
 //   fftpad.forwards(in,u);
 //
 // Notes:
 //   stride is the spacing between the elements of each Complex vector.
 //
-class ffttwothirds {
+class fft0pad {
   unsigned int n;
   unsigned int m;
   unsigned int M;
@@ -706,7 +706,7 @@ class ffttwothirds {
   double Cos,Sin;
   Complex zeta;
 public:  
-  ffttwothirds(unsigned int m, unsigned int M, unsigned int stride,
+  fft0pad(unsigned int m, unsigned int M, unsigned int stride,
                Complex *f) : m(m), M(M), stride(stride) {
     n=3*m;
     double arg=2.0*M_PI/n;
@@ -837,7 +837,7 @@ protected:
   fft2d *Backwards;
   fft2d *Forwards;
   cconvolution *C;
-  ffthalf *fftpad;
+  fftpad *xfftpad;
   Complex *u,*v;
   Complex *work;
 public:  
@@ -860,7 +860,7 @@ public:
     u=FFTWComplex(m*m);
     v=FFTWComplex(m*m);
     work=FFTWComplex(n);
-    fftpad=new ffthalf(m,m,m,u);
+    xfftpad=new fftpad(m,m,m,u);
     C=new cconvolution(m,work);
   }
   
@@ -925,8 +925,8 @@ public:
   
   // Note: input arrays f and g are destroyed.
   void unpadded(Complex *f, Complex *g) {
-    fftpad->backwards(f,u);
-    fftpad->backwards(g,v);
+    xfftpad->backwards(f,u);
+    xfftpad->backwards(g,v);
 
     unsigned int m2=m*m;
     Complex *work2=work+m;
@@ -935,7 +935,7 @@ public:
     for(unsigned int i=0; i < m2; i += m)
       C->unpadded(u+i,v+i,work,work2);
     
-    fftpad->forwards(f,u);
+    xfftpad->forwards(f,u);
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier
@@ -973,7 +973,7 @@ protected:
   fft2d *Backwards;
   fft2d *Forwards;
   convolution *C;
-  ffttwothirds *fftpad;
+  fft0pad *xfftpad;
   Complex *u,*v;
   Complex *work;
 public:  
@@ -996,7 +996,7 @@ public:
     u=FFTWComplex(m*m);
     v=FFTWComplex(m*m);
     work=FFTWComplex(n);
-    fftpad=new ffthalf(m,m,m,u);
+    xfftpad=new fftpad(m,m,m,u);
     C=new cconvolution(m,work);
   }
   
@@ -1046,8 +1046,8 @@ public:
   
   // Note: input arrays f and g are destroyed.
   void unpadded(Complex *f, Complex *g) {
-    fftpad->backwards(f,u);
-    fftpad->backwards(g,v);
+    xfftpad->backwards(f,u);
+    xfftpad->backwards(g,v);
 
     unsigned int m2=m*m;
     Complex *work2=work+m;
@@ -1056,7 +1056,7 @@ public:
     for(unsigned int i=0; i < m2; i += m)
       C->unpadded(u+i,v+i,work,work2);
     
-    fftpad->forwards(f,u);
+    xfftpad->forwards(f,u);
   }
   
 // Compute H = F (*) G, where F and G contain the non-negative Fourier

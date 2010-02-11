@@ -27,7 +27,7 @@ pair[] rcfft(real[] f, int sign=-1)
 // Unrolled scrambled cr version for p=2, q=3
 // with n=3m; m even for now
 // f has length m, u is a work array of length m/2+1.
-real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
+real[] crfft0pad(pair[] f, pair[] u, bool unscramble=true)
 {
   int m=f.length;
   int c=quotient(m,2);
@@ -101,7 +101,7 @@ real[] fftpad(pair[] f, pair[] u, bool unscramble=true)
 // Unrolled scrambled rc version for p=2, q=3
 // with n=3m
 // f has length 3m.
-pair[] fftpadinv(real[] f, bool unscramble=true)
+pair[] rcfft0padinv(real[] f, bool unscramble=true)
 {
   assert(!unscramble); // Not yet implemented
   
@@ -313,5 +313,5 @@ write();
 f=copy(d);
 //write(f);
 //write();
-//write(fftpad(f,u));
-//write(fftpadinv(fftpad(f,u,false),false));
+//write(crfft0pad(f,u));
+write(rcfft0padinv(crfft0pad(f,u,false),false));

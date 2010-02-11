@@ -91,9 +91,9 @@ int main(int argc, char* argv[])
     for(unsigned int i=0; i < L; i++) f[2*i+1]=-d[i];
     int m=(L+1)/2;
     Complex *u=FFTWComplex(2*(m+1));
-    ffttwothirds fftpad(m,2,2,f);
-    fftpad.backwards(f,u);
-    fftpad.forwards(f,u);
+    fft0pad fft(m,2,2,f);
+    fft.backwards(f,u);
+    fft.forwards(f,u);
 
     for(int i=0; i < 2*m-1; ++i)
       cout << f[2*i] << endl;

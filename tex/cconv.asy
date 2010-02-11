@@ -30,7 +30,7 @@ pair[] convolve0(pair[] f, pair[] g)
 // f has length 2m-1 with the origin at index m
 // (i.e. physical wavenumber k=-m+1 to k=m-1).
 // u is a work array of length m.
-pair[] cfftpad(pair[] f, pair[] u, bool unscramble=true)
+pair[] fft0pad(pair[] f, pair[] u, bool unscramble=true)
 {
   int m=quotient(f.length+1,2);
   assert(2m-1 == f.length);
@@ -78,7 +78,7 @@ pair[] cfftpad(pair[] f, pair[] u, bool unscramble=true)
   return h;
 }
 
-pair[] cfftpadinv(pair[] f, bool unscramble=true)
+pair[] fft0padinv(pair[] f, bool unscramble=true)
 {
   int n=f.length;
   int m=quotient(n,3);
@@ -177,14 +177,14 @@ int m=quotient(f.length+1,2);
 pair[] u=new pair[m];
 
 int p=2,q=3;
-//write(cfftpad(f,u));
+//write(fft0pad(f,u));
 //write();
 f=copy(d);
 write(f);
 
 write();
 
-//write(cfftpad(f,u,false));
+//write(fft0pad(f,u,false));
 
-write(cfftpadinv(cfftpad(f,u,false),false));
+write(fft0padinv(fft0pad(f,u,false),false));
 

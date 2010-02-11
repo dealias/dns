@@ -21,7 +21,7 @@ int m;
 pair[] Zeta;
 
 // Unrolled scrambled version for p=1, q=2.
-pair[] ffthalf(pair[] f)
+pair[] fftpad(pair[] f)
 {
   for(int k=0; k < m; ++k)
     f[k+m]=conj(Zeta[k])*f[k];
@@ -30,7 +30,7 @@ pair[] ffthalf(pair[] f)
 }
 
 // Unrolled scrambled version for p=1, q=2.
-pair[] ffthalfinv(pair[] f)
+pair[] fftpadinv(pair[] f)
 {
   f=concat(fft(f[0:m],1),fft(f[m:2m],1));
   for(int k=0; k < m; ++k)
@@ -38,35 +38,35 @@ pair[] ffthalfinv(pair[] f)
   return f[0:m];
 }
 
-pair[][] ffthalf(pair[][] a)
+pair[][] fftpad(pair[][] a)
 {
   pair[][] A=new pair[a.length][];
   int k=0;
   for(pair[] v : a) {
-    A[k]=ffthalf(v);
+    A[k]=fftpad(v);
     ++k;
   }
   a=transpose(A);
   k=0;
   for(pair[] v : a) {
-    A[k]=ffthalf(v);
+    A[k]=fftpad(v);
     ++k;
   }
   return transpose(A);
 }
 
-pair[][] ffthalfinv(pair[][] a)
+pair[][] fftpadinv(pair[][] a)
 {
   pair[][] A=new pair[a.length][];
   int k=0;
   for(pair[] v : a) {
-    A[k]=ffthalfinv(v);
+    A[k]=fftpadinv(v);
     ++k;
   }
   a=transpose(A);
   k=0;
   for(pair[] v : a) {
-    A[k]=ffthalfinv(v);
+    A[k]=fftpadinv(v);
     ++k;
   }
   return unpad(transpose(A),nx,ny);
@@ -123,13 +123,13 @@ for(int i=0; i < n; ++i)
 write("f:");
 write(f[0]);
 write();
-write("ffthalf(f):");
-write(ffthalf(f[0]));
+write("fftpad(f):");
+write(fftpad(f[0]));
 write();
 
 
-pair[][] F=ffthalf(f);
-pair[][] G=ffthalf(f);
+pair[][] F=fftpad(f);
+pair[][] G=fftpad(f);
 
 for(int i=0; i < F.length; ++i)
   for(int j=0; j < F[0].length; ++j)
@@ -137,7 +137,6 @@ for(int i=0; i < F.length; ++i)
 
 real ninv=1/(F.length*F[0].length);
 write("unpadded:");
-pair[][] f_unpadded=ninv*ffthalfinv(F);
+pair[][] f_unpadded=ninv*fftpadinv(F);
 //write(f_unpadded);
 write("error="+(string)maxerror(f_direct,f_unpadded));
-
