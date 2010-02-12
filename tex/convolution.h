@@ -1,3 +1,5 @@
+// Rename m to a?
+
 #include "fftw++.h"
 
 #ifndef __convolution_h__
@@ -282,7 +284,6 @@ public:
   }	
 
 };
-
 
 // calculates a the convolution of two complex, non-Hermitian vectors
 class cconvolution {
@@ -604,9 +605,9 @@ public:
 // Before calling fft(), the arrays in and out (which may coincide), along
 // with the array u, must be allocated as Complex[M*m].
 //
-//   fftpad fftpad(m,M,stride);
-//   fftpad.backwards(in,u);
-//   fftpad.forwards(in,u);
+//   fftpad fft(m,M,stride);
+//   fft.backwards(in,u);
+//   fft.forwards(in,u);
 //
 // Notes:
 //   stride is the spacing between the elements of each Complex vector.
@@ -683,14 +684,15 @@ public:
 };
   
 // Compute the scrambled virtual m-padded complex Fourier transform of M complex
-// vectors, each of length 2m-1.
+// vectors, each of length 2m-1 with the origin at index m
+// (i.e. physical wavenumber k=-m+1 to k=m-1).
 // Before calling fft(), the arrays in and out (which may coincide)
 // must be allocated as Complex[M*(2m-1)].
 // The array u must be allocated as Complex[M*(m+1)].
 //
-//   fft0pad fftpad(m,M,stride);
-//   fftpad.backwards(in,u);
-//   fftpad.forwards(in,u);
+//   fft0pad fft(m,M,stride);
+//   fft.backwards(in,u);
+//   fft.forwards(in,u);
 //
 // Notes:
 //   stride is the spacing between the elements of each Complex vector.
@@ -706,16 +708,16 @@ class fft0pad {
   double Cos,Sin;
   Complex zeta;
 public:  
-  fft0pad(unsigned int m, unsigned int M, unsigned int stride,
-               Complex *f) : m(m), M(M), stride(stride) {
+  fft0pad(unsigned int m, unsigned int M, unsigned int stride, Complex *u)
+    : m(m), M(M), stride(stride) {
     n=3*m;
     double arg=2.0*M_PI/n;
     Cos=cos(arg);
     Sin=sin(arg);
     zeta=Complex(cos(arg),sin(arg));
     
-    Backwards=new mfft1d(m,1,M,stride,1,f);
-    Forwards=new mfft1d(m,-1,M,stride,1,f);
+    Backwards=new mfft1d(m,1,M,stride,1,u);
+    Forwards=new mfft1d(m,-1,M,stride,1,u);
   }
   
   void backwards(Complex *f, Complex *u) {
@@ -960,11 +962,11 @@ public:
   }	
 };
 
-#if 0
 class convolution2 {
 protected:
   unsigned int n;
   unsigned int m;
+  unsigned int mx,my;
   bool prune;
   mfft1d *xBackwards;
   mfft1d *yBackwards;
@@ -972,10 +974,10 @@ protected:
   mfft1d *yForwards;
   fft2d *Backwards;
   fft2d *Forwards;
-  convolution *C;
+  convolution *yconvolve;
   fft0pad *xfftpad;
   Complex *u,*v;
-  Complex *work;
+  Complex *work,*work2;
 public:  
   // Set prune=true to skip Fourier transforming zero rows.
   convolution2(unsigned int n, unsigned int m, Complex *f, bool prune=false) :
@@ -991,32 +993,26 @@ public:
     }
   }
   
-  convolution2(unsigned int m, Complex *f) : m(m) {
+// The array u must be allocated as Complex[mx*(my+1)].
+  convolution2(unsigned int mx, unsigned int my, Complex *f) : mx(mx), my(my) {
     n=3*m;
-    u=FFTWComplex(m*m);
-    v=FFTWComplex(m*m);
-    work=FFTWComplex(n);
-    xfftpad=new fftpad(m,m,m,u);
-    C=new cconvolution(m,work);
+    unsigned int myxp=my*(mx+1);
+    u=FFTWComplex(myxp);
+    v=FFTWComplex(myxp);
+    xfftpad=new fft0pad(mx,my,my,u);
+    unsigned int c=my/2;
+    work=FFTWComplex(c+1);
+    work2=FFTWComplex(c+1);
+    yconvolve=new convolution(my,work,work2);
   }
   
 // Need destructor  
   
-// Compute H = F (*) G, where F and G are the non-negative Fourier
-// components of real functions f and g, respectively. Dealiasing via
-// zero-padding is implemented automatically.
-//
-// Arrays F[n/2+1], G[n/2+1] must be distinct.
-// Input F[i], G[i] (0 <= i < m), where 3*m <= n.
-// Output H[i] = F (*) G  (0 <= i < m), F[i]=f[i], G[i]=g[i] (0 <= i < n/2).
-//
-// Array H[n/2+1] can coincide with either F or G, in which case the output H
-// subsumes f or g, respectively.
-
   void pad(Complex *f) {
   }
   
   void fft(Complex *f, Complex *g) {
+/*    
     pad(f);
     if(prune) {
       xBackwards->fft(f);
@@ -1042,6 +1038,7 @@ public:
     } else {
       Forwards->fft(f);
     }
+*/
   }
   
   // Note: input arrays f and g are destroyed.
@@ -1049,12 +1046,12 @@ public:
     xfftpad->backwards(f,u);
     xfftpad->backwards(g,v);
 
-    unsigned int m2=m*m;
-    Complex *work2=work+m;
-    for(unsigned int i=0; i < m2; i += m)
-      C->unpadded(f+i,g+i,work,work2);
-    for(unsigned int i=0; i < m2; i += m)
-      C->unpadded(u+i,v+i,work,work2);
+    unsigned int mf=(2*mx-1)*my;
+    for(unsigned int i=0; i < mf; i += my)
+      yconvolve->unpadded(f+i,g+i,work,work2);
+    unsigned int mu=(mx+1)*my;
+    for(unsigned int i=0; i < mu; i += my)
+      yconvolve->unpadded(u+i,v+i,work,work2);
     
     xfftpad->forwards(f,u);
   }
@@ -1069,8 +1066,6 @@ public:
 // Array H[m] must be distinct from F[m] and G[m].
 
   void direct(Complex *H, Complex *F, Complex *G) {
-    int mx=2*m-1;
-    int my=m;
     // TODO: Shift origin.
     for(unsigned int i=0; i < mx; ++i) {
       for(unsigned int j=0; j < my; ++j) {
@@ -1092,8 +1087,6 @@ public:
       }
     }
   }	
-
 };
-#endif
 
 #endif
