@@ -964,38 +964,37 @@ public:
 
 class convolution2 {
 protected:
-  unsigned int n;
-  unsigned int m;
+  unsigned int nx,ny;
   unsigned int mx,my;
   bool prune;
-  mfft1d *xBackwards;
-  mfft1d *yBackwards;
-  mfft1d *xForwards;
-  mfft1d *yForwards;
-  fft2d *Backwards;
-  fft2d *Forwards;
+  mcrfft1d *xBackwards;
+  mcrfft1d *yBackwards;
+  mrcfft1d *xForwards;
+  mrcfft1d *yForwards;
+  crfft2d *Backwards;
+  rcfft2d *Forwards;
   convolution *yconvolve;
   fft0pad *xfftpad;
   Complex *u,*v;
   Complex *work,*work2;
 public:  
   // Set prune=true to skip Fourier transforming zero rows.
-  convolution2(unsigned int n, unsigned int m, Complex *f, bool prune=false) :
-    n(n), m(m), prune(prune) {
+  convolution2(unsigned int nx, unsigned int ny, 
+               unsigned int mx, unsigned int my, Complex *f, bool prune=false) :
+    nx(nx), ny(ny), mx(mx), my(my), prune(prune) {
     if(prune) {
-      xBackwards=new mfft1d(n,1,m,n,1,f);
-      yBackwards=new mfft1d(n,1,n,1,n,f);
-      xForwards=new mfft1d(n,-1,m,n,1,f);
-      yForwards=new mfft1d(n,-1,n,1,n,f);
+      xBackwards=new mcrfft1d(nx,my,ny,1,f);
+      yBackwards=new mcrfft1d(ny,nx,1,ny,f);
+      xForwards=new mrcfft1d(nx,my,ny,1,f);
+      yForwards=new mrcfft1d(ny,nx,1,ny,f);
     } else {
-      Backwards=new fft2d(n,n,1,f);
-      Forwards=new fft2d(n,n,-1,f);
+      Backwards=new crfft2d(nx,ny,f);
+      Forwards=new rcfft2d(nx,ny,f);
     }
   }
   
 // The array u must be allocated as Complex[mx*(my+1)].
   convolution2(unsigned int mx, unsigned int my, Complex *f) : mx(mx), my(my) {
-    n=3*m;
     unsigned int myxp=my*(mx+1);
     u=FFTWComplex(myxp);
     v=FFTWComplex(myxp);
@@ -1009,36 +1008,50 @@ public:
 // Need destructor  
   
   void pad(Complex *f) {
+    unsigned int nx2=nx/2;
+    for(unsigned int i=0; i <= nx2-mx; ++i) {
+      unsigned int nyi=ny*i;
+      for(unsigned int j=0; j < ny; ++j)
+        f[nyi+j]=0.0;
+    }
+    for(unsigned int i=nx2+mx; i < nx; ++i) {
+      unsigned int nyi=ny*i;
+      for(unsigned int j=0; j < ny; ++j)
+        f[nyi+j]=0.0;
+    }
+    for(unsigned int i=0; i < nx; ++i) {
+      unsigned int nyi=ny*i;
+      for(unsigned int j=my; j < ny; ++j)
+        f[nyi+j]=0.0;
+    }
   }
   
   void fft(Complex *f, Complex *g) {
-/*    
     pad(f);
     if(prune) {
-      xBackwards->fft(f);
+      xBackwards->fft0(f); // Optimize
       yBackwards->fft(f);
     } else
       Backwards->fft(f);
-  
+    
     pad(g);
     if(prune) {
-      xBackwards->fft(g);
+      xBackwards->fft0(g); // Optimize
       yBackwards->fft(g);
     } else
       Backwards->fft(g);
     
-    unsigned int n2=n*n;
+    unsigned int n2=nx*ny;
     double ninv=1.0/n2;
     for(unsigned int i=0; i < n2; ++i)
       f[i] *= g[i]*ninv;
 	
     if(prune) {
       yForwards->fft(f);
-      xForwards->fft(f);
+      xForwards->fft0(f);
     } else {
       Forwards->fft(f);
     }
-*/
   }
   
   // Note: input arrays f and g are destroyed.
@@ -1066,24 +1079,23 @@ public:
 // Array H[m] must be distinct from F[m] and G[m].
 
   void direct(Complex *H, Complex *F, Complex *G) {
-    // TODO: Shift origin.
+    unsigned int nx2=nx/2;
     for(unsigned int i=0; i < mx; ++i) {
       for(unsigned int j=0; j < my; ++j) {
         Complex sum=0.0;
         for(unsigned int k=0; k <= i; ++k)
           for(unsigned int p=0; p <= j; ++p)
-            sum += F[k*my+p]*G[(i-k)*my+j-p];
+            sum += F[nx2+k*my+p]*G[(i-k)*my+j-p];
         
         for(unsigned int k=0; k < i; ++k)
           for(unsigned int p=j; p < my; ++p)
-            sum += F[k*my+p]*conj(G[(mx+k-i)*my+p-j]);
+            sum += F[nx2+k*my+p]*conj(G[(mx+k-i)*my+p-j]);
           
         for(unsigned int k=1; k <= i; ++k)
           for(unsigned int p=0; p < my-j; ++p)
-            sum += conj(F[(mx-k)*my+p])*G[(i-k)*my+j+p];
+            sum += conj(F[nx2+(mx-k)*my+p])*G[(i-k)*my+j+p];
           
-            
-        H[i*m+j]=sum;
+        H[i*my+j]=sum;
       }
     }
   }	
