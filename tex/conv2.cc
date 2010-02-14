@@ -47,16 +47,29 @@ inline double seconds()
 
 inline void init(array2<Complex>& f, array2<Complex>& g) 
 {
-  int offset=pad ? nx/2-mx+1 : 0;
-  int stop=2*mx-1;
-  for(unsigned int i=0; i < stop; i++) {
+  unsigned int offset=pad ? nx/2-mx+1 : 0;
+  unsigned int origin=offset+mx-1;
+  unsigned int stop=origin+mx;
+  
+  cout << offset << " " << origin << endl;
+  
+  for(unsigned int i=offset; i < stop; i++) {
     for(unsigned int j=0; j < my; j++) {
-      f[offset+i][j]=Complex(3.0,2.0);
-      g[offset+i][j]=Complex(5.0,3.0);
+      f[i][j]=Complex(3.0,2.0);
+      g[i][j]=Complex(5.0,3.0);
 //      f[i][j]=i+j;
 //      g[i][j]=i+j;
     }
   }
+  f[origin][0]=f[origin][0].re;
+  g[origin][0]=g[origin][0].re;
+  cout << endl;
+  for(unsigned int i=1; i < mx; i++)
+    f[origin-i][0]=conj(f[origin+i][0]);
+  
+//  cout << endl;
+//  cout << f << endl;
+//  cout << endl;
 }
 
 unsigned int padding(unsigned int m)
@@ -163,11 +176,9 @@ int main(int argc, char* argv[])
 #endif
   }
 
-  if(false)
+//  if(false)
+  if(!pad)
   {
-    array2<Complex> f(nxp,nyp,align);
-    array2<Complex> g(nxp,nyp,align);
-    array2<Complex> h(nxp,nyp,align);
     convolution2 convolve(nx,ny,mx,my,f);
     init(f,g);
     seconds();
@@ -181,7 +192,7 @@ int main(int argc, char* argv[])
 
     if(nxp*nyp < outlimit) 
       for(unsigned int i=0; i < nxp; i++) {
-        for(unsigned int j=0; j < nyp; j++)
+        for(unsigned int j=0; j < my; j++)
           cout << h[i][j] << "\t";
         cout << endl;
       } else cout << h[0][0] << endl;

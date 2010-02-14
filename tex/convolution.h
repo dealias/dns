@@ -1089,21 +1089,34 @@ public:
 // Array H[m] must be distinct from F[m] and G[m].
 
   void direct(Complex *H, Complex *F, Complex *G) {
-    unsigned int nx2=nx/2;
+    /*
+    Complex *f=FFTWComplex((2*mx-1)*(2*my-1));
+    for(unsigned int i=0; i < 2*mx-1; i++) {
+      f[i][0]=F[i][0];
+      for(unsigned int j=1; j < my; j++) {
+        f[i][j]=F[i][j];
+        f[i][j]=F[i][origin-j];
+      }
+    }
+    cconvolution2 C(mx,f);
+    return C.direct(h,f,g);
+    */
+    
+    unsigned int origin=mx-1;
     for(unsigned int i=0; i < mx; ++i) {
       for(unsigned int j=0; j < my; ++j) {
         Complex sum=0.0;
         for(unsigned int k=0; k <= i; ++k)
           for(unsigned int p=0; p <= j; ++p)
-            sum += F[nx2+k*my+p]*G[(i-k)*my+j-p];
+            sum += F[(origin+k)*my+p]*G[(origin+i-k)*my+j-p];
         
-        for(unsigned int k=0; k < i; ++k)
-          for(unsigned int p=j; p < my; ++p)
-            sum += F[nx2+k*my+p]*conj(G[(mx+k-i)*my+p-j]);
+        for(unsigned int k=0; k <= i; ++k)
+          for(unsigned int p=j+1; p < my; ++p)
+            sum += F[(origin+k)*my+p]*conj(G[(origin+k-i)*my+p-j]);
           
-        for(unsigned int k=1; k <= i; ++k)
+        for(unsigned int k=0; k <= i; ++k)
           for(unsigned int p=0; p < my-j; ++p)
-            sum += conj(F[nx2+(mx-k)*my+p])*G[(i-k)*my+j+p];
+            sum += conj(F[(origin-k)*my+p])*G[(origin+i-k)*my+j+p];
           
         H[i*my+j]=sum;
       }
