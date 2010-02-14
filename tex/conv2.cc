@@ -23,6 +23,8 @@ unsigned int nx=4;
 unsigned int ny=4;
 unsigned int mx=2;
 unsigned int my=2;
+unsigned int nxp;
+unsigned int nyp;
 
 unsigned int outlimit=25;
 
@@ -43,8 +45,8 @@ inline double seconds()
 
 inline void init(array2<Complex>& f, array2<Complex>& g) 
 {
-  for(unsigned int i=0; i < mx; i++) {
-    for(unsigned int j=0; j < my; j++) {
+  for(unsigned int i=0; i < nxp; i++) {
+    for(unsigned int j=0; j < nyp; j++) {
       f[i][j]=Complex(3.0,2.0);
       g[i][j]=Complex(5.0,3.0);
 //      f[i][j]=i+j;
@@ -87,8 +89,8 @@ int main(int argc, char* argv[])
   cout << "mx=" << mx << ", my=" << my << endl;
   
   size_t align=sizeof(Complex);
-  int nxp=pad ? nx : 2*mx-1;
-  int nyp=pad ? ny/2+1 : my;
+  nxp=pad ? nx : 2*mx-1;
+  nyp=pad ? ny/2+1 : my;
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
   array2<Complex> h(nxp,nyp,align);
