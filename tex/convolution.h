@@ -1105,20 +1105,30 @@ public:
     unsigned int origin=mx-1;
     for(unsigned int i=0; i < mx; ++i) {
       for(unsigned int l=0; l < my; ++l) {
-        Complex sum=0.0;
+        Complex sump=0.0;
+        Complex summ=0.0;
         for(unsigned int k=0; k <= i; ++k)
-          for(unsigned int j=0; j <= l; ++j)
-            sum += F[(origin+k)*my+j]*G[(origin+i-k)*my+l-j];
+          for(unsigned int j=0; j <= l; ++j) {
+            sump += F[(origin+k)*my+j]*G[(origin+i-k)*my+l-j];
+            summ += F[(origin-k)*my+j]*G[(origin-i+k)*my+l-j];
+          }
         
         for(unsigned int k=0; k <= i; ++k)
-          for(unsigned int j=l+1; j < my; ++j)
-            sum += F[(origin+k)*my+j]*conj(G[(origin+k-i)*my+j-l]);
+          for(unsigned int j=l+1; j < my; ++j) {
+            sump += F[(origin+k)*my+j]*conj(G[(origin+k-i)*my+j-l]);
+            summ += F[(origin-k)*my+j]*conj(G[(origin-k+i)*my+j-l]);
+          }
+        
           
         for(unsigned int k=0; k <= i; ++k)
-          for(unsigned int j=1; j < my-l; ++j)
-            sum += conj(F[(origin-k)*my+j])*G[(origin+i-k)*my+l+j];
-          
-        H[i*my+l]=sum;
+          for(unsigned int j=1; j < my-l; ++j) {
+            sump += conj(F[(origin-k)*my+j])*G[(origin+i-k)*my+l+j];
+            summ += conj(F[(origin+k)*my+j])*G[(origin-i+k)*my+l+j];
+          }
+        
+        H[(origin+i)*my+l]=sump;
+        if(i > 0) 
+          H[(origin-i)*my+l]=summ;
       }
     }
   }	
