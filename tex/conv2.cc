@@ -18,15 +18,17 @@ using namespace Array;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=100;
-unsigned int nx=4;
-unsigned int ny=4;
-unsigned int mx=2;
-unsigned int my=2;
+unsigned int N=1;
+unsigned int nx=0;
+unsigned int ny=0;
+unsigned int mx=4;
+unsigned int my=4;
 unsigned int nxp;
 unsigned int nyp;
 
-unsigned int outlimit=25;
+int pad;
+
+unsigned int outlimit=100;
 
 using namespace std;
 
@@ -45,10 +47,12 @@ inline double seconds()
 
 inline void init(array2<Complex>& f, array2<Complex>& g) 
 {
-  for(unsigned int i=0; i < nxp; i++) {
-    for(unsigned int j=0; j < nyp; j++) {
-      f[i][j]=Complex(3.0,2.0);
-      g[i][j]=Complex(5.0,3.0);
+  int offset=pad ? nx/2-mx+1 : 0;
+  int stop=2*mx-1;
+  for(unsigned int i=0; i < stop; i++) {
+    for(unsigned int j=0; j < my; j++) {
+      f[offset+i][j]=Complex(3.0,2.0);
+      g[offset+i][j]=Complex(5.0,3.0);
 //      f[i][j]=i+j;
 //      g[i][j]=i+j;
     }
@@ -72,7 +76,7 @@ int main(int argc, char* argv[])
   // Turn off
   fftw::effort |= FFTW_NO_SIMD;
   
-  int pad=0;
+  pad=0;
   
   if (argc >= 2) {
     mx=my=atoi(argv[1]);
@@ -119,9 +123,9 @@ int main(int argc, char* argv[])
     cout << "Unpadded:" << endl;
     cout << (sum-offset)/N << endl;
     cout << endl;
-    if(nxp*nyp < outlimit)
+    if(nxp*my < outlimit)
       for(unsigned int i=0; i < nxp; i++) {
-        for(unsigned int j=0; j < nyp; j++)
+        for(unsigned int j=0; j < my; j++)
           cout << f[i][j] << " ";
         cout << endl;
       } else cout << f[0][0] << endl;
@@ -132,7 +136,7 @@ int main(int argc, char* argv[])
   }
   
   if(pad) {
-    for(int prune=0; prune <= 1; ++prune) {
+    for(int prune=0; prune <= 0; ++prune) {
       sum=0.0;
       convolution2 Convolve(nx,ny,mx,my,f,prune);
       for(int i=0; i < N; ++i) {
@@ -146,12 +150,13 @@ int main(int argc, char* argv[])
       cout << (prune ? "Pruned:" : "Padded:") << endl;
       cout << (sum-offset)/N << endl;
       cout << endl;
-      if(nxp*nyp < 5) 
-        for(unsigned int i=0; i < nxp; i++) {
-          for(unsigned int j=0; j < nyp; j++)
+      unsigned int offset=nx/2;
+      if(nxp*my < outlimit) 
+        for(unsigned int i=offset; i < offset+nxp; i++) {
+          for(unsigned int j=0; j < my; j++)
             cout << f[i][j] << "\t";
           cout << endl;
-        } else cout << f[0][0] << endl;
+        } else cout << f[offset][0] << endl;
     }
 #ifdef TEST    
     for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
@@ -174,7 +179,7 @@ int main(int argc, char* argv[])
     cout << sum-offset/N << endl;
     cout << endl;
 
-    if(nxp*nyp < 5) 
+    if(nxp*nyp < outlimit) 
       for(unsigned int i=0; i < nxp; i++) {
         for(unsigned int j=0; j < nyp; j++)
           cout << h[i][j] << "\t";

@@ -111,7 +111,7 @@ public:
 
     bool even=m % 2 == 0;
     if(m <= 2 || !even) {
-      cout << "Not yet implemented!";
+      cout << "Not yet implemented!" << endl;
       _exit(1);
     }
     
@@ -986,6 +986,7 @@ public:
   convolution2(unsigned int nx, unsigned int ny, 
                unsigned int mx, unsigned int my, Complex *f, bool prune=false) :
     nx(nx), ny(ny), mx(mx), my(my), prune(prune) {
+    unsigned int nyp=ny/2+1;
     if(prune) {
       xBackwards=new mcrfft1d(nx,my,ny,1,f);
       yBackwards=new mcrfft1d(ny,nx,1,ny,f);
@@ -1013,48 +1014,53 @@ public:
   
   void pad(Complex *f) {
     unsigned int nx2=nx/2;
+    unsigned int nyp=ny/2+1;
     for(unsigned int i=0; i <= nx2-mx; ++i) {
-      unsigned int nyi=ny*i;
-      for(unsigned int j=0; j < ny; ++j)
+      unsigned int nyi=nyp*i;
+      for(unsigned int j=0; j < nyp; ++j)
         f[nyi+j]=0.0;
     }
     for(unsigned int i=nx2+mx; i < nx; ++i) {
-      unsigned int nyi=ny*i;
-      for(unsigned int j=0; j < ny; ++j)
+      unsigned int nyi=nyp*i;
+      for(unsigned int j=0; j < nyp; ++j)
         f[nyi+j]=0.0;
     }
     for(unsigned int i=0; i < nx; ++i) {
-      unsigned int nyi=ny*i;
-      for(unsigned int j=my; j < ny; ++j)
+      unsigned int nyi=nyp*i;
+      for(unsigned int j=my; j < nyp; ++j)
         f[nyi+j]=0.0;
     }
   }
   
   void fft(Complex *f, Complex *g) {
     pad(f);
+
     if(prune) {
       xBackwards->fft0(f); // Optimize
       yBackwards->fft(f);
     } else
-      Backwards->fft(f);
+      Backwards->fft0(f);
     
     pad(g);
     if(prune) {
       xBackwards->fft0(g); // Optimize
       yBackwards->fft(g);
     } else
-      Backwards->fft(g);
+      Backwards->fft0(g);
+    
+    double *F=(double *) f;
+    double *G=(double *) g;
     
     unsigned int n2=nx*ny;
     double ninv=1.0/n2;
     for(unsigned int i=0; i < n2; ++i)
-      f[i] *= g[i]*ninv;
+      F[i] *= G[i]*ninv;
 	
     if(prune) {
       yForwards->fft(f);
       xForwards->fft0(f);
     } else {
-      Forwards->fft(f);
+      Forwards->fft0(f);
     }
   }
   
