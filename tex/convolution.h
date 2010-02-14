@@ -110,8 +110,10 @@ public:
     double g0=g[0].re;
 
     bool even=m % 2 == 0;
-    if(m <= 2) cout << "Not yet implemented!";
-    if(!even) _exit(1);
+    if(m <= 2 || !even) {
+      cout << "Not yet implemented!";
+      _exit(1);
+    }
     
     // Arrange input data
     u[0]=f0;
