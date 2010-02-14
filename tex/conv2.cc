@@ -64,8 +64,11 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
   f[origin][0]=f[origin][0].re;
   g[origin][0]=g[origin][0].re;
   cout << endl;
-  for(unsigned int i=1; i < mx; i++)
+  for(unsigned int i=1; i < mx; i++) {
     f[origin-i][0]=conj(f[origin+i][0]);
+    g[origin-i][0]=conj(g[origin+i][0]);
+  }
+  
   
 //  cout << endl;
 //  cout << f << endl;
