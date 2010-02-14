@@ -103,12 +103,14 @@ public:
   }
   
   // Note: input arrays f and g are destroyed.
+  // f and g are of size m.
   // u and v are temporary work arrays each of size m/2+1.
   void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
     double f0=f[0].re;
     double g0=g[0].re;
 
     bool even=m % 2 == 0;
+    if(m <= 2) cout << "Not yet implemented!";
     if(!even) _exit(1);
     
     // Arrange input data
@@ -993,12 +995,12 @@ public:
     }
   }
   
-// The array u must be allocated as Complex[mx*(my+1)].
+// The array f must be allocated as Complex[(2mx-1)*my].
   convolution2(unsigned int mx, unsigned int my, Complex *f) : mx(mx), my(my) {
-    unsigned int myxp=my*(mx+1);
-    u=FFTWComplex(myxp);
-    v=FFTWComplex(myxp);
-    xfftpad=new fft0pad(mx,my,my,u);
+    unsigned int mxpy=(mx+1)*my;
+    u=FFTWComplex(mxpy);
+    v=FFTWComplex(mxpy);
+    xfftpad=new fft0pad(mx,my,my,f);
     unsigned int c=my/2;
     work=FFTWComplex(c+1);
     work2=FFTWComplex(c+1);
