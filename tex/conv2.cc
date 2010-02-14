@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
       cout << endl;
       unsigned int offset=nx/2;
       if(nxp*my < outlimit) 
-        for(unsigned int i=offset; i < offset+nxp; i++) {
+        for(unsigned int i=offset; i < offset+2*mx-1; i++) {
           for(unsigned int j=0; j < my; j++)
             cout << f[i][j] << "\t";
           cout << endl;
