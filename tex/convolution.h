@@ -1065,8 +1065,9 @@ public:
 
     for(unsigned int i=0; i < nx; ++i) {
       unsigned int ny2i=ny2*i;
-      for(unsigned int j=0; j < ny; ++j)
-        F[ny2i+j] *= G[ny2i+j]*ninv;
+      unsigned int stop=ny2i+ny;
+      for(unsigned int j=ny2i; j < stop; ++j)
+        F[j] *= G[j]*ninv;
     }
 	
     if(prune) {
