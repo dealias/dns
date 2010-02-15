@@ -1034,7 +1034,7 @@ public:
   
   void fft(Complex *f, Complex *g) {
     pad(f);
-
+    
     if(prune) {
       xBackwards->fft0(f); // Optimize
       yBackwards->fft(f);
@@ -1052,9 +1052,13 @@ public:
     double *G=(double *) g;
     
     unsigned int n2=nx*ny;
+    unsigned int ny2=ny+2;
     double ninv=1.0/n2;
-    for(unsigned int i=0; i < n2; ++i)
-      F[i] *= G[i]*ninv;
+    for(unsigned int i=0; i < nx; ++i) {
+      unsigned int ny2i=ny2*i;
+      for(unsigned int j=0; j < ny; ++j)
+        F[ny2i+j] *= G[ny2i+j]*ninv;
+    }
 	
     if(prune) {
       yForwards->fft(f);

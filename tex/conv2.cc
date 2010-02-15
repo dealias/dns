@@ -51,8 +51,6 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
   unsigned int origin=offset+mx-1;
   unsigned int stop=origin+mx;
   
-  cout << offset << " " << origin << endl;
-  
   for(unsigned int i=offset; i < stop; i++) {
     for(unsigned int j=0; j < my; j++) {
       f[i][j]=Complex(3.0,2.0);
@@ -63,7 +61,7 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
   }
   f[origin][0]=f[origin][0].re;
   g[origin][0]=g[origin][0].re;
-  cout << endl;
+
   for(unsigned int i=1; i < mx; i++) {
     f[origin-i][0]=conj(f[origin+i][0]);
     g[origin-i][0]=conj(g[origin+i][0]);
@@ -113,7 +111,6 @@ int main(int argc, char* argv[])
   nyp=pad ? ny/2+1 : my;
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
-  array2<Complex> h(nxp,nyp,align);
 #ifdef TEST  
   array2<Complex> pseudoh(mx,my,align);
 #endif
@@ -166,7 +163,7 @@ int main(int argc, char* argv[])
       cout << (prune ? "Pruned:" : "Padded:") << endl;
       cout << (sum-offset)/N << endl;
       cout << endl;
-      unsigned int offset=nx/2;
+      unsigned int offset=nx/2-mx+1;
       if(nxp*my < outlimit) 
         for(unsigned int i=offset; i < offset+2*mx-1; i++) {
           for(unsigned int j=0; j < my; j++)
@@ -179,9 +176,10 @@ int main(int argc, char* argv[])
 #endif
   }
 
-//  if(false)
+  if(false)
   if(!pad)
   {
+    array2<Complex> h(nxp,nyp,align);
     convolution2 convolve(nx,ny,mx,my,f);
     init(f,g);
     seconds();

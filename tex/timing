@@ -9,7 +9,7 @@ rm -rf padded unpadded pruned
 touch padded unpadded pruned
 
 echo Timing:
-for (( i=7; i<=$stop; i++ ))
+for (( i=4; i<=$stop; i++ ))
 do
     echo $i
     m=$(asy -c "2^$i")
