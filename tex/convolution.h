@@ -289,7 +289,7 @@ public:
 
 };
 
-// calculates a the convolution of two complex, non-Hermitian vectors
+// calculates the convolution of two complex non-Hermitian vectors
 class cconvolution {
  protected:
   unsigned int n;
@@ -995,13 +995,6 @@ public:
     } else {
       Backwards=new crfft2d(nx,ny,f);
       Forwards=new rcfft2d(nx,ny,f);
-      
-      /*
-      mfft1d(nx,1,nyp,nyp,1);
-      mcrfft1d(ny,nx,1,nyp);
-      mrcfft1d(ny,nx,1,nyp);
-      mfft1d(nx,-1,nyp,nyp,1);
-      */
     }
   }
   
@@ -1061,6 +1054,7 @@ public:
     unsigned int n2=nx*ny;
     unsigned int ny2=ny+2;
     double ninv=1.0/n2;
+
     for(unsigned int i=0; i < nx; ++i) {
       unsigned int ny2i=ny2*i;
       for(unsigned int j=0; j < ny; ++j)
@@ -1069,7 +1063,8 @@ public:
 	
     if(prune) {
       yForwards->fft(f);
-      xForwards->fft0(f);
+      fftw::Shift(f,nx,ny);
+      xForwards->fft(f);
     } else {
       Forwards->fft0(f);
     }
