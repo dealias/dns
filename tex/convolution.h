@@ -1015,20 +1015,28 @@ public:
   void pad(Complex *f) {
     unsigned int nx2=nx/2;
     unsigned int nyp=ny/2+1;
-    for(unsigned int i=0; i <= nx2-mx; ++i) {
-      unsigned int nyi=nyp*i;
-      for(unsigned int j=0; j < nyp; ++j)
-        f[nyi+j]=0.0;
+    unsigned int end=nx2-mx;
+    for(unsigned int i=0; i <= end;) {
+      unsigned int j=nyp*i;
+      ++i;
+      unsigned int nypip=nyp*i;
+      for(; j < nypip; ++j)
+        f[j]=0.0;
     }
-    for(unsigned int i=nx2+mx; i < nx; ++i) {
-      unsigned int nyi=nyp*i;
-      for(unsigned int j=0; j < nyp; ++j)
-        f[nyi+j]=0.0;
+    
+    for(unsigned int i=nx2+mx; i < nx;) {
+      unsigned int j=nyp*i;
+      ++i;
+      unsigned int nypip=nyp*i;
+      for(; j < nypip; ++j)
+        f[j]=0.0;
     }
-    for(unsigned int i=0; i < nx; ++i) {
-      unsigned int nyi=nyp*i;
-      for(unsigned int j=my; j < nyp; ++j)
-        f[nyi+j]=0.0;
+    for(unsigned int i=0; i < nx;) {
+      unsigned int j=nyp*i+my;
+      ++i;
+      unsigned int nypip=nyp*i;
+      for(; j < nypip; ++j)
+        f[j]=0.0;
     }
   }
   
