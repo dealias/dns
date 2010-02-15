@@ -18,7 +18,7 @@ using namespace Array;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=1;
+unsigned int N=100;
 unsigned int nx=0;
 unsigned int ny=0;
 unsigned int mx=4;
@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
   }
   
   if(pad) {
-    for(int prune=0; prune <= 0; ++prune) {
+    for(int prune=0; prune <= 1; ++prune) {
       sum=0.0;
       convolution2 Convolve(nx,ny,mx,my,f,prune);
       for(int i=0; i < N; ++i) {

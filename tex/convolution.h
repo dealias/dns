@@ -853,8 +853,8 @@ public:
     if(prune) {
       xBackwards=new mfft1d(n,1,m,n,1,f);
       yBackwards=new mfft1d(n,1,n,1,n,f);
-      xForwards=new mfft1d(n,-1,m,n,1,f);
       yForwards=new mfft1d(n,-1,n,1,n,f);
+      xForwards=new mfft1d(n,-1,m,n,1,f);
     } else {
       Backwards=new fft2d(n,n,1,f);
       Forwards=new fft2d(n,n,-1,f);
@@ -971,9 +971,9 @@ protected:
   unsigned int nx,ny;
   unsigned int mx,my;
   bool prune;
-  mcrfft1d *xBackwards;
+  mfft1d *xBackwards;
+  mfft1d *xForwards;
   mcrfft1d *yBackwards;
-  mrcfft1d *xForwards;
   mrcfft1d *yForwards;
   crfft2d *Backwards;
   rcfft2d *Forwards;
@@ -988,13 +988,20 @@ public:
     nx(nx), ny(ny), mx(mx), my(my), prune(prune) {
     unsigned int nyp=ny/2+1;
     if(prune) {
-      xBackwards=new mcrfft1d(nx,my,ny,1,f);
-      yBackwards=new mcrfft1d(ny,nx,1,ny,f);
-      xForwards=new mrcfft1d(nx,my,ny,1,f);
-      yForwards=new mrcfft1d(ny,nx,1,ny,f);
+      xBackwards=new mfft1d(nx,1,my,nyp,1,f);
+      yBackwards=new mcrfft1d(ny,nx,1,nyp,f);
+      yForwards=new mrcfft1d(ny,nx,1,nyp,f);
+      xForwards=new mfft1d(nx,-1,my,nyp,1,f);
     } else {
       Backwards=new crfft2d(nx,ny,f);
       Forwards=new rcfft2d(nx,ny,f);
+      
+      /*
+      mfft1d(nx,1,nyp,nyp,1);
+      mcrfft1d(ny,nx,1,nyp);
+      mrcfft1d(ny,nx,1,nyp);
+      mfft1d(nx,-1,nyp,nyp,1);
+      */
     }
   }
   
@@ -1036,17 +1043,17 @@ public:
     pad(f);
     
     if(prune) {
-      xBackwards->fft0(f); // Optimize
+      xBackwards->fft(f);
       yBackwards->fft(f);
     } else
-      Backwards->fft0(f);
+      Backwards->fft(f);
     
     pad(g);
     if(prune) {
-      xBackwards->fft0(g); // Optimize
+      xBackwards->fft(g);
       yBackwards->fft(g);
     } else
-      Backwards->fft0(g);
+      Backwards->fft(g);
     
     double *F=(double *) f;
     double *G=(double *) g;

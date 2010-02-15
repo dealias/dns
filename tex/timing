@@ -17,4 +17,6 @@ do
 #    m=$(asy -c "ceil(2^$i*2/3)")
     m=$(asy -c "int n=ceil(2^$i*2/3); n-1+(n % 2)")
     echo -e "$m \t $(./a.out $m 1 | grep -A 1 Padded | tail -n 1)" | cat >> padded
+    m=$(asy -c "2^$i")
+    echo -e "$m \t $(./a.out $m 1 | grep -A 1 Pruned | tail -n 1)" | cat >> pruned
 done
