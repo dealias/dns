@@ -18,7 +18,7 @@ using namespace Array;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=100;
+unsigned int N=20;
 unsigned int nx=0;
 unsigned int ny=0;
 unsigned int mx=4;
