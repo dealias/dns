@@ -6,18 +6,18 @@ if [ "$1" != "" ]; then
     stop=$1
 fi
 
-rm -rf padded unpadded pruned
-touch padded unpadded pruned
+rm -rf explicit implicit pruned
+touch explicit implicit pruned
 
 echo Timing:
 for (( i=$start; i<=$stop; i++ ))
 do
     echo $i
     m=$(asy -c "2^$i")
-    echo -e "$m \t $(./a.out $m 0 | grep -A 1 Unpadded | tail -n 1)"| cat >> unpadded
+    echo -e "$m \t $(./a.out $m 0 | grep -A 1 Implicit | tail -n 1)"| cat >> implicit
 #    m=$(asy -c "ceil(2^$i*2/3)")
     m=$(asy -c "int n=ceil(2^$i*2/3); n-1+(n % 2)")
-    echo -e "$m \t $(./a.out $m 1 | grep -A 1 Padded | tail -n 1)" | cat >> padded
+    echo -e "$m \t $(./a.out $m 1 | grep -A 1 Explicit | tail -n 1)" | cat >> explicit
     m=$(asy -c "int n=ceil(2^$i*2/3); n-1+(n % 2)")
     echo -e "$m \t $(./a.out $m 1 | grep -A 1 Pruned | tail -n 1)" | cat >> pruned
 done

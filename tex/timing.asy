@@ -4,7 +4,7 @@ size(200,150,IgnoreAspect);
 scale(Log,Log);
 real[] mp,p,mu,u,mP,P;
 
-file fin=input("padded").line();
+file fin=input("explicit").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);
 mp=a[0]; p=a[1];
@@ -16,7 +16,7 @@ if(a.length > 1) {
   mP=a[0]; P=a[1];
 }
 
-file fin=input("unpadded").line();
+file fin=input("implicit").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);
 mu=a[0]; u=a[1];

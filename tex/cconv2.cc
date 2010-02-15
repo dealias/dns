@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
     }
     
     cout << endl;
-    cout << "Unpadded:" << endl;
+    cout << "Implicit:" << endl;
     cout << (sum-offset)/N << endl;
     cout << endl;
     if(m < 5) 
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
         sum += seconds();
       }
       cout << endl;
-      cout << (prune ? "Pruned:" : "Padded:") << endl;
+      cout << (prune ? "Pruned:" : "Explicit:") << endl;
       cout << (sum-offset)/N << endl;
       cout << endl;
       if(m < 5) 

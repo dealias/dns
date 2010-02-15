@@ -136,7 +136,7 @@ for(int i=0; i < F.length; ++i)
     F[i][j] *= G[i][j];
 
 real ninv=1/(F.length*F[0].length);
-write("unpadded:");
+
 pair[][] f_unpadded=ninv*fftpadinv(F);
 //write(f_unpadded);
 write("error="+(string)maxerror(f_direct,f_unpadded));
