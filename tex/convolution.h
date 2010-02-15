@@ -1013,8 +1013,8 @@ public:
 // Need destructor  
   
   void pad(Complex *f) {
-    unsigned int nx2=nx/2;
     unsigned int nyp=ny/2+1;
+    unsigned int nx2=nx/2;
     unsigned int end=nx2-mx;
     for(unsigned int i=0; i <= end;) {
       unsigned int j=nyp*i;
@@ -1060,8 +1060,8 @@ public:
     double *G=(double *) g;
     
     unsigned int n2=nx*ny;
-    unsigned int ny2=ny+2;
     double ninv=1.0/n2;
+    unsigned int ny2=ny+2;
 
     for(unsigned int i=0; i < nx; ++i) {
       unsigned int ny2i=ny2*i;
