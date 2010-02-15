@@ -972,8 +972,8 @@ protected:
   unsigned int mx,my;
   bool prune;
   mfft1d *xBackwards;
-  mfft1d *xForwards;
   mcrfft1d *yBackwards;
+  mfft1d *xForwards;
   mrcfft1d *yForwards;
   crfft2d *Backwards;
   rcfft2d *Forwards;
