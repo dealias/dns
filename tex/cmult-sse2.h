@@ -22,14 +22,14 @@
 
 #include <emmintrin.h>
 
-typedef __m128d V;
+typedef __m128d Vec;
 
 #define UNPACKL _mm_unpacklo_pd
 #define UNPACKH _mm_unpackhi_pd
 
 union uvec {
   unsigned u[4];
-  V v;
+  Vec v;
 };
   
 // TODO: move to cc file.
@@ -37,47 +37,47 @@ const union uvec sse2_pm = {
   { 0x00000000,0x00000000,0x00000000,0x80000000 }
 };
 
-static inline V FLIP(const V& z)
+static inline Vec FLIP(const Vec& z)
 {
   return _mm_shuffle_pd(z,z,1);
 }
 
-static inline V CONJ(const V& z)
+static inline Vec CONJ(const Vec& z)
 {
   return _mm_xor_pd(sse2_pm.v,z);
 }
 
 // Return the complex product of iz.
-static inline V ZMULTI(const V& z)
+static inline Vec ZMULTI(const Vec& z)
 {
   return FLIP(CONJ(z));
 }
 
 // Return the complex product of z and w.
-static inline V ZMULT(const V& z, const V& w)
+static inline Vec ZMULT(const Vec& z, const Vec& w)
 {
   return w*UNPACKL(z,z)+UNPACKH(z,z)*ZMULTI(w);
 }
 
 // Return the complex product of z and I*w.
-static inline V ZMULTI(const V& z, const V& w)
+static inline Vec ZMULTI(const Vec& z, const Vec& w)
 {
   return ZMULTI(w)*UNPACKL(z,z)-UNPACKH(z,z)*w;
 }
 
-static inline V ZMULT(const V& t0, const V& t1, V w)
+static inline Vec ZMULT(const Vec& t0, const Vec& t1, Vec w)
 {
   return t0*w+t1*FLIP(w);
 }
 
-static inline V LOAD(const Complex *z)
+static inline Vec LOAD(const Complex *z)
 {
-  return *(const V *) z;
+  return *(const Vec *) z;
 }
 
-static inline void STORE(Complex *z, const V& v)
+static inline void STORE(Complex *z, const Vec& v)
 {
-  *(V *) z = v;
+  *(Vec *) z = v;
 }
 
 #endif

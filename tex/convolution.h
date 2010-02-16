@@ -136,45 +136,45 @@ public:
     Complex zetac(Cos,-Sin);
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-    const Complex mss(Sin,-Sin);
-    V CC=LOAD(&cc);
-    V SS=LOAD(&mss);
-    V Zetak=LOAD(&zetac);
-    V Fmk=LOAD(&fmk);
-    V Gmk=LOAD(&gmk);
+    Vec CC=LOAD(&cc);
+    Vec SS=-LOAD(&ss);
+    Vec Zetak=LOAD(&zetac);
+    Vec Fmk=LOAD(&fmk);
+    Vec Gmk=LOAD(&gmk);
     static const Complex mhalf(-0.5,-0.5);
-    V Mhalf=LOAD(&mhalf);
+    Vec Mhalf=LOAD(&mhalf);
     static const Complex hSqrt3(hsqrt3,hsqrt3);
-    V HSqrt3=LOAD(&hSqrt3);
+    Vec HSqrt3=LOAD(&hSqrt3);
 #else
-#endif
     double Re=Cos;
     double Im=-Sin;
+#endif
     for(unsigned int k=1; k < c; ++k) {
+      Complex *p=f+k;
+      Complex *q=g+k;
 #ifdef __SSE2__
-      V A=LOAD(f+k);
-      V Z=Fmk*Mhalf+CONJ(A);
-      STORE(f+k,A+CONJ(Fmk));
-      V W=Fmk*HSqrt3;
+      Vec A=LOAD(p);
+      Vec Z=Fmk*Mhalf+CONJ(A);
+      STORE(p,A+CONJ(Fmk));
+      Vec W=Fmk*HSqrt3;
       A=ZMULT(Zetak,UNPACKL(Z,W));
-      V B=ZMULTI(Zetak,UNPACKH(Z,W));
+      Vec B=ZMULTI(Zetak,UNPACKH(Z,W));
       STORE(u+k,A-B);
-      Complex *p=f+m1-k;
+      p=f+m1-k;
       Fmk=LOAD(p);
       STORE(p,A+B);
 
-      A=LOAD(g+k);
+      A=LOAD(q);
       Z=Gmk*Mhalf+CONJ(A);
-      STORE(g+k,A+CONJ(Gmk));
+      STORE(q,A+CONJ(Gmk));
       W=Gmk*HSqrt3;
       A=ZMULT(Zetak,UNPACKL(Z,W));
       B=ZMULTI(Zetak,UNPACKH(Z,W));
       STORE(v+k,A-B);
-      p=g+m1-k;
-      Gmk=LOAD(p);
-      STORE(p,A+B);
+      q=g+m1-k;
+      Gmk=LOAD(q);
+      STORE(q,A+B);
 #else
-      Complex *p=f+k;
       double re=-0.5*fmkre+p->re;
       double im=hsqrt3*fmkre;
       double Are=Re*re-Im*im;
@@ -194,25 +194,24 @@ public:
       p->re=Are+Bre;
       p->im=Aim+Bim;
 
-      p=g+k;
-      re=-0.5*gmkre+p->re;
+      re=-0.5*gmkre+q->re;
       im=hsqrt3*gmkre;
       Are=Re*re-Im*im;
       Aim=Re*im+Im*re;
-      re=-0.5*gmkim-p->im;
+      re=-0.5*gmkim-q->im;
       im=hsqrt3*gmkim;
-      p->re += gmkre;
-      p->im -= gmkim;
+      q->re += gmkre;
+      q->im -= gmkim;
       Bre=-Re*im-Im*re;
       Bim=Re*re-Im*im;
-      p=v+k;
-      p->re=Are-Bre;
-      p->im=Aim-Bim;
-      p=g+m1-k;
-      gmkre=p->re;
-      gmkim=p->im;
-      p->re=Are+Bre;
-      p->im=Aim+Bim;
+      q=v+k;
+      q->re=Are-Bre;
+      q->im=Aim-Bim;
+      q=g+m1-k;
+      gmkre=q->re;
+      gmkim=q->im;
+      q->re=Are+Bre;
+      q->im=Aim+Bim;
 #endif
 #ifdef __SSE2__      
       Zetak=ZMULT(CC,SS,Zetak);
@@ -278,14 +277,30 @@ public:
     unsigned int stop=m-c-1;
     double ninv=1.0/n;
     f[0]=(f[0].re+v[0].re+u[0].re)*ninv;
+    Complex *fm=f+m;
+#ifdef __SSE2__      
+    Complex Zeta(Cos,Sin);
+    const Complex Ninv2(ninv,ninv);
+    Vec ninv2=LOAD(&Ninv2);
+    Zetak=LOAD(&Zeta)*ninv2;
+    SS=LOAD(&ss);
+#else
     Re=Cos*ninv;
     Im=Sin*ninv;
-    Complex *fm=f+m;
+#endif    
     for(unsigned k=1; k < stop; ++k) {
       Complex *p=f+k;
+      Complex *s=fm-k;
+#ifdef __SSE2__      
+      Vec F0=LOAD(p)*ninv2;
+      Vec F1=ZMULT(CONJ(Zetak),LOAD(v+k));
+      Vec F2=ZMULT(Zetak,LOAD(u+k));
+      Vec S=F1+F2;
+      STORE(p,F0+S);
+      STORE(s,CONJ(F0+Mhalf*S)-HSqrt3*FLIP(F1-F2));
+#else
       Complex *q=v+k;
       Complex *r=u+k;
-      Complex *s=fm-k;
       double f0re=p->re*ninv;
       double f0im=p->im*ninv;
       double f1re=Re*q->re+Im*q->im;
@@ -298,12 +313,22 @@ public:
       p->im=f0im+sim;
       s->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
       s->im=-f0im+0.5*sim-hsqrt3*(f1re-f2re);
+#endif      
+#ifdef __SSE2__      
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
       double temp=Re*Cos-Im*Sin; 
       Im=Re*Sin+Im*Cos;
       Re=temp;
+#endif      
     }
     
+#ifdef __SSE2__      
+    Complex Zetak0;
+    STORE(&Zetak0,Zetak);
+#else    
     Complex Zetak0=Complex(Re,Im);
+#endif      
     Complex f0k=overlap0*ninv;
     Complex f1k=conj(Zetak0)*v[stop];
     Complex f2k=Zetak0*u[cm1];
@@ -400,10 +425,9 @@ public:
     static const Complex one(1.0,0.0);
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-    const Complex mss(Sin,-Sin);
-    V CC=LOAD(&cc);
-    V SS=LOAD(&ss);
-    V Zetak=LOAD(&one);
+    Vec CC=LOAD(&cc);
+    Vec SS=LOAD(&ss);
+    Vec Zetak=LOAD(&one);
 #else    
     double re=1.0;
     double im=0.0;
@@ -463,11 +487,11 @@ public:
     
     double ninv=1.0/n;
 #ifdef __SSE2__      
-    SS=LOAD(&mss);
+    SS=-LOAD(&ss);
     const Complex Ninv(ninv,0.0);
     const Complex Ninv2(ninv,ninv);
     Zetak=LOAD(&Ninv);
-    V ninv2=LOAD(&Ninv2);
+    Vec ninv2=LOAD(&Ninv2);
 #else    
     re=ninv;
     im=0.0;
