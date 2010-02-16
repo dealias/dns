@@ -291,22 +291,22 @@ public:
 
 };
 
-// calculates the convolution of two complex non-Hermitian vectors
+// Calculates the convolution of two complex vectors
 class cconvolution {
- protected:
+protected:
   unsigned int n;
   unsigned int m;
   fft1d *Backwards, *Backwardso;
   fft1d *Forwards, *Forwardso;
   double c,s;
- public:  
- cconvolution(unsigned int n, unsigned int m, Complex *f) :
-  n(n), m(m) {
+public:  
+  cconvolution(unsigned int n, unsigned int m, Complex *f) :
+    n(n), m(m) {
     Backwards=new fft1d(n,1,f);
     Forwards=new fft1d(n,-1,f);
   }
   
- cconvolution(unsigned int m, Complex *f) : m(m) {
+  cconvolution(unsigned int m, Complex *f) : m(m) {
     n=2*m;
     double arg=2.0*M_PI/n;
     c=cos(arg);
@@ -673,7 +673,7 @@ class fftpad {
 
 public:  
   fftpad(unsigned int m, unsigned int M,
-          unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
+         unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
     n=2*m;
     double arg=2.0*M_PI/n;
     c=cos(arg);
@@ -1139,59 +1139,6 @@ public:
     xfftpad->forwards(f,u);
   }
   
-// Compute H = F (*) G, where F and G contain the non-negative Fourier
-// components of real functions f and g, respectively, via direct convolution
-// instead of a Fast Fourier Transform technique.
-//
-// Input F[i], G[i] (0 <= i < m).
-// Output H[i] = F (*) G  (0 <= i < m), F and G unchanged.
-//
-// Array H[m] must be distinct from F[m] and G[m].
-
-  void direct(Complex *H, Complex *F, Complex *G) {
-    /*
-    Complex *f=FFTWComplex((2*mx-1)*(2*my-1));
-    for(unsigned int i=0; i < 2*mx-1; i++) {
-      f[i][0]=F[i][0];
-      for(unsigned int j=1; j < my; j++) {
-        f[i][j]=F[i][j];
-        f[i][j]=F[i][origin-j];
-      }
-    }
-    cconvolution2 C(mx,f);
-    return C.direct(h,f,g);
-    */
-    
-    unsigned int origin=mx-1;
-    for(unsigned int i=0; i < mx; ++i) {
-      for(unsigned int l=0; l < my; ++l) {
-        Complex sump=0.0;
-        Complex summ=0.0;
-        for(unsigned int k=0; k <= i; ++k)
-          for(unsigned int j=0; j <= l; ++j) {
-            sump += F[(origin+k)*my+j]*G[(origin+i-k)*my+l-j];
-            summ += F[(origin-k)*my+j]*G[(origin-i+k)*my+l-j];
-          }
-        
-        for(unsigned int k=0; k <= i; ++k)
-          for(unsigned int j=l+1; j < my; ++j) {
-            sump += F[(origin+k)*my+j]*conj(G[(origin+k-i)*my+j-l]);
-            summ += F[(origin-k)*my+j]*conj(G[(origin-k+i)*my+j-l]);
-          }
-        
-          
-        for(unsigned int k=0; k <= i; ++k)
-          for(unsigned int j=1; j < my-l; ++j) {
-            sump += conj(F[(origin-k)*my+j])*G[(origin+i-k)*my+l+j];
-            summ += conj(F[(origin+k)*my+j])*G[(origin-i+k)*my+l+j];
-          }
-        
-        H[(origin+i)*my+l]=sump;
-        if(i > 0) 
-          H[(origin-i)*my+l]=summ;
-      }
-    }
-  }	
 };
 
 #endif

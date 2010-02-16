@@ -175,40 +175,6 @@ int main(int argc, char* argv[])
     for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
 #endif
   }
-
-  if(false)
-  if(!pad)
-  {
-    array2<Complex> h(nxp,nyp,align);
-    convolution2 convolve(nx,ny,mx,my,f);
-    init(f,g);
-    seconds();
-    convolve.direct(h,f,g);
-    sum=seconds();
-  
-    cout << endl;
-    cout << "Direct:" << endl;
-    cout << sum-offset/N << endl;
-    cout << endl;
-
-    if(nxp*nyp < outlimit) 
-      for(unsigned int i=0; i < nxp; i++) {
-        for(unsigned int j=0; j < my; j++)
-          cout << h[i][j] << "\t";
-        cout << endl;
-      } else cout << h[0][0] << endl;
-
-    // test accuracy of convolution methods:
-    double error=0.0;
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) 
-      error += abs2(h[i]-pseudoh[i]);
-    cout << "error="<<error<<endl;
-    if (error > 1e-12)
-      cerr << "Caution! error="<<error<<endl;
-#endif    
-  }
-  
   
 //  FFTWdelete(f);
 //  FFTWdelete(g);
