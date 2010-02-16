@@ -1,6 +1,5 @@
 // Rename m to a?
 
-#include <emmintrin.h>
 #include "fftw++.h"
 
 #include "cmult-sse2.h"

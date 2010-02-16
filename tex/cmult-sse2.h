@@ -21,6 +21,13 @@
  *
  */
 
+#ifndef __cmult_sse2_h__
+#define __cmult_sse2_h__ 1
+
+#ifdef __SSE2__      
+
+#include <emmintrin.h>
+
 typedef __m128d V;
 
 #define VADD _mm_add_pd
@@ -38,6 +45,7 @@ union uvec {
   V v;
 };
   
+// TODO: move to cc file.
 const union uvec sse2_pm = {
   { 0x00000000,0x00000000,0x00000000,0x80000000 }
 };
@@ -77,3 +85,6 @@ static inline void STA(Complex *x, const V& v)
   *(V *) x = v;
 }
 
+#endif
+
+#endif
