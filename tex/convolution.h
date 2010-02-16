@@ -354,11 +354,12 @@ class cconvolution {
   // 1/2 padding
   void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
 #ifdef __SSE2__      
+    static const Complex one(1.0,0.0);
     const Complex cc(c,c);
     const Complex sms(s,-s);
+    const Complex mss(-s,s);
     V CC=LDA(&cc);
     V SS=LDA(&sms);
-    static const Complex one(1.0,0.0);
     V Zetak=LDA(&one);
 #else    
     double re=1.0;
@@ -419,7 +420,6 @@ class cconvolution {
     
     double ninv=1.0/n;
 #ifdef __SSE2__      
-    const Complex mss(-s,s);
     SS=LDA(&mss);
     const Complex Ninv(ninv,0.0);
     const Complex Ninv2(ninv,ninv);
