@@ -1,6 +1,9 @@
 // Rename m to a?
 
+#include <emmintrin.h>
 #include "fftw++.h"
+
+#include "cmult-sse2.h"
 
 #ifndef __convolution_h__
 #define __convolution_h__ 1
@@ -350,9 +353,20 @@ class cconvolution {
   // u and v are temporary work arrays each of size m.
   // 1/2 padding
   void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
+#ifdef __SSE2__      
+    const Complex zetac(c,-s);
+    static const Complex one(1.0,0.0);
+    V C=LDA(&zetac);
+    V Zetak=LDA(&one);
+#else    
+#endif
     double re=1.0;
     double im=0.0;
     for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__      
+      STA(u+k,VZMUL(Zetak,LDA(f+k)));
+      STA(v+k,VZMUL(Zetak,LDA(g+k)));
+#else      
       Complex *P=u+k;
       Complex *Q=v+k;
       Complex fk=*(f+k);
@@ -361,45 +375,75 @@ class cconvolution {
       P->im=im*fk.re+re*fk.im;
       Q->re=re*gk.re-im*gk.im;
       Q->im=im*gk.re+re*gk.im;
+#endif      
+#ifdef __SSE2__      
+      Zetak=VZMUL(Zetak,C);
+#else      
       double temp=re*c+im*s; 
       im=-re*s+im*c;
       re=temp;
+#endif      
     }  
     
     Backwards->fft(u);
     Backwards->fft(v);
     for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__      
+      STA(v+k,VZMUL(LDA(u+k),LDA(v+k)));
+#else      
       Complex *p=v+k;
       Complex vk=*p;
       Complex uk=*(u+k);
       p->re=uk.re*vk.re-uk.im*vk.im;
       p->im=uk.re*vk.im+uk.im*vk.re;
+#endif      
     }
     Forwardso->fft(v,u);
 
     Backwardso->fft(f,v);
     Backwardso->fft(g,f);
     for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__      
+      STA(v+k,VZMUL(LDA(v+k),LDA(f+k)));
+#else      
       Complex *p=v+k;
       Complex vk=*p;
       Complex fk=*(f+k);
       p->re=vk.re*fk.re-vk.im*fk.im;
       p->im=vk.re*fk.im+vk.im*fk.re;
+#endif      
     }
     Forwardso->fft(v,f);
     
     double ninv=1.0/n;
+#ifdef __SSE2__      
+    const Complex zeta(c,s);
+    static const Complex Ninv(ninv,0.0);
+    static const Complex Ninv2(ninv,ninv);
+    C=LDA(&zeta);
+    Zetak=LDA(&Ninv);
+    V ninv2=LDA(&Ninv2);
+#else    
     re=ninv;
     im=0.0;
+#endif    
     for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__
+      STA(f+k,VADD(VZMUL(Zetak,LDA(u+k)),VMUL(ninv2,LDA(f+k))));
+#else      
       Complex *p=f+k;
       Complex fk=*p;
       Complex fkm=*(u+k);
       p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
       p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+#endif      
+#ifdef __SSE2__      
+      Zetak=VZMUL(Zetak,C);
+#else      
       double temp=re*c-im*s;
       im=re*s+im*c;
       re=temp;
+#endif      
     }
   }
   

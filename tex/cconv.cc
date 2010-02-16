@@ -47,7 +47,7 @@ inline void init(Complex *f, Complex *g)
 
 int main(int argc, char* argv[])
 {
-  fftw::effort |= FFTW_NO_SIMD;
+//  fftw::effort |= FFTW_NO_SIMD;
   
   int pad=0;
   
