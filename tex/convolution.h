@@ -22,8 +22,7 @@ protected:
   rcfft1d *rc, *rco;
   crfft1d *cr, *cro;
   double *F,*G;
-  double Cos;
-  double Sin;
+  double Cos,Sin;
 public:  
   // Pass a temporary work array f to save memory.
   convolution(unsigned int n, unsigned int m, Complex *f=NULL) :
@@ -298,7 +297,7 @@ protected:
   unsigned int m;
   fft1d *Backwards, *Backwardso;
   fft1d *Forwards, *Forwardso;
-  double c,s;
+  double Cos,Sin;
 public:  
   cconvolution(unsigned int n, unsigned int m, Complex *f) :
     n(n), m(m) {
@@ -309,8 +308,8 @@ public:
   cconvolution(unsigned int m, Complex *f) : m(m) {
     n=2*m;
     double arg=2.0*M_PI/n;
-    c=cos(arg);
-    s=sin(arg);
+    Cos=cos(arg);
+    Sin=sin(arg);
 
     Backwards=new fft1d(m,-1,f);
     Forwards=new fft1d(m,1,f);
@@ -354,9 +353,9 @@ public:
   void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
 #ifdef __SSE2__      
     static const Complex one(1.0,0.0);
-    const Complex cc(c,c);
-    const Complex sms(s,-s);
-    const Complex mss(-s,s);
+    const Complex cc(Cos,Cos);
+    const Complex sms(Sin,-Sin);
+    const Complex mss(-Sin,Sin);
     V CC=LDA(&cc);
     V SS=LDA(&sms);
     V Zetak=LDA(&one);
@@ -381,8 +380,8 @@ public:
 #ifdef __SSE2__      
       Zetak=VZMUL(CC,SS,Zetak);
 #else      
-      double temp=re*c+im*s; 
-      im=-re*s+im*c;
+      double temp=re*Cos+im*Sin; 
+      im=-re*Sin+im*Cos;
       re=temp;
 #endif      
     }  
@@ -441,8 +440,8 @@ public:
 #ifdef __SSE2__      
       Zetak=VZMUL(CC,SS,Zetak);
 #else      
-      double temp=re*c-im*s;
-      im=re*s+im*c;
+      double temp=re*Cos-im*Sin;
+      im=re*Sin+im*Cos;
       re=temp;
 #endif      
     }
@@ -475,7 +474,7 @@ protected:
   unsigned int dist;
   mfft1d *Backwards;
   mfft1d *Forwards;
-  double c,s;
+  double Cos,Sin;
 public:  
   mcconvolution(unsigned int m, unsigned int M, unsigned int stride,
                 unsigned int dist, Complex *f) : m(m), M(M), stride(stride),
@@ -483,8 +482,8 @@ public:
     n=2*m;
     
     double arg=2.0*M_PI/n;
-    c=cos(arg);
-    s=sin(arg);
+    Cos=cos(arg);
+    Sin=sin(arg);
 
     Backwards=new mfft1d(m,-1,M,stride,dist,f);
     Forwards=new mfft1d(m,1,M,stride,dist,f);
@@ -509,8 +508,8 @@ public:
         P->im=im*fk.re+re*fk.im;
         Q->re=re*gk.re-im*gk.im;
         Q->im=im*gk.re+re*gk.im;
-        double temp=re*c+im*s; 
-        im=-re*s+im*c;
+        double temp=re*Cos+im*Sin; 
+        im=-re*Sin+im*Cos;
         re=temp;
       }  
     }
@@ -559,8 +558,8 @@ public:
         Complex fkm=*(ui+k);
         p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
-        double temp=re*c-im*s;
-        im=re*s+im*c;
+        double temp=re*Cos-im*Sin;
+        im=re*Sin+im*Cos;
         re=temp;
       }
     }
@@ -592,8 +591,8 @@ public:
         Q->re=re*gk.re-im*gk.im;
         Q->im=im*gk.re+re*gk.im;
       }  
-      double temp=re*c+im*s; 
-      im=-re*s+im*c;
+      double temp=re*Cos+im*Sin; 
+      im=-re*Sin+im*Cos;
       re=temp;
     }
     
@@ -642,8 +641,8 @@ public:
         p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
       }
-      double temp=re*c-im*s;
-      im=re*s+im*c;
+      double temp=re*Cos-im*Sin;
+      im=re*Sin+im*Cos;
       re=temp;
     }
   }
@@ -669,15 +668,15 @@ class fftpad {
   unsigned int dist;
   mfft1d *Backwards;
   mfft1d *Forwards;
-  double c,s;
+  double Cos,Sin;
 
 public:  
   fftpad(unsigned int m, unsigned int M,
          unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
     n=2*m;
     double arg=2.0*M_PI/n;
-    c=cos(arg);
-    s=sin(arg);
+    Cos=cos(arg);
+    Sin=sin(arg);
     
     // TODO: Standardize signs
     Backwards=new mfft1d(m,-1,M,stride,1,f);
@@ -698,8 +697,8 @@ public:
         P->re=re*fk.re-im*fk.im;
         P->im=im*fk.re+re*fk.im;
       }
-      double temp=re*c+im*s; 
-      im=-re*s+im*c;
+      double temp=re*Cos+im*Sin; 
+      im=-re*Sin+im*Cos;
       re=temp;
     }
     
@@ -725,8 +724,8 @@ public:
         p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
       }
-      double temp=re*c-im*s;
-      im=re*s+im*c;
+      double temp=re*Cos-im*Sin;
+      im=re*Sin+im*Cos;
       re=temp;
     }
   }
