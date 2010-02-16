@@ -354,14 +354,16 @@ class cconvolution {
   // 1/2 padding
   void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
 #ifdef __SSE2__      
-    const Complex zetac(c,-s);
+    const Complex cc(c,c);
+    const Complex sms(s,-s);
+    V CC=LDA(&cc);
+    V SS=LDA(&sms);
     static const Complex one(1.0,0.0);
-    V C=LDA(&zetac);
     V Zetak=LDA(&one);
 #else    
-#endif
     double re=1.0;
     double im=0.0;
+#endif
     for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
       STA(u+k,VZMUL(Zetak,LDA(f+k)));
@@ -377,7 +379,7 @@ class cconvolution {
       Q->im=im*gk.re+re*gk.im;
 #endif      
 #ifdef __SSE2__      
-      Zetak=VZMUL(Zetak,C);
+      Zetak=VZMUL(CC,SS,Zetak);
 #else      
       double temp=re*c+im*s; 
       im=-re*s+im*c;
@@ -417,10 +419,10 @@ class cconvolution {
     
     double ninv=1.0/n;
 #ifdef __SSE2__      
-    const Complex zeta(c,s);
-    static const Complex Ninv(ninv,0.0);
-    static const Complex Ninv2(ninv,ninv);
-    C=LDA(&zeta);
+    const Complex mss(-s,s);
+    SS=LDA(&mss);
+    const Complex Ninv(ninv,0.0);
+    const Complex Ninv2(ninv,ninv);
     Zetak=LDA(&Ninv);
     V ninv2=LDA(&Ninv2);
 #else    
@@ -438,7 +440,7 @@ class cconvolution {
       p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
 #endif      
 #ifdef __SSE2__      
-      Zetak=VZMUL(Zetak,C);
+      Zetak=VZMUL(CC,SS,Zetak);
 #else      
       double temp=re*c-im*s;
       im=re*s+im*c;

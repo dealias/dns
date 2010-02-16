@@ -1,3 +1,26 @@
+/*
+ * SSE2 complex multiplication routines derived from FFTW simd-sse2.h
+ * by John C. Bowman (University of Alberta)
+ *
+ * Copyright (c) 2003, 2007-8 Matteo Frigo
+ * Copyright (c) 2003, 2007-8 Massachusetts Institute of Technology
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */
+
 typedef __m128d V;
 
 #define VADD _mm_add_pd
@@ -11,47 +34,46 @@ typedef __m128d V;
 #define STOREL _mm_storel_pd
 
 union uvec {
-     unsigned u[4];
-     V v;
+  unsigned u[4];
+  V v;
 };
   
 const union uvec sse2_pm = {
-     { 0x00000000, 0x00000000, 0x00000000, 0x80000000 }
+  { 0x00000000,0x00000000,0x00000000,0x80000000 }
 };
 
-static inline V FLIP_RI(V x)
+static inline V FLIP_RI(const V& x)
 {
-     return SHUFPD(x, x, 1);
+  return SHUFPD(x,x,1);
 }
 
-static inline V VCONJ(V x)
+static inline V VCONJ(const V& x)
 {
-     return VXOR(sse2_pm.v, x);
+  return VXOR(sse2_pm.v,x);
 }
 
-static inline V VBYI(V x)
+static inline V VBYI(const V& x)
 {
-     x = VCONJ(x);
-     x = FLIP_RI(x);
-     return x;
+  return FLIP_RI(VCONJ(x));
 }
 
-static inline V VZMUL(V tx, V sr)
+static inline V VZMUL(const V& tx, const V& sr)
 {
-     V tr = UNPCKL(tx, tx);
-     V ti = UNPCKH(tx, tx);
-     tr = VMUL(sr, tr);
-     sr = VBYI(sr);
-     return VADD(tr, VMUL(ti, sr));
+  return VADD(VMUL(sr,UNPCKL(tx,tx)),VMUL(UNPCKH(tx,tx),VBYI(sr)));
+}
+
+static inline V VZMUL(const V& t0, const V& t1, V sr)
+{
+  return VADD(VMUL(t0,sr),VMUL(t1,FLIP_RI(sr)));
 }
 
 static inline V LDA(const Complex *x)
 {
-  return *(const V *)x;
+  return *(const V *) x;
 }
 
-static inline void STA(Complex *x, V v)
+static inline void STA(Complex *x, const V& v)
 {
-  *(V *)x = v;
+  *(V *) x = v;
 }
 
