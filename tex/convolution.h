@@ -290,7 +290,7 @@ public:
 
 };
 
-// Calculates the convolution of two complex vectors
+// Calculates the convolution of two complex vectors.
 class cconvolution {
 protected:
   unsigned int n;
@@ -311,12 +311,12 @@ public:
     Cos=cos(arg);
     Sin=sin(arg);
 
-    Backwards=new fft1d(m,-1,f);
-    Forwards=new fft1d(m,1,f);
+    Backwards=new fft1d(m,1,f);
+    Forwards=new fft1d(m,-1,f);
     
     Complex *G=(Complex *)FFTWComplex(m);
-    Backwardso=new fft1d(m,-1,f,G);
-    Forwardso=new fft1d(m,1,G,f);
+    Backwardso=new fft1d(m,1,f,G);
+    Forwardso=new fft1d(m,-1,G,f);
     FFTWdelete(G);
   }
   
@@ -354,10 +354,10 @@ public:
 #ifdef __SSE2__      
     static const Complex one(1.0,0.0);
     const Complex cc(Cos,Cos);
-    const Complex sms(Sin,-Sin);
-    const Complex mss(-Sin,Sin);
+    const Complex ss(-Sin,Sin);
+    const Complex mss(Sin,-Sin);
     V CC=LDA(&cc);
-    V SS=LDA(&sms);
+    V SS=LDA(&ss);
     V Zetak=LDA(&one);
 #else    
     double re=1.0;
@@ -380,8 +380,8 @@ public:
 #ifdef __SSE2__      
       Zetak=VZMUL(CC,SS,Zetak);
 #else      
-      double temp=re*Cos+im*Sin; 
-      im=-re*Sin+im*Cos;
+      double temp=re*Cos-im*Sin; 
+      im=re*Sin+im*Cos;
       re=temp;
 #endif      
     }  
@@ -440,8 +440,8 @@ public:
 #ifdef __SSE2__      
       Zetak=VZMUL(CC,SS,Zetak);
 #else      
-      double temp=re*Cos-im*Sin;
-      im=re*Sin+im*Cos;
+      double temp=re*Cos+im*Sin;
+      im=-re*Sin+im*Cos;
       re=temp;
 #endif      
     }
@@ -485,8 +485,8 @@ public:
     Cos=cos(arg);
     Sin=sin(arg);
 
-    Backwards=new mfft1d(m,-1,M,stride,dist,f);
-    Forwards=new mfft1d(m,1,M,stride,dist,f);
+    Backwards=new mfft1d(m,1,M,stride,dist,f);
+    Forwards=new mfft1d(m,-1,M,stride,dist,f);
   }
   
   // Special case optimized for stride=1.
@@ -508,16 +508,16 @@ public:
         P->im=im*fk.re+re*fk.im;
         Q->re=re*gk.re-im*gk.im;
         Q->im=im*gk.re+re*gk.im;
-        double temp=re*Cos+im*Sin; 
-        im=-re*Sin+im*Cos;
+        double temp=re*Cos-im*Sin; 
+        im=re*Sin+im*Cos;
         re=temp;
       }  
     }
     
-    Forwards->fft(f);
-    Forwards->fft(u);
-    Forwards->fft(g);
-    Forwards->fft(u+mM);
+    Backwards->fft(f);
+    Backwards->fft(u);
+    Backwards->fft(g);
+    Backwards->fft(u+mM);
     
     for(unsigned int i=0; i < istop; i += dist) {
       Complex *fi=f+i;
@@ -531,7 +531,7 @@ public:
       }
     }
     
-    Backwards->fft(f);
+    Forwards->fft(f);
     
     for(unsigned int i=0; i < istop; i += dist) {
       Complex *ui=u+i;
@@ -544,7 +544,7 @@ public:
       }
     }
     
-    Backwards->fft(u);
+    Forwards->fft(u);
     
     double ninv=1.0/n;
     for(unsigned int i=0; i < istop; i += dist) {
@@ -558,8 +558,8 @@ public:
         Complex fkm=*(ui+k);
         p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
-        double temp=re*Cos-im*Sin;
-        im=re*Sin+im*Cos;
+        double temp=re*Cos+im*Sin;
+        im=-re*Sin+im*Cos;
         re=temp;
       }
     }
@@ -591,15 +591,15 @@ public:
         Q->re=re*gk.re-im*gk.im;
         Q->im=im*gk.re+re*gk.im;
       }  
-      double temp=re*Cos+im*Sin; 
-      im=-re*Sin+im*Cos;
+      double temp=re*Cos-im*Sin; 
+      im=re*Sin+im*Cos;
       re=temp;
     }
     
-    Forwards->fft(f);
-    Forwards->fft(u);
-    Forwards->fft(g);
-    Forwards->fft(u+mM);
+    Backwards->fft(f);
+    Backwards->fft(u);
+    Backwards->fft(g);
+    Backwards->fft(u+mM);
     
     for(unsigned int k=0; k < kstop; k += stride) {
       Complex *fk=f+k;
@@ -613,7 +613,7 @@ public:
       }
     }
     
-    Backwards->fft(f);
+    Forwards->fft(f);
     
     for(unsigned int k=0; k < kstop; k += stride) {
       Complex *uk=u+k;
@@ -626,7 +626,7 @@ public:
       }
     }
     
-    Backwards->fft(u);
+    Forwards->fft(u);
     
     double ninv=1.0/n;
     re=ninv;
@@ -641,8 +641,8 @@ public:
         p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
       }
-      double temp=re*Cos-im*Sin;
-      im=re*Sin+im*Cos;
+      double temp=re*Cos+im*Sin;
+      im=-re*Sin+im*Cos;
       re=temp;
     }
   }
@@ -678,9 +678,8 @@ public:
     Cos=cos(arg);
     Sin=sin(arg);
     
-    // TODO: Standardize signs
-    Backwards=new mfft1d(m,-1,M,stride,1,f);
-    Forwards=new mfft1d(m,1,M,stride,1,f);
+    Backwards=new mfft1d(m,1,M,stride,1,f);
+    Forwards=new mfft1d(m,-1,M,stride,1,f);
   }
   
   void backwards(Complex *f, Complex *u) {
@@ -697,8 +696,8 @@ public:
         P->re=re*fk.re-im*fk.im;
         P->im=im*fk.re+re*fk.im;
       }
-      double temp=re*Cos+im*Sin; 
-      im=-re*Sin+im*Cos;
+      double temp=re*Cos-im*Sin; 
+      im=re*Sin+im*Cos;
       re=temp;
     }
     
@@ -724,8 +723,8 @@ public:
         p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
       }
-      double temp=re*Cos-im*Sin;
-      im=re*Sin+im*Cos;
+      double temp=re*Cos+im*Sin;
+      im=-re*Sin+im*Cos;
       re=temp;
     }
   }

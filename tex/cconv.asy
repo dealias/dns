@@ -9,17 +9,17 @@ pair[] convolve0(pair[] f, pair[] g)
 
   pair Zetak=1.0;
   for(int k=0; k < m; ++k) {
-    f[k+m]=conj(Zetak)*f[k];
-    g[k+m]=conj(Zetak)*g[k];
+    f[k+m]=Zetak*f[k];
+    g[k+m]=Zetak*g[k];
     Zetak *= zeta;
   }
   
-  f=concat(fft(fft(f[0:m],-1)*fft(g[0:m],-1),1),
-           fft(fft(f[m:2m],-1)*fft(g[m:2m],-1),1));
+  f=concat(fft(fft(f[0:m],1)*fft(g[0:m],1),-1),
+           fft(fft(f[m:2m],1)*fft(g[m:2m],1),-1));
 
   Zetak=1.0;
   for(int k=0; k < m; ++k) {
-    f[k]=(f[k]+Zetak*f[k+m])/n;
+    f[k]=(f[k]+conj(Zetak)*f[k+m])/n;
     Zetak *= zeta;
   }
 
@@ -30,7 +30,7 @@ pair[] convolve0(pair[] f, pair[] g)
 // f has length 2m-1 with the origin at index m
 // (i.e. physical wavenumber k=-m+1 to k=m-1).
 // u is a work array of length m.
-pair[] fft0pad(pair[] f, pair[] u, bool unscramble=true)
+pair[] fft0padinv(pair[] f, pair[] u, bool unscramble=true)
 {
   int m=quotient(f.length+1,2);
   assert(2m-1 == f.length);
@@ -78,7 +78,7 @@ pair[] fft0pad(pair[] f, pair[] u, bool unscramble=true)
   return h;
 }
 
-pair[] fft0padinv(pair[] f, bool unscramble=true)
+pair[] fft0pad(pair[] f, bool unscramble=true)
 {
   int n=f.length;
   int m=quotient(n,3);
@@ -186,5 +186,5 @@ write();
 
 //write(fft0pad(f,u,false));
 
-write(fft0padinv(fft0pad(f,u,false),false));
+write(fft0pad(fft0padinv(f,u,false),false));
 

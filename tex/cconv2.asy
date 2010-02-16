@@ -104,7 +104,7 @@ write();
 real ninv=1/(F.length*F[0].length);
 write("padded:");
 pair[][] f_padded=ninv*unpad(fft(F,-1),nx,ny);
-//write(f_padded);
+write(f_padded);
 write("error="+(string)maxerror(f_direct,f_padded));
 
 write();
@@ -123,10 +123,6 @@ for(int i=0; i < n; ++i)
 write("f:");
 write(f[0]);
 write();
-write("fftpad(f):");
-write(fftpad(f[0]));
-write();
-
 
 pair[][] F=fftpad(f);
 pair[][] G=fftpad(f);
