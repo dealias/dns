@@ -14,6 +14,7 @@
 static const double sqrt3=sqrt(3.0);
 static const double hsqrt3=0.5*sqrt3;
 
+// Calculate the convolution of two Hermitian vectors.
 class convolution {
 protected:
   unsigned int n;
@@ -131,9 +132,48 @@ public:
     double gmkim=gmk.im;
     g[m1]=g0;
     
+#ifdef __SSE2__      
+    Complex zetac(Cos,-Sin);
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    const Complex mss(Sin,-Sin);
+    V CC=LOAD(&cc);
+    V SS=LOAD(&mss);
+    V Zetak=LOAD(&zetac);
+    V Fmk=LOAD(&fmk);
+    V Gmk=LOAD(&gmk);
+    static const Complex mhalf(-0.5,-0.5);
+    V Mhalf=LOAD(&mhalf);
+    static const Complex hSqrt3(hsqrt3,hsqrt3);
+    V HSqrt3=LOAD(&hSqrt3);
+#else
+#endif
     double Re=Cos;
     double Im=-Sin;
     for(unsigned int k=1; k < c; ++k) {
+#ifdef __SSE2__
+      V A=LOAD(f+k);
+      V Z=Fmk*Mhalf+CONJ(A);
+      STORE(f+k,A+CONJ(Fmk));
+      V W=Fmk*HSqrt3;
+      A=ZMULT(Zetak,UNPACKL(Z,W));
+      V B=ZMULTI(Zetak,UNPACKH(Z,W));
+      STORE(u+k,A-B);
+      Complex *p=f+m1-k;
+      Fmk=LOAD(p);
+      STORE(p,A+B);
+
+      A=LOAD(g+k);
+      Z=Gmk*Mhalf+CONJ(A);
+      STORE(g+k,A+CONJ(Gmk));
+      W=Gmk*HSqrt3;
+      A=ZMULT(Zetak,UNPACKL(Z,W));
+      B=ZMULTI(Zetak,UNPACKH(Z,W));
+      STORE(v+k,A-B);
+      p=g+m1-k;
+      Gmk=LOAD(p);
+      STORE(p,A+B);
+#else
       Complex *p=f+k;
       double re=-0.5*fmkre+p->re;
       double im=hsqrt3*fmkre;
@@ -173,9 +213,14 @@ public:
       gmkim=p->im;
       p->re=Are+Bre;
       p->im=Aim+Bim;
+#endif
+#ifdef __SSE2__      
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
       double temp=Re*Cos+Im*Sin; 
       Im=-Re*Sin+Im*Cos;
       Re=temp;
+#endif      
     }
   
     double A=fc.re;
@@ -258,10 +303,10 @@ public:
       Re=temp;
     }
     
-    Complex Zetak=Complex(Re,Im);
+    Complex Zetak0=Complex(Re,Im);
     Complex f0k=overlap0*ninv;
-    Complex f1k=conj(Zetak)*v[stop];
-    Complex f2k=Zetak*u[cm1];
+    Complex f1k=conj(Zetak0)*v[stop];
+    Complex f2k=Zetak0*u[cm1];
     f[cm1]=f0k+f1k+f2k;
     static const Complex zeta3(-0.5,hsqrt3);
     f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
@@ -290,7 +335,7 @@ public:
 
 };
 
-// Calculates the convolution of two complex vectors.
+// Calculate the convolution of two complex vectors.
 class cconvolution {
 protected:
   unsigned int n;
@@ -356,17 +401,17 @@ public:
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
     const Complex mss(Sin,-Sin);
-    V CC=LDA(&cc);
-    V SS=LDA(&ss);
-    V Zetak=LDA(&one);
+    V CC=LOAD(&cc);
+    V SS=LOAD(&ss);
+    V Zetak=LOAD(&one);
 #else    
     double re=1.0;
     double im=0.0;
 #endif
     for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
-      STA(u+k,VZMUL(Zetak,LDA(f+k)));
-      STA(v+k,VZMUL(Zetak,LDA(g+k)));
+      STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
+      STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
 #else      
       Complex *P=u+k;
       Complex *Q=v+k;
@@ -378,7 +423,7 @@ public:
       Q->im=im*gk.re+re*gk.im;
 #endif      
 #ifdef __SSE2__      
-      Zetak=VZMUL(CC,SS,Zetak);
+      Zetak=ZMULT(CC,SS,Zetak);
 #else      
       double temp=re*Cos-im*Sin; 
       im=re*Sin+im*Cos;
@@ -390,7 +435,7 @@ public:
     Backwards->fft(v);
     for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
-      STA(v+k,VZMUL(LDA(u+k),LDA(v+k)));
+      STORE(v+k,ZMULT(LOAD(u+k),LOAD(v+k)));
 #else      
       Complex *p=v+k;
       Complex vk=*p;
@@ -405,7 +450,7 @@ public:
     Backwardso->fft(g,f);
     for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
-      STA(v+k,VZMUL(LDA(v+k),LDA(f+k)));
+      STORE(v+k,ZMULT(LOAD(v+k),LOAD(f+k)));
 #else      
       Complex *p=v+k;
       Complex vk=*p;
@@ -418,18 +463,18 @@ public:
     
     double ninv=1.0/n;
 #ifdef __SSE2__      
-    SS=LDA(&mss);
+    SS=LOAD(&mss);
     const Complex Ninv(ninv,0.0);
     const Complex Ninv2(ninv,ninv);
-    Zetak=LDA(&Ninv);
-    V ninv2=LDA(&Ninv2);
+    Zetak=LOAD(&Ninv);
+    V ninv2=LOAD(&Ninv2);
 #else    
     re=ninv;
     im=0.0;
 #endif    
     for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__
-      STA(f+k,VADD(VZMUL(Zetak,LDA(u+k)),VMUL(ninv2,LDA(f+k))));
+      STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
 #else      
       Complex *p=f+k;
       Complex fk=*p;
@@ -438,7 +483,7 @@ public:
       p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
 #endif      
 #ifdef __SSE2__      
-      Zetak=VZMUL(CC,SS,Zetak);
+      Zetak=ZMULT(CC,SS,Zetak);
 #else      
       double temp=re*Cos+im*Sin;
       im=-re*Sin+im*Cos;
