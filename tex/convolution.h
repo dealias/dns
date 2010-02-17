@@ -1,5 +1,7 @@
 // Rename m to a?
 
+#include <cassert>
+
 #include "fftw++.h"
 
 #include "cmult-sse2.h"
@@ -357,50 +359,29 @@ public:
 
 };
 
-// Calculate the convolution of two complex vectors.
-class cconvolution {
+// In-place explicitly dealiased complex convolution.
+class ExplicitConvolution {
 protected:
-  unsigned int n;
-  unsigned int m;
-  fft1d *Backwards, *Backwardso;
-  fft1d *Forwards, *Forwardso;
+  unsigned int n,m;
+  fft1d *Backwards,*Forwards;
   double Cos,Sin;
 public:  
-  cconvolution(unsigned int n, unsigned int m, Complex *f) :
+  
+  // u is a temporary array of size n.
+  ExplicitConvolution(unsigned int n, unsigned int m, Complex *u) :
     n(n), m(m) {
-    Backwards=new fft1d(n,1,f);
-    Forwards=new fft1d(n,-1,f);
+    Backwards=new fft1d(n,1,u);
+    Forwards=new fft1d(n,-1,u);
   }
   
-  cconvolution(unsigned int m, Complex *f) : m(m) {
-    n=2*m;
-    double arg=2.0*M_PI/n;
-    Cos=cos(arg);
-    Sin=sin(arg);
-
-    Backwards=new fft1d(m,1,f);
-    Forwards=new fft1d(m,-1,f);
-    
-    Complex *G=(Complex *)FFTWComplex(m);
-    Backwardso=new fft1d(m,1,f,G);
-    Forwardso=new fft1d(m,-1,G,f);
-    FFTWdelete(G);
-  }
+  ~ExplicitConvolution() {
+    delete Backwards;
+    delete Forwards;
+  }    
   
-// Need destructor  
-  
-// Compute H = F (*) G, where F and G are the non-negative Fourier
-// components of real functions f and g, respectively. Dealiasing via
-// zero-padding is implemented automatically.
-//
-// Arrays F[n/2+1], G[n/2+1] must be distinct.
-// Input F[i], G[i] (0 <= i < m), where 3*m <= n.
-// Output H[i] = F (*) G  (0 <= i < m), F[i]=f[i], G[i]=g[i] (0 <= i < n/2).
-//
-// Array H[n/2+1] can coincide with either F or G, in which case the output H
-// subsumes f or g, respectively.
-
-  void fft(Complex *h, Complex *f, Complex *g) {
+  // The input arrays f and g are each of size n (contents not preserved).
+  // The output is returned in f.
+  void convolve(Complex *f, Complex *g) {
     for(unsigned int i=m; i < n; i++) f[i]=0.0;
     Backwards->fft(f);
   
@@ -413,11 +394,42 @@ public:
 	
     Forwards->fft(f);
   }
+};
+
+// In-place implicitly dealiased complex convolution.
+class ImplicitConvolution {
+protected:
+  unsigned int n,m;
+  fft1d *Backwards,*Forwards;
+  fft1d *Backwardso,*Forwardso;
+  double Cos,Sin;
+public:  
   
-  // Note: input arrays f and g are destroyed.
+  // u and v are distinct temporary arrays each of size m.
+  ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : n(2*m), m(m) {
+    double arg=2.0*M_PI/n;
+    Cos=cos(arg);
+    Sin=sin(arg);
+
+    Backwards=new fft1d(m,1,u);
+    Forwards=new fft1d(m,-1,u);
+    
+    Backwardso=new fft1d(m,1,u,v);
+    Forwardso=new fft1d(m,-1,u,v);
+  }
+  
+  ~ImplicitConvolution() {
+    delete Backwards;
+    delete Forwards;
+    delete Backwardso;
+    delete Forwardso;
+  }
+  
+  // In-place implicitly dealiased convolution.
+  // The input arrays f and g are each of size m (contents not preserved).
+  // The output is returned in f.
   // u and v are temporary work arrays each of size m.
-  // 1/2 padding
-  void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
+  void convolve(Complex *f, Complex *g, Complex *u, Complex *v) {
 #ifdef __SSE2__      
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
@@ -505,21 +517,20 @@ public:
 #endif      
     }
   }
-  
-// Compute H = F (*) G, where F and G contain the non-negative Fourier
-// components of real functions f and g, respectively, via direct convolution
-// instead of a Fast Fourier Transform technique.
-//
-// Input F[i], G[i] (0 <= i < m).
-// Output H[i] = F (*) G  (0 <= i < m), F and G unchanged.
-//
-// Array H[m] must be distinct from F[m] and G[m].
+};
 
-  void direct(Complex *H, Complex *F, Complex *G) {
+// Out-of-place direct complex convolution.
+class DirectConvolution {
+protected:
+  unsigned int m;
+public:  
+  DirectConvolution(unsigned int m) : m(m) {}
+  
+  void convolve(Complex *h, Complex *f, Complex *g) {
     for(unsigned int i=0; i < m; i++) {
       Complex sum=0.0;
-      for(unsigned int j=0; j <= i; j++) sum += F[j]*G[i-j];
-      H[i]=sum;
+      for(unsigned int j=0; j <= i; j++) sum += f[j]*g[i-j];
+      h[i]=sum;
     }
   }	
 };
@@ -848,24 +859,18 @@ public:
   }
 };
   
-class cconvolution2 {
+// In-place explicitly dealiased 2D complex convolution.
+class ExplicitConvolution2 {
 protected:
   unsigned int n;
   unsigned int m;
-  bool prune;
-  mfft1d *xBackwards;
-  mfft1d *yBackwards;
-  mfft1d *xForwards;
-  mfft1d *yForwards;
-  fft2d *Backwards;
-  fft2d *Forwards;
-  cconvolution *C;
-  fftpad *xfftpad;
-  Complex *u,*v;
-  Complex *work;
-public:  
-  // Set prune=true to skip Fourier transforming zero rows.
-  cconvolution2(unsigned int n, unsigned int m, Complex *f, bool prune=false) :
+  bool prune; // Skip Fourier transforming rows containing all zeroes?
+  mfft1d *xBackwards, *xForwards;
+  mfft1d *yBackwards, *yForwards;
+  fft2d *Backwards, *Forwards;
+public:
+  ExplicitConvolution2(unsigned int n, unsigned int m,
+                       Complex *f, bool prune=false) :
     n(n), m(m), prune(prune) {
     if(prune) {
       xBackwards=new mfft1d(n,1,m,n,1,f);
@@ -878,28 +883,18 @@ public:
     }
   }
   
-  cconvolution2(unsigned int m, Complex *f) : m(m) {
-    n=2*m;
-    u=FFTWComplex(m*m);
-    v=FFTWComplex(m*m);
-    work=FFTWComplex(n);
-    xfftpad=new fftpad(m,m,m,u);
-    C=new cconvolution(m,work);
-  }
+  ~ExplicitConvolution2() {
+    if(prune) {
+      delete xBackwards;
+      delete yBackwards;
+      delete xForwards;
+      delete yForwards;
+    } else {
+      delete Backwards;
+      delete Forwards;
+    }
+  }    
   
-// Need destructor  
-  
-// Compute H = F (*) G, where F and G are the non-negative Fourier
-// components of real functions f and g, respectively. Dealiasing via
-// zero-padding is implemented automatically.
-//
-// Arrays F[n/2+1], G[n/2+1] must be distinct.
-// Input F[i], G[i] (0 <= i < m), where 3*m <= n.
-// Output H[i] = F (*) G  (0 <= i < m), F[i]=f[i], G[i]=g[i] (0 <= i < n/2).
-//
-// Array H[n/2+1] can coincide with either F or G, in which case the output H
-// subsumes f or g, respectively.
-
   void pad(Complex *f) {
     for(unsigned int i=0; i < m;) {
       unsigned int j=n*i+m;
@@ -918,7 +913,7 @@ public:
     }
   }
   
-  void fft(Complex *f, Complex *g) {
+  void convolve(Complex *f, Complex *g) {
     pad(f);
     if(prune) {
       xBackwards->fft(f);
@@ -945,39 +940,65 @@ public:
       Forwards->fft(f);
     }
   }
-  
-  // Note: input arrays f and g are destroyed.
-  void unpadded(Complex *f, Complex *g) {
-    xfftpad->backwards(f,u);
-    xfftpad->backwards(g,v);
+};
 
-    unsigned int m2=m*m;
-    Complex *work2=work+m;
-    for(unsigned int i=0; i < m2; i += m)
-      C->unpadded(f+i,g+i,work,work2);
-    for(unsigned int i=0; i < m2; i += m)
-      C->unpadded(u+i,v+i,work,work2);
-    
-    xfftpad->forwards(f,u);
+// In-place implicitly dealiased 2D complex convolution.
+class ImplicitConvolution2 {
+protected:
+  unsigned int n;
+  unsigned int m;
+  ImplicitConvolution *yconvolve;
+  fftpad *xfftpad;
+  Complex *u,*v;
+  Complex *work;
+public:  
+  // u1 is a temporary work array of size m.
+  // u2 is a temporary work array of size m*m.
+  ImplicitConvolution2(unsigned int m, Complex *u1, Complex *u2) : 
+    n(2*m), m(m) {
+    xfftpad=new fftpad(m,m,m,u2);
+    yconvolve=new ImplicitConvolution(m,u1,u2);
   }
   
-// Compute H = F (*) G, where F and G contain the non-negative Fourier
-// components of real functions f and g, respectively, via direct convolution
-// instead of a Fast Fourier Transform technique.
-//
-// Input F[i], G[i] (0 <= i < m).
-// Output H[i] = F (*) G  (0 <= i < m), F and G unchanged.
-//
-// Array H[m] must be distinct from F[m] and G[m].
+  ~ImplicitConvolution2() {
+    delete xfftpad;
+    delete yconvolve;
+  }
+  
+  // Note: input arrays f and g are destroyed.
+  // u1 and v1 are temporary work arrays of size m.
+  // u2 and v2 are temporary work arrays of size m*m.
+  void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
+                Complex *u2, Complex *v2) {
+    xfftpad->backwards(f,u2);
+    xfftpad->backwards(g,v2);
 
-  void direct(Complex *H, Complex *F, Complex *G) {
+    unsigned int m2=m*m;
+    for(unsigned int i=0; i < m2; i += m)
+      yconvolve->convolve(f+i,g+i,u1,v1);
+    for(unsigned int i=0; i < m2; i += m)
+      yconvolve->convolve(u2+i,v2+i,u1,v1);
+    
+    xfftpad->forwards(f,u2);
+  }
+};
+
+// Out-of-place direct 2D complex convolution.
+class DirectConvolution2 {
+protected:  
+  unsigned int m;
+  
+public:
+  DirectConvolution2(unsigned int m) : m(m) {}
+  
+  void convolve(Complex *h, Complex *f, Complex *g) {
     for(unsigned int i=0; i < m; ++i) {
       for(unsigned int j=0; j < m; ++j) {
         Complex sum=0.0;
         for(unsigned int k=0; k <= i; ++k)
           for(unsigned int p=0; p <= j; ++p)
-            sum += F[k*m+p]*G[(i-k)*m+j-p];
-        H[i*m+j]=sum;
+            sum += f[k*m+p]*g[(i-k)*m+j-p];
+        h[i*m+j]=sum;
       }
     }
   }	

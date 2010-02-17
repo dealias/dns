@@ -32,20 +32,20 @@
 
 \begin{document}
 
+%\title{Implicit Dealiasing of Fourier-Based Convolutions}
 \title{Efficient Dealiased Convolutions without the Padding}
 \author{John C. Bowman and Malcolm Roberts}
 \maketitle
 
 \begin{abstract}
 An algorithm is described for dealiasing pseudospectral convolution sums
-without the computational expense of conventional zero-padding or
+without the expense of conventional zero-padding or
 phase-shift techniques. In the one-dimensional complex case, the memory
 requirements are identical with the usual zero-padding technique, with the
-important distinction that the additional work memory need not contiguous
-with the data.  This decoupling of the data and work arrays affords
-%(explicit amount?)
-significant reductions in memory usage and bandwidth for higher-dimensional
-convolutions. 
+important distinction that the additional work memory need not be contiguous
+with the data. In addition to being more convenient for the user, 
+for higher-dimensional convolutions, this decoupling of the data and work
+arrays reduces the memory usage of in-place convolutions by a factor of two.
 Generalizations for computing the hyperconvolutions that arise as Fourier
 transform of arbitrary powers are described.  
 Highly optimized methods for both complex and centered Hermitian
@@ -66,6 +66,8 @@ bit reversal, hyperconvolution
 \end{AMS}
 
 \pagestyle{myheadings}
+
+use out-of-place Fourier transforms where possible (percent?)
 
 % Address misleading implication of Canuto page 136 (dealiased.pdf: p.20)
 % regarding power of 2 transforms.

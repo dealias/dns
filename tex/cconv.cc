@@ -110,11 +110,11 @@ int main(int argc, char* argv[])
   if(!pad) {
     Complex *u=FFTWComplex(m);
     Complex *v=FFTWComplex(m);
-    cconvolution convolve(m,f);
+    ImplicitConvolution C(m,u,v);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(f,g,u,v);
+      C.convolve(f,g,u,v);
       sum += seconds();
     }
     
@@ -132,12 +132,12 @@ int main(int argc, char* argv[])
   
   if(pad) {
     sum=0.0;
-    cconvolution Convolve(n,m,f);
+    ExplicitConvolution C(n,m,f);
     for(int i=0; i < N; ++i) {
       // FFTW out-of-place cr routines destroy the input arrays.
       init(f,g);
       seconds();
-      Convolve.fft(h,f,g);
+      C.convolve(f,g);
       sum += seconds();
     }
     cout << endl;
@@ -145,20 +145,21 @@ int main(int argc, char* argv[])
     cout << (sum-offset)/N << endl;
     cout << endl;
     if(m < 100) 
-      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-    else cout << h[0] << endl;
+      for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
+    else cout << f[0] << endl;
     cout << endl;
 #ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=h[i];
+    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
 #endif
   }
   
-  if(false) {
-    cconvolution convolve(m,f);
+//  if(false)
+    {
+    DirectConvolution C(m);
     init(f,g);
     h=FFTWComplex(n);
     seconds();
-    convolve.direct(h,f,g);
+    C.convolve(h,f,g);
     sum=seconds();
   
     cout << endl;

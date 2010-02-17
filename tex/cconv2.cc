@@ -95,11 +95,15 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(!pad) {
-    cconvolution2 convolve(m,f);
+    Complex *u1=FFTWComplex(m);
+    Complex *v1=FFTWComplex(m);
+    Complex *u2=FFTWComplex(m*m);
+    Complex *v2=FFTWComplex(m*m);
+    ImplicitConvolution2 C(m,u1,u2);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(f,g);
+      C.convolve(f,g,u1,v1,u2,v2);
       sum += seconds();
     }
     
@@ -122,12 +126,11 @@ int main(int argc, char* argv[])
   if(pad) {
     for(int prune=0; prune <= 1; ++prune) {
       sum=0.0;
-      cconvolution2 Convolve(n,m,f,prune);
+      ExplicitConvolution2 C(n,m,f,prune);
       for(int i=0; i < N; ++i) {
-        // FFTW out-of-place cr routines destroy the input arrays.
         init(f,g);
         seconds();
-        Convolve.fft(f,g);
+        C.convolve(f,g);
         sum += seconds();
       }
       cout << endl;
@@ -151,10 +154,10 @@ int main(int argc, char* argv[])
     array2<Complex> f(m,m,align);
     array2<Complex> g(m,m,align);
     array2<Complex> h(m,m,align);
-    cconvolution2 convolve(m,f);
+    DirectConvolution C(m);
     init(f,g);
     seconds();
-    convolve.direct(h,f,g);
+    C.convolve(h,f,g);
     sum=seconds();
   
     cout << endl;
