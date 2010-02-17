@@ -18,7 +18,7 @@ using namespace Array;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=100000000;
+unsigned int N=10000000;
 unsigned int n=4;
 unsigned int m=2;
 
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
   
-  N=N/n;
+  N=N/(n*n);
   if(N < 10) N=10;
   cout << "N=" << N << endl;
   
