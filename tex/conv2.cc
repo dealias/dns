@@ -18,7 +18,7 @@ using namespace Array;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=100;
+unsigned int N=10000000;
 unsigned int nx=0;
 unsigned int ny=0;
 unsigned int mx=4;
@@ -106,6 +106,10 @@ int main(int argc, char* argv[])
   cout << "nx=" << nx << ", ny=" << ny << endl;
   cout << "mx=" << mx << ", my=" << my << endl;
   
+  N=N/(nx*ny);
+  if(N < 10) N=10;
+  cout << "N=" << N << endl;
+    
   size_t align=sizeof(Complex);
   nxp=pad ? nx : 2*mx-1;
   nyp=pad ? ny/2+1 : my;

@@ -15,7 +15,7 @@ using namespace std;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=10000;
+unsigned int N=100000000;
   
 Complex d[]={Complex(-5,3),Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
 
@@ -67,6 +67,10 @@ int main(int argc, char* argv[])
   n=1 << log2n;
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
+  
+  N=N/n;
+  if(N < 10) N=10;
+  cout << "N=" << N << endl;
   
   int np=pad ? n : m;
   Complex *f=FFTWComplex(np);

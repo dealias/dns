@@ -18,7 +18,7 @@ using namespace Array;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=100;
+unsigned int N=100000000;
 unsigned int n=4;
 unsigned int m=2;
 
@@ -72,6 +72,10 @@ int main(int argc, char* argv[])
   n=1 << log2n;
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
+  
+  N=N/n;
+  if(N < 10) N=10;
+  cout << "N=" << N << endl;
   
   size_t align=sizeof(Complex);
   int np=pad ? n : m;

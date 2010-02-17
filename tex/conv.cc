@@ -15,7 +15,7 @@ using namespace std;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=1000;
+unsigned int N=100000000;
   
 using namespace std;
 
@@ -73,6 +73,10 @@ int main(int argc, char* argv[])
   n=1 << log2n;
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
+  
+  N=N/n;
+  if(N < 10) N=10;
+  cout << "N=" << N << endl;
   
   unsigned int np=pad ? n/2+1 : m;
     
