@@ -154,26 +154,25 @@ public:
       Complex *q=g+k;
 #ifdef __SSE2__
       Vec A=LOAD(p);
-      Vec Z=Fmk*Mhalf+CONJ(A);
+      Vec B=LOAD(q);
+      Vec C=Fmk*Mhalf+CONJ(A);
+      Vec D=Gmk*Mhalf+CONJ(B);
       STORE(p,A+CONJ(Fmk));
-      Vec W=Fmk*HSqrt3;
-      A=ZMULT(Zetak,UNPACKL(Z,W));
-      Vec B=ZMULTI(Zetak,UNPACKH(Z,W));
+      STORE(q,B+CONJ(Gmk));
+      Fmk *= HSqrt3;
+      Gmk *= HSqrt3;
+      A=ZMULT(Zetak,UNPACKL(C,Fmk));
+      B=ZMULTI(Zetak,UNPACKH(C,Fmk));
+      C=ZMULT(Zetak,UNPACKL(D,Gmk));
+      D=ZMULTI(Zetak,UNPACKH(D,Gmk));
       STORE(u+k,A-B);
+      STORE(v+k,C-D);
       p=f+m1-k;
       Fmk=LOAD(p);
       STORE(p,A+B);
-
-      A=LOAD(q);
-      Z=Gmk*Mhalf+CONJ(A);
-      STORE(q,A+CONJ(Gmk));
-      W=Gmk*HSqrt3;
-      A=ZMULT(Zetak,UNPACKL(Z,W));
-      B=ZMULTI(Zetak,UNPACKH(Z,W));
-      STORE(v+k,A-B);
       q=g+m1-k;
       Gmk=LOAD(q);
-      STORE(q,A+B);
+      STORE(q,C+D);
 #else
       double re=-0.5*fmkre+p->re;
       double im=hsqrt3*fmkre;
