@@ -133,9 +133,9 @@ public:
     g[m1]=g0;
     
 #ifdef __SSE2__      
-    Complex zetac(Cos,-Sin);
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
+    const Complex zetac(Cos,-Sin);
     Vec CC=LOAD(&cc);
     Vec SS=-LOAD(&ss);
     Vec Zetak=LOAD(&zetac);
@@ -844,17 +844,43 @@ public:
       u[i]=fm1stride[i];
     
     unsigned int mstride=m*stride;
+#ifdef __SSE2__      
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    const Complex zetac(Cos,Sin);
+    Vec CC=LOAD(&cc);
+    Vec SS=LOAD(&ss);
+    Vec Zetak=LOAD(&zetac);
+    static const Complex mhalf(-0.5,-0.5);
+    Vec Mhalf=LOAD(&mhalf);
+    static const Complex mhsqrt3(-hsqrt3,-hsqrt3);
+    Vec Mhsqrt3=LOAD(&mhsqrt3);
+#else
     double Re=Cos;
     double Im=Sin;
+#endif    
     for(unsigned int k=stride; k < mstride; k += stride) {
       Complex *uk=u+k;
       Complex *fk=f+k;
       Complex *fmk=f+m1stride+k;
       for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fmk+i;
         Complex *q=f+i;
+        Complex *r=fk+i;
+#ifdef __SSE2__
+        Vec P=LOAD(p);
+        Vec Q=LOAD(q);
+        Vec Z=Q*Mhalf+P;
+        STORE(q,LOAD(r));
+        STORE(r,Q+P);
+        Vec W=Q*Mhsqrt3;
+        Vec A=ZMULT(Zetak,UNPACKL(Z,W));
+        Vec B=ZMULTI(Zetak,UNPACKH(Z,W));
+        STORE(p,A+B);
+        STORE(uk+i,CONJ(A-B));
+#else        
         double fkre=q->re;
         double fkim=q->im;
-        Complex *p=fmk+i;
         double fmkre=p->re;
         double fmkim=p->im;
         double re=-0.5*fkre+fmkre;
@@ -870,15 +896,19 @@ public:
         p=uk+i;
         p->re=Are-Bre;
         p->im=Bim-Aim;
-        p=fk+i;
-        q->re=p->re;
-        q->im=p->im;
-        p->re=fkre+fmkre;
-        p->im=fkim+fmkim;
+        q->re=r->re;
+        q->im=r->im;
+        r->re=fkre+fmkre;
+        r->im=fkim+fmkim;
+#endif        
       }
+#ifdef __SSE2__      
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
       double temp=Re*Cos-Im*Sin;
       Im=Re*Sin+Im*Cos;
       Re=temp;
+#endif      
     }
     
     Backwards->fft(f);
@@ -910,8 +940,23 @@ public:
     double ninv=1.0/n;
     for(unsigned int i=0; i < M; ++i)
       umstride[i]=(umstride[i]+f[i]+u[i])*ninv;
+#ifdef __SSE2__      
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    const Complex zetac(Cos,Sin);
+    Vec CC=LOAD(&cc);
+    Vec SS=LOAD(&ss);
+    const Complex Ninv2(ninv,ninv);
+    Vec ninv2=LOAD(&Ninv2);
+    Vec Zetak=LOAD(&zetac)*ninv2;
+    static const Complex mhalf(-0.5,-0.5);
+    Vec Mhalf=LOAD(&mhalf);
+    static const Complex hSqrt3(hsqrt3,hsqrt3);
+    Vec HSqrt3=LOAD(&hSqrt3);
+#else
     double Re=Cos*ninv;
     double Im=Sin*ninv;
+#endif    
     for(unsigned int k=stride; k < mstride; k += stride) {
       Complex *fk=f+k;
       Complex *fm1k=fm1stride+k;
@@ -919,6 +964,14 @@ public:
       for(unsigned int i=0; i < M; ++i) {
         Complex *p=fk+i;
         Complex *q=fm1k+i;
+#ifdef __SSE2__      
+        Vec F0=LOAD(p)*ninv2;
+        Vec F1=ZMULT(CONJ(Zetak),LOAD(q));
+        Vec F2=ZMULT(Zetak,LOAD(uk+i));
+        Vec S=F1+F2;
+        STORE(p-stride,F0+Mhalf*S+HSqrt3*ZMULTI(F1-F2));
+        STORE(q,F0+S);
+#else
         Complex *r=uk+i;
         double f0re=p->re*ninv;
         double f0im=p->im*ninv;
@@ -933,10 +986,15 @@ public:
         p->im=f0im-0.5*sim+hsqrt3*(f1re-f2re);
         q->re=f0re+sre;
         q->im=f0im+sim;
+#endif        
       }
+#ifdef __SSE2__      
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
       double temp=Re*Cos-Im*Sin;
       Im=Re*Sin+Im*Cos;
       Re=temp;
+#endif      
     }
     for(unsigned int i=0; i < M; ++i)
       fm1stride[i]=umstride[i];

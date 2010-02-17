@@ -88,7 +88,7 @@ unsigned int padding(unsigned int m)
 int main(int argc, char* argv[])
 {
   // Turn off
-  fftw::effort |= FFTW_NO_SIMD;
+//  fftw::effort |= FFTW_NO_SIMD;
   
   pad=0;
   
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
       cout << (sum-offset)/N << endl;
       cout << endl;
       unsigned int offset=nx/2-mx+1;
-      if(nxp*my < outlimit) 
+      if(2*(mx-1)*my < outlimit) 
         for(unsigned int i=offset; i < offset+2*mx-1; i++) {
           for(unsigned int j=0; j < my; j++)
             cout << f[i][j] << "\t";
