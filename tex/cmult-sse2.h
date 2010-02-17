@@ -20,6 +20,7 @@
 
 #ifdef __SSE2__      
 
+#include "Complex.h"
 #include <emmintrin.h>
 
 typedef __m128d Vec;
@@ -36,6 +37,47 @@ union uvec {
 const union uvec sse2_pm = {
   { 0x00000000,0x00000000,0x00000000,0x80000000 }
 };
+
+const union uvec sse2_mm = {
+  { 0x00000000,0x80000000,0x00000000,0x80000000 }
+};
+
+#if defined(__INTEL_COMPILER) || !defined(__GNUC__)
+static inline Vec operator -(const Vec& a) 
+{
+  return _mm_xor_pd(sse2_mm.v,a);
+}
+
+static inline Vec operator +(const Vec& a, const Vec& b) 
+{
+  return _mm_add_pd(a,b);
+}
+
+static inline Vec operator -(const Vec& a, const Vec& b) 
+{
+  return _mm_sub_pd(a,b);
+}
+
+static inline Vec operator *(const Vec& a, const Vec& b) 
+{
+  return _mm_mul_pd(a,b);
+}
+
+static inline void operator +=(Vec& a, const Vec& b) 
+{
+  a=_mm_add_pd(a,b);
+}
+
+static inline void operator -=(Vec& a, const Vec& b) 
+{
+  a=_mm_sub_pd(a,b);
+}
+
+static inline void operator *=(Vec& a, const Vec& b) 
+{
+  a=_mm_mul_pd(a,b);
+}
+#endif
 
 static inline Vec FLIP(const Vec& z)
 {
@@ -65,12 +107,12 @@ static inline Vec ZMULTI(const Vec& z, const Vec& w)
   return ZMULTI(w)*UNPACKL(z,z)-UNPACKH(z,z)*w;
 }
 
-static inline Vec ZMULT(const Vec& t0, const Vec& t1, Vec w)
+static inline Vec ZMULT(const Vec& t0, const Vec& t1, const Vec& w)
 {
   return t0*w+t1*FLIP(w);
 }
 
-static inline Vec LOAD(const Complex *z)
+static inline Vec LOAD(Complex *z)
 {
   return *(const Vec *) z;
 }

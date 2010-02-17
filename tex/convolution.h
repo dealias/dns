@@ -13,6 +13,11 @@
 
 static const double sqrt3=sqrt(3.0);
 static const double hsqrt3=0.5*sqrt3;
+static const Complex hSqrt3(hsqrt3,hsqrt3);
+static const Complex mhsqrt3(-hsqrt3,-hsqrt3);
+static const Complex mhalf(-0.5,-0.5);
+static const Complex zeta3(-0.5,hsqrt3);
+static const Complex one(1.0,0.0);
 
 // Calculate the convolution of two Hermitian vectors.
 class convolution {
@@ -141,9 +146,7 @@ public:
     Vec Zetak=LOAD(&zetac);
     Vec Fmk=LOAD(&fmk);
     Vec Gmk=LOAD(&gmk);
-    static const Complex mhalf(-0.5,-0.5);
     Vec Mhalf=LOAD(&mhalf);
-    static const Complex hSqrt3(hsqrt3,hsqrt3);
     Vec HSqrt3=LOAD(&hSqrt3);
 #else
     double Re=Cos;
@@ -332,7 +335,6 @@ public:
     Complex f1k=conj(Zetak0)*v[stop];
     Complex f2k=Zetak0*u[cm1];
     f[cm1]=f0k+f1k+f2k;
-    static const Complex zeta3(-0.5,hsqrt3);
     f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
 
     if(even) f[c]=(overlap1-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
@@ -421,7 +423,6 @@ public:
   // 1/2 padding
   void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
 #ifdef __SSE2__      
-    static const Complex one(1.0,0.0);
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
     Vec CC=LOAD(&cc);
@@ -702,9 +703,7 @@ public:
     Vec CC=LOAD(&cc);
     Vec SS=LOAD(&ss);
     Vec Zetak=LOAD(&zetac);
-    static const Complex mhalf(-0.5,-0.5);
     Vec Mhalf=LOAD(&mhalf);
-    static const Complex mhsqrt3(-hsqrt3,-hsqrt3);
     Vec Mhsqrt3=LOAD(&mhsqrt3);
 #else
     double Re=Cos;
@@ -800,9 +799,7 @@ public:
     const Complex Ninv2(ninv,ninv);
     Vec ninv2=LOAD(&Ninv2);
     Vec Zetak=LOAD(&zetac)*ninv2;
-    static const Complex mhalf(-0.5,-0.5);
     Vec Mhalf=LOAD(&mhalf);
-    static const Complex hSqrt3(hsqrt3,hsqrt3);
     Vec HSqrt3=LOAD(&hSqrt3);
 #else
     double Re=Cos*ninv;

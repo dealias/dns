@@ -1,20 +1,81 @@
-\documentclass[12pt]{article}
+\documentclass[final]{siamltex}
+%\documentclass[12pt]{article}
 \usepackage[dvips]{attachfile2}
-\usepackage{math}
+\usepackage{mathdef}
 
+\let\orightarrow\rightarrow
+\let\omapsto\mapsto
+\usepackage{breqn}
+\let\rightarrow\orightarrow
+\def\longrightarrow{\relbar\joinrel\joinrel\joinrel\orightarrow}
+\let\mapsto\omapsto
+\usepackage{hyperbreqn}
+
+\def\be{\begin{dmath*}}
+\def\ee{\end{dmath*}}
+\def\bel{\begin{dmath}}
+\def\eel{\end{dmath}}
+\def\bec{\begin{dmath*}[compact]}
+\let\eec\ee
+\def\belc{\begin{equation}}
+\def\eelc{\end{equation}}
+
+\def\bg{\begin{dgroup*}}
+\def\eg{\end{dgroup*}}
+\def\bgl{\begin{dgroup}}
+\def\egl{\end{dgroup}}
+\def\bs{\begin{dsuspend}}
+\def\es{\end{dsuspend}}
+\def\no{\hiderel}
 
 \newcommand{\Fourier}[0]{\mathcal{F}}
 
 \begin{document}
 
-\topmargin=-1in
-
-\title{Efficient Dealiasing of Fast Fourier-Transform Convolutions}
+\title{Efficient Dealiased Convolutions without the Padding}
 \author{John C. Bowman and Malcolm Roberts}
 \maketitle
 
+\begin{abstract}
+An algorithm is described for dealiasing pseudospectral convolution sums
+without the computational expense of conventional zero-padding or
+phase-shift techniques. In the one-dimensional complex case, the memory
+requirements are identical with the usual zero-padding technique, with the
+important distinction that the additional work memory need not contiguous
+with the data.  This decoupling of the data and work arrays affords
+%(explicit amount?)
+significant reductions in memory usage and bandwidth for higher-dimensional
+convolutions. 
+Generalizations for computing the hyperconvolutions that arise as Fourier
+transform of arbitrary powers are described.  
+Highly optimized methods for both complex and centered Hermitian
+convolutions can be built on top of state-of-the-art fast Fourier transform
+libraries. Vectorized methods have been implemented in the open-source package
+{\tt fftw++}.
+\end{abstract}
+
+\begin{keywords} 
+dealiasing, convolution, zero padding, fast Fourier transform,
+pseudospectral methods, spectral truncations, in-place Fourier transforms,
+bit reversal, hyperconvolution
+\end{keywords}
+
+\begin{AMS}
+%15A15, 15A09, 15A23
+%vectorized with single-instruction multiple-data (SIMD) code.
+\end{AMS}
+
+\pagestyle{myheadings}
+
+% Address misleading implication of Canuto page 136 (dealiased.pdf: p.20)
+% regarding power of 2 transforms.
+%
+% memory requirements of phase-shift \cite{Patterson and Orszag 71} (doubles
+% memory usage).
+
 \section{1-D Dealiased Fast Fourier Transforms}
 \subsection{$1/2$ Dealiased Data}
+
 Suppose $N$ is a multiple of $2$. In terms of the $N$th primitive root of unity,
 $$
 \zeta_N\doteq \exp\(\frac{2 \pi i}{N}\),
