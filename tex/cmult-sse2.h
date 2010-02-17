@@ -33,14 +33,8 @@ union uvec {
   Vec v;
 };
   
-// TODO: move to cc file.
-const union uvec sse2_pm = {
-  { 0x00000000,0x00000000,0x00000000,0x80000000 }
-};
-
-const union uvec sse2_mm = {
-  { 0x00000000,0x80000000,0x00000000,0x80000000 }
-};
+extern const union uvec sse2_pm;
+extern const union uvec sse2_mm;
 
 #if defined(__INTEL_COMPILER) || !defined(__GNUC__)
 static inline Vec operator -(const Vec& a) 

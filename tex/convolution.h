@@ -11,13 +11,14 @@
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-static const double sqrt3=sqrt(3.0);
-static const double hsqrt3=0.5*sqrt3;
-static const Complex hSqrt3(hsqrt3,hsqrt3);
-static const Complex mhsqrt3(-hsqrt3,-hsqrt3);
-static const Complex mhalf(-0.5,-0.5);
-static const Complex zeta3(-0.5,hsqrt3);
-static const Complex one(1.0,0.0);
+extern const double sqrt3;
+extern const double hsqrt3;
+
+extern const Complex hSqrt3;
+extern const Complex mhsqrt3;
+extern const Complex mhalf;
+extern const Complex zeta3;
+extern const Complex one;
 
 // Calculate the convolution of two Hermitian vectors.
 class convolution {
