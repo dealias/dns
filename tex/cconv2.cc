@@ -52,7 +52,7 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
 int main(int argc, char* argv[])
 {
   // Turn off
-  fftw::effort |= FFTW_NO_SIMD;
+//  fftw::effort |= FFTW_NO_SIMD;
   
   int pad=0;
   

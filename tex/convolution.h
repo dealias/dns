@@ -752,22 +752,38 @@ public:
   }
   
   void backwards(Complex *f, Complex *u) {
+#ifdef __SSE2__
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    const Complex one(1.0,0.0);
+    Vec CC=LOAD(&cc);
+    Vec SS=LOAD(&ss);
+    Vec Zetak=LOAD(&one);
+#else
     double re=1.0;
     double im=0.0;
+#endif    
     unsigned int stop=m*stride;
     for(unsigned int k=0; k < stop; k += stride) {
       Complex *fk=f+k;
       Complex *uk=u+k;
       for(unsigned int i=0; i < M; ++i) {
-        Complex *P=uk+i;
-        Complex *p=fk+i;
-        Complex fk=*p;
-        P->re=re*fk.re-im*fk.im;
-        P->im=im*fk.re+re*fk.im;
+#ifdef __SSE2__      
+        STORE(uk+i,ZMULT(Zetak,LOAD(fk+i)));
+#else
+        Complex *p=uk+i;
+        Complex fki=*(fk+i);
+        p->re=re*fki.re-im*fki.im;
+        p->im=im*fki.re+re*fki.im;
+#endif        
       }
+#ifdef __SSE2__      
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
       double temp=re*Cos-im*Sin; 
       im=re*Sin+im*Cos;
       re=temp;
+#endif      
     }
     
     Backwards->fft(f);
@@ -779,22 +795,41 @@ public:
     Forwards->fft(u);
 
     double ninv=1.0/n;
+#ifdef __SSE2__
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    const Complex ninv1(ninv,0.0);
+    const Complex ninv2(ninv,ninv);
+    Vec CC=LOAD(&cc);
+    Vec SS=-LOAD(&ss);
+    Vec Zetak=LOAD(&ninv1);
+    Vec Ninv2=LOAD(&ninv2);
+#else
     double re=ninv;
     double im=0.0;
+#endif    
     unsigned int stop=m*stride;
     for(unsigned int k=0; k < stop; k += stride) {
       Complex *uk=u+k;
       Complex *fk=f+k;
       for(unsigned int i=0; i < M; ++i) {
         Complex *p=fk+i;
-        Complex fk=*p;
+#ifdef __SSE2__      
+        STORE(p,LOAD(p)*Ninv2+ZMULT(Zetak,LOAD(uk+i)));
+#else        
+        Complex fki=*p;
         Complex fkm=*(uk+i);
-        p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
-        p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+        p->re=ninv*fki.re+re*fkm.re-im*fkm.im;
+        p->im=ninv*fki.im+im*fkm.re+re*fkm.im;
+#endif        
       }
+#ifdef __SSE2__      
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
       double temp=re*Cos+im*Sin;
       im=-re*Sin+im*Cos;
       re=temp;
+#endif     
     }
   }
 };
