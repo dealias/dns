@@ -112,7 +112,7 @@ static inline Vec ZMULT(const Vec& t0, const Vec& t1, const Vec& w)
   return t0*w+t1*FLIP(w);
 }
 
-static inline Vec LOAD(Complex *z)
+static inline Vec LOAD(const Complex *z)
 {
   return *(const Vec *) z;
 }
