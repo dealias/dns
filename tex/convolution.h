@@ -719,14 +719,14 @@ public:
         Complex *q=f+i;
         Complex *r=fk+i;
 #ifdef __SSE2__
-        Vec P=LOAD(p);
-        Vec Q=LOAD(q);
-        Vec Z=Q*Mhalf+P;
+        Vec A=LOAD(p);
+        Vec B=LOAD(q);
+        Vec Z=B*Mhalf+A;
         STORE(q,LOAD(r));
-        STORE(r,Q+P);
-        Vec W=Q*Mhsqrt3;
-        Vec A=ZMULT(Zetak,UNPACKL(Z,W));
-        Vec B=ZMULTI(Zetak,UNPACKH(Z,W));
+        STORE(r,B+A);
+        B *= Mhsqrt3;
+        A=ZMULT(Zetak,UNPACKL(Z,B));
+        B=ZMULTI(Zetak,UNPACKH(Z,B));
         STORE(p,A+B);
         STORE(uk+i,CONJ(A-B));
 #else        
