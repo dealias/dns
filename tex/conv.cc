@@ -15,7 +15,7 @@ using namespace std;
 // optionally specifies the size of m.
 
 // Number of iterations.
-unsigned int N=100000000;
+unsigned int N=10000000;
   
 using namespace std;
 

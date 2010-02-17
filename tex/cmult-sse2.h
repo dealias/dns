@@ -101,9 +101,15 @@ static inline Vec ZMULTI(const Vec& z, const Vec& w)
   return ZMULTI(w)*UNPACKL(z,z)-UNPACKH(z,z)*w;
 }
 
-static inline Vec ZMULT(const Vec& t0, const Vec& t1, const Vec& w)
+static inline Vec ZMULT(const Vec& x, const Vec& y, const Vec& w)
 {
-  return t0*w+t1*FLIP(w);
+  return x*w+y*FLIP(w);
+}
+
+static inline Vec ZMULTI(const Vec& x, const Vec& y, const Vec& w)
+{
+  Vec z=CONJ(w);
+  return x*FLIP(z)+y*z;
 }
 
 static inline Vec LOAD(const Complex *z)

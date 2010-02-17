@@ -177,6 +177,7 @@ public:
       q=g+m1-k;
       Gmk=LOAD(q);
       STORE(q,C+D);
+      Zetak=ZMULT(CC,SS,Zetak);
 #else
       double re=-0.5*fmkre+p->re;
       double im=hsqrt3*fmkre;
@@ -215,10 +216,7 @@ public:
       gmkim=q->im;
       q->re=Are+Bre;
       q->im=Aim+Bim;
-#endif
-#ifdef __SSE2__      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
+      
       double temp=Re*Cos+Im*Sin; 
       Im=-Re*Sin+Im*Cos;
       Re=temp;
@@ -301,6 +299,7 @@ public:
       Vec S=F1+F2;
       STORE(p,F0+S);
       STORE(s,CONJ(F0+Mhalf*S)-HSqrt3*FLIP(F1-F2));
+      Zetak=ZMULT(CC,SS,Zetak);
 #else
       Complex *q=v+k;
       Complex *r=u+k;
@@ -316,10 +315,6 @@ public:
       p->im=f0im+sim;
       s->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
       s->im=-f0im+0.5*sim-hsqrt3*(f1re-f2re);
-#endif      
-#ifdef __SSE2__      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
       double temp=Re*Cos-Im*Sin; 
       Im=Re*Sin+Im*Cos;
       Re=temp;
@@ -437,6 +432,7 @@ public:
 #ifdef __SSE2__      
       STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
       STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
+      Zetak=ZMULT(CC,SS,Zetak);
 #else      
       Complex *P=u+k;
       Complex *Q=v+k;
@@ -446,10 +442,6 @@ public:
       P->im=im*fk.re+re*fk.im;
       Q->re=re*gk.re-im*gk.im;
       Q->im=im*gk.re+re*gk.im;
-#endif      
-#ifdef __SSE2__      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
       double temp=re*Cos-im*Sin; 
       im=re*Sin+im*Cos;
       re=temp;
@@ -500,16 +492,13 @@ public:
     for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__
       STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
+      Zetak=ZMULT(CC,SS,Zetak);
 #else      
       Complex *p=f+k;
       Complex fk=*p;
       Complex fkm=*(u+k);
       p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
       p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
-#endif      
-#ifdef __SSE2__      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
       double temp=re*Cos+im*Sin;
       im=-re*Sin+im*Cos;
       re=temp;
@@ -585,19 +574,19 @@ public:
     for(unsigned int k=0; k < stop; k += stride) {
       Complex *fk=f+k;
       Complex *uk=u+k;
-      for(unsigned int i=0; i < M; ++i) {
 #ifdef __SSE2__      
-        STORE(uk+i,ZMULT(Zetak,LOAD(fk+i)));
+      Vec X=UNPACKL(Zetak,Zetak);
+      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
+      for(unsigned int i=0; i < M; ++i)
+        STORE(uk+i,ZMULT(X,Y,LOAD(fk+i)));
+      Zetak=ZMULT(CC,SS,Zetak);
 #else
+      for(unsigned int i=0; i < M; ++i) {
         Complex *p=uk+i;
         Complex fki=*(fk+i);
         p->re=re*fki.re-im*fki.im;
         p->im=im*fki.re+re*fki.im;
-#endif        
       }
-#ifdef __SSE2__      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
       double temp=re*Cos-im*Sin; 
       im=re*Sin+im*Cos;
       re=temp;
@@ -630,20 +619,22 @@ public:
     for(unsigned int k=0; k < stop; k += stride) {
       Complex *uk=u+k;
       Complex *fk=f+k;
+#ifdef __SSE2__      
+      Vec X=UNPACKL(Zetak,Zetak);
+      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
       for(unsigned int i=0; i < M; ++i) {
         Complex *p=fk+i;
-#ifdef __SSE2__      
-        STORE(p,LOAD(p)*Ninv2+ZMULT(Zetak,LOAD(uk+i)));
+        STORE(p,LOAD(p)*Ninv2+ZMULT(X,Y,LOAD(uk+i)));
+      }
+      Zetak=ZMULT(CC,SS,Zetak);
 #else        
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fk+i;
         Complex fki=*p;
         Complex fkm=*(uk+i);
         p->re=ninv*fki.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fki.im+im*fkm.re+re*fkm.im;
-#endif        
       }
-#ifdef __SSE2__      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
       double temp=re*Cos+im*Sin;
       im=-re*Sin+im*Cos;
       re=temp;
@@ -714,22 +705,29 @@ public:
       Complex *uk=u+k;
       Complex *fk=f+k;
       Complex *fmk=f+m1stride+k;
+#ifdef __SSE2__
+      Vec X=UNPACKL(Zetak,Zetak);
+      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
       for(unsigned int i=0; i < M; ++i) {
         Complex *p=fmk+i;
         Complex *q=f+i;
         Complex *r=fk+i;
-#ifdef __SSE2__
         Vec A=LOAD(p);
         Vec B=LOAD(q);
         Vec Z=B*Mhalf+A;
         STORE(q,LOAD(r));
         STORE(r,B+A);
         B *= Mhsqrt3;
-        A=ZMULT(Zetak,UNPACKL(Z,B));
-        B=ZMULTI(Zetak,UNPACKH(Z,B));
+        A=ZMULT(X,Y,UNPACKL(Z,B));
+        B=ZMULTI(X,Y,UNPACKH(Z,B));
         STORE(p,A+B);
         STORE(uk+i,CONJ(A-B));
+      }
+      Zetak=ZMULT(CC,SS,Zetak);
 #else        
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fmk+i;
+        Complex *q=f+i;
         double fkre=q->re;
         double fkim=q->im;
         double fmkre=p->re;
@@ -747,15 +745,12 @@ public:
         p=uk+i;
         p->re=Are-Bre;
         p->im=Bim-Aim;
-        q->re=r->re;
-        q->im=r->im;
-        r->re=fkre+fmkre;
-        r->im=fkim+fmkim;
-#endif        
+        p=fk+i;
+        q->re=p->re;
+        q->im=p->im;
+        p->re=fkre+fmkre;
+        p->im=fkim+fmkim;
       }
-#ifdef __SSE2__      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
       double temp=Re*Cos-Im*Sin;
       Im=Re*Sin+Im*Cos;
       Re=temp;
@@ -810,17 +805,24 @@ public:
       Complex *fk=f+k;
       Complex *fm1k=fm1stride+k;
       Complex *uk=u+k;
+#ifdef __SSE2__      
+      Vec X=UNPACKL(Zetak,Zetak);
+      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
       for(unsigned int i=0; i < M; ++i) {
         Complex *p=fk+i;
         Complex *q=fm1k+i;
-#ifdef __SSE2__      
         Vec F0=LOAD(p)*ninv2;
-        Vec F1=ZMULT(CONJ(Zetak),LOAD(q));
-        Vec F2=ZMULT(Zetak,LOAD(uk+i));
+        Vec F1=ZMULT(X,-Y,LOAD(q));
+        Vec F2=ZMULT(X,Y,LOAD(uk+i));
         Vec S=F1+F2;
         STORE(p-stride,F0+Mhalf*S+HSqrt3*ZMULTI(F1-F2));
         STORE(q,F0+S);
+      }
+      Zetak=ZMULT(CC,SS,Zetak);
 #else
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fk+i;
+        Complex *q=fm1k+i;
         Complex *r=uk+i;
         double f0re=p->re*ninv;
         double f0im=p->im*ninv;
@@ -835,11 +837,7 @@ public:
         p->im=f0im-0.5*sim+hsqrt3*(f1re-f2re);
         q->re=f0re+sre;
         q->im=f0im+sim;
-#endif        
       }
-#ifdef __SSE2__      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
       double temp=Re*Cos-Im*Sin;
       Im=Re*Sin+Im*Cos;
       Re=temp;

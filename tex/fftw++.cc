@@ -9,6 +9,7 @@ bool fftw::Wise=false;
 unsigned int fftw::effort=FFTW_PATIENT;
 const char *fftw::WisdomName="wisdom3.txt";
 
+#ifdef __SSE2__
 const union uvec sse2_pm = {
   { 0x00000000,0x00000000,0x00000000,0x80000000 }
 };
@@ -16,6 +17,7 @@ const union uvec sse2_pm = {
 const union uvec sse2_mm = {
   { 0x00000000,0x80000000,0x00000000,0x80000000 }
 };
+#endif
 
 double sqrt3=sqrt(3.0);
 double hsqrt3=0.5*sqrt3;
