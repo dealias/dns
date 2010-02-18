@@ -39,19 +39,18 @@
 
 \begin{abstract}
 An algorithm is described for dealiasing pseudospectral convolution sums
-without the expense of conventional zero-padding or
-phase-shift techniques. In the one-dimensional complex case, the memory
-requirements are identical with the usual zero-padding technique, with the
-important distinction that the additional work memory need not be contiguous
-with the data. In addition to being more convenient for the user, 
-for higher-dimensional convolutions, this decoupling of the data and work
-arrays reduces the memory usage of in-place convolutions by a factor of two.
-Generalizations for computing the hyperconvolutions that arise as Fourier
-transform of arbitrary powers are described.  
-Highly optimized methods for both complex and centered Hermitian
-convolutions can be built on top of state-of-the-art fast Fourier transform
-libraries. Vectorized methods have been implemented in the open-source package
-{\tt fftw++}.
+without the expense of conventional zero-padding or phase-shift
+techniques. In the one-dimensional complex case, the memory requirements
+are identical with the usual zero-padding technique, with the important
+distinction that the additional work memory need not be contiguous with the
+data. For higher-dimensional convolutions, this decoupling of the data and
+work arrays reduces the memory usage of in-place convolutions by a factor
+of two. The technique also allows one to efficiently dealias the
+hyperconvolutions that arise on Fourier transforming arbitrary powers.
+Such implicitly padded convolutions can be built on top of state-of-the-art fast
+Fourier transform libraries; for example, vectorized implementations of
+multidimensional dealiased complex and centered Hermitian convolutions have
+already been implemented in the open-source package {\tt fftw++}.
 \end{abstract}
 
 \begin{keywords} 
@@ -62,12 +61,16 @@ bit reversal, hyperconvolution
 
 \begin{AMS}
 %15A15, 15A09, 15A23
-%vectorized with single-instruction multiple-data (SIMD) code.
 \end{AMS}
 
 \pagestyle{myheadings}
 
 use out-of-place Fourier transforms where possible (percent?)
+% decoupling is more convenient for the user, 
+
+%vectorized with single-instruction multiple-data (SIMD) code.
+%highly optimized
+
 
 % Address misleading implication of Canuto page 136 (dealiased.pdf: p.20)
 % regarding power of 2 transforms.

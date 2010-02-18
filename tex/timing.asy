@@ -31,7 +31,7 @@ draw(graph(mP,P,P>0),Pen(2),"Pruned",mark1);
 draw(graph(mu,u,u>0),Pen(1),"Implicit",mark2);
 
 xaxis("$m$",BottomTop,LeftTicks);
-yaxis("time",LeftRight,RightTicks);
+yaxis("time (sec)",LeftRight,RightTicks);
 
 attach(legend(),point(plain.E),20plain.E);
 
