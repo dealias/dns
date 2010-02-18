@@ -90,8 +90,8 @@ Memory usage is critical in many applications of convolution sums for direct
 numerical simulation, image processing, and signal processing.
 
 In higher dimensions, the memory usage of our noncentered (centered)
-convolution is one-half (two-thirds), of the memory requirements imposed by
-zero padding.
+convolution is asymptotically one-half (two-thirds) of the memory
+requirements imposed by zero padding.
 Of course, if memory savings alone were the goal, this savings could
 also be achieved with explicit zero padding by copying the data for the
 innermost convolution to an external padded buffer, but this extra data
