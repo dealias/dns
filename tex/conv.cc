@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
   if(argc >= 2)
     m=atoi(argv[1]);
  
-  if (argc >= 3)
+  if(argc >= 3)
     pad=atoi(argv[2]);
   
 //  unsigned int m=sizeof(d)/sizeof(Complex);

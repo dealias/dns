@@ -5,10 +5,6 @@
 #ifndef __convolution_h__
 #define __convolution_h__ 1
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327950288
-#endif
-
 extern const double sqrt3;
 extern const double hsqrt3;
 
@@ -1015,9 +1011,12 @@ protected:
   rcfft2d *Forwards;
 public:  
   ExplicitHConvolution2(unsigned int nx, unsigned int ny, 
-               unsigned int mx, unsigned int my, Complex *f, bool prune=false) :
-    nx(nx), ny(ny), mx(mx), my(my), prune(prune) {
+               unsigned int mx, unsigned int my, Complex *f,
+                        bool pruned=false) :
+    nx(nx), ny(ny), mx(mx), my(my), prune(pruned) {
     unsigned int nyp=ny/2+1;
+    // Odd nx requires interleaving of shift with x and y transforms.
+    if(nx % 2 == 1) prune=true;
     if(prune) {
       xBackwards=new mfft1d(nx,1,my,nyp,1,f);
       yBackwards=new mcrfft1d(ny,nx,1,nyp,f);
@@ -1074,6 +1073,7 @@ public:
     
     if(prune) {
       xBackwards->fft(f);
+      fftw::Shift(f,nx,ny,-1);
       yBackwards->fft(f);
     } else
       Backwards->fft(f);
@@ -1081,6 +1081,7 @@ public:
     pad(g);
     if(prune) {
       xBackwards->fft(g);
+      fftw::Shift(g,nx,ny,-1);
       yBackwards->fft(g);
     } else
       Backwards->fft(g);
@@ -1088,24 +1089,23 @@ public:
     double *F=(double *) f;
     double *G=(double *) g;
     
-    unsigned int n2=nx*ny;
-    double ninv=1.0/n2;
-    unsigned int ny2=ny+2;
+    double ninv=1.0/(nx*ny);
+    unsigned int nyp=ny/2+1;
+    unsigned int nyp2=2*nyp;
 
     for(unsigned int i=0; i < nx; ++i) {
-      unsigned int ny2i=ny2*i;
-      unsigned int stop=ny2i+ny;
-      for(unsigned int j=ny2i; j < stop; ++j)
+      unsigned int nyp2i=nyp2*i;
+      unsigned int stop=nyp2i+ny;
+      for(unsigned int j=nyp2i; j < stop; ++j)
         F[j] *= G[j]*ninv;
     }
 	
     if(prune) {
       yForwards->fft(f);
-      fftw::Shift(f,nx,ny);
+      fftw::Shift(f,nx,ny,1);
       xForwards->fft(f);
-    } else {
+    } else
       Forwards->fft0(f);
-    }
   }
 };
 

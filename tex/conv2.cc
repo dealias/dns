@@ -59,6 +59,7 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
 //      g[i][j]=i+j;
     }
   }
+
   f[origin][0]=f[origin][0].re;
   g[origin][0]=g[origin][0].re;
 
@@ -131,10 +132,10 @@ int main(int argc, char* argv[])
       sum += seconds();
     }
     
-    FFTWdelete(u1);
-    FFTWdelete(v1);
-    FFTWdelete(u2);
     FFTWdelete(v2);
+    FFTWdelete(u2);
+    FFTWdelete(v1);
+    FFTWdelete(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;
