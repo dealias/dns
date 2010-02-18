@@ -43,15 +43,15 @@ without the expense of conventional zero-padding or phase-shift
 techniques. In the one-dimensional complex case, the memory requirements
 are identical with the usual zero-padding technique, with the important
 distinction that the additional work memory need not be contiguous with the
-data. For higher-dimensional convolutions, this decoupling of the data and
-work arrays reduces the memory usage of in-place convolutions by a factor
-of two. The technique also allows one to efficiently dealias the
+data. This decoupling of the data and work arrays significantly reduces the
+memory usage of in-place higher-dimensional convolutions.
+The technique also allows one to efficiently dealias the
 hyperconvolutions that arise on Fourier transforming arbitrary powers.
 Such implicitly padded convolutions can be built on top of state-of-the-art fast
 Fourier transform libraries; for example, vectorized implementations of
-multidimensional dealiased complex and centered Hermitian convolutions have
-already been implemented in the open-source package {\tt fftw++}.
-\end{abstract}
+multidimensional dealiased centered and non-centered, complex and Hermitian
+convolutions, have already been implemented in the open-source package 
+{\tt fftw++}. \end{abstract} 
 
 \begin{keywords} 
 dealiasing, convolution, zero padding, fast Fourier transform,
@@ -65,12 +65,15 @@ bit reversal, hyperconvolution
 
 \pagestyle{myheadings}
 
-use out-of-place Fourier transforms where possible (percent?)
+%use out-of-place Fourier transforms where possible (percent?)
+
 % decoupling is more convenient for the user, 
+% 
 
 %vectorized with single-instruction multiple-data (SIMD) code.
 %highly optimized
 
+%avoids inconvenience of and extra copying required by zero padding
 
 % CRAY power-of-2 stride issue
 % Supports efficient convolutions of power of 2 sizes
@@ -79,6 +82,23 @@ use out-of-place Fourier transforms where possible (percent?)
 %
 % memory requirements of phase-shift \cite{Patterson and Orszag 71} (doubles
 % memory usage).
+
+% Think about parallelization issues (another advantage of removing zeros).
+
+\section{Introduction}
+Memory usage is critical in many applications of convolution sums for direct
+numerical simulation, image processing, and signal processing.
+
+In higher dimensions, the memory usage of our noncentered (centered)
+convolution is one-half (two-thirds), of the memory requirements imposed by
+zero padding.
+Of course, if memory savings alone were the goal, this savings could
+also be achieved with explicit zero padding by copying the data for the
+innermost convolution to an external padded buffer, but this extra data
+communication turns out to be prohibitively expensive. The fact that our
+one-dimensional convolution does not require this extra copying is the key
+feature that was exploited to obtain simultaneous improvements in memory
+usage and performance.
 
 \section{1-D Dealiased Fast Fourier Transforms}
 \subsection{$1/2$ Dealiased Data}
