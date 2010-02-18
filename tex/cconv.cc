@@ -51,13 +51,11 @@ int main(int argc, char* argv[])
   
   int pad=0;
   
-  if (argc >= 2) {
+  if(argc >= 2)
     m=atoi(argv[1]);
-  }
  
-  if (argc >= 3) {
+  if(argc >= 3)
     pad=atoi(argv[2]);
-  }
   
   n=2*m;
   cout << "min padded buffer=" << n << endl;
@@ -75,7 +73,6 @@ int main(int argc, char* argv[])
   int np=pad ? n : m;
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
-  Complex *h=f;
 #ifdef TEST  
   Complex pseudoh[m];
 #endif
@@ -98,6 +95,7 @@ int main(int argc, char* argv[])
     fft0pad fft(m,2,2,f);
     fft.backwards(f,u);
     fft.forwards(f,u);
+    FFTWdelete(u);
 
     for(int i=0; i < 2*m-1; ++i)
       cout << f[2*i] << endl;
@@ -117,16 +115,18 @@ int main(int argc, char* argv[])
       C.convolve(f,g,u,v);
       sum += seconds();
     }
+    FFTWdelete(u);
+    FFTWdelete(v);
     
     cout << endl;
     cout << "Implicit:" << endl;
     cout << (sum-offset)/N << endl;
     cout << endl;
     if(m < 100) 
-      for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
-    else cout << h[0] << endl;
+      for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
+    else cout << f[0] << endl;
 #ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=h[i];
+    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
 #endif    
   }
   
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
     {
     DirectConvolution C(m);
     init(f,g);
-    h=FFTWComplex(n);
+    Complex *h=FFTWComplex(n);
     seconds();
     C.convolve(h,f,g);
     sum=seconds();
@@ -167,7 +167,7 @@ int main(int argc, char* argv[])
     cout << sum-offset/N << endl;
     cout << endl;
 
-    if(m < 100) 
+    if(m < 100)
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
 
@@ -180,9 +180,10 @@ int main(int argc, char* argv[])
     if (error > 1e-12)
       cerr << "Caution! error="<<error<<endl;
 #endif    
+    FFTWdelete(h);
   }
   
-//  FFTWdelete(f);
-//  FFTWdelete(g);
+  FFTWdelete(g);
+  FFTWdelete(f);
 }
 

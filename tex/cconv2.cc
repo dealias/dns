@@ -51,18 +51,15 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
 
 int main(int argc, char* argv[])
 {
-  // Turn off
 //  fftw::effort |= FFTW_NO_SIMD;
   
   int pad=0;
   
-  if (argc >= 2) {
+  if(argc >= 2)
     m=atoi(argv[1]);
-  }
  
-  if (argc >= 3) {
+  if(argc >= 3)
     pad=atoi(argv[2]);
-  }
   
   n=2*m;
   cout << "min padded buffer=" << n << endl;
@@ -81,7 +78,6 @@ int main(int argc, char* argv[])
   int np=pad ? n : m;
   array2<Complex> f(np,np,align);
   array2<Complex> g(np,np,align);
-  array2<Complex> h(np,np,align);
 #ifdef TEST  
   array2<Complex> pseudoh(m,m,align);
 #endif
@@ -106,6 +102,11 @@ int main(int argc, char* argv[])
       C.convolve(f,g,u1,v1,u2,v2);
       sum += seconds();
     }
+    
+    FFTWdelete(u1);
+    FFTWdelete(v1);
+    FFTWdelete(u2);
+    FFTWdelete(v2);
     
     cout << endl;
     cout << "Implicit:" << endl;
@@ -182,9 +183,5 @@ int main(int argc, char* argv[])
       cerr << "Caution! error="<<error<<endl;
 #endif    
   }
-  
-  
-//  FFTWdelete(f);
-//  FFTWdelete(g);
 }
 

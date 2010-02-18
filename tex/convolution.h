@@ -1,7 +1,3 @@
-// Rename m to a?
-
-#include <cassert>
-
 #include "fftw++.h"
 
 #include "cmult-sse2.h"
@@ -22,8 +18,56 @@ extern const Complex mhalf;
 extern const Complex zeta3;
 extern const Complex one;
 
-// Calculate the convolution of two Hermitian vectors.
-class convolution {
+// In-place explicitly dealiased Hermitian convolution.
+class ExplicitHConvolution {
+protected:
+  unsigned int n;
+  unsigned int m;
+  rcfft1d *rc;
+  crfft1d *cr;
+public:
+  // u is a temporary array of size n.
+  ExplicitHConvolution(unsigned int n, unsigned int m, Complex *u) :
+    n(n), m(m) {
+    rc=new rcfft1d(n,u);
+    cr=new crfft1d(n,u);
+  }
+  
+  ~ExplicitHConvolution() {
+    delete cr;
+    delete rc;
+  }
+    
+  void pad(Complex *f) {
+    unsigned int n2=n/2;
+    for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
+  }
+  
+// Compute f (*) g, where f and g contain the m non-negative Fourier
+// components of real functions. Dealiasing is internally implemented via
+// explicit zero-padding to size n >= 3*m.
+//
+// The (distinct) input arrays f and g must each be allocated to size n/2+1
+// (contents not preserved). The output is returned in the first m elements
+// of f.
+  void convolve(Complex *f, Complex *g) {
+    pad(f);
+    cr->fft(f);
+    
+    pad(g);
+    cr->fft(g);
+	
+    double *F=(double *) f;
+    double *G=(double *) g;
+    double ninv=1.0/n;
+    for(unsigned int i=0; i < n; ++i)
+      F[i] *= G[i]*ninv;
+    rc->fft(f);
+  }
+};
+
+// In-place implicitly dealiased Hermitian convolution.
+class ImplicitHConvolution {
 protected:
   unsigned int n;
   unsigned int m;
@@ -33,26 +77,9 @@ protected:
   double *F,*G;
   double Cos,Sin;
 public:  
-  // Pass a temporary work array f to save memory.
-  convolution(unsigned int n, unsigned int m, Complex *f=NULL) :
-    n(n), m(m) {
-    if(f) {
-      F=NULL;
-      G=NULL;
-      rc=new rcfft1d(n,f);
-      cr=new crfft1d(n,f);
-    } else {
-      F=FFTWdouble(n);
-      G=FFTWdouble(n+2);
-      rc=new rcfft1d(n,F,(Complex *) G);
-      cr=new crfft1d(n,(Complex *) G,F);
-    }
-  }
-  
-  convolution(unsigned int m) : m(m) {}
   
   // u and v must be each allocated as m/2+1 Complex values.
-  convolution(unsigned int m, Complex *u, Complex *v) : m(m) {
+  ImplicitHConvolution(unsigned int m, Complex *u, Complex *v) : m(m) {
     n=3*m;
     c=m/2;
     double arg=2.0*M_PI/n;
@@ -65,57 +92,19 @@ public:
     double *U=(double *) u;
     rco=new rcfft1d(m,U,v);
     cro=new crfft1d(m,v,U);
-
   }
   
-// Need destructor  
-  
-// Compute H = F (*) G, where F and G are the non-negative Fourier
-// components of real functions f and g, respectively. Dealiasing via
-// zero-padding is implemented automatically.
-//
-// Arrays F[n/2+1], G[n/2+1] must be distinct.
-// Input F[i], G[i] (0 <= i < m), where 3*m <= n.
-// Output H[i] = F (*) G  (0 <= i < m), F[i]=f[i], G[i]=g[i] (0 <= i < n/2).
-//
-// Array H[n/2+1] can coincide with either F or G, in which case the output H
-// subsumes f or g, respectively.
-
-  void fft(Complex *h, Complex *f, Complex *g) {
-    unsigned int n2=n/2;
-    double ninv=1.0/n;
-    if(F) {
-      for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
-      cr->fft(f,F);
-  
-      for(unsigned int i=m; i <= n2; i++) g[i]=0.0;
-      cr->fft(g,G);
-      
-      for(unsigned int i=0; i < n; ++i)
-        F[i] *= G[i]*ninv;
-	
-      rc->fft(F,h);
-    } else {
-      for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
-      cr->fft(f);
-  
-      for(unsigned int i=m; i <= n2; i++) g[i]=0.0;
-      cr->fft(g);
-	
-      double *F=(double *) f;
-      double *G=(double *) g;
-      double *H=(double *) h;
-      for(unsigned int i=0; i < n; ++i)
-        H[i]=F[i]*G[i]*ninv;
-	
-      rc->fft(h);
-    }
+  ~ImplicitHConvolution() {
+    delete cro;
+    delete rco;
+    delete cr;
+    delete rc;
   }
   
   // Note: input arrays f and g are destroyed.
-  // f and g are of size m.
-  // u and v are temporary work arrays each of size m/2+1.
-  void unpadded(Complex *f, Complex *g, Complex *u, Complex *v) {
+  // f and g are each of size m.
+  // u and v are temporary arrays each of size m/2+1.
+  void convolve(Complex *f, Complex *g, Complex *u, Complex *v) {
     double f0=f[0].re;
     double g0=g[0].re;
 
@@ -337,26 +326,28 @@ public:
 
     if(even) f[c]=(overlap1-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
   }
+};
   
-// Compute H = F (*) G, where F and G contain the non-negative Fourier
-// components of real functions f and g, respectively, via direct convolution
-// instead of a Fast Fourier Transform technique.
-//
-// Input F[i], G[i] (0 <= i < m).
-// Output H[i] = F (*) G  (0 <= i < m), F and G unchanged.
-//
-// Array H[m] must be distinct from F[m] and G[m].
-
-  void direct(Complex *H, Complex *F, Complex *G) {
+// Out-of-place direct Hermitian convolution.
+class DirectHConvolution {
+protected:
+  unsigned int m;
+public:  
+  DirectHConvolution(unsigned int m) : m(m) {}
+  
+// Compute h= f (*) g via direct convolution, where f and g contain the m
+// non-negative Fourier components of real functions (contents
+// preserved). The output of m complex values is returned in the array h,
+// which must be distinct from f and g.
+  void convolve(Complex *h, Complex *f, Complex *g) {
     for(unsigned int i=0; i < m; i++) {
       Complex sum=0.0;
-      for(unsigned int j=0; j <= i; j++) sum += F[j]*G[i-j];
-      for(unsigned int j=i+1; j < m; j++) sum += F[j]*conj(G[j-i]);
-      for(unsigned int j=1; j < m-i; j++) sum += conj(F[j])*G[i+j];
-      H[i]=sum;
+      for(unsigned int j=0; j <= i; j++) sum += f[j]*g[i-j];
+      for(unsigned int j=i+1; j < m; j++) sum += f[j]*conj(g[j-i]);
+      for(unsigned int j=1; j < m-i; j++) sum += conj(f[j])*g[i+j];
+      h[i]=sum;
     }
   }	
-
 };
 
 // In-place explicitly dealiased complex convolution.
@@ -375,12 +366,12 @@ public:
   }
   
   ~ExplicitConvolution() {
-    delete Backwards;
     delete Forwards;
+    delete Backwards;
   }    
   
-  // The input arrays f and g are each of size n (contents not preserved).
-  // The output is returned in f.
+  // The distinct) input arrays f and g are each of size n (contents not
+  // preserved). The output is returned in f.
   void convolve(Complex *f, Complex *g) {
     for(unsigned int i=m; i < n; i++) f[i]=0.0;
     Backwards->fft(f);
@@ -419,16 +410,16 @@ public:
   }
   
   ~ImplicitConvolution() {
-    delete Backwards;
-    delete Forwards;
-    delete Backwardso;
     delete Forwardso;
+    delete Backwardso;
+    delete Forwards;
+    delete Backwards;
   }
   
   // In-place implicitly dealiased convolution.
   // The input arrays f and g are each of size m (contents not preserved).
   // The output is returned in f.
-  // u and v are temporary work arrays each of size m.
+  // u and v are temporary arrays each of size m.
   void convolve(Complex *f, Complex *g, Complex *u, Complex *v) {
 #ifdef __SSE2__      
     const Complex cc(Cos,Cos);
@@ -569,6 +560,11 @@ public:
     Forwards=new mfft1d(m,-1,M,stride,1,f);
   }
   
+  ~fftpad() {
+    delete Forwards;
+    delete Backwards;
+  }
+  
   void backwards(Complex *f, Complex *u) {
 #ifdef __SSE2__
     const Complex cc(Cos,Cos);
@@ -689,6 +685,11 @@ public:
     
     Backwards=new mfft1d(m,1,M,stride,1,u);
     Forwards=new mfft1d(m,-1,M,stride,1,u);
+  }
+  
+  ~fft0pad() {
+    delete Forwards;
+    delete Backwards;
   }
   
   void backwards(Complex *f, Complex *u) {
@@ -885,13 +886,13 @@ public:
   
   ~ExplicitConvolution2() {
     if(prune) {
-      delete xBackwards;
-      delete yBackwards;
       delete xForwards;
       delete yForwards;
+      delete yBackwards;
+      delete xBackwards;
     } else {
-      delete Backwards;
       delete Forwards;
+      delete Backwards;
     }
   }    
   
@@ -947,13 +948,11 @@ class ImplicitConvolution2 {
 protected:
   unsigned int n;
   unsigned int m;
-  ImplicitConvolution *yconvolve;
   fftpad *xfftpad;
-  Complex *u,*v;
-  Complex *work;
+  ImplicitConvolution *yconvolve;
 public:  
-  // u1 is a temporary work array of size m.
-  // u2 is a temporary work array of size m*m.
+  // u1 is a temporary array of size m.
+  // u2 is a temporary array of size m*m.
   ImplicitConvolution2(unsigned int m, Complex *u1, Complex *u2) : 
     n(2*m), m(m) {
     xfftpad=new fftpad(m,m,m,u2);
@@ -961,13 +960,13 @@ public:
   }
   
   ~ImplicitConvolution2() {
-    delete xfftpad;
     delete yconvolve;
+    delete xfftpad;
   }
   
-  // Note: input arrays f and g are destroyed.
-  // u1 and v1 are temporary work arrays of size m.
-  // u2 and v2 are temporary work arrays of size m*m.
+  // f must be allocated as m*m.
+  // u1 and v1 are temporary arrays of size m.
+  // u2 and v2 are temporary arrays of size m*m.
   void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
                 Complex *u2, Complex *v2) {
     xfftpad->backwards(f,u2);
@@ -1004,24 +1003,20 @@ public:
   }	
 };
 
-class convolution2 {
+// In-place explicitly dealiased 2D Hermitian convolution.
+class ExplicitHConvolution2 {
 protected:
   unsigned int nx,ny;
   unsigned int mx,my;
-  bool prune;
+  bool prune; // Skip Fourier transforming rows containing all zeroes?
   mfft1d *xBackwards;
-  mcrfft1d *yBackwards;
   mfft1d *xForwards;
+  mcrfft1d *yBackwards;
   mrcfft1d *yForwards;
   crfft2d *Backwards;
   rcfft2d *Forwards;
-  convolution *yconvolve;
-  fft0pad *xfftpad;
-  Complex *u,*v;
-  Complex *work,*work2;
 public:  
-  // Set prune=true to skip Fourier transforming zero rows.
-  convolution2(unsigned int nx, unsigned int ny, 
+  ExplicitHConvolution2(unsigned int nx, unsigned int ny, 
                unsigned int mx, unsigned int my, Complex *f, bool prune=false) :
     nx(nx), ny(ny), mx(mx), my(my), prune(prune) {
     unsigned int nyp=ny/2+1;
@@ -1036,19 +1031,17 @@ public:
     }
   }
   
-// The array f must be allocated as Complex[(2mx-1)*my].
-  convolution2(unsigned int mx, unsigned int my, Complex *f) : mx(mx), my(my) {
-    unsigned int mxpy=(mx+1)*my;
-    u=FFTWComplex(mxpy);
-    v=FFTWComplex(mxpy);
-    xfftpad=new fft0pad(mx,my,my,f);
-    unsigned int c=my/2;
-    work=FFTWComplex(c+1);
-    work2=FFTWComplex(c+1);
-    yconvolve=new convolution(my,work,work2);
-  }
-  
-// Need destructor  
+  ~ExplicitHConvolution2() {
+    if(prune) {
+      delete xForwards;
+      delete yForwards;
+      delete yBackwards;
+      delete xBackwards;
+   } else {
+      delete Forwards;
+      delete Backwards;
+    }
+  }    
   
   void pad(Complex *f) {
     unsigned int nyp=ny/2+1;
@@ -1078,7 +1071,7 @@ public:
     }
   }
   
-  void fft(Complex *f, Complex *g) {
+  void convolve(Complex *f, Complex *g) {
     pad(f);
     
     if(prune) {
@@ -1116,22 +1109,49 @@ public:
       Forwards->fft0(f);
     }
   }
+};
+
+// In-place implicitly dealiased 2D Hermitian convolution.
+class ImplicitHConvolution2 {
+protected:
+  unsigned int nx,ny;
+  unsigned int mx,my;
+  fft0pad *xfftpad;
+  ImplicitHConvolution *yconvolve;
+public:  
+  // u1 and v1 are temporary arrays of size my/2+1.
+  // u2 is a temporary array of size (mx+1)*my;
+  ImplicitHConvolution2(unsigned int mx, unsigned int my,
+                        Complex *u1, Complex *v1, Complex *u2) :
+    mx(mx), my(my) {
+    xfftpad=new fft0pad(mx,my,my,u2);
+    yconvolve=new ImplicitHConvolution(my,u1,v1);
+  }
   
-  // Note: input arrays f and g are destroyed.
-  void unpadded(Complex *f, Complex *g) {
-    xfftpad->backwards(f,u);
-    xfftpad->backwards(g,v);
+  ~ImplicitHConvolution2() {
+    delete yconvolve;
+    delete xfftpad;
+  }
+  
+  // The distinct input arrays f and g must be allocated as Complex[(2mx-1)*my] 
+  // (not preserved).
+  // u1 and v1 are temporary arrays allocated as Complex[my/2+1].
+  // u2 and v2 are temporary arrays allocated as Complex [(mx+1)*my];
+  // The output is returned in f.
+  void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
+                Complex *u2, Complex *v2) {
+    xfftpad->backwards(f,u2);
+    xfftpad->backwards(g,v2);
 
     unsigned int mf=(2*mx-1)*my;
     for(unsigned int i=0; i < mf; i += my)
-      yconvolve->unpadded(f+i,g+i,work,work2);
+      yconvolve->convolve(f+i,g+i,u1,v1);
     unsigned int mu=(mx+1)*my;
     for(unsigned int i=0; i < mu; i += my)
-      yconvolve->unpadded(u+i,v+i,work,work2);
+      yconvolve->convolve(u2+i,v2+i,u1,v1);
     
-    xfftpad->forwards(f,u);
+    xfftpad->forwards(f,u2);
   }
-  
 };
 
 #endif

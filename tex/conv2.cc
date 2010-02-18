@@ -66,11 +66,6 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
     f[origin-i][0]=conj(f[origin+i][0]);
     g[origin-i][0]=conj(g[origin+i][0]);
   }
-  
-  
-//  cout << endl;
-//  cout << f << endl;
-//  cout << endl;
 }
 
 unsigned int padding(unsigned int m)
@@ -87,18 +82,15 @@ unsigned int padding(unsigned int m)
 
 int main(int argc, char* argv[])
 {
-  // Turn off
 //  fftw::effort |= FFTW_NO_SIMD;
   
   pad=0;
   
-  if (argc >= 2) {
+  if(argc >= 2)
     mx=my=atoi(argv[1]);
-  }
  
-  if (argc >= 3) {
+  if(argc >= 3)
     pad=atoi(argv[2]);
-  }
   
   nx=padding(mx);
   ny=padding(my);
@@ -109,15 +101,14 @@ int main(int argc, char* argv[])
   N=N/(nx*ny);
   if(N < 10) N=10;
   cout << "N=" << N << endl;
+  N=1;
+  
     
   size_t align=sizeof(Complex);
   nxp=pad ? nx : 2*mx-1;
   nyp=pad ? ny/2+1 : my;
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
-#ifdef TEST  
-  array2<Complex> pseudoh(mx,my,align);
-#endif
 
   double offset=0.0;
   seconds();
@@ -128,13 +119,24 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(!pad) {
-    convolution2 convolve(mx,my,f);
+    unsigned int c=my/2;
+    unsigned int mxpmy=(mx+1)*my;
+    Complex *u1=FFTWComplex(c+1);
+    Complex *v1=FFTWComplex(c+1);
+    Complex *u2=FFTWComplex(mxpmy);
+    Complex *v2=FFTWComplex(mxpmy);
+    ImplicitHConvolution2 C(mx,my,u1,v1,u2);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      convolve.unpadded(f,g);
+      C.convolve(f,g,u1,v1,u2,v2);
       sum += seconds();
     }
+    
+    FFTWdelete(u1);
+    FFTWdelete(v1);
+    FFTWdelete(u2);
+    FFTWdelete(v2);
     
     cout << endl;
     cout << "Implicit:" << endl;
@@ -147,20 +149,17 @@ int main(int argc, char* argv[])
         cout << endl;
       } else cout << f[0][0] << endl;
     cout << endl;
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
-#endif    
   }
   
   if(pad) {
     for(int prune=0; prune <= 1; ++prune) {
       sum=0.0;
-      convolution2 Convolve(nx,ny,mx,my,f,prune);
+      ExplicitHConvolution2 C(nx,ny,mx,my,f,prune);
       for(int i=0; i < N; ++i) {
         // FFTW out-of-place cr routines destroy the input arrays.
         init(f,g);
         seconds();
-        Convolve.fft(f,g);
+        C.convolve(f,g);
         sum += seconds();
       }
       cout << endl;
@@ -175,12 +174,9 @@ int main(int argc, char* argv[])
           cout << endl;
         } else cout << f[offset][0] << endl;
     }
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
-#endif
   }
   
-//  FFTWdelete(f);
-//  FFTWdelete(g);
+  FFTWdelete(f);
+  FFTWdelete(g);
 }
 
