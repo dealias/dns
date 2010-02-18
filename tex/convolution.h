@@ -673,7 +673,6 @@ class fft0pad {
   mfft1d *Backwards;
   mfft1d *Forwards;
   double Cos,Sin;
-  Complex zeta;
 public:  
   fft0pad(unsigned int m, unsigned int M, unsigned int stride, Complex *u)
     : m(m), M(M), stride(stride) {
@@ -681,7 +680,6 @@ public:
     double arg=2.0*M_PI/n;
     Cos=cos(arg);
     Sin=sin(arg);
-    zeta=Complex(cos(arg),sin(arg));
     
     Backwards=new mfft1d(m,1,M,stride,1,u);
     Forwards=new mfft1d(m,-1,M,stride,1,u);
@@ -703,10 +701,10 @@ public:
 #ifdef __SSE2__      
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-    const Complex zetac(Cos,Sin);
+    const Complex zeta(Cos,Sin);
     Vec CC=LOAD(&cc);
     Vec SS=LOAD(&ss);
-    Vec Zetak=LOAD(&zetac);
+    Vec Zetak=LOAD(&zeta);
     Vec Mhalf=LOAD(&mhalf);
     Vec Mhsqrt3=LOAD(&mhsqrt3);
 #else
@@ -801,12 +799,12 @@ public:
 #ifdef __SSE2__      
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-    const Complex zetac(Cos,Sin);
+    const Complex zeta(Cos,Sin);
     Vec CC=LOAD(&cc);
     Vec SS=LOAD(&ss);
     const Complex Ninv2(ninv,ninv);
     Vec ninv2=LOAD(&Ninv2);
-    Vec Zetak=LOAD(&zetac)*ninv2;
+    Vec Zetak=LOAD(&zeta)*ninv2;
     Vec Mhalf=LOAD(&mhalf);
     Vec HSqrt3=LOAD(&hSqrt3);
 #else

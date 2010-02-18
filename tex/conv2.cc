@@ -101,8 +101,6 @@ int main(int argc, char* argv[])
   N=N/(nx*ny);
   if(N < 10) N=10;
   cout << "N=" << N << endl;
-  N=1;
-  
     
   size_t align=sizeof(Complex);
   nxp=pad ? nx : 2*mx-1;
@@ -175,8 +173,5 @@ int main(int argc, char* argv[])
         } else cout << f[offset][0] << endl;
     }
   }
-  
-  FFTWdelete(f);
-  FFTWdelete(g);
 }
 
