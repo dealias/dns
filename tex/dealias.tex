@@ -60,6 +60,7 @@ bit reversal, hyperconvolution
 \end{keywords}
 
 \begin{AMS}
+65R99,65T50
 %15A15, 15A09, 15A23
 \end{AMS}
 
@@ -70,6 +71,8 @@ bit reversal, hyperconvolution
 % decoupling is more convenient for the user, 
 % 
 
+%padding to smooth data vs. chirp-z algorithm
+
 %vectorized with single-instruction multiple-data (SIMD) code.
 %highly optimized
 
@@ -77,8 +80,6 @@ bit reversal, hyperconvolution
 
 % CRAY power-of-2 stride issue
 % Supports efficient convolutions of power of 2 sizes
-% Address misleading implication of Canuto page 136 (dealiased.pdf: p.20)
-% regarding power of 2 transforms.
 %
 % memory requirements of phase-shift \cite{Patterson and Orszag 71} (doubles
 % memory usage).
@@ -86,24 +87,152 @@ bit reversal, hyperconvolution
 % Think about parallelization issues (another advantage of removing zeros).
 
 \section{Introduction}
-Memory usage is critical in many applications of convolution sums for direct
-numerical simulation, image processing, and signal processing.
+Discrete convolution sums based on the fast Fourier transform (FFT) algorithm
+have become important tools for image filtering, digital signal processing, and
+correlation analysis. They are also widely used in computational physics to
+solve nonlinear partial differential equations such as the Navier--Stokes
+equations in periodic domains. In some of these applications, notably
+direct numerical pseudospectral simulations of fluid turbulence, memory
+usage is a critical limiting factor: in-place multidimensional Fourier
+transforms are typically used to reduce the memory footprint of
+the required spectral convolutions.
 
-In higher dimensions, the memory usage of our noncentered (centered)
-convolution is asymptotically one-half (two-thirds) of the memory
-requirements imposed by zero padding.
+Because the discrete convolution, which produces cyclic output from cyclic
+input, is applied to nonperiodic (wavenumber-space) data, it is important
+to remove aliases from the convolution. Typically the data array is
+extended by padding it with enough zeros so that the wave beats of the
+the positive frequencies cannot wrap around and contaminate
+the negative frequencies. The convolution is then performed using a
+correspondingly larger Fourier transform size. Alternatively, phase
+shift dealiasing \cite{Patterson71,Canuto} can be used to cancel out the
+aliasing errors between two convolutions with two different phase
+shifts. However, this second technique is rarely used in practice, since in
+addition to doubling the memory requirements, it is computationally more
+expensive ($15N\log_2 N$ operations) than zero padding
+($\fr{45/4}N\log_2 N$ operations) \cite[p.~136]{Canuto}. 
+% Address slightly misleading implication of Canuto page 136
+% (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
+% application).
+
+The obvious disadvantage of an explicit application of the zero padding
+technique is that one is summing over a large number of data values that
+are known {\it a priori\/} to be zero.
+A frequently asked question by users of FFT libraries
+who want to compute dealiased convolutions is how to avoid this obvious
+waste of memory and computation time.
+Steven G. Johnson, has provided this
+answer\cite{http://www.fftw.org/pruned.html}:
+\begin{quotation}
+{\it
+The most common case where people seem to want a pruned FFT is for
+zero-padded convolutions, where roughly 50\% of your inputs are zero (to
+get a linear convolution from an FFT-based cyclic convolution). Here, a
+pruned FFT is hardly worth thinking about, at least in one dimension. In
+higher dimensions, matters change (e.g. for a 3d zero-padded array about
+1/8 of your inputs are non-zero, and one can fairly easily save a factor of
+two or so simply by skipping 1d sub-transforms that are zero).
+}
+\end{quotation}
+
+The reasoning behind the assertion that such one-dimensional pruned FFTs
+are not worth thinking about is that if $K$ of the $N$ inputs are zero,
+the computational cost is reduced only from $N\log N$ to $N\log K$.
+For example, if $K=N/2$, the savings is a minuscule $1/\log_2 N$.
+Nevertheless, in this work we demonstrate that pruning the zero-padded
+elements of one-dimensional convolutions is indeed worth thinking about,
+primarily because it provides a more effective building block for constructing
+multidimensional convolutions.
+
+The key observation is that, although the memory usage of our implicitly
+padded 1D convolution is identical to that for a conventional explicitly
+padded convolution, the additional temporary memory need not be contiguous
+with the user data.  In a multidimensional context, this external work
+buffer can be reused for other one-dimensional convolutions.
+As a result, for dimensions greater than one, the memory usage of our
+noncentered (centered) convolution is asymptotically one-half (two-thirds)
+of the memory requirements imposed by zero padding.
 Of course, if memory savings alone were the goal, this savings could
 also be achieved with explicit zero padding by copying the data for the
-innermost convolution to an external padded buffer, but this extra data
+innermost convolution to an external padded buffer, but such extra data
 communication turns out to be prohibitively expensive. The fact that our
 one-dimensional convolution does not require this extra copying is the key
 feature that was exploited to obtain simultaneous improvements in memory
 usage and performance.
 
+The task of writing an efficient implicitly padded one-dimensional
+convolution is onerous, particularly if one tries to compete with an
+explicitly problem-dependent and architecture-adaptive FFTW algorithm such
+as the award-winning \cite{FFTW} library, which empirically predetermines a
+near optimal butterfly scheme at each subdivision. Effectively one wants to
+perform the first FFT subdivision manually, dropping the zero terms and
+leaving the inner transforms to be computed with the usual library
+routine. But this places an artificial restriction, at least at the highest
+subdivision, on the possible adaptive algorithm that can be
+used. Fortunately, there are a number of features of our algorithm that
+help to offset this disadvantage. First, since the goal is to produce a
+convolution, bit-reversal for the manual (highest) subdivision is
+unnecessary: the scrambled Fourier subtransforms of the two input vectors
+can be multiplied together as they are produced (perhaps while are still
+accessible in the cache). Second, the implicit method allows most (four out
+of six for the complex noncentered case and seven out of nine for the
+Hermitian centered case) of the subtransforms for an in-place convolution
+to be computed as out-of-place transforms, which are typically faster than
+in-place transforms.  These savings helped keep our one-dimensional in-place
+implicit convolution competitive with the explicitly padded convolution
+based on the same highly optimized library. 
+
+The computation times for the two methods are compared for a
+one-dimensional noncentered (Fourier origin at the first index) complex
+case in Figure~\ref{timing1c} and a one-dimensional centered (Fourier
+origin at the central index) Hermitian case in Figure~\ref{timing1r}.
+Both the FFTW library and the layer we built on top of it were compiled
+with the Intel C/C++ Compiler and optimization options and run on a 64-bit
+Intel processor. For the noncentered case, where the origin is at the first
+index, the input data length $m$ is taken to be a power of $2$ and one must
+pad to $n=2m-1$ to prevent the wavenumber $m-1$ from beating with itself to
+affect mode~$n$. However, since power of two transforms are the most
+efficient, it is typically better to extend the padding to $n=2m$.
+For the centered case, we take the input data length to be odd, say $2m-1$,
+with the origin at index $m-1$. One then needs to pad to $n=3m-2$
+to prevent the wavenumber $m-1$ from beating with itself to affect the most
+negative (first) wavenumber, $-m+1$. (Asymptotically, for large $m$, this
+argument yields the so-called $2/3$ padding rule.) For implicit padding it
+is convenient to pad to $n=3m$ and use a radix $3$ subdivision at the highest
+level. For explicit padding, we chose $n$ to be a power of $2$ and set 
+$m$ to be the largest odd integer less than or equal to $\ceil{2n/3}$,
+whereas for implicit padding, we chose $m$ itself to be a power of $2$;
+thereby choosing the optimal size for each case 
+(for the intended application of solving partial differential equations,
+the exact size is arbitrary anyway and is chosen in this manner to yield
+optimal efficiency). 
+
+%USE DISTINCT MONO MARKERS & LINE TYPES.
+%With fftw-3.2.2 configured with --enable-sse2 and CC=icpc
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{timing1c}
+    \caption{Comparison of computation times for explicitly and implicitly
+dealiased complex noncentered 1D convolutions of two vectors of (unpadded)
+length $m$.}
+    \label{timing1c}
+  \end{center}
+\end{figure}
+
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{timing1r}
+    \caption{Comparison of computation times for explicitly and implicitly
+dealiased Hermitian centered 1D convolutions of two vectors of (unpadded)
+length $2m-1$.}
+    \label{timing1r}
+  \end{center}
+\end{figure}
+
 \section{1-D Dealiased Fast Fourier Transforms}
 \subsection{$1/2$ Dealiased Data}
 
-Suppose $N$ is a multiple of $2$. In terms of the $N$th primitive root of unity,
+Suppose $N$ is a multiple of $2$. 
+In terms of the $N$th primitive root of unity,
 $$
 \zeta_N\doteq \exp\(\frac{2 \pi i}{N}\),
 $$
@@ -331,5 +460,20 @@ buffer for all necessary transformations.
   \end{center}
 \end{figure}
 
+\section{Conclusions}
+In this work we develop an efficient method for avoiding explicit zero
+padding in multidimensional convolutions, saving both memory and
+computation time.
 
 \end{document}
+
+%Self-sorting in-place fast fourier transforms
+%Source 	SIAM Journal on Scientific and Statistical Computing archive
+%Volume 12 ,  Issue 4  (July 1991) table of contents
+%Pages: 808 - 823  
+%Year of Publication: 1991
+%ISSN:0196-5204 
+
+% LocalWords:  dealiasing dealias hyperconvolutions Hermitian fftw FFT priori
+% LocalWords:  hyperconvolution nonperiodic FFTs noncentered subtransforms
+% LocalWords:  unpadded

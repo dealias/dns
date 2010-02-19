@@ -4,11 +4,12 @@ using namespace std;
 
 #define TEST 1
 
-// For FFTW_NO_SIMD:
-// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math conv.cc fftw++.cc -lfftw3 -march=native
-
-// Without FFTW_NO_SIMD:
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse conv.cc fftw++.cc -lfftw3 -march=native
+
+// icpc -O3 -ansi-alias -malign-double -fast -fp-model fast=2 conv.cc fftw++.cc -lfftw3
+
+// FFTW: CC=icpc CFLAGS="-fast -fp-model fast=2"
+// configure --enable-sse2
 
 // usage: aout [int m]
 // optionally specifies the size of m.

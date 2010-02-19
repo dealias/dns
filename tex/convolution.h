@@ -224,8 +224,7 @@ public:
     v[c]=C+B;
     C -= B;
     
-    // FFTs, convolutions, and inverse FFTs
-    // seven of nine transforms are out-of-place
+    // seven of nine FFTs are out-of-place
     // r=-1:
     cr->fft(u);
     cr->fft(v);
@@ -446,6 +445,8 @@ public:
       re=temp;
 #endif      
     }  
+    
+    // four of six FFTs are out-of-place
     
     Backwards->fft(u);
     Backwards->fft(v);
