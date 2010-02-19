@@ -21,11 +21,14 @@ real[][] a=fin.dimension(0,0);
 a=transpose(a);
 mu=a[0]; u=a[1];
 
-guide g=scale(0.4mm)*unitcircle;
+guide g0=scale(0.4mm)*unitcircle;
+guide g1=scale(0.6mm)*polygon(3);
+guide g2=scale(0.6mm)*polygon(4);
 
-marker mark0=marker(g,Fill(Pen(0)));
-marker mark1=marker(g,Fill(Pen(2)));
-marker mark2=marker(g,Fill(Pen(1)));
+marker mark0=marker(g0,Draw(Pen(0)));
+marker mark1=marker(g1,Draw(Pen(2)));
+marker mark2=marker(g2,Draw(Pen(1)));
+
 draw(graph(mp,p,p>0),Pen(0),"Explicit",mark0);
 draw(graph(mP,P,P>0),Pen(2),"Pruned",mark1);
 draw(graph(mu,u,u>0),Pen(1),"Implicit",mark2);

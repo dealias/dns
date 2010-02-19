@@ -6,9 +6,9 @@ using namespace std;
 
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse conv.cc fftw++.cc -lfftw3 -march=native
 
-// icpc -O3 -ansi-alias -malign-double -fast -fp-model fast=2 conv.cc fftw++.cc -lfftw3
+// icpc -O3 -ansi-alias -malign-double -fp-model fast=2 conv.cc fftw++.cc -lfftw3
 
-// FFTW: CC=icpc CFLAGS="-fast -fp-model fast=2"
+// FFTW: CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
 // configure --enable-sse2
 
 // usage: aout [int m]
