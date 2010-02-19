@@ -2,17 +2,14 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
-#define TEST 1
-
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse conv.cc fftw++.cc -lfftw3 -march=native
 
 // icpc -O3 -ansi-alias -malign-double -fp-model fast=2 conv.cc fftw++.cc -lfftw3
 
-// FFTW: CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
-// configure --enable-sse2
+// FFTW: 
+// configure --enable-sse2 CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
 
-// usage: aout [int m]
-// optionally specifies the size of m.
+// usage: aout [int m] [int pad]
 
 // Number of iterations.
 unsigned int N=10000000;
@@ -181,4 +178,3 @@ int main(int argc, char* argv[])
   FFTWdelete(f);
   FFTWdelete(g);
 }
-

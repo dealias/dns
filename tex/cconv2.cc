@@ -7,15 +7,14 @@ using namespace std;
 
 using namespace Array;
 
-// For FFTW_NO_SIMD:
-// g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math cconv2.cc fftw++.cc -lfftw3 -march=native
-//
-// Without FFTW_NO_SIMD:
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse cconv2.cc fftw++.cc -lfftw3 -march=native
-//
-//
-// usage: aout [int m]
-// optionally specifies the size of m.
+
+// icpc -O3 -ansi-alias -malign-double -fp-model fast=2 cconv2.cc fftw++.cc -lfftw3
+
+// FFTW: 
+// configure --enable-sse2 CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
+
+// usage: aout [int m] [int pad]
 
 // Number of iterations.
 unsigned int N=10000000;
