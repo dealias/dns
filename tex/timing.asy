@@ -21,7 +21,7 @@ real[][] a=fin.dimension(0,0);
 a=transpose(a);
 mu=a[0]; u=a[1];
 
-guide g0=scale(0.4mm)*unitcircle;
+guide g0=scale(0.5mm)*unitcircle;
 guide g1=scale(0.6mm)*polygon(3);
 guide g2=scale(0.6mm)*polygon(4);
 
