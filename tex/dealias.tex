@@ -110,9 +110,7 @@ shifts. However, this second technique is rarely used in practice, since in
 addition to doubling the memory requirements, it is computationally more
 expensive ($15N\log_2 N$ operations) than zero padding
 ($\fr{45/4}N\log_2 N$ operations) \cite[p.~136]{Canuto}. 
-% Address slightly misleading implication of Canuto page 136
-% (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
-% application).
+
 
 The obvious disadvantage of an explicit application of the zero padding
 technique is that one is summing over a large number of data values that
@@ -198,19 +196,27 @@ efficient in practice, it is typically better to extend the padding to $n=2m$.
 For the centered case, we take the input data length to be odd, say $2m-1$,
 with the origin at index $m-1$. One then needs to pad to $n\ge 3m-2$
 to prevent the wavenumber $m-1$ from beating with itself to affect the most
-negative (first) wavenumber, $-m+1$. Asymptotically, for large $m$, this
-argument yields the so-called $2/3$ padding rule. 
+negative (first) wavenumber, $-m+1$. Since ratio of physical to total modes,
+$(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, the explicit padding
+technique is often referred to as the {\it $2/3$ padding rule}. 
 For implicit padding it is convenient to pad to $n=3m$ to allow use of a
 radix $3$ subdivision at the highest level. For explicit padding, we chose
-$n$ to be a power of $2$ and set FIXME$m$ to be the largest odd integer less than or
-equal to $\ceil{(2n-1)/3}$, whereas for implicit padding, we chose $m$ itself
-to be a power of $2$; thereby choosing the optimal size for each case
-(for the intended application of solving partial differential equations,
-the exact size is arbitrary anyway and is chosen in this manner to yield
-optimal efficiency). 
+$n$ to be a power of $2$ and
+set $m=\floor{(n+2)/3}$, whereas for implicit padding, we chose $m$ itself
+to be a power of $2$; thereby choosing the optimal size for each case.
 
-%USE DISTINCT MONO MARKERS & LINE TYPES.
-%With fftw-3.2.2 configured with --enable-sse2 and CC=icpc
+For the intended application of solving partial differential equations,
+the convolution size is arbitrary and is normally chosen anyway to 
+optimal efficiency. On the other hand, for those applications where the
+size of the convolution is dictated by external factors, implicit
+convolutions effectively expand the set of efficient convolutions sizes to
+include integral powers of $2$, a case of practical importance.
+The existence of implicit convolutions in fact nullifies the argument of
+Canuto...
+% Address slightly misleading implication of Canuto page 136
+% (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
+% application).
+
 \begin{figure}[htbp]
   \begin{center}
     \includegraphics{timing1c}

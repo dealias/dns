@@ -67,6 +67,8 @@ int main(int argc, char* argv[])
   N=N/n;
   if(N < 10) N=10;
   cout << "N=" << N << endl;
+  N=1;
+  
   
   unsigned int np=pad ? n/2+1 : m;
     
