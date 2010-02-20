@@ -181,27 +181,30 @@ in-place transforms.  These savings helped keep our one-dimensional in-place
 implicit convolution competitive with the explicitly padded convolution
 based on the same highly optimized library. 
 
-The computation times for the two methods are compared for a
+The computation times for the two methods are compared for
 one-dimensional noncentered (Fourier origin at the first index) complex
-case in Figure~\ref{timing1c} and a one-dimensional centered (Fourier
-origin at the central index) Hermitian case in Figure~\ref{timing1r}.
+convolutions in Figure~\ref{timing1c} and one-dimensional centered (Fourier
+origin at the central index) Hermitian convolutions in Figure~\ref{timing1r}.
 Both the FFTW library and the layer we built on top of it were compiled
 with the Intel C/C++ Compiler and optimization options and run on a 64-bit
-Intel processor. For the noncentered case, where the origin is at the first
-index, the input data length $m$ is taken to be a power of $2$ and one must
-pad to $n=2m-1$ to prevent the wavenumber $m-1$ from beating with itself to
-affect mode~$n$. However, since power of two transforms are the most
-efficient, it is typically better to extend the padding to $n=2m$.
+Intel processor. 
+
+For the noncentered case, where the origin is at the first index, the input
+data vectors of length $m$ must each be zero-padded to length $n\ge 2m-1$ to
+prevent the wavenumber $m-1$ from beating with itself to
+affect mode~$n=0\mod n$. However, since power-of-two transforms are the most
+efficient in practice, it is typically better to extend the padding to $n=2m$.
+
 For the centered case, we take the input data length to be odd, say $2m-1$,
-with the origin at index $m-1$. One then needs to pad to $n=3m-2$
+with the origin at index $m-1$. One then needs to pad to $n\ge 3m-2$
 to prevent the wavenumber $m-1$ from beating with itself to affect the most
-negative (first) wavenumber, $-m+1$. (Asymptotically, for large $m$, this
-argument yields the so-called $2/3$ padding rule.) For implicit padding it
-is convenient to pad to $n=3m$ and use a radix $3$ subdivision at the highest
-level. For explicit padding, we chose $n$ to be a power of $2$ and set 
-$m$ to be the largest odd integer less than or equal to $\ceil{2n/3}$,
-whereas for implicit padding, we chose $m$ itself to be a power of $2$;
-thereby choosing the optimal size for each case 
+negative (first) wavenumber, $-m+1$. Asymptotically, for large $m$, this
+argument yields the so-called $2/3$ padding rule. 
+For implicit padding it is convenient to pad to $n=3m$ to allow use of a
+radix $3$ subdivision at the highest level. For explicit padding, we chose
+$n$ to be a power of $2$ and set FIXME$m$ to be the largest odd integer less than or
+equal to $\ceil{(2n-1)/3}$, whereas for implicit padding, we chose $m$ itself
+to be a power of $2$; thereby choosing the optimal size for each case
 (for the intended application of solving partial differential equations,
 the exact size is arbitrary anyway and is chosen in this manner to yield
 optimal efficiency). 
@@ -212,8 +215,8 @@ optimal efficiency).
   \begin{center}
     \includegraphics{timing1c}
     \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex noncentered 1D convolutions of two vectors of (unpadded)
-length $m$.}
+dealiased complex noncentered 1D in-place convolutions of two vectors of
+(unpadded) length $m$.}
     \label{timing1c}
   \end{center}
 \end{figure}
@@ -222,8 +225,8 @@ length $m$.}
   \begin{center}
     \includegraphics{timing1r}
     \caption{Comparison of computation times for explicitly and implicitly
-dealiased Hermitian centered 1D convolutions of two vectors of (unpadded)
-length $2m-1$.}
+dealiased Hermitian centered 1D in-place convolutions of two vectors of
+(unpadded) length $2m-1$.}
     \label{timing1r}
   \end{center}
 \end{figure}
