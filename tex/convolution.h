@@ -14,6 +14,184 @@ extern const Complex mhalf;
 extern const Complex zeta3;
 extern const Complex one;
 
+// In-place explicitly dealiased complex convolution.
+class ExplicitConvolution {
+protected:
+  unsigned int n,m;
+  fft1d *Backwards,*Forwards;
+  double Cos,Sin;
+public:  
+  
+  // u is a temporary array of size n.
+  ExplicitConvolution(unsigned int n, unsigned int m, Complex *u) :
+    n(n), m(m) {
+    Backwards=new fft1d(n,1,u);
+    Forwards=new fft1d(n,-1,u);
+  }
+  
+  ~ExplicitConvolution() {
+    delete Forwards;
+    delete Backwards;
+  }    
+  
+  // The distinct) input arrays f and g are each of size n (contents not
+  // preserved). The output is returned in f.
+  void convolve(Complex *f, Complex *g) {
+    for(unsigned int i=m; i < n; i++) f[i]=0.0;
+    Backwards->fft(f);
+  
+    for(unsigned int i=m; i < n; i++) g[i]=0.0;
+    Backwards->fft(g);
+      
+    double ninv=1.0/n;
+    for(unsigned int i=0; i < n; ++i)
+      f[i] *= g[i]*ninv;
+	
+    Forwards->fft(f);
+  }
+};
+
+// In-place implicitly dealiased complex convolution.
+class ImplicitConvolution {
+protected:
+  unsigned int n,m;
+  fft1d *Backwards,*Forwards;
+  fft1d *Backwardso,*Forwardso;
+  double Cos,Sin;
+public:  
+  
+  // u and v are distinct temporary arrays each of size m.
+  ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : n(2*m), m(m) {
+    double arg=2.0*M_PI/n;
+    Cos=cos(arg);
+    Sin=sin(arg);
+
+    Backwards=new fft1d(m,1,u);
+    Forwards=new fft1d(m,-1,u);
+    
+    Backwardso=new fft1d(m,1,u,v);
+    Forwardso=new fft1d(m,-1,u,v);
+  }
+  
+  ~ImplicitConvolution() {
+    delete Forwardso;
+    delete Backwardso;
+    delete Forwards;
+    delete Backwards;
+  }
+  
+  // In-place implicitly dealiased convolution.
+  // The input arrays f and g are each of size m (contents not preserved).
+  // The output is returned in f.
+  // u and v are temporary arrays each of size m.
+  void convolve(Complex *f, Complex *g, Complex *u, Complex *v) {
+#ifdef __SSE2__      
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    Vec CC=LOAD(&cc);
+    Vec SS=LOAD(&ss);
+    Vec Zetak=LOAD(&one);
+#else    
+    double re=1.0;
+    double im=0.0;
+#endif
+    for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__      
+      STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
+      STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
+      Complex *P=u+k;
+      Complex *Q=v+k;
+      Complex fk=*(f+k);
+      Complex gk=*(g+k);
+      P->re=re*fk.re-im*fk.im;
+      P->im=im*fk.re+re*fk.im;
+      Q->re=re*gk.re-im*gk.im;
+      Q->im=im*gk.re+re*gk.im;
+      double temp=re*Cos-im*Sin; 
+      im=re*Sin+im*Cos;
+      re=temp;
+#endif      
+    }  
+    
+    // four of six FFTs are out-of-place
+    
+    Backwards->fft(u);
+    Backwards->fft(v);
+    for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__      
+      STORE(v+k,ZMULT(LOAD(u+k),LOAD(v+k)));
+#else      
+      Complex *p=v+k;
+      Complex vk=*p;
+      Complex uk=*(u+k);
+      p->re=uk.re*vk.re-uk.im*vk.im;
+      p->im=uk.re*vk.im+uk.im*vk.re;
+#endif      
+    }
+    Forwardso->fft(v,u);
+
+    Backwardso->fft(f,v);
+    Backwardso->fft(g,f);
+    for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__      
+      STORE(v+k,ZMULT(LOAD(v+k),LOAD(f+k)));
+#else      
+      Complex *p=v+k;
+      Complex vk=*p;
+      Complex fk=*(f+k);
+      p->re=vk.re*fk.re-vk.im*fk.im;
+      p->im=vk.re*fk.im+vk.im*fk.re;
+#endif      
+    }
+    Forwardso->fft(v,f);
+    
+    double ninv=1.0/n;
+#ifdef __SSE2__      
+    SS=-LOAD(&ss);
+    const Complex Ninv(ninv,0.0);
+    const Complex Ninv2(ninv,ninv);
+    Zetak=LOAD(&Ninv);
+    Vec ninv2=LOAD(&Ninv2);
+#else    
+    re=ninv;
+    im=0.0;
+#endif    
+    for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__
+      STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
+      Complex *p=f+k;
+      Complex fk=*p;
+      Complex fkm=*(u+k);
+      p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
+      p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+      double temp=re*Cos+im*Sin;
+      im=-re*Sin+im*Cos;
+      re=temp;
+#endif      
+    }
+  }
+};
+
+// Out-of-place direct complex convolution.
+class DirectConvolution {
+protected:
+  unsigned int m;
+public:  
+  DirectConvolution(unsigned int m) : m(m) {}
+  
+  void convolve(Complex *h, Complex *f, Complex *g) {
+    for(unsigned int i=0; i < m; i++) {
+      Complex sum=0.0;
+      for(unsigned int j=0; j <= i; j++) sum += f[j]*g[i-j];
+      h[i]=sum;
+    }
+  }	
+};
+
 // In-place explicitly dealiased Hermitian convolution.
 class ExplicitHConvolution {
 protected:
@@ -340,184 +518,6 @@ public:
       for(unsigned int j=0; j <= i; j++) sum += f[j]*g[i-j];
       for(unsigned int j=i+1; j < m; j++) sum += f[j]*conj(g[j-i]);
       for(unsigned int j=1; j < m-i; j++) sum += conj(f[j])*g[i+j];
-      h[i]=sum;
-    }
-  }	
-};
-
-// In-place explicitly dealiased complex convolution.
-class ExplicitConvolution {
-protected:
-  unsigned int n,m;
-  fft1d *Backwards,*Forwards;
-  double Cos,Sin;
-public:  
-  
-  // u is a temporary array of size n.
-  ExplicitConvolution(unsigned int n, unsigned int m, Complex *u) :
-    n(n), m(m) {
-    Backwards=new fft1d(n,1,u);
-    Forwards=new fft1d(n,-1,u);
-  }
-  
-  ~ExplicitConvolution() {
-    delete Forwards;
-    delete Backwards;
-  }    
-  
-  // The distinct) input arrays f and g are each of size n (contents not
-  // preserved). The output is returned in f.
-  void convolve(Complex *f, Complex *g) {
-    for(unsigned int i=m; i < n; i++) f[i]=0.0;
-    Backwards->fft(f);
-  
-    for(unsigned int i=m; i < n; i++) g[i]=0.0;
-    Backwards->fft(g);
-      
-    double ninv=1.0/n;
-    for(unsigned int i=0; i < n; ++i)
-      f[i] *= g[i]*ninv;
-	
-    Forwards->fft(f);
-  }
-};
-
-// In-place implicitly dealiased complex convolution.
-class ImplicitConvolution {
-protected:
-  unsigned int n,m;
-  fft1d *Backwards,*Forwards;
-  fft1d *Backwardso,*Forwardso;
-  double Cos,Sin;
-public:  
-  
-  // u and v are distinct temporary arrays each of size m.
-  ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : n(2*m), m(m) {
-    double arg=2.0*M_PI/n;
-    Cos=cos(arg);
-    Sin=sin(arg);
-
-    Backwards=new fft1d(m,1,u);
-    Forwards=new fft1d(m,-1,u);
-    
-    Backwardso=new fft1d(m,1,u,v);
-    Forwardso=new fft1d(m,-1,u,v);
-  }
-  
-  ~ImplicitConvolution() {
-    delete Forwardso;
-    delete Backwardso;
-    delete Forwards;
-    delete Backwards;
-  }
-  
-  // In-place implicitly dealiased convolution.
-  // The input arrays f and g are each of size m (contents not preserved).
-  // The output is returned in f.
-  // u and v are temporary arrays each of size m.
-  void convolve(Complex *f, Complex *g, Complex *u, Complex *v) {
-#ifdef __SSE2__      
-    const Complex cc(Cos,Cos);
-    const Complex ss(-Sin,Sin);
-    Vec CC=LOAD(&cc);
-    Vec SS=LOAD(&ss);
-    Vec Zetak=LOAD(&one);
-#else    
-    double re=1.0;
-    double im=0.0;
-#endif
-    for(unsigned int k=0; k < m; ++k) {
-#ifdef __SSE2__      
-      STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
-      STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
-      Complex *P=u+k;
-      Complex *Q=v+k;
-      Complex fk=*(f+k);
-      Complex gk=*(g+k);
-      P->re=re*fk.re-im*fk.im;
-      P->im=im*fk.re+re*fk.im;
-      Q->re=re*gk.re-im*gk.im;
-      Q->im=im*gk.re+re*gk.im;
-      double temp=re*Cos-im*Sin; 
-      im=re*Sin+im*Cos;
-      re=temp;
-#endif      
-    }  
-    
-    // four of six FFTs are out-of-place
-    
-    Backwards->fft(u);
-    Backwards->fft(v);
-    for(unsigned int k=0; k < m; ++k) {
-#ifdef __SSE2__      
-      STORE(v+k,ZMULT(LOAD(u+k),LOAD(v+k)));
-#else      
-      Complex *p=v+k;
-      Complex vk=*p;
-      Complex uk=*(u+k);
-      p->re=uk.re*vk.re-uk.im*vk.im;
-      p->im=uk.re*vk.im+uk.im*vk.re;
-#endif      
-    }
-    Forwardso->fft(v,u);
-
-    Backwardso->fft(f,v);
-    Backwardso->fft(g,f);
-    for(unsigned int k=0; k < m; ++k) {
-#ifdef __SSE2__      
-      STORE(v+k,ZMULT(LOAD(v+k),LOAD(f+k)));
-#else      
-      Complex *p=v+k;
-      Complex vk=*p;
-      Complex fk=*(f+k);
-      p->re=vk.re*fk.re-vk.im*fk.im;
-      p->im=vk.re*fk.im+vk.im*fk.re;
-#endif      
-    }
-    Forwardso->fft(v,f);
-    
-    double ninv=1.0/n;
-#ifdef __SSE2__      
-    SS=-LOAD(&ss);
-    const Complex Ninv(ninv,0.0);
-    const Complex Ninv2(ninv,ninv);
-    Zetak=LOAD(&Ninv);
-    Vec ninv2=LOAD(&Ninv2);
-#else    
-    re=ninv;
-    im=0.0;
-#endif    
-    for(unsigned int k=0; k < m; ++k) {
-#ifdef __SSE2__
-      STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
-      Zetak=ZMULT(CC,SS,Zetak);
-#else      
-      Complex *p=f+k;
-      Complex fk=*p;
-      Complex fkm=*(u+k);
-      p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
-      p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
-      double temp=re*Cos+im*Sin;
-      im=-re*Sin+im*Cos;
-      re=temp;
-#endif      
-    }
-  }
-};
-
-// Out-of-place direct complex convolution.
-class DirectConvolution {
-protected:
-  unsigned int m;
-public:  
-  DirectConvolution(unsigned int m) : m(m) {}
-  
-  void convolve(Complex *h, Complex *f, Complex *g) {
-    for(unsigned int i=0; i < m; i++) {
-      Complex sum=0.0;
-      for(unsigned int j=0; j <= i; j++) sum += f[j]*g[i-j];
       h[i]=sum;
     }
   }	
