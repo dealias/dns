@@ -51,7 +51,8 @@ Such implicitly padded convolutions can be built on top of state-of-the-art fast
 Fourier transform libraries; for example, vectorized implementations of
 multidimensional dealiased centered and non-centered, complex and Hermitian
 convolutions, have already been implemented in the open-source package 
-{\tt fftw++}. \end{abstract} 
+{\tt fftw++}.
+\end{abstract} 
 
 \begin{keywords} 
 dealiasing, convolution, zero padding, fast Fourier transform,
@@ -401,6 +402,26 @@ u_{3u+r,3v+s}\no=\sum_{k=-m-1}^{m-1}\sum_{\ell=-m-1}^{m-1}
 \sum_{\ell=0}^{m-1} \z_{m}^{v \ell} \z_N^{s\ell} \hat u_{k,\ell}
 \ee
 \end{comment}
+
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{timing2c}
+    \caption{Comparison of computation times for explicitly and implicitly
+dealiased complex noncentered 2D in-place convolutions of two vectors of
+(unpadded) length $m\times m$.}
+    \label{timing2c}
+  \end{center}
+\end{figure}
+
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{timing2r}
+    \caption{Comparison of computation times for explicitly and implicitly
+dealiased Hermitian centered 2D in-place convolutions of two vectors of
+(unpadded) length $(2m-1)\times (2m-1)$.}
+    \label{timing2r}
+  \end{center}
+\end{figure}
 
 
 \newpage
