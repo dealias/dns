@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
 #endif
   }
   
-//  if(false)
+  if(false)
     {
     DirectConvolution C(m);
     init(f,g);
