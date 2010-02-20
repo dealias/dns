@@ -70,9 +70,7 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
 
 unsigned int padding(unsigned int m)
 {
-  unsigned int n=(2*m-1)*3;
-  if(n % 2 == 1) ++n;
-  n /= 2;
+  unsigned int n=3*m-2;
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
   // Choose next power of 2 for maximal efficiency.

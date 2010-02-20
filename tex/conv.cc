@@ -38,11 +38,9 @@ inline void init(Complex *f, Complex *g)
 //  for(unsigned int i=0; i < m; i++) f[i]=d[i];
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
   f[0]=1.0;
-  for(unsigned int i=1; i < m-1; i++) f[i]=Complex(3.0,2.0);
-  f[m-1]=3.0;
+  for(unsigned int i=1; i < m; i++) f[i]=Complex(3.0,2.0);
   g[0]=2.0;
-  for(unsigned int i=1; i < m-1; i++) g[i]=Complex(5.0,3.0);
-  g[m-1]=2.0;
+  for(unsigned int i=1; i < m; i++) g[i]=Complex(5.0,3.0);
 }
 
 int main(int argc, char* argv[])
@@ -57,10 +55,7 @@ int main(int argc, char* argv[])
   if(argc >= 3)
     pad=atoi(argv[2]);
   
-//  unsigned int m=sizeof(d)/sizeof(Complex);
-  unsigned int n=(2*m-1)*3;
-  if(n % 2 == 1) ++n;
-  n /= 2;
+  unsigned int n=3*m-2;
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
   // Choose next power of 2 for maximal efficiency.
@@ -72,6 +67,7 @@ int main(int argc, char* argv[])
   N=N/n;
   if(N < 10) N=10;
   cout << "N=" << N << endl;
+  N=1;
   
   unsigned int np=pad ? n/2+1 : m;
     
@@ -144,15 +140,15 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  if(false)
-  if(!pad) {
+//  if(false)
+  {
     DirectHConvolution C(m);
     init(f,g);
-    Complex *h=FFTWComplex(n);
+    Complex *h=FFTWComplex(m);
     seconds();
     C.convolve(h,f,g);
     sum=seconds();
-  
+    
     cout << endl;
     cout << "Direct:" << endl;
     cout << sum-offset/N << endl;
@@ -172,7 +168,7 @@ int main(int argc, char* argv[])
     if (error > 1e-12)
       cerr << "Caution! error="<<error<<endl;
 #endif
-    if(!pad) FFTWdelete(h);
+    FFTWdelete(h);
   }
   
   FFTWdelete(f);
