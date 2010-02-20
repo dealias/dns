@@ -38,26 +38,24 @@
 \maketitle
 
 \begin{abstract}
-An algorithm is described for dealiasing pseudospectral convolution sums
+An algorithm is described for dealiasing linear convolution sums
 without the expense of conventional zero-padding or phase-shift
-techniques. In the one-dimensional complex case, the memory requirements
-are identical with the usual zero-padding technique, with the important
+techniques. For one-dimensional in-place convolutions, the memory
+requirements are identical with the zero-padding technique, with the important
 distinction that the additional work memory need not be contiguous with the
-data. This decoupling of the data and work arrays significantly reduces the
-memory usage of in-place higher-dimensional convolutions.
-The technique also allows one to efficiently dealias the
+data. This decoupling of the data and work arrays significantly reduces
+the memory and computation time required to evaluate higher-dimensional
+in-place convolutions. The technique also allows one to efficiently dealias the
 hyperconvolutions that arise on Fourier transforming arbitrary powers.
-Such implicitly padded convolutions can be built on top of state-of-the-art fast
-Fourier transform libraries; for example, vectorized implementations of
-multidimensional dealiased centered and non-centered, complex and Hermitian
-convolutions, have already been implemented in the open-source package 
-{\tt fftw++}.
+Implicitly padded convolutions can be built on top of state-of-the-art
+fast Fourier transform libraries: vectorized multidimensional implementations
+for the non-centered complex and centered Hermitian (pseudospectral) cases have
+been implemented in the open-source software {\tt fftw++}.
 \end{abstract} 
 
 \begin{keywords} 
-dealiasing, convolution, zero padding, fast Fourier transform,
-pseudospectral methods, spectral truncations, in-place Fourier transforms,
-bit reversal, hyperconvolution
+dealiasing, zero padding, convolution, hyperconvolution, fast Fourier transform,
+pseudospectral method, in-place transform, bit reversal
 \end{keywords}
 
 \begin{AMS}
@@ -66,6 +64,8 @@ bit reversal, hyperconvolution
 \end{AMS}
 
 \pagestyle{myheadings}
+
+% We should also implement a noncentered Hermitian convolution.
 
 %use out-of-place Fourier transforms where possible (percent?)
 
@@ -88,15 +88,15 @@ bit reversal, hyperconvolution
 % Think about parallelization issues (another advantage of removing zeros).
 
 \section{Introduction}
-Discrete convolution sums based on the fast Fourier transform (FFT) algorithm
-have become important tools for image filtering, digital signal processing, and
-correlation analysis. They are also widely used in computational physics to
-solve nonlinear partial differential equations such as the Navier--Stokes
-equations in periodic domains. In some of these applications, notably
-direct numerical pseudospectral simulations of fluid turbulence, memory
-usage is a critical limiting factor: in-place multidimensional Fourier
-transforms are typically used to reduce the memory footprint of
-the required spectral convolutions.
+Discrete linear convolution sums based on the fast Fourier transform (FFT)
+algorithm have become important tools for image filtering, digital signal
+processing, and correlation analysis. They are also widely used in
+computational physics to solve nonlinear partial differential equations
+such as the Navier--Stokes equations in periodic domains. In some of these
+applications, notably direct numerical pseudospectral simulations of fluid
+turbulence, memory usage is a critical limiting factor: in-place
+multidimensional Fourier transforms are typically used to reduce the memory
+footprint of the required spectral convolutions.
 
 Because the discrete convolution, which produces cyclic output from cyclic
 input, is applied to nonperiodic (wavenumber-space) data, it is important
@@ -162,7 +162,7 @@ The task of writing an efficient implicitly padded one-dimensional
 convolution is onerous, particularly if one tries to compete with an
 explicitly problem-dependent and architecture-adaptive FFTW algorithm such
 as the award-winning \cite{FFTW} library, which empirically predetermines a
-near optimal butterfly scheme at each subdivision. Effectively one wants to
+near optimal butterfly graph at each subdivision. Effectively one wants to
 perform the first FFT subdivision manually, dropping the zero terms and
 leaving the inner transforms to be computed with the usual library
 routine. But this places an artificial restriction, at least at the highest
@@ -178,45 +178,68 @@ Hermitian centered case) of the subtransforms for an in-place convolution
 to be computed as out-of-place transforms, which are typically faster than
 in-place transforms.  These savings helped keep our one-dimensional in-place
 implicit convolution competitive with the explicitly padded convolution
-based on the same highly optimized library. 
+based on the same highly optimized library.
+
+\section{1D Implicitly Padded Convolution}
+\subsection{Noncentered complex convolution}
+
+For the noncentered case, where the origin is at the first index, the input
+data vectors of length $m$ must each be zero-padded to length $N\ge 2m-1$ to
+prevent the wavenumber $m-1$ from beating with itself to
+affect mode~$N=0\mod n$. However, since power-of-two FFT transforms in practice
+yield the most efficient implementations, it is typically
+better to extend the padding to $N=2m$.
+
+In terms of the $N$th primitive root of unity,
+$\zeta_N\doteq \exp\(2 \pi i/N\)$, we define the
+unnormalized discrete inverse Fourier transform
+$$
+u_j\doteq\sum_{k=0}^{N-1}\zeta_N^{jk} \hat u_k\qquad j=0,\ldots,N-1.
+$$
+($\doteq$ indicates a definition).
+Our method exploits the properties that $\zeta_N^r=\zeta_{N/r}$ and
+$\zeta_N^N=1$.
+
+If $\hat u_k=0$ for $k \ge m$ then
+\be
+u_{2\ell}
+=\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \hat u_k
+%=\ds\sum_{m=0}^{N/4-1}\zeta_m^{2\ell m} \hat u_{2m}+
+%\zeta_N^{2\ell}\sum_{m=0}^{N/4-1}\zeta_m^{2\ell m} \hat u_{2m+1}.
+\ee
+
+Likewise,
+\be
+u_{2\ell+1}
+=\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \zeta_N^k\hat u_k
+%=\ds\sum_{m=0}^{N/4-1}\zeta_m^{2\ell m} \zeta_N^{2m}\hat u_{2m}
+%+\zeta_N^{2\ell+1}\sum_{m=0}^{N/4-1}\zeta_m^{2\ell m} \zeta_N^{2m}\hat u_{2m+1}
+\ee
+
+These terms need to be computed for $\ell=0,\ldots,m-1$.
+So the scaling is $2\fr{N}{2}\log m=N\log(m)$.
+
+The odd and even terms of the convolution can be separately computed,
+multiplied term-by-term, and transformed back to Fourier space:
+\bec
+\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+=\sum_{\ell=0}^{m-1}\zeta_N^{-2k\ell} u_{2\ell}
++\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_N^{-2k\ell} u_{2\ell+1}
+=\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell}
++\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell+1}
+\qquad k=0,\ldots,\fr{N}{2}-1.
+\ee
+
+We can therefore compute the convolution with two 1024 blocks (rather than one
+2048 block), to get a dealiased 1024 convolution (with the 2/4 rule).
 
 The computation times for the two methods are compared for
 one-dimensional noncentered (Fourier origin at the first index) complex
 convolutions in Figure~\ref{timing1c} and one-dimensional centered (Fourier
 origin at the central index) Hermitian convolutions in Figure~\ref{timing1r}.
-Both the FFTW library and the layer we built on top of it were compiled
-with the Intel C/C++ Compiler and optimization options and run on a 64-bit
-Intel processor. 
-
-For the noncentered case, where the origin is at the first index, the input
-data vectors of length $m$ must each be zero-padded to length $n\ge 2m-1$ to
-prevent the wavenumber $m-1$ from beating with itself to
-affect mode~$n=0\mod n$. However, since power-of-two transforms are the most
-efficient in practice, it is typically better to extend the padding to $n=2m$.
-
-For the centered case, we take the input data length to be odd, say $2m-1$,
-with the origin at index $m-1$. One then needs to pad to $n\ge 3m-2$
-to prevent the wavenumber $m-1$ from beating with itself to affect the most
-negative (first) wavenumber, $-m+1$. Since ratio of physical to total modes,
-$(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, the explicit padding
-technique is often referred to as the {\it $2/3$ padding rule}. 
-For implicit padding it is convenient to pad to $n=3m$ to allow use of a
-radix $3$ subdivision at the highest level. For explicit padding, we chose
-$n$ to be a power of $2$ and
-set $m=\floor{(n+2)/3}$, whereas for implicit padding, we chose $m$ itself
-to be a power of $2$; thereby choosing the optimal size for each case.
-
-For the intended application of solving partial differential equations,
-the convolution size is arbitrary and is normally chosen anyway to 
-optimal efficiency. On the other hand, for those applications where the
-size of the convolution is dictated by external factors, implicit
-convolutions effectively expand the set of efficient convolutions sizes to
-include integral powers of $2$, a case of practical importance.
-The existence of implicit convolutions in fact nullifies the argument of
-Canuto...
-% Address slightly misleading implication of Canuto page 136
-% (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
-% application).
+Both the FFTW library and the convolution layer we built on top of it were
+compiled with the Intel C/C++ Compiler and optimization options and run on
+a 64-bit Intel processor.
 
 \begin{figure}[htbp]
   \begin{center}
@@ -228,66 +251,32 @@ dealiased complex noncentered 1D in-place convolutions of two vectors of
   \end{center}
 \end{figure}
 
-\begin{figure}[htbp]
-  \begin{center}
-    \includegraphics{timing1r}
-    \caption{Comparison of computation times for explicitly and implicitly
-dealiased Hermitian centered 1D in-place convolutions of two vectors of
-(unpadded) length $2m-1$.}
-    \label{timing1r}
-  \end{center}
-\end{figure}
+\subsection{Centered Hermitian convolution}
 
-\section{1-D Dealiased Fast Fourier Transforms}
-\subsection{$1/2$ Dealiased Data}
+For the centered case, we take the input data length to be odd, say $2m-1$,
+with the Fourier origin at index $m-1$. One then needs to pad to $N\ge 3m-2$
+to prevent the wavenumber $m-1$ from beating with itself to affect the most
+negative (first) wavenumber, $-m+1$. Since ratio of physical to total modes,
+$(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, the explicit padding
+technique is often referred to as the {\it $2/3$ padding rule}. 
+For implicit padding it is convenient to pad to $N=3m$ to allow use of a
+radix $3$ subdivision at the highest level. For explicit padding, we chose
+$N$ to be a power of $2$ and
+set $m=\floor{(n+2)/3}$, whereas for implicit padding, we chose $m$ itself
+to be a power of $2$; thereby choosing the optimal size for each case.
 
-Suppose $N$ is a multiple of $2$. 
-In terms of the $N$th primitive root of unity,
-$$
-\zeta_N\doteq \exp\(\frac{2 \pi i}{N}\),
-$$
-the discrete inverse Fourier transform may be written
-$$
-u_j=\sum_{k=0}^{N-1}\zeta_N^{jk} \hat u_k\qquad j=0,\ldots,N-1.
-$$
-Notice that $\zeta_N^2=\zeta_{N/2}$ and $\zeta_N^N=1$.
+For the intended application to partial differential equations, there is
+flexibility in the choice of the exact convolution size, which is
+therefore chosen to optimize efficiency. On the other hand, for those
+applications where the size of the convolution is dictated by external
+criteria, implicit padding effectively expands the set of efficient
+convolutions sizes to include integral powers of $2$, a case of practical
+significance. The existence of implicit convolutions in fact nullifies the
+argument of Canuto...
+% Address slightly misleading implication of Canuto page 136
+% (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
+% application).
 
-If $\hat u_k=0$ for $k \ge N/2$ then
-\be
-u_{2\ell}
-=\ds\sum_{k=0}^{N/2-1}\zeta_{N/2}^{\ell k} \hat u_k
-%=\ds\sum_{m=0}^{N/4-1}\zeta_{N/2}^{2\ell m} \hat u_{2m}+
-%\zeta_N^{2\ell}\sum_{m=0}^{N/4-1}\zeta_{N/2}^{2\ell m} \hat u_{2m+1}.
-\ee
-
-Likewise,
-\be
-u_{2\ell+1}
-=\ds\sum_{k=0}^{N/2-1}\zeta_{N/2}^{\ell k} \zeta_N^k\hat u_k
-%=\ds\sum_{m=0}^{N/4-1}\zeta_{N/2}^{2\ell m} \zeta_N^{2m}\hat u_{2m}
-%+\zeta_N^{2\ell+1}\sum_{m=0}^{N/4-1}\zeta_{N/2}^{2\ell m} \zeta_N^{2m}\hat u_{2m+1}
-\ee
-
-These terms need to be computed for $\ell=0,\ldots,N/2-1$.
-So the scaling is $2\fr{N}{2}\log {N/2}=N\log(N/2)$.
-
-
-The odd and even terms of the convolution can be separately computed,
-multiplied term-by-term, and transformed back to Fourier space:
-\bec
-\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
-=\sum_{\ell=0}^{N/2-1}\zeta_N^{-2k\ell} u_{2\ell}
-+\zeta_N^{-k}\sum_{\ell=0}^{N/2-1}\zeta_N^{-2k\ell} u_{2\ell+1}
-=\sum_{\ell=0}^{N/2-1}\zeta_{N/2}^{-k\ell} u_{2\ell}
-+\zeta_N^{-k}\sum_{\ell=0}^{N/2-1}\zeta_{N/2}^{-k\ell} u_{2\ell+1}
-\qquad k=0,\ldots,\fr{N}{2}-1.
-\ee
-
-We can therefore compute the convolution with two 1024 blocks (rather than one
-2048 block), to get a dealiased 1024 convolution (with the 2/4 rule).
-
-\newpage
-\subsection{$2/3$ Dealiased Data}
 The convolution in the Navier--Stokes equations require a $2/3$ padding in
 order to avoid problems with aliasing.  Suppose that the total number of modes
 (including zero-padding) is $N=3m$.  The inverse discrete Fourier transform
@@ -299,11 +288,11 @@ $$
 Then 
 \bel
 u_{3\ell}= \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} \hat u_k
-=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
-+\sum_{k=m}^{2m-1}\z_{m}^{\ell k} \hat u_k
-=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \hat u_k
-+\sum_{k=0}^{m-1}\z_{m}^{\ell (k+m)} \hat u_{k+m}
-=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\hat u_k+\hat u_{k+m}\).\label{DFTm}
+=\sum_{k=0}^{m-1}\z_m^{\ell k} \hat u_k
++\sum_{k=m}^{2m-1}\z_m^{\ell k} \hat u_k
+=\sum_{k=0}^{m-1}\z_m^{\ell k} \hat u_k
++\sum_{k=0}^{m-1}\z_m^{\ell (k+m)} \hat u_{k+m}
+=\sum_{k=0}^{m-1}\z_m^{\ell k} \(\hat u_k+\hat u_{k+m}\).\label{DFTm}
 \eel
 Equation~\ref{DFTm} is a DFT of length $m$,
 each requiring $m\log m$ operations. Following a similar procedure,
@@ -311,17 +300,30 @@ with $r=1$ or $r=2$,
 \bel
 \label{dfft23g}
 u_{3\ell +r}\no=
- \sum_{k=0}^{m-1}\z_{m}^{\ell k} \(\z_N^{rk} \hat u_k + \z_N^{r(k+m)}\hat u_{k+m}\)
+ \sum_{k=0}^{m-1}\z_m^{\ell k} \(\z_N^{rk} \hat u_k + \z_N^{r(k+m)}\hat u_{k+m}\)
 \eel
 Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
 
 The forward Fourier transform appears as
 \be
-\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=0}^{2}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
 =\sum_{r=0}^{2}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =0,\ldots,pm-1.
 \ee
+
+The computation times for implicit padding is compared with explicit zero
+padding in Figure~\ref{timing1r}.
+
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{timing1r}
+    \caption{Comparison of computation times for explicitly and implicitly
+dealiased Hermitian centered 1D in-place convolutions of two vectors of
+(unpadded) length $2m-1$.}
+    \label{timing1r}
+  \end{center}
+\end{figure}
 
 \newpage
 \subsubsection{1D Complex to Real Transforms of 2/3 Dealiased Data}
@@ -339,12 +341,12 @@ has $2m-1$ elements.
 
 The backwards (complex-to-real) transform becomes, on letting $k'=m+k$,
 \bec
-u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k'=1}^{m-1}\z_{m}^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
-+\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k=1}^{m-1}\z_{m}^{\ell k} \z_N^{-r(m-k)} \hat u_{m-k}^*
-+\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k=0}^{m-1}\z_{m}^{\ell k} \(w_{k,r}+w_{m-k,r}^*\),
+u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k'=1}^{m-1}\z_m^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
++\sum_{k=0}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k=1}^{m-1}\z_m^{\ell k} \z_N^{-r(m-k)} \hat u_{m-k}^*
++\sum_{k=0}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k=0}^{m-1}\z_m^{\ell k} \(w_{k,r}+w_{m-k,r}^*\),
 \ee
 where
 $$
@@ -352,7 +354,7 @@ w_{k,r}=\z_N^{rk} \(\hat u_k-\half \hat u_0\d_{k,0}\).
 $$
 The forwards transform becomes
 \be
-\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
 =\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =0,\ldots,m-1.
@@ -360,10 +362,10 @@ The forwards transform becomes
 
 Note: without the hermiticity condition, the backwards transform is
 \bec
-u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k'=1}^{m-1}\z_{m}^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
-+\sum_{k=0}^{m-1}\z_{m}^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k=0}^{m-1}\z_{m}^{\ell k} w_{k,r},
+u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k'=1}^{m-1}\z_m^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
++\sum_{k=0}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r},
 \ee
 where
 $$
@@ -375,7 +377,7 @@ w_{k,r}=
 $$
 and the forwards transform is
 \be
-\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =-m+1,\ldots,m-1.
 \ee
@@ -391,15 +393,15 @@ change of variables $\vk=(m_x,m_y)+\vk'$.
 \begin{comment}
 \bec
 u_{3u+r,3v+s}\no=\sum_{k=-m-1}^{m-1}\sum_{\ell=-m-1}^{m-1}
-\z_{m}^{u k} \z_{m}^{v \ell} \z_N^{rk} \z_N^{s\ell} \hat u_{k,\ell}
-=\sum_{k=-m-1}^{m-1}\z_{m}^{u k}\z_N^{rk}  
-\sum_{\ell=1}^{m-1} \z_{m}^{v \ell} \z_N^{s(\ell'-m)} \hat u_{k,\ell'-m}
-+\sum_{k=-m-1}^{m-1}\z_{m}^{u k}\z_N^{rk}
-\sum_{\ell=0}^{m-1} \z_{m}^{v \ell} \z_N^{s\ell} \hat u_{k,\ell}
-=\sum_{k=-m-1}^{m-1}\z_{m}^{-u k}\z_N^{-rk}  
-\sum_{\ell=1}^{m-1} \z_{m}^{v \ell} \z_N^{-s(m-\ell')} \hat u_{k,m-\ell'}^*
-+\sum_{k=-m-1}^{m-1}\z_{m}^{u k}\z_N^{rk}
-\sum_{\ell=0}^{m-1} \z_{m}^{v \ell} \z_N^{s\ell} \hat u_{k,\ell}
+\z_m^{u k} \z_m^{v \ell} \z_N^{rk} \z_N^{s\ell} \hat u_{k,\ell}
+=\sum_{k=-m-1}^{m-1}\z_m^{u k}\z_N^{rk}  
+\sum_{\ell=1}^{m-1} \z_m^{v \ell} \z_N^{s(\ell'-m)} \hat u_{k,\ell'-m}
++\sum_{k=-m-1}^{m-1}\z_m^{u k}\z_N^{rk}
+\sum_{\ell=0}^{m-1} \z_m^{v \ell} \z_N^{s\ell} \hat u_{k,\ell}
+=\sum_{k=-m-1}^{m-1}\z_m^{-u k}\z_N^{-rk}  
+\sum_{\ell=1}^{m-1} \z_m^{v \ell} \z_N^{-s(m-\ell')} \hat u_{k,m-\ell'}^*
++\sum_{k=-m-1}^{m-1}\z_m^{u k}\z_N^{rk}
+\sum_{\ell=0}^{m-1} \z_m^{v \ell} \z_N^{s\ell} \hat u_{k,\ell}
 \ee
 \end{comment}
 
@@ -434,9 +436,9 @@ Then
 \be
 u_{q\ell+r} = \sum_{k=0}^{N-1}\z_N^{(q\ell+r)k} \hat u_k
 = \sum_{k=0}^{pm-1}\z_{qm}^{(q\ell+r)k} \hat u_k
-= \sum_{k=0}^{pm-1}\z_{m}^{\ell k}\z_{N}^{rk} \hat u_k
-= \sum_{\a=0}^{p-1} \sum_{k=\a m}^{(\a+1)m-1}\z_{m}^{\ell k}\z_{N}^{rk} \hat u_k
-= \sum_{\a=0}^{p-1} \sum_{\k=0}^{m-1}\z_{m}^{\ell (\k+\a m)}\z_{N}^{r(\k+\a m)}
+= \sum_{k=0}^{pm-1}\z_m^{\ell k}\z_{N}^{rk} \hat u_k
+= \sum_{\a=0}^{p-1} \sum_{k=\a m}^{(\a+1)m-1}\z_m^{\ell k}\z_{N}^{rk} \hat u_k
+= \sum_{\a=0}^{p-1} \sum_{\k=0}^{m-1}\z_m^{\ell (\k+\a m)}\z_{N}^{r(\k+\a m)}
 \hat u_{\k+\a m}
 %=  \sum_{\a=0}^{p-1}\z_N^{r \a m} \sum_{\k=0}^{m-1}\z_m^{\ell\k}\z_N^{r\k}\hat u_{\k+\a m}
 =  \sum_{\k=0}^{m-1}\z_m^{\ell\k}\sum_{\a=0}^{p-1}\z_N^{r(\k+\a m)} \hat u_{\k+\a m}
@@ -450,7 +452,7 @@ in memory use and parallelizability.
 
 The forward Fourier transform appears as
 \be
-\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-q\ell k} u_{q\ell+r}
 =\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{q\ell+r}
 \qquad k\no =0,\ldots,pm-1.
