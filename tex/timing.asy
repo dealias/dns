@@ -1,5 +1,6 @@
 include graph;
-size(200,150,IgnoreAspect);
+
+size(175,200,IgnoreAspect);
 
 scale(Log,Log);
 real[] mp,p,mu,u,mP,P;
@@ -29,12 +30,13 @@ marker mark0=marker(g0,Draw(Pen(0)));
 marker mark1=marker(g1,Draw(Pen(2)));
 marker mark2=marker(g2,Draw(Pen(1)));
 
-draw(graph(mp,p,p>0),Pen(0),"Explicit",mark0);
-draw(graph(mP,P,P>0),Pen(2),"Pruned",mark1);
-draw(graph(mu,u,u>0),Pen(1),"Implicit",mark2);
+pen lp=fontsize(8pt);
+draw(graph(mp,p,p>0),Pen(0),Label("Explicit",Pen(0)+lp),mark0);
+draw(graph(mP,P,P>0),Pen(2),Label("Pruned",Pen(2)+lp),mark1);
+draw(graph(mu,u,u>0),Pen(1),Label("Implicit",Pen(1)+lp),mark2);
 
 xaxis("$m$",BottomTop,LeftTicks);
 yaxis("time (sec)",LeftRight,RightTicks);
 
-attach(legend(),point(plain.E),20plain.E);
-
+legendlinelength=0.5cm;
+attach(legend(),point(NW),10SE);

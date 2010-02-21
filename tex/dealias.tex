@@ -1,3 +1,5 @@
+% Put legends inside graphs.
+
 \documentclass[final]{siamltex}
 %\documentclass[12pt]{article}
 
@@ -92,8 +94,8 @@ pseudospectral method, in-place transform, bit reversal
 
 \section{Introduction}
 Discrete linear convolution sums based on the fast Fourier transform (FFT)
-algorithm \cite{Cooley65} have become important tools for image filtering,
-digital signal
+algorithm \cite{Gauss1866,Cooley65} have become important tools for image
+filtering, digital signal
 processing, and correlation analysis. They are also widely used in
 computational physics to solve nonlinear partial differential equations
 such as the Navier--Stokes equations in periodic domains. In some of these
@@ -242,13 +244,27 @@ options. Like the FFTW library, our algorithm was vectorized with
 specialized single-instruction multiple-data (SIMD) code.
 
 \begin{figure}[htbp]
-  \begin{center}
-    \includegraphics{timing1c}
-    \caption{Comparison of computation times for explicitly and implicitly
+\begin{center}
+\begin{minipage}{0.49\linewidth}
+\begin{center}
+\includegraphics{timing1c}
+\caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 1D convolutions of two vectors of
 (unpadded) length $m$.}
-    \label{timing1c}
-  \end{center}
+\label{timing1c}
+\end{center}
+\end{minipage}
+%
+\begin{minipage}{0.49\linewidth}
+\begin{center}
+\includegraphics{timing1r}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased centered Hermitian in-place 1D convolutions of two vectors of
+(unpadded) length $(2m-1)$.}
+\label{timing1r}
+\end{center}
+\end{minipage}
+\end{center}
 \end{figure}
 
 \subsection{Implicitly padded centered Fourier transform}\label{fft0}
@@ -382,16 +398,6 @@ application to partial differential equations, there is flexibility in the
 choice of the exact convolution size. This is why we consider for each
 algorithm only those vector lengths that maximize performance.
 
-\begin{figure}[htbp]
-  \begin{center}
-    \includegraphics{timing1r}
-    \caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 1D convolutions of two vectors of
-(unpadded) length $2m-1$.}
-    \label{timing1r}
-  \end{center}
-\end{figure}
-
 On the other hand, for those applications where the size of the convolution
 is dictated by external criteria, implicit padding effectively expands the
 set of efficient convolutions sizes to include integral powers of $2$, a
@@ -426,23 +432,27 @@ u_{3u+r,3v+s}\no=\sum_{k=-m-1}^{m-1}\sum_{\ell=-m-1}^{m-1}
 %27\% faster)!
 
 \begin{figure}[htbp]
-  \begin{center}
-    \includegraphics{timing2c}
-    \caption{Comparison of computation times for explicitly and implicitly
+\begin{center}
+\begin{minipage}{0.49\linewidth}
+\begin{center}
+\includegraphics{timing2c}
+\caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 2D convolutions of two vectors of
 (unpadded) length $m\times m$.}
-    \label{timing2c}
-  \end{center}
-\end{figure}
-
-\begin{figure}[htbp]
-  \begin{center}
-    \includegraphics{timing2r}
-    \caption{Comparison of computation times for explicitly and implicitly
+\label{timing2c}
+\end{center}
+\end{minipage}
+%
+\begin{minipage}{0.49\linewidth}
+\begin{center}
+\includegraphics{timing2r}
+\caption{Comparison of computation times for explicitly and implicitly
 dealiased centered Hermitian in-place 2D convolutions of two vectors of
 (unpadded) length $(2m-1)\times (2m-1)$.}
-    \label{timing2r}
-  \end{center}
+\label{timing2r}
+\end{center}
+\end{minipage}
+\end{center}
 \end{figure}
 
 
