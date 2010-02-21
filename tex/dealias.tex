@@ -1,5 +1,7 @@
 \documentclass[final]{siamltex}
 %\documentclass[12pt]{article}
+
+\usepackage{hyperref}
 \usepackage{mathdef}
 
 \let\orightarrow\rightarrow
@@ -64,7 +66,6 @@ pseudospectral method, in-place transform, bit reversal
 
 \pagestyle{myheadings}
 
-% Add ref to Cooley--Tukey
 % We should also implement a unshifted Hermitian convolution.
 
 %use out-of-place Fourier transforms where possible (percent?)
@@ -87,9 +88,12 @@ pseudospectral method, in-place transform, bit reversal
 
 % Think about parallelization issues (another advantage of removing zeros).
 
+\bibliographystyle{siam}
+
 \section{Introduction}
 Discrete linear convolution sums based on the fast Fourier transform (FFT)
-algorithm have become important tools for image filtering, digital signal
+algorithm\cite{Cooley65} have become important tools for image filtering,
+digital signal
 processing, and correlation analysis. They are also widely used in
 computational physics to solve nonlinear partial differential equations
 such as the Navier--Stokes equations in periodic domains. In some of these
@@ -496,6 +500,7 @@ In this work we develop an efficient method for avoiding explicit zero
 padding in multidimensional convolutions, saving both memory and
 computation time.
 
+\bibliography{refs}
 \end{document}
 
 %Self-sorting in-place fast fourier transforms
