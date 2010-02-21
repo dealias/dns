@@ -49,7 +49,7 @@ in-place convolutions. The technique also allows one to efficiently dealias the
 hyperconvolutions that arise on Fourier transforming arbitrary powers.
 Implicitly padded convolutions can be built on top of state-of-the-art
 fast Fourier transform libraries: vectorized multidimensional implementations
-for the non-centered complex and centered Hermitian (pseudospectral) cases have
+for the complex and centered Hermitian (pseudospectral) cases have
 been implemented in the open-source software {\tt fftw++}.
 \end{abstract} 
 
@@ -65,7 +65,8 @@ pseudospectral method, in-place transform, bit reversal
 
 \pagestyle{myheadings}
 
-% We should also implement a noncentered Hermitian convolution.
+% Add ref to Cooley--Tukey
+% We should also implement a unshifted Hermitian convolution.
 
 %use out-of-place Fourier transforms where possible (percent?)
 
@@ -74,7 +75,7 @@ pseudospectral method, in-place transform, bit reversal
 
 %padding to smooth data vs. chirp-z algorithm
 
-%vectorized with single-instruction multiple-data (SIMD) code.
+%
 %highly optimized
 
 %avoids inconvenience of and extra copying required by zero padding
@@ -112,14 +113,12 @@ addition to doubling the memory requirements, it is computationally more
 expensive ($15N\log_2 N$ operations) than zero padding
 ($\fr{45/4}N\log_2 N$ operations) \cite[p.~136]{Canuto}. 
 
-
-The obvious disadvantage of an explicit application of the zero padding
-technique is that one is summing over a large number of data values that
+An explicit application of the zero-padding technique has the rather
+obvious inefficiency of summing over a large number of data values that
 are known {\it a priori\/} to be zero.
-A frequently asked question by users of FFT libraries
-who want to compute dealiased convolutions is how to avoid this obvious
-waste of memory and computation time.
-Steven G. Johnson, has provided this
+To a frequently asked question by FFT users who want to avoid this
+unnecessary expense in computing a dealiased convolution,
+Steven G. Johnson has provided this
 answer\cite{http://www.fftw.org/pruned.html}:
 \begin{quotation}
 {\it
@@ -148,7 +147,7 @@ padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
 buffer can be reused for other one-dimensional convolutions.
 As a result, for dimensions greater than one, the memory usage of our
-noncentered (centered) convolution is asymptotically one-half (two-thirds)
+unshifted (centered) convolution is asymptotically one-half (two-thirds)
 of the memory requirements imposed by zero padding.
 Of course, if memory savings alone were the goal, this savings could
 also be achieved with explicit zero padding by copying the data for the
@@ -158,7 +157,7 @@ one-dimensional convolution does not require this extra copying is the key
 feature that was exploited to obtain simultaneous improvements in memory
 usage and performance.
 
-The task of writing an efficient implicitly padded one-dimensional
+Nevertheless, the task of writing an efficient implicitly padded one-dimensional
 convolution is onerous, particularly if one tries to compete with an
 explicitly problem-dependent and architecture-adaptive FFTW algorithm such
 as the award-winning \cite{FFTW} library, which empirically predetermines a
@@ -173,7 +172,7 @@ convolution, bit-reversal for the manual (highest) subdivision is
 unnecessary: the scrambled Fourier subtransforms of the two input vectors
 can be multiplied together as they are produced (perhaps while are still
 accessible in the cache). Second, the implicit method allows most (four out
-of six for the complex noncentered case and seven out of nine for the
+of six for the complex unshifted case and seven out of nine for the
 Hermitian centered case) of the subtransforms for an in-place convolution
 to be computed as out-of-place transforms, which are typically faster than
 in-place transforms.  These savings helped keep our one-dimensional in-place
@@ -181,9 +180,9 @@ implicit convolution competitive with the explicitly padded convolution
 based on the same highly optimized library.
 
 \section{1D Implicitly Padded Convolution}
-\subsection{Noncentered complex convolution}
+\subsection{Complex convolution}
 
-For the noncentered case, where the origin is at the first index, the input
+In the unshifted case, the Fourier origin is at the first index and the input
 data vectors of length $m$ must each be zero-padded to length $N\ge 2m-1$ to
 prevent the wavenumber $m-1$ from beating with itself to
 affect mode~$N=0\mod n$. However, since power-of-two FFT transforms in practice
@@ -200,52 +199,50 @@ $$
 Our method exploits the properties that $\zeta_N^r=\zeta_{N/r}$ and
 $\zeta_N^N=1$.
 
-If $\hat u_k=0$ for $k \ge m$ then
-\be
+If $\hat u_k=0$ for $k \ge m$ then we can discard these zero modes by
+decimating in frequency:
+\belc
 u_{2\ell}
-=\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \hat u_k
-%=\ds\sum_{m=0}^{N/4-1}\zeta_m^{2\ell m} \hat u_{2m}+
-%\zeta_N^{2\ell}\sum_{m=0}^{N/4-1}\zeta_m^{2\ell m} \hat u_{2m+1}.
-\ee
-
-Likewise,
-\be
+=\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \hat u_k,
+\qquad
 u_{2\ell+1}
 =\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \zeta_N^k\hat u_k
-%=\ds\sum_{m=0}^{N/4-1}\zeta_m^{2\ell m} \zeta_N^{2m}\hat u_{2m}
-%+\zeta_N^{2\ell+1}\sum_{m=0}^{N/4-1}\zeta_m^{2\ell m} \zeta_N^{2m}\hat u_{2m+1}
-\ee
+\qquad
+(\ell=0,1,\ldots m-1).\label{cconv1inv}
+\eelc
+Since this requires computing two subtransforms, each of size $m$,
+the overall computational scaling is of order $2m\log m=N\log(m)$.
 
-These terms need to be computed for $\ell=0,\ldots,m-1$.
-So the scaling is $2\fr{N}{2}\log m=N\log(m)$.
-
-The odd and even terms of the convolution can be separately computed,
-multiplied term-by-term, and transformed back to Fourier space:
-\bec
-\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+The odd and even terms of the convolution can then be computed separately
+(without the need for a bit reversal stage), multiplied term-by-term, and
+transformed back to Fourier space using the forward transform
+\bel
+N\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{\ell=0}^{m-1}\zeta_N^{-2k\ell} u_{2\ell}
 +\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_N^{-2k\ell} u_{2\ell+1}
 =\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell}
 +\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell+1}
-\qquad k=0,\ldots,\fr{N}{2}-1.
-\ee
+\qquad k\no=0,\ldots,\fr{N}{2}-1.\label{cconv1}
+\eel
+One can thus compute a dealiased convolution of (unpadded) length $m$ using
+for each input vector two blocks of size $m$ instead of one block of size $2m$.
+This seemingly trivial distinction is the key to the improved efficiency
+and reduced storage requirements of the higher-dimensional implicit
+convolutions describe in Sections~\ref{conv2} and~\ref{conv3}.
 
-We can therefore compute the convolution with two 1024 blocks (rather than one
-2048 block), to get a dealiased 1024 convolution (with the 2/4 rule).
-
-The computation times for the two methods are compared for
-one-dimensional noncentered (Fourier origin at the first index) complex
-convolutions in Figure~\ref{timing1c} and one-dimensional centered (Fourier
-origin at the central index) Hermitian convolutions in Figure~\ref{timing1r}.
-Both the FFTW library and the convolution layer we built on top of it were
-compiled with the Intel C/C++ Compiler and optimization options and run on
-a 64-bit Intel processor.
+Referring to the computation times shown in Figure~\ref{timing1c},
+we see that the implicit padding algorithm, \Eqs{cconv1} and~\ref{cconv1inv},
+is quite competitive with convolution by explicit padding. Both the FFTW library
+and the convolution layer we built on top of it were compiled with the
+Intel C/C++ Compiler and optimization options and run on a 64-bit Intel
+processor. Like the FFTW library, our algorithm was vectorized with specialized
+single-instruction multiple-data (SIMD) code.
 
 \begin{figure}[htbp]
   \begin{center}
     \includegraphics{timing1c}
     \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex noncentered 1D in-place convolutions of two vectors of
+dealiased complex in-place 1D convolutions of two vectors of
 (unpadded) length $m$.}
     \label{timing1c}
   \end{center}
@@ -253,34 +250,53 @@ dealiased complex noncentered 1D in-place convolutions of two vectors of
 
 \subsection{Centered Hermitian convolution}
 
-For the centered case, we take the input data length to be odd, say $2m-1$,
-with the Fourier origin at index $m-1$. One then needs to pad to $N\ge 3m-2$
-to prevent the wavenumber $m-1$ from beating with itself to affect the most
-negative (first) wavenumber, $-m+1$. Since ratio of physical to total modes,
-$(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, the explicit padding
-technique is often referred to as the {\it $2/3$ padding rule}. 
-For implicit padding it is convenient to pad to $N=3m$ to allow use of a
-radix $3$ subdivision at the highest level. For explicit padding, we chose
-$N$ to be a power of $2$ and
-set $m=\floor{(n+2)/3}$, whereas for implicit padding, we chose $m$ itself
-to be a power of $2$; thereby choosing the optimal size for each case.
+In this frequently encountered case (relevant to the pseudospectral
+method), the input data length is odd, say $2m-1$, with the Fourier origin
+at index $m-1$. One then needs to pad to $N\ge 3m-2$ to prevent the
+wavenumber $m-1$ from beating with itself to affect the most negative
+(first) wavenumber, $-m+1$. Since the ratio of the number of physical to
+total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, the
+explicit padding technique is often referred to as the {\it $2/3$ padding
+rule}.  This padding ratio turns out to work particularly well with the
+Hermiticity condition, $\hat{u}_{-k}=\overline{\hat{u}_k}$, which guarantees
+that the $x$-space data is real-valued.
+% Consider a wavenumber-truncated
+%vector ranging from $k=-(m-1)$ to $k=m-1$, which 
+%has $2m-1$ elements.
 
-For the intended application to partial differential equations, there is
-flexibility in the choice of the exact convolution size, which is
-therefore chosen to optimize efficiency. On the other hand, for those
-applications where the size of the convolution is dictated by external
-criteria, implicit padding effectively expands the set of efficient
-convolutions sizes to include integral powers of $2$, a case of practical
-significance. The existence of implicit convolutions in fact nullifies the
-argument of Canuto...
-% Address slightly misleading implication of Canuto page 136
-% (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
-% application).
+For explicit padding, one typically choses the padded vector length
+$N$ to be a power of $2$, with $m=\floor{(n+2)/3}$. However, for implicit
+padding, it is advantageous to choose $m$ itself to be a power of $2$
+since the algorithm reduces to computing $m$-length FFTs.
+Moreover, it is convenient to pad implicitly beyond $3m-2$ to $N=3m$
+as this allow the use of a radix $3$ subdivision at the highest level, so
+that only two of the three subtransforms of length $m$ need to be retained. 
 
-The convolution in the Navier--Stokes equations require a $2/3$ padding in
-order to avoid problems with aliasing.  Suppose that the total number of modes
-(including zero-padding) is $N=3m$.  The inverse discrete Fourier transform
-is then
+Given that $\hat u_k=0$ for $k\ge m$, the backwards (complex-to-real) transform
+may be expressed using the substitution $k'=m+k$ as 
+\bec
+u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k'=1}^{m-1}\z_m^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
++\sum_{k=0}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k=1}^{m-1}\z_m^{\ell k} \z_N^{-r(m-k)} \hat u_{m-k}^*
++\sum_{k=0}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
+=\sum_{k=0}^{m-1}\z_m^{\ell k} \(w_{k,r}+w_{m-k,r}^*\),
+\ee
+where
+$$
+w_{k,r}=\z_N^{rk} \(\hat u_k-\half \hat u_0\d_{k,0}\).
+$$
+The forwards transform becomes
+\be
+N\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
+=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
+\qquad k\no =0,\ldots,m-1.
+\ee
+
+
+
+
 $$
 u_j=\sum_{k=0}^{N-1}\zeta_N^{jk} \hat u_k
 =\sum_{k=0}^{2m-1}\zeta_N^{jk} \hat u_k
@@ -306,59 +322,40 @@ Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
 
 The forward Fourier transform appears as
 \be
-\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+N\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=0}^{2}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
 =\sum_{r=0}^{2}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =0,\ldots,pm-1.
 \ee
 
-The computation times for implicit padding is compared with explicit zero
-padding in Figure~\ref{timing1r}.
+The computation times for implicit padding of a centered is compared with
+explicit zero padding in Figure~\ref{timing1r}. For the intended
+application to partial differential equations, there is flexibility in the
+choice of the exact convolution size. This is why we consider for each
+algorithm only those vector lengths that maximize performance.
 
 \begin{figure}[htbp]
   \begin{center}
     \includegraphics{timing1r}
     \caption{Comparison of computation times for explicitly and implicitly
-dealiased Hermitian centered 1D in-place convolutions of two vectors of
+dealiased centered Hermitian in-place 1D convolutions of two vectors of
 (unpadded) length $2m-1$.}
     \label{timing1r}
   \end{center}
 \end{figure}
 
+On the other hand, for those applications where the size of the convolution
+is dictated by external criteria, implicit padding effectively expands the
+set of efficient convolutions sizes to include integral powers of $2$, a
+case of practical significance. The existence of implicit convolutions in
+fact nullifies the argument of Canuto...
+% Address slightly misleading implication of Canuto page 136
+% (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
+% application).
+
 \newpage
 \subsubsection{1D Complex to Real Transforms of 2/3 Dealiased Data}
 
-Consider the cryptic comment
-\begin{quotation}
-  ``Also, this will work with complex to real transforms without modification,
-  since $\zeta_N^{-k}=\zeta_N^k{}^*$.''
-\end{quotation}
-As it turns out, $2/3$ dealiased data works particularly well with the
-Hermiticity condition, $\hat{u}_{-k}=\hat{u}^*_k$, which guarantees
-that the $x$-space data is real-valued. Consider a
-wavenumber-truncated vector ranging from $k=-(m-1)$ to $k=m-1$, which
-has $2m-1$ elements.
-
-The backwards (complex-to-real) transform becomes, on letting $k'=m+k$,
-\bec
-u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k'=1}^{m-1}\z_m^{\ell k'} \z_N^{r(k'-m)} \hat u_{k'-m}
-+\sum_{k=0}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k=1}^{m-1}\z_m^{\ell k} \z_N^{-r(m-k)} \hat u_{m-k}^*
-+\sum_{k=0}^{m-1}\z_m^{\ell k} \z_N^{rk} \hat u_k
-=\sum_{k=0}^{m-1}\z_m^{\ell k} \(w_{k,r}+w_{m-k,r}^*\),
-\ee
-where
-$$
-w_{k,r}=\z_N^{rk} \(\hat u_k-\half \hat u_0\d_{k,0}\).
-$$
-The forwards transform becomes
-\be
-\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
-=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
-=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
-\qquad k\no =0,\ldots,m-1.
-\ee
 
 Note: without the hermiticity condition, the backwards transform is
 \bec
@@ -377,7 +374,7 @@ w_{k,r}=
 $$
 and the forwards transform is
 \be
-\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+N\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =-m+1,\ldots,m-1.
 \ee
@@ -409,7 +406,7 @@ u_{3u+r,3v+s}\no=\sum_{k=-m-1}^{m-1}\sum_{\ell=-m-1}^{m-1}
   \begin{center}
     \includegraphics{timing2c}
     \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex noncentered 2D in-place convolutions of two vectors of
+dealiased complex in-place 2D convolutions of two vectors of
 (unpadded) length $m\times m$.}
     \label{timing2c}
   \end{center}
@@ -419,7 +416,7 @@ dealiased complex noncentered 2D in-place convolutions of two vectors of
   \begin{center}
     \includegraphics{timing2r}
     \caption{Comparison of computation times for explicitly and implicitly
-dealiased Hermitian centered 2D in-place convolutions of two vectors of
+dealiased centered Hermitian in-place 2D convolutions of two vectors of
 (unpadded) length $(2m-1)\times (2m-1)$.}
     \label{timing2r}
   \end{center}
@@ -452,7 +449,7 @@ in memory use and parallelizability.
 
 The forward Fourier transform appears as
 \be
-\fr{1}{N}\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
+N\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-q\ell k} u_{q\ell+r}
 =\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{q\ell+r}
 \qquad k\no =0,\ldots,pm-1.
