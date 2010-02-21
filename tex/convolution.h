@@ -1,3 +1,6 @@
+// TODO: try using simd instructions everywhere for the real term-by-term
+// multiply.
+
 #include "fftw++.h"
 
 #include "cmult-sse2.h"
