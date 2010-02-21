@@ -92,7 +92,7 @@ pseudospectral method, in-place transform, bit reversal
 
 \section{Introduction}
 Discrete linear convolution sums based on the fast Fourier transform (FFT)
-algorithm\cite{Cooley65} have become important tools for image filtering,
+algorithm \cite{Cooley65} have become important tools for image filtering,
 digital signal
 processing, and correlation analysis. They are also widely used in
 computational physics to solve nonlinear partial differential equations
@@ -122,7 +122,7 @@ are known {\it a priori\/} to be zero.
 To a frequently asked question by FFT users who want to avoid this
 unnecessary expense in computing a dealiased convolution,
 Steven G. Johnson has provided this
-answer\cite{http://www.fftw.org/pruned.html}:
+answer \cite{http://www.fftw.org/pruned.html}:
 \begin{quotation}
 {\it
 The most common case where people seem to want a pruned FFT is for
@@ -182,28 +182,28 @@ in-place transforms.  These savings helped keep our one-dimensional in-place
 implicit convolution competitive with the explicitly padded convolution
 based on the same highly optimized library.
 
-\section{1D Implicitly Padded Convolution}
+\section{1D Implicitly padded convolution}
 \subsection{Complex convolution}
 
-In the unshifted case, the Fourier origin is at the first index and the input
-data vectors of length $m$ must each be zero-padded to length $N\ge 2m-1$ to
-prevent the wavenumber $m-1$ from beating with itself to
-affect mode~$N=0\mod n$. However, since power-of-two FFT transforms in practice
-yield the most efficient implementations, it is typically
-better to extend the padding to $N=2m$.
+The Fourier origin for unshifted convolutions is at index zero.
+Therefore, input data vectors of length $m$ must be padded with zeros to
+length $N\ge 2m-1$ to prevent mode $m-1$ from beating with itself to
+contaminate mode~$N=0\mod N$. However, since FFT sizes with small prime
+factors in practice yield the most efficient implementations, it is normally
+desirable to extend the padding to $N=2m$.
 
 In terms of the $N$th primitive root of unity,
 $\zeta_N\doteq \exp\(2 \pi i/N\)$, we define the
-unnormalized discrete inverse Fourier transform
+unnormalized discrete backwards Fourier transform
 $$
 u_j\doteq\sum_{k=0}^{N-1}\zeta_N^{jk} \hat u_k\qquad j=0,\ldots,N-1.
 $$
 ($\doteq$ indicates a definition).
-Our method exploits the properties that $\zeta_N^r=\zeta_{N/r}$ and
-$\zeta_N^N=1$.
+The fast Fourier transform method exploits the properties that
+$\zeta_N^r=\zeta_{N/r}$ and $\zeta_N^N=1$.
 
-If $\hat u_k=0$ for $k \ge m$ then we can discard these zero modes by
-decimating in frequency:
+If $\hat u_k=0$ for $k \ge m$, one can easily avoid looping over the
+unwanted zero Fourier modes by decimating in frequency:
 \belc
 u_{2\ell}
 =\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \hat u_k,
@@ -211,35 +211,35 @@ u_{2\ell}
 u_{2\ell+1}
 =\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \zeta_N^k\hat u_k
 \qquad
-(\ell=0,1,\ldots m-1).\label{cconv1inv}
+\ell=0,1,\ldots m-1.\label{cconv1inv}
 \eelc
 Since this requires computing two subtransforms, each of size $m$,
 the overall computational scaling is of order $2m\log m=N\log(m)$.
 
 The odd and even terms of the convolution can then be computed separately
 (without the need for a bit reversal stage), multiplied term-by-term, and
-transformed back to Fourier space using the forward transform
+finally transformed back to Fourier space using the forward transform
 \bel
 N\hat u_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
-=\sum_{\ell=0}^{m-1}\zeta_N^{-2k\ell} u_{2\ell}
-+\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_N^{-2k\ell} u_{2\ell+1}
+=\sum_{\ell=0}^{m-1}\zeta_N^{-k2\ell} u_{2\ell}
++\sum_{\ell=0}^{m-1}\zeta_N^{-k(2\ell+1)} u_{2\ell+1}
 =\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell}
 +\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell+1}
 \qquad k\no=0,\ldots,\fr{N}{2}-1.\label{cconv1}
 \eel
 One can thus compute a dealiased convolution of (unpadded) length $m$ using
-for each input vector two blocks of size $m$ instead of one block of size $2m$.
+for each input vector two arrays of size $m$ instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
-convolutions describe in Sections~\ref{conv2} and~\ref{conv3}.
+convolutions described in Sections~\ref{conv2} and~\ref{conv3}.
 
 Referring to the computation times shown in Figure~\ref{timing1c},
 we see that the implicit padding algorithm, \Eqs{cconv1} and~\ref{cconv1inv},
-is quite competitive with convolution by explicit padding. Both the FFTW library
+is quite competitive with explicitly padded convolutions. Both the FFTW library
 and the convolution layer we built on top of it were compiled with the
-Intel C/C++ Compiler and optimization options and run on a 64-bit Intel
-processor. Like the FFTW library, our algorithm was vectorized with specialized
-single-instruction multiple-data (SIMD) code.
+Intel C/C++ compiler on a 64-bit Intel processor using the same optimization
+options. Like the FFTW library, our algorithm was vectorized with
+specialized single-instruction multiple-data (SIMD) code.
 
 \begin{figure}[htbp]
   \begin{center}
@@ -255,19 +255,17 @@ dealiased complex in-place 1D convolutions of two vectors of
 
 In this frequently encountered case (relevant to the pseudospectral
 method), the input data length is odd, say $2m-1$, with the Fourier origin
-at index $m-1$. One then needs to pad to $N\ge 3m-2$ to prevent the
-wavenumber $m-1$ from beating with itself to affect the most negative
-(first) wavenumber, $-m+1$. Since the ratio of the number of physical to
-total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, the
-explicit padding technique is often referred to as the {\it $2/3$ padding
-rule}.  This padding ratio turns out to work particularly well with the
-Hermiticity condition, $\hat{u}_{-k}=\overline{\hat{u}_k}$, which guarantees
-that the $x$-space data is real-valued.
-% Consider a wavenumber-truncated
-%vector ranging from $k=-(m-1)$ to $k=m-1$, which 
-%has $2m-1$ elements.
+at index $m-1$. One then needs to pad to $N\ge 3m-2$ to prevent
+mode $m-1$ from beating with itself to contaminate the most negative
+(first) mode, at wavenumber $-m+1$. Since the ratio of the number of physical to
+total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, this
+padding scheme is often referred to as the {\it $2/3$ padding
+rule}.  As we will see, the $2/3$ padding ratio turns out to work
+particularly well for developing implicitly padded convolutions subject to
+the Hermiticity condition, $\hat{u}_{-k}=\overline{\hat{u}_k}$, which
+guarantees that the $x$-space data is real valued.
 
-For explicit padding, one typically choses the padded vector length
+For explicit padding, one typically chooses the padded vector length
 $N$ to be a power of $2$, with $m=\floor{(n+2)/3}$. However, for implicit
 padding, it is advantageous to choose $m$ itself to be a power of $2$
 since the algorithm reduces to computing $m$-length FFTs.
@@ -483,7 +481,7 @@ The total cost is then
 \frac{2 n}{3} \log \frac{2 n}{3} +  n \log \frac{2 n}{3}
 =\frac{5n}{3} \log \frac{2 n}{3},
 \ee
-using the dealiased FFT, as opposed to $2 n \log n$ for the naive FFT. This 
+using the dealiased FFT, as opposed to $2 N \log N$ for the naive FFT. This 
 is $1/6$ faster, while using significantly less memory. Moreover, the
 intermediary, $1/3$-sparse buffer can be kept allocated as an intermediary
 buffer for all necessary transformations.
