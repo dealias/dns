@@ -57,7 +57,7 @@ data. This decoupling of the data and work arrays significantly reduces
 the memory and computation time required to evaluate higher-dimensional
 in-place convolutions. The technique also allows one to efficiently dealias the
 hyperconvolutions that arise on Fourier transforming arbitrary powers.
-Implicitly padded convolutions can be built on top of state-of-the-art
+Implicitly dealiased convolutions can be built on top of state-of-the-art
 fast Fourier transform libraries: vectorized multidimensional implementations
 for the complex and centered Hermitian (pseudospectral) cases have
 been implemented in the open-source software {\tt fftw++}.
@@ -161,7 +161,7 @@ padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
 buffer can be reused for other one-dimensional convolutions.
 As a result, for dimensions greater than one,
-an implicitly padded standard convolution asymptotically uses half of the
+an implicitly dealised standard convolution asymptotically uses half of the
 memory required by explicit padding. For the case where the Fourier origin is
 centered in the domain, memory usage is reduced by one third.
 Of course, if memory savings alone were the goal, these savings could
@@ -172,7 +172,7 @@ one-dimensional convolution does not require this extra copying is the key
 feature that was exploited to obtain simultaneous improvements in memory
 usage and performance.
 
-Nevertheless, the task of writing an efficient implicitly padded
+Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
 compete with an explicitly problem-dependent and architecture-adaptive
 FFTW algorithm such as the award-winning \cite{FFTW} library, which
@@ -267,8 +267,8 @@ complex Fourier transforms of size $m$ can be done out of place.
   \SetKwData{xg}{g}
   \SetKwData{xu}{u}
   \SetKwData{xv}{v}
-  \xu $\leftarrow$ $\z_N^k$ \xf\;
-  \xv $\leftarrow$ $\z_N^k$ \xg\;
+  \xu $\leftarrow$ $\z_{3m}^k$ \xf\;
+  \xv $\leftarrow$ $\z_{3m}^k$ \xg\;
   \medskip
   $\xu \leftarrow \fft\inv(\xu)$\;
   $\xv \leftarrow \fft\inv(\xv)$\;
@@ -279,9 +279,9 @@ complex Fourier transforms of size $m$ can be done out of place.
   $\xf \leftarrow \fft\inv(\xg)$\;
   $\xv \leftarrow \xv * \xf$\;
   $\xf \leftarrow \fft(\xv)$\;
-  \Return f;
+  \Return f/(3m);
 \caption{cconv(vector {\sf f}, vector {\sf g}) computes
-an in-place implicitly padded convolution of two complex vectors {\sf f}
+an in-place implicitly dealiased convolution of two complex vectors {\sf f}
 and {\sf g} using two temporary vectors {\sf u} and {\sf v}, all of length
 $m$.}\label{cconv}
 \end{function}
@@ -309,9 +309,9 @@ Intel C/C++ compiler on a 64-bit Intel processor using the same optimization
 options. Like the FFTW library, our algorithm was vectorized with
 specialized single-instruction multiple-data (SIMD) code.
 
-\subsection{Implicitly padded centered Fourier transform}\label{fft0}
+\subsection{Implicitly dealiased centered Fourier transform}\label{fft0}
 A basic building block for constructing multidimensional pseudospectral
-convolutions is an implicitly padded centered Fourier transform, where the
+convolutions is an implicitly dealiased centered Fourier transform, where the
 input data length is odd, say $2m-1$, with the Fourier origin at index $m-1$. 
 Here, one needs to pad to $N\ge 3m-2$ to prevent 
 mode $m-1$ from beating with itself to contaminate the most negative
@@ -376,8 +376,8 @@ versions of these routines.
   \KwOut{vector \xf, vector \xu}
   $\xu[0] \leftarrow \xf[m-1]$\;
   \For{$k=1$ \KwTo $m-1$}{
-    $\xA \leftarrow \zeta_N^k*\[\Re \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Re \xf[k]\]$\;
-    $\xB \leftarrow i\zeta_N^k*\[\Im \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Im \xf[k]\]$\;
+    $\xA \leftarrow \zeta_{3m}^k*\[\Re \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Re \xf[k]\]$\;
+    $\xB \leftarrow i\zeta_{3m}^k*\[\Im \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Im \xf[k]\]$\;
     $\xf[m-1+k] \leftarrow \xA+\xB$\;
     $\xu[k] \leftarrow \conj{\xA-\xB}$\;
     $\xf[0] \leftarrow \xf[k]$\;
@@ -390,7 +390,7 @@ versions of these routines.
   $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}\inv(\xf[m-1,\ldots,2m-2])$\;
   $\xu[0,\ldots,m-1] \leftarrow {\tt fft}\inv(\xu[0,\ldots,m-1])$\;
   \caption{fft0padBackwards(vector {\sf f}, vector {\sf u}) returns the scrambled
-$3m$ implicitly padded backwards Fourier transform values of a vector {\sf f} of length
+$3m$ implicitly dealiased backwards Fourier transform values of a vector {\sf f} of length
 $2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0padBackwards}
 \end{procedure}
 
@@ -410,8 +410,8 @@ $2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0pa
 
   $\xu[m] \leftarrow \xf[0]+\xu[m]+\xu[0]$\;
   \For{$k=1$ \KwTo $m-1$}{
-    $\xf[k-1]=\xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_N^{-k}*\xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_N^k*\xu[k]$\;
-    $\xf[m-1+k]=\xf[k]+\zeta_N^{-k}*\xf[m-1+k]+\zeta_N^k*\xu[k]$\;
+    $\xf[k-1]=\xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{3m}^{-k}*\xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{3m}^k*\xu[k]$\;
+    $\xf[m-1+k]=\xf[k]+\zeta_{3m}^{-k}*\xf[m-1+k]+\zeta_{3m}^k*\xu[k]$\;
   }
   $\xf[m-1] \leftarrow \xu[m]$\;
 
@@ -448,7 +448,7 @@ U_0&if $k=0$,\cr
 We note that $w_{k,r}$ obeys the unshifted Hermitian symmetry 
 $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
-be real-valued. This allows us to build a backwards implicitly padded
+be real-valued. This allows us to build a backwards implicitly deliased
 Hermitian transform using three complex-to-real Fourier transforms of the
 first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
 forwards transform is given by
@@ -494,14 +494,14 @@ of the two transformed input vectors.
   $\xFk \leftarrow \conj{f[m-1]}$\;
   $\xf[m-1] \leftarrow \xf[0]$\;
   \For{$k=1$ \KwTo $c-1$}{
-    $\xA \leftarrow \zeta_N^k*\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xFk\]$\;
-    $\xB \leftarrow -i\zeta_N^k*\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xFk\]$\;
+    $\xA \leftarrow \zeta_{6c}^k*\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xFk\]$\;
+    $\xB \leftarrow -i\zeta_{6c}^k*\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xFk\]$\;
     $\xf[k] \leftarrow \xf[k]+\xFk$\;
     $\xu[k] \leftarrow \xA-\xB$\;
     $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
     $\xf[m-1-k] \leftarrow \xA+\xB$\;
   }
-  \caption{build(vector {\sf f}, vector {\sf u}) builds the Hermitian FFT arrays
+  \caption{build(vector {\sf f}, vector {\sf u}) builds the required FFT arrays
 from an unpadded vector {\sf f} of length $2c$ into {\sf f} and an auxillary
 vector~{\sf u} of length $c+1$.}\label{build} 
 \end{procedure}
@@ -511,27 +511,27 @@ vector~{\sf u} of length $c+1$.}\label{build}
   \SetKwData{xg}{g}
   \SetKwData{xu}{u}
   \SetKwData{xv}{v}
-  \SetKwData{xFk}{F}
-  \SetKwData{xGk}{G}
-  \SetKwData{xz}{z}
-  \SetKwData{xw}{w}
-  \SetKwData{xA}{A}
-  \SetKwData{xB}{B}
+  \SetKwData{xC}{C}
+  \SetKwData{xD}{D}
+  \SetKwData{xF}{F}
+  \SetKwData{xG}{G}
+  \SetKwData{xS}{S}
+  \SetKwData{xT}{T}
   \SetKwFunction{build}{build}
-  \KwIn{vector \xf}
-  \KwOut{vector \xf, vector \xu}
-  $\xz \leftarrow \xf[c]$\;
-  $\xw \leftarrow \xg[c]$\;
+  \KwIn{vector \xf, vector \xg}
+  \KwOut{vector \xf}
+  $\xF \leftarrow \xf[c]$\;
+  $\xG \leftarrow \xg[c]$\;
   \build{\xf,\xu}\;
   \build{\xg,\xv}\;
   \medskip
-  $\xf_c \leftarrow \xf[c]$\;
-  $\xf[c] \leftarrow 2\Re \xz$\;
-  $\xu[c] \leftarrow \Re \xz+\sqrt{3}\Im \xz$\;
+  $\xC \leftarrow \xf[c]$\;
+  $\xf[c] \leftarrow 2\Re \xF$\;
+  $\xu[c] \leftarrow \Re \xF+\sqrt{3}\Im \xF$\;
   \medskip
-  $\xg_c \leftarrow \xg[c]$\;
-  $\xg[c] \leftarrow 2\Re \xw$\;
-  $\xv[c] \leftarrow \Re \xw+\sqrt{3}\Im \xw$\;
+  $\xD \leftarrow \xg[c]$\;
+  $\xg[c] \leftarrow 2\Re \xG$\;
+  $\xv[c] \leftarrow \Re \xG+\sqrt{3}\Im \xG$\;
   \medskip
   $\xu \leftarrow \crfft(\xu)$\;
   $\xv \leftarrow \crfft(\xv)$\;
@@ -540,23 +540,35 @@ vector~{\sf u} of length $c+1$.}\label{build}
   \medskip
   $\xv \leftarrow \crfft(\xf[0,\ldots,c])$\;
   $\xf[0,\ldots,c] \leftarrow \crfft(\xg[0,\ldots,c])$\;
-  $\xv \leftarrow \xv * \xf$\;
+  $\xv \leftarrow \xv * \xf[0,\ldots,c]$\;
   $\xf[0,\ldots,c] \leftarrow \rcfft(\xv)$\;
   \medskip
-  $\xf[c-1]=\Re \xz-\sqrt{3}\Im \xz$\;
-  $\xf[c]=f_c$\;
-  $\xg[c-1]=\Re \xw-\sqrt{3}\Im \xw$\;
-  $\xg[c]=g_c$\;
+  $\xS\leftarrow \xf[c-1]$\;
+  $\xT\leftarrow \xf[c]$\;
+  $\xf[c-1]=\Re \xF-\sqrt{3}\Im \xF$\;
+  $\xf[c]=\xC$\;
+  $\xg[c-1]=\Re \xG-\sqrt{3}\Im \xG$\;
+  $\xg[c]=\xD$\;
   \medskip
-  $\xv \leftarrow \crfft(\xg[c-1,\ldots,m-1])$\;
-  $\xg[0,\ldots,c-1] \leftarrow \crfft(\xf[c-1,\ldots,m-1])$\;
-  $\xg \leftarrow \xg * \xv$\;
-  $\xv[0,\ldots,c] \leftarrow \rcfft(\xg[0,\ldots,c-1])$\;
-  TODO\;
-  \Return f;
+  $\xv \leftarrow \crfft(\xg[c-1,\ldots,2c-1])$\;
+  $\xg[c-1,\ldots,2c-1] \leftarrow \crfft(\xf[c-1,\ldots,2c-1])$\;
+  $\xg[c-1,\ldots,2c-1] \leftarrow \xg[c-1,\ldots,2c-1] * \xv$\;
+  $\xv\leftarrow \rcfft(\xg[c-1,\ldots,2c-1])$\;
+  \medskip
+
+  \For{$k=1$ \KwTo $c-2$}{
+    $\xf[k]=\xf[k]+\zeta_{6c}^{-k}*\xv[k]+\zeta_{6c}^k*\xu[k]$\;
+    $\xf[2c-k]=\conj{\xf[k]}+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{6c}^k*\conj{\xv[k]}+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{-k}*\conj{\xu[k]}$\;
+  }
+
+  $\xf[c-1]=S+\zeta_{6c}^{1-c}*\xv[c-1]+\zeta_{6c}^{c-1}*\xu[c-1]$\;
+  $\xf[c]=T-\(-\half,\fr{\sqrt{3}}{2}\)*\xv[c]-\(-\half,-\fr{\sqrt{3}}{2}\)*\xu[c]$\;
+  $\xf[c+1]=\conj{S}+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{c-1}*\conj{\xv[c-1]}+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{1-c}*\conj{\xu[c-1]}$\;
+
+  \Return f/(6c);
 \caption{conv(vector {\sf f}, vector {\sf g}) computes
-an in-place implicitly padded convolution of two centered Hermitian vectors
-{\sf f} and {\sf g} of length $m=2c$ using two temporary vectors {\sf u} and
+an in-place implicitly dealiased convolution of two centered Hermitian vectors
+{\sf f} and {\sf g} of length $2c$ using two temporary vectors {\sf u} and
 {\sf v} of length $c+1$.}\label{conv}
 \end{function}
 
@@ -602,8 +614,8 @@ NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 \ee
 \end{comment}
 
-The computation times for implicit padding of a Hermitian implicitly padded
-convolution is compared with explicit zero padding in
+The computation times for a implicitly dealiased Hermitian
+convolution are compared with those for an explicitly padded convolution in
 Figure~\ref{timing1r}. For the intended application to partial differential
 equations, there is flexibility in the choice of the exact convolution
 size. This is why we consider for each algorithm only those vector lengths

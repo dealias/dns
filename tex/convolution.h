@@ -442,7 +442,6 @@ public:
       G[i] *= V[i];
     rco->fft(G,v);
 
-    unsigned int stop=m-c-1;
     double ninv=1.0/n;
     f[0]=(f[0].re+v[0].re+u[0].re)*ninv;
     Complex *fm=f+m;
@@ -456,7 +455,7 @@ public:
     Re=Cos*ninv;
     Im=Sin*ninv;
 #endif    
-    for(unsigned k=1; k < stop; ++k) {
+    for(unsigned k=1; k < cm1; ++k) {
       Complex *p=f+k;
       Complex *s=fm-k;
 #ifdef __SSE2__      
@@ -495,7 +494,7 @@ public:
     Complex Zetak0=Complex(Re,Im);
 #endif      
     Complex f0k=overlap0*ninv;
-    Complex f1k=conj(Zetak0)*v[stop];
+    Complex f1k=conj(Zetak0)*v[cm1];
     Complex f2k=Zetak0*u[cm1];
     f[cm1]=f0k+f1k+f2k;
     f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
