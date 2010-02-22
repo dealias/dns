@@ -26,8 +26,8 @@ pair[] convolve0(pair[] f, pair[] g)
   return f[0:m];
 }
 
-// Unrolled scrambled shifted cc version for p=2, q=3, with n=3m.
-// f has length 2m-1 with the origin at index m
+// Unrolled scrambled centered cc version for p=2, q=3, with n=3m.
+// f has length 2m-1 with the origin at index m-1
 // (i.e. physical wavenumber k=-m+1 to k=m-1).
 // u is a work array of length m.
 pair[] fft0padinv(pair[] f, pair[] u, bool unscramble=true)

@@ -651,7 +651,7 @@ public:
 };
   
 // Compute the scrambled virtual m-padded complex Fourier transform of M complex
-// vectors, each of length 2m-1 with the origin at index m
+// vectors, each of length 2m-1 with the origin at index m-1
 // (i.e. physical wavenumber k=-m+1 to k=m-1).
 // Before calling fft(), the arrays in and out (which may coincide)
 // must be allocated as Complex[M*(2m-1)].

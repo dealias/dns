@@ -245,44 +245,39 @@ convolutions described in Sections~\ref{conv2} and~\ref{conv3}.
 Moreover, in Algorithm~\ref{cconv} we see that four out the six
 complex Fourier transforms of size $m$ can be done out of place.
 
+\setlength{\algomargin}{0.8em}
 \SetAlCapSkip{3pt}
-\SetKwFunction{FFTinv}{fft$\inv$}
-\SetKwFunction{FFT}{fft}
+\SetAlgoCaptionLayout{textit}
+\def\FFT{\tt fft}
 
-\begin{algorithm}[htp]
+\begin{figure}[htbp]
+\begin{minipage}{.49\linewidth}
+\begin{center}
+\begin{function}[H]
   \SetKwData{xf}{f}
   \SetKwData{xg}{g}
   \SetKwData{xu}{u}
   \SetKwData{xv}{v}
-  \KwIn{vector \xf, vector \xg}
-  \KwOut{vector \xf}
   \xu $\leftarrow$ $\z_N^k$ \xf\;
   \xv $\leftarrow$ $\z_N^k$ \xg\;
   \medskip
-  \xu $\leftarrow$ \FFTinv{\xu}\;
-  \xv $\leftarrow$ \FFTinv{\xv}\;
-  \xv $\leftarrow$ \xu * \xv\;
-  \xu $\leftarrow$ \FFT{\xv}\;
+  $\xu \leftarrow \FFT\inv(\xu)$\;
+  $\xv \leftarrow \FFT\inv(\xv)$\;
+  $\xv \leftarrow \xu * \xv$\;
+  $\xu \leftarrow \FFT(\xv)$\;
   \medskip
-  \xv $\leftarrow$ \FFTinv{\xf}\;
-  \xf $\leftarrow$ \FFTinv{\xg}\;
-  \xv $\leftarrow$ \xv * \xf\;
-  \xf $\leftarrow$ \FFT{\xv}\;
-  
-  \caption{In-place convolution of two complex vectors.}\label{cconv}
-\end{algorithm}
-
-Referring to the computation times shown in Figure~\ref{timing1c},
-we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
-and~\hEq{cconv1forwards}
-can be implemented to be quite competitive with an explicitly padded
-convolution. Both the FFTW library and the convolution layer we built on top of it were compiled with the
-Intel C/C++ compiler on a 64-bit Intel processor using the same optimization
-options. Like the FFTW library, our algorithm was vectorized with
-specialized single-instruction multiple-data (SIMD) code.
-
-\begin{figure}[htbp]
-\begin{center}
+  $\xv \leftarrow \FFT\inv(\xf)$\;
+  $\xf \leftarrow \FFT\inv(\xg)$\;
+  $\xv \leftarrow \xv * \xf$\;
+  $\xf \leftarrow \FFT(\xv)$\;
+  \Return f;
+\caption{cconv(vector {\sf f}, vector {\sf g}) computes
+an in-place implicitly padded convolution of two complex vectors {\sf f}
+and {\sf g} using two temporary vectors {\sf u} and {\sf v}, all of length
+$m$.}\label{cconv}
+\end{function}
+\end{center}
+\end{minipage}
 \begin{minipage}{0.49\linewidth}
 \begin{center}
 %On orcinus, using N=100000000.
@@ -293,19 +288,16 @@ dealiased complex in-place 1D convolutions of two vectors of
 \label{timing1c}
 \end{center}
 \end{minipage}
-%
-\begin{minipage}{0.49\linewidth}
-\begin{center}
-%On orcinus, using N=100000000.
-\includegraphics{timing1r}
-\caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 1D convolutions of two vectors of
-(unpadded) length $(2m-1)$.}
-\label{timing1r}
-\end{center}
-\end{minipage}
-\end{center}
 \end{figure}
+
+Referring to the computation times shown in Figure~\ref{timing1c},
+we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
+and~\hEq{cconv1forwards}
+can be implemented to be quite competitive with an explicitly padded
+convolution. Both the FFTW library and the convolution layer we built on top of it were compiled with the
+Intel C/C++ compiler on a 64-bit Intel processor using the same optimization
+options. Like the FFTW library, our algorithm was vectorized with
+specialized single-instruction multiple-data (SIMD) code.
 
 \subsection{Implicitly padded centered Fourier transform}\label{fft0}
 A basic building block for constructing multidimensional pseudospectral
@@ -350,16 +342,44 @@ NU_k=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r
 The use of the remainder $r=-1$ instead of $r=2$ allows us to exploit
 the optimization $\zeta_N^{-k}=\conj{\zeta_N^ k}$ in \Eqs{fft0backwardsB}
 and~\hEq{fft0forwards}.
-Also, the operation count in the two complex multiplications
-in \Eq{fft0backwardsB} can be reduced by introducing the quantities
+The number of complex multiplies needed to evaluate \Eq{fft0backwardsB} 
+for $r=\pm 1$ can be reduced by computing the intermediate complex quantities
 \begin{align*}
-A_k&\doteq \zeta_N^k\(\Re U_k+\conj{z} \Re U_{k-m}\),\\
-B_k&\doteq i\zeta_N^k\(\Im U_k+\conj{z} \Im U_{k-m}\),
+A_k&\doteq \zeta_N^k\(\Re U_k+\zeta_3^{-1} \Re U_{k-m}\),\\
+B_k&\doteq i\zeta_N^k\(\Im U_k+\zeta_3^{-1} \Im U_{k-m}\),
 \end{align*}
-where $z\doteq\zeta_3^1=\(-\half,\sqrt{3}/2\)$ so that for $k > 0$,
+where $\zeta_3^{-1}=\(-\half,-\fr{\sqrt{3}}{2}\)$, so that for $k > 0$,
 $w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
-The operation count for these implictly padded transforms is asymptotic to
-$3Km\log m$. 
+The operation count for the implictly padded forwards and backwards
+transforms is asymptotic to $3Km\log m$.
+
+\begin{procedure}[htp]
+  \SetKwData{xf}{f}
+  \SetKwData{xu}{u}
+  \SetKwData{xf}{f}
+  \SetKwData{xA}{A}
+  \SetKwData{xB}{B}
+  \KwIn{vector \xf}
+  \KwOut{vector \xf, vector \xu}
+  $\xu[0] \leftarrow \xf[m-1]$\;
+  \For{$k$ = 1 \KwTo m-1}{
+    $\xA \leftarrow \zeta^k*\[\Re \xf[m-1-k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Re \xf[k]\]$\;
+    $\xB \leftarrow i*\zeta^k*\[\Im \xf[m-1-k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Im \xf[k]\]$\;
+    $\xf[m-1-k] \leftarrow \xA+\xB$\;
+    $\xu[k] \leftarrow \conj{\xA-\xB}$\;
+    $\xf[0] \leftarrow \xf[k]$\;
+    $\xf[k] \leftarrow \xf[k]+\xf[m-1-k]$\;
+  }
+
+  $\xf[0,\ldots,m-1] \leftarrow {\tt fft}(\xf[0,\ldots,m-1])$\;
+  $\xu[m] \leftarrow \xf[m-1]$\;
+  $\xf[m-1] \leftarrow \xu[0]$\;
+  $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}(\xf[m-1,\ldots,2m-2])$\;
+  $\xu[0,\ldots,m-1] \leftarrow {\tt fft}(\xu[0,\ldots,m-1])$\;
+  \caption{fft0padBackwards(vector {\sf f}, vector {\sf u}) returns the scrambled
+$3m$ implicitly padded backwards Fourier transform values of a vector {\sf f} of length
+$2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0pad}
+\end{procedure}
 
 \subsection{Hermitian convolution}
 
@@ -415,31 +435,36 @@ transforms can be done out of place.
 \SetKwFunction{rcFFT}{rcfft}
 \SetKwFunction{crFFT}{crfft}
 
-\begin{algorithm}[htp]
+\begin{figure}[htbp]
+\begin{minipage}{.49\linewidth}
+\begin{center}
+\begin{function}[H]
   \SetKwData{xf}{f}
   \SetKwData{xg}{g}
   \SetKwData{xu}{u}
   \SetKwData{xv}{v}
-  \SetKwData{xA}{A}
   \KwIn{vector \xf, vector \xg}
   \KwOut{vector \xf}
-  ...
-  in progress\;
-  \xu $\leftarrow$ $\z_N^k$ \xf\;
-  \xv $\leftarrow$ $\z_N^k$ \xg\;
   \medskip
-  \xu $\leftarrow$ \FFTinv{\xu}\;
-  \xv $\leftarrow$ \FFTinv{\xv}\;
-  \xv $\leftarrow$ \xu * \xv\;
-  \xu $\leftarrow$ \FFT{\xv}\;
-  \medskip
-  \xv $\leftarrow$ \FFTinv{\xf}\;
-  \xf $\leftarrow$ \FFTinv{\xg}\;
-  \xv $\leftarrow$ \xv * \xf\;
-  \xf $\leftarrow$ \FFT{\xv}\;
-  
-  \caption{In-place convolution of two centered Hermitian vectors.}\label{conv}
-\end{algorithm}
+  \Return f;
+\caption{conv(vector {\sf f}, vector {\sf g}) computes
+an in-place implicitly padded convolution of two centered Hermitian vectors
+{\sf f} and {\sf g} using two temporary vectors {\sf u} and {\sf v}, all of length
+$m$.}\label{conv}
+\end{function}
+\end{center}
+\end{minipage}
+\begin{minipage}{0.49\linewidth}
+\begin{center}
+%On orcinus, using N=100000000.
+\includegraphics{timing1r}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased centered Hermitian in-place 1D convolutions of two vectors of
+(unpadded) length $(2m-1)$.}
+\label{timing1r}
+\end{center}
+\end{minipage}
+\end{figure}
 
 \begin{comment}
 $$
