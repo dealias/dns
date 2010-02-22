@@ -860,24 +860,25 @@ public:
 // In-place explicitly dealiased 2D complex convolution.
 class ExplicitConvolution2 {
 protected:
-  unsigned int n;
-  unsigned int m;
+  unsigned int nx,ny;
+  unsigned int mx,my;
   bool prune; // Skip Fourier transforming rows containing all zeroes?
   mfft1d *xBackwards, *xForwards;
   mfft1d *yBackwards, *yForwards;
   fft2d *Backwards, *Forwards;
 public:
-  ExplicitConvolution2(unsigned int n, unsigned int m,
+  ExplicitConvolution2(unsigned int nx, unsigned int ny,
+                       unsigned int mx, unsigned int my,
                        Complex *f, bool prune=false) :
-    n(n), m(m), prune(prune) {
+    nx(nx), ny(ny), mx(mx), my(my), prune(prune) {
     if(prune) {
-      xBackwards=new mfft1d(n,1,m,n,1,f);
-      yBackwards=new mfft1d(n,1,n,1,n,f);
-      yForwards=new mfft1d(n,-1,n,1,n,f);
-      xForwards=new mfft1d(n,-1,m,n,1,f);
+      xBackwards=new mfft1d(nx,1,my,ny,1,f);
+      yBackwards=new mfft1d(ny,1,nx,1,ny,f);
+      yForwards=new mfft1d(ny,-1,nx,1,ny,f);
+      xForwards=new mfft1d(nx,-1,my,ny,1,f);
     } else {
-      Backwards=new fft2d(n,n,1,f);
-      Forwards=new fft2d(n,n,-1,f);
+      Backwards=new fft2d(nx,ny,1,f);
+      Forwards=new fft2d(nx,ny,-1,f);
     }
   }
   
@@ -894,19 +895,17 @@ public:
   }    
   
   void pad(Complex *f) {
-    for(unsigned int i=0; i < m;) {
-      unsigned int j=n*i+m;
-      ++i;
-      unsigned int nip=n*i;
-      for(; j < nip; ++j)
+    for(unsigned int i=0; i < mx; ++i) {
+      unsigned int nyi=ny*i;
+      unsigned int stop=nyi+ny;
+      for(unsigned int j=nyi+my; j < stop; ++j)
         f[j]=0.0;
     }
     
-    for(unsigned int i=m; i < n;) {
-      unsigned int j=n*i;
-      ++i;
-      unsigned int nip=n*i;
-      for(; j < nip; ++j)
+    for(unsigned int i=mx; i < nx; ++i) {
+      unsigned int nyi=ny*i;
+      unsigned int stop=nyi+ny;
+      for(unsigned int j=nyi; j < stop; ++j)
         f[j]=0.0;
     }
   }
@@ -926,9 +925,9 @@ public:
     } else
       Backwards->fft(g);
     
-    unsigned int n2=n*n;
-    double ninv=1.0/n2;
-    for(unsigned int i=0; i < n2; ++i)
+    unsigned int nxy=nx*ny;
+    double ninv=1.0/nxy;
+    for(unsigned int i=0; i < nxy; ++i)
       f[i] *= g[i]*ninv;
 	
     if(prune) {
@@ -943,17 +942,16 @@ public:
 // In-place implicitly dealiased 2D complex convolution.
 class ImplicitConvolution2 {
 protected:
-  unsigned int n;
-  unsigned int m;
+  unsigned int mx,my;
   fftpad *xfftpad;
   ImplicitConvolution *yconvolve;
 public:  
-  // u1 is a temporary array of size m.
-  // u2 is a temporary array of size m*m.
-  ImplicitConvolution2(unsigned int m, Complex *u1, Complex *u2) : 
-    n(2*m), m(m) {
-    xfftpad=new fftpad(m,m,m,u2);
-    yconvolve=new ImplicitConvolution(m,u1,u2);
+  // u1 and v1 are temporary arrays of size my.
+  // u2 is a temporary array of size mx*my.
+  ImplicitConvolution2(unsigned int mx, unsigned int my,
+                       Complex *u1, Complex *v1, Complex *u2) : mx(mx), my(my) {
+    xfftpad=new fftpad(mx,my,my,u2);
+    yconvolve=new ImplicitConvolution(my,u1,v1);
   }
   
   ~ImplicitConvolution2() {
@@ -961,18 +959,19 @@ public:
     delete xfftpad;
   }
   
-  // f must be allocated as m*m.
-  // u1 and v1 are temporary arrays of size m.
-  // u2 and v2 are temporary arrays of size m*m.
+  // The distinct input arrays f and g must be allocated as Complex[mx*my]. 
+  // u1 and v1 are temporary arrays of size my.
+  // u2 and v2 are temporary arrays of size mx*my.
+  // The output is returned in f.
   void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
                 Complex *u2, Complex *v2) {
     xfftpad->backwards(f,u2);
     xfftpad->backwards(g,v2);
 
-    unsigned int m2=m*m;
-    for(unsigned int i=0; i < m2; i += m)
+    unsigned int mxy=mx*my;
+    for(unsigned int i=0; i < mxy; i += my)
       yconvolve->convolve(f+i,g+i,u1,v1);
-    for(unsigned int i=0; i < m2; i += m)
+    for(unsigned int i=0; i < mxy; i += my)
       yconvolve->convolve(u2+i,v2+i,u1,v1);
     
     xfftpad->forwards(f,u2);
@@ -982,19 +981,19 @@ public:
 // Out-of-place direct 2D complex convolution.
 class DirectConvolution2 {
 protected:  
-  unsigned int m;
+  unsigned int mx,my;
   
 public:
-  DirectConvolution2(unsigned int m) : m(m) {}
+  DirectConvolution2(unsigned int mx, unsigned int my) : mx(mx), my(my) {}
   
   void convolve(Complex *h, Complex *f, Complex *g) {
-    for(unsigned int i=0; i < m; ++i) {
-      for(unsigned int j=0; j < m; ++j) {
+    for(unsigned int i=0; i < mx; ++i) {
+      for(unsigned int j=0; j < my; ++j) {
         Complex sum=0.0;
         for(unsigned int k=0; k <= i; ++k)
           for(unsigned int p=0; p <= j; ++p)
-            sum += f[k*m+p]*g[(i-k)*m+j-p];
-        h[i*m+j]=sum;
+            sum += f[k*my+p]*g[(i-k)*my+j-p];
+        h[i*my+j]=sum;
       }
     }
   }	
@@ -1047,26 +1046,23 @@ public:
     unsigned int nyp=ny/2+1;
     unsigned int nx2=nx/2;
     unsigned int end=nx2-mx;
-    for(unsigned int i=0; i <= end;) {
-      unsigned int j=nyp*i;
-      ++i;
-      unsigned int nypip=nyp*i;
-      for(; j < nypip; ++j)
+    for(unsigned int i=0; i <= end; ++i) {
+      unsigned int nypi=nyp*i;
+      unsigned int stop=nypi+nyp;
+      for(unsigned int j=nypi; j < stop; ++j)
         f[j]=0.0;
     }
     
-    for(unsigned int i=nx2+mx; i < nx;) {
-      unsigned int j=nyp*i;
-      ++i;
-      unsigned int nypip=nyp*i;
-      for(; j < nypip; ++j)
+    for(unsigned int i=nx2+mx; i < nx; ++i) {
+      unsigned int nypi=nyp*i;
+      unsigned int stop=nypi+nyp;
+      for(unsigned int j=nypi; j < stop; ++j)
         f[j]=0.0;
     }
-    for(unsigned int i=0; i < nx;) {
-      unsigned int j=nyp*i+my;
-      ++i;
-      unsigned int nypip=nyp*i;
-      for(; j < nypip; ++j)
+    for(unsigned int i=0; i < nx; ++i) {
+      unsigned int nypi=nyp*i;
+      unsigned int stop=nypi+nyp;
+      for(unsigned int j=nypi+my; j < stop; ++j)
         f[j]=0.0;
     }
   }

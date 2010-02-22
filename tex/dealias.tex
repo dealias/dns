@@ -249,10 +249,10 @@ two arrays of size $m$ as input vectors instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
 convolutions described in Sections~\ref{conv2} and~\ref{conv3}.
-Moreover, in Algorithm~\ref{cconv} we see that four out the six
+Moreover, in Function~\ref{cconv} we see that four out the six
 complex Fourier transforms of size $m$ can be done out of place.
 
-\setlength{\algomargin}{0.8em}
+%\setlength{\algomargin}{0.5em}
 \SetAlCapSkip{3pt}
 \SetAlgoCaptionLayout{textit}
 \def\fft{\tt fft}
@@ -280,14 +280,14 @@ complex Fourier transforms of size $m$ can be done out of place.
   $\xv \leftarrow \xv * \xf$\;
   $\xf \leftarrow \fft(\xv)$\;
   \Return f/(3m);
-\caption{cconv(vector {\sf f}, vector {\sf g}) computes
+\caption{cconv(vector {\sf f}, vector~{\sf g}) computes
 an in-place implicitly dealiased convolution of two complex vectors {\sf f}
-and {\sf g} using two temporary vectors {\sf u} and {\sf v}, all of length
-$m$.}\label{cconv}
+and {\sf g} using two temporary vectors {\sf u} and {\sf v}, all of
+length~$m$.}\label{cconv}
 \end{function}
 \end{center}
 \end{minipage}
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.5\linewidth}
 \begin{center}
 %On orcinus, using N=100000000.
 \includegraphics{timing1c}
@@ -466,7 +466,7 @@ one output vector, the complete convolution requires a total of nine
 Hermitian Fourier transforms of size $m$, for an overall computational
 scaling of $\fr{9}{2}K m \log m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
-We see in Algorithm~\ref{conv} that seven out of these nine Fourier
+We see in Function~\ref{conv} that seven out of these nine Fourier
 transforms can be performed out of place using the same amount of memory,
 $2(N/2+1)=6c+2$, as would be used to compute a centered Hermitian convolution with
 explicit padding.
@@ -478,51 +478,11 @@ the upper half of the $f$ vector, using the identity (for real $u_j$)
 $$
 u_j=\conj{u_j}=\sum_{k=-c+1}^{c}\zeta_m^{-jk} \conj{U_k}
 =\sum_{k'=m-1}^{0}\zeta_m^{j(k'-c)} \conj{U_{c-k'}}
-=(-1)^j\sum_{k=0}^{m-1}\zeta_m^{jk'} \conj{U_{c-k'}}
+=(-1)^j\sum_{k=0}^{m-1}\zeta_m^{jk} \conj{U_{c-k}}
 $$
-obtained by the substitution $k'=c-k$. One can omit the factors of
+obtained using the substitution $k'=c-k$. One can omit the factors of
 $(-1)^j$ since they will cancel during the real term-by-term multiplication
 of the two transformed input vectors.
-
-\begin{figure}[htbp]
-\begin{minipage}{.49\linewidth}
-\begin{center}
-\begin{procedure}[H]
-  \SetKwData{xf}{f}
-  \SetKwData{xu}{u}
-  \SetKwData{xFk}{F}
-  \SetKwData{xA}{A}
-  \SetKwData{xB}{B}
-  \KwIn{vector \xf}
-  \KwOut{vector \xf, vector \xu}
-  $\xu[0] \leftarrow \xf[0]$\;
-  $\xFk \leftarrow \conj{f[m-1]}$\;
-  $\xf[m-1] \leftarrow \xf[0]$\;
-  \For{$k=1$ \KwTo $c-1$}{
-    $\xA \leftarrow \zeta_{6c}^k*\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xFk\]$\;
-    $\xB \leftarrow -i\zeta_{6c}^k*\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xFk\]$\;
-    $\xf[k] \leftarrow \xf[k]+\xFk$\;
-    $\xu[k] \leftarrow \xA-\xB$\;
-    $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
-    $\xf[m-1-k] \leftarrow \xA+\xB$\;
-  }
-  \caption{build(vector {\sf f}, vector {\sf u}) builds the required FFT arrays
-from an unpadded vector {\sf f} of length $2c$ into {\sf f} and an auxillary
-vector~{\sf u} of length $c+1$.}\label{build} 
-\end{procedure}
-\end{center}
-\end{minipage}
-\begin{minipage}{0.49\linewidth}
-\begin{center}
-%On orcinus, using N=100000000.
-\includegraphics{timing1r}
-\caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 1D convolutions of two vectors of
-(unpadded) length $(2m-1)$.}
-\label{timing1r}
-\end{center}
-\end{minipage}
-\end{figure}
 
 \begin{function}[htbp]
   \SetKwData{xf}{f}
@@ -540,6 +500,7 @@ dealiased centered Hermitian in-place 1D convolutions of two vectors of
   \KwOut{vector \xf}
   $\xF \leftarrow \xf[c]$\;
   $\xG \leftarrow \xg[c]$\;
+  \medskip
   \build{\xf,\xu}\;
   \build{\xg,\xv}\;
   \medskip
@@ -584,11 +545,55 @@ dealiased centered Hermitian in-place 1D convolutions of two vectors of
   $\xf[c+1]=\conj{S}+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{c-1}*\conj{\xv[c-1]}+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{1-c}*\conj{\xu[c-1]}$\;
 
   \Return f/(6c);
-\caption{conv(vector {\sf f}, vector {\sf g}) computes
-an in-place implicitly dealiased convolution of two centered Hermitian vectors
-{\sf f} and {\sf g} of length $2c$ using two temporary vectors {\sf u} and
+\caption{conv(vector {\sf f}, vector {\sf g}) 
+uses Procedure~\ref{build} to compute
+an in-place implicitly dealiased convolution of centered Hermitian vectors
+{\sf f} and {\sf g} of length $2c$ using temporary vectors {\sf u} and
 {\sf v} of length $c+1$.}\label{conv}
 \end{function}
+
+\begin{figure}[htbp]
+\begin{minipage}{0.5\linewidth}
+\begin{center}
+\begin{procedure}[H]
+  \SetKwData{xf}{f}
+  \SetKwData{xu}{u}
+  \SetKwData{xFk}{F}
+  \SetKwData{xA}{A}
+  \SetKwData{xB}{B}
+  \KwIn{vector \xf}
+  \KwOut{vector \xf, vector \xu}
+  $\xu[0] \leftarrow \xf[0]$\;
+  $\xFk \leftarrow \conj{f[m-1]}$\;
+  $\xf[m-1] \leftarrow \xf[0]$\;
+  \For{$k=1$ \KwTo $c-1$}{
+    $\xA \leftarrow \zeta_{6c}^k*\phantom{\quad}
+\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xFk\]$\;
+    $\xB \leftarrow -i\zeta_{6c}^k*\phantom{\quad}
+\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xFk\]$\;
+    $\xf[k] \leftarrow \xf[k]+\xFk$\;
+    $\xu[k] \leftarrow \xA-\xB$\;
+    $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
+    $\xf[m-1-k] \leftarrow \xA+\xB$\;
+  }
+  \caption{build(vector~{\sf f}, vector~{\sf u}) builds the FFT arrays
+required for Procedure~\ref{conv} from an unpadded vector {\sf f} of length
+$2c$ into {\sf f} and an auxillary vector~{\sf u} of length
+$c+1$.}\label{build}
+\end{procedure}
+\end{center}
+\end{minipage}
+\begin{minipage}{0.5\linewidth}
+\begin{center}
+%On orcinus, using N=100000000.
+\includegraphics{timing1r}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased centered Hermitian in-place 1D convolutions of two vectors of
+(unpadded) length $(2m-1)$.}
+\label{timing1r}
+\end{center}
+\end{minipage}
+\end{figure}
 
 
 \begin{comment}
@@ -640,7 +645,24 @@ fact nullifies the argument of Canuto...
 
 \section{Implicitly dealiased 2D convolutions}
 
-\subsection{Complex convolution}
+\subsection{Complex 2D convolution}
+We now show how the previous routines can be used as building blocks 
+to construct efficient implicitly padded 2D convolutions.
+
+\begin{function}[htbp]
+  \For{$k=1$ \KwTo $m-1$}{
+  }
+
+\caption{cconv(matrix~{\sf f}, matrix~{\sf g}) 
+uses Procedure~\ref{build} to compute
+an in-place implicitly dealiased convolution of centered Hermitian matrices
+{\sf f} and {\sf g} of length $m\times m$ using temporary matrices 
+{\sf U} and {\sf V} of length $m\times m$ and temporary vectors
+{\sf u} and {\sf v} of length $m$.
+.}\label{cconv2}
+\end{function}
+
+\subsection{Centered 2D Hermitian convolution}
 
 \subsubsection{2D Complex to Real Transforms of 2/3 Dealiased Data}
 The Hermiticity condition is now $U_{-k,-\ell}=\conj{U_{k,\ell}}$.

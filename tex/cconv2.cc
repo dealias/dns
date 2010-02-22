@@ -18,8 +18,10 @@ using namespace Array;
 
 // Number of iterations.
 unsigned int N=10000000;
-unsigned int n=4;
-unsigned int m=2;
+unsigned int nx=0;
+unsigned int ny=0;
+unsigned int mx=4;
+unsigned int my=4;
 
 using namespace std;
 
@@ -38,8 +40,8 @@ inline double seconds()
 
 inline void init(array2<Complex>& f, array2<Complex>& g) 
 {
-  for(unsigned int i=0; i < m; i++) {
-    for(unsigned int j=0; j < m; j++) {
+  for(unsigned int i=0; i < mx; i++) {
+    for(unsigned int j=0; j < my; j++) {
       f[i][j]=Complex(3.0,2.0);
       g[i][j]=Complex(5.0,3.0);
 //      f[i][j]=i+j;
@@ -48,38 +50,48 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
   }
 }
 
-int main(int argc, char* argv[])
+int pad=0;
+  
+unsigned int outlimit=100;
+
+unsigned int padding(unsigned int m)
 {
-//  fftw::effort |= FFTW_NO_SIMD;
-  
-  int pad=0;
-  
-  if(argc >= 2)
-    m=atoi(argv[1]);
- 
-  if(argc >= 3)
-    pad=atoi(argv[2]);
-  
-  n=2*m;
+  unsigned int n=2*m;
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
   // Choose next power of 2 for maximal efficiency.
   for(log2n=0; n > (1 << log2n); log2n++);
-  n=1 << log2n;
-  cout << "n=" << n << endl;
-  cout << "m=" << m << endl;
+  return 1 << log2n;
+}
+
+int main(int argc, char* argv[])
+{
+//  fftw::effort |= FFTW_NO_SIMD;
   
-  N=N/(n*n);
+  if(argc >= 2)
+    mx=my=atoi(argv[1]);
+ 
+  if(argc >= 3)
+    pad=atoi(argv[2]);
+  
+  if(argc >= 4)
+    my=atoi(argv[3]);
+  
+  cout << "nx=" << nx << ", ny=" << ny << endl;
+  cout << "mx=" << mx << ", my=" << my << endl;
+  
+  nx=padding(mx);
+  ny=padding(my);
+  
+  N=N/(nx*ny);
   if(N < 10) N=10;
   cout << "N=" << N << endl;
   
   size_t align=sizeof(Complex);
-  int np=pad ? n : m;
-  array2<Complex> f(np,np,align);
-  array2<Complex> g(np,np,align);
-#ifdef TEST  
-  array2<Complex> pseudoh(m,m,align);
-#endif
+  int nxp=pad ? nx : mx;
+  int nyp=pad ? ny : my;
+  array2<Complex> f(nxp,nyp,align);
+  array2<Complex> g(nxp,nyp,align);
 
   double offset=0.0;
   seconds();
@@ -90,11 +102,11 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(!pad) {
-    Complex *u1=FFTWComplex(m);
-    Complex *v1=FFTWComplex(m);
-    Complex *u2=FFTWComplex(m*m);
-    Complex *v2=FFTWComplex(m*m);
-    ImplicitConvolution2 C(m,u1,u2);
+    Complex *u1=FFTWComplex(my);
+    Complex *v1=FFTWComplex(my);
+    Complex *u2=FFTWComplex(mx*my);
+    Complex *v2=FFTWComplex(mx*my);
+    ImplicitConvolution2 C(mx,my,u1,v1,u2);
     for(int i=0; i < N; ++i) {
       init(f,g);
       seconds();
@@ -102,31 +114,28 @@ int main(int argc, char* argv[])
       sum += seconds();
     }
     
-    FFTWdelete(u1);
-    FFTWdelete(v1);
-    FFTWdelete(u2);
     FFTWdelete(v2);
+    FFTWdelete(u2);
+    FFTWdelete(v1);
+    FFTWdelete(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;
     cout << (sum-offset)/N << endl;
     cout << endl;
-    if(m < 5) 
-      for(unsigned int i=0; i < m; i++) {
-        for(unsigned int j=0; j < m; j++)
+    if(mx*my < 25) 
+      for(unsigned int i=0; i < mx; i++) {
+        for(unsigned int j=0; j < my; j++)
           cout << f[i][j] << " ";
         cout << endl;
       } else cout << f[0][0] << endl;
     cout << endl;
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
-#endif    
   }
   
   if(pad) {
     for(int prune=0; prune <= 1; ++prune) {
       sum=0.0;
-      ExplicitConvolution2 C(n,m,f,prune);
+      ExplicitConvolution2 C(nx,ny,mx,my,f,prune);
       for(int i=0; i < N; ++i) {
         init(f,g);
         seconds();
@@ -137,24 +146,21 @@ int main(int argc, char* argv[])
       cout << (prune ? "Pruned:" : "Explicit:") << endl;
       cout << (sum-offset)/N << endl;
       cout << endl;
-      if(m < 5) 
-        for(unsigned int i=0; i < m; i++) {
-          for(unsigned int j=0; j < m; j++)
+      if(mx*my < outlimit) 
+        for(unsigned int i=0; i < mx; i++) {
+          for(unsigned int j=0; j < my; j++)
             cout << f[i][j] << "\t";
           cout << endl;
         } else cout << f[0][0] << endl;
     }
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
-#endif
   }
 
   if(false)
   {
-    array2<Complex> f(m,m,align);
-    array2<Complex> g(m,m,align);
-    array2<Complex> h(m,m,align);
-    DirectConvolution C(m);
+    array2<Complex> f(mx,my,align);
+    array2<Complex> g(mx,my,align);
+    array2<Complex> h(mx,my,align);
+    DirectConvolution2 C(mx,my);
     init(f,g);
     seconds();
     C.convolve(h,f,g);
@@ -165,22 +171,15 @@ int main(int argc, char* argv[])
     cout << sum-offset/N << endl;
     cout << endl;
 
-    if(m < 5) 
-      for(unsigned int i=0; i < m; i++) {
-        for(unsigned int j=0; j < m; j++)
+    if(mx*my < outlimit) 
+      for(unsigned int i=0; i < mx; i++) {
+        for(unsigned int j=0; j < my; j++)
           cout << h[i][j] << "\t";
         cout << endl;
       } else cout << h[0][0] << endl;
 
     // test accuracy of convolution methods:
     double error=0.0;
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) 
-      error += abs2(h[i]-pseudoh[i]);
-    cout << "error="<<error<<endl;
-    if (error > 1e-12)
-      cerr << "Caution! error="<<error<<endl;
-#endif    
   }
 }
 
