@@ -161,7 +161,8 @@ padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
 buffer can be reused for other one-dimensional convolutions.
 As a result, for dimensions greater than one, the memory usage of our
-unshifted (centered) %FIXME: define?
+standard (centered) 
+%FIXME: define? Centered is standard usage; defined in detail later
 convolution is asymptotically one-half (two-thirds)
 of the memory requirements imposed by zero padding.
 Of course, if memory savings alone were the goal, this savings could
@@ -177,7 +178,11 @@ one-dimensional convolution is onerous, particularly if one tries to
 compete with an explicitly problem-dependent and architecture-adaptive
 FFTW algorithm such as the award-winning \cite{FFTW} library, which
 empirically predetermines a near optimal butterfly graph
-FIXME:REForDEFN at each subdivision. Effectively one wants to perform
+%FIXME:REForDEFN
+%Standard term from graph theory/FFT literature 
+%(e.g. see butterfly diagram in Wikipedia). Maybe add
+%Alan V. Oppenheim, Ronald W. Schafer, and John R. Buck, Discrete-Time Signal Processing, 2nd edition (Upper Saddle River, NJ: Prentice Hall, 1989)
+at each subdivision. Effectively one wants to perform
 the first FFT subdivision manually, dropping the zero terms and
 leaving the inner transforms to be computed with the usual library
 routine. But this places an artificial restriction, at least at the
@@ -205,9 +210,9 @@ contaminate mode~$N=0\mod N$. However, since FFT sizes with small prime
 factors in practice yield the most efficient implementations, it is normally
 desirable to extend the padding to $N=2m$.
 
-Using the $N$th primitive root of unity, $\zeta_N\doteq \exp\(2 \pi i/N\)$, 
-(here $\doteq$ indicates a definition), the unnormalized backwards discrete 
-Fourier transform of a complex vector
+In terms of the $N$th primitive root of unity, $\zeta_N\doteq \exp\(2 \pi
+i/N\)$, (here $\doteq$ indicates a definition), the unnormalized backwards
+discrete Fourier transform of a complex vector
 $\{U_k: k=0,\ldots,N\}$ may be written
 $$
 u_j\doteq\sum_{k=0}^{N-1}\zeta_N^{jk} U_k\qquad j=0,\ldots,N-1.
@@ -313,7 +318,7 @@ Here, one needs to pad to $N\ge 3m-2$ to prevent
 mode $m-1$ from beating with itself to contaminate the most negative
 (first) mode, at wavenumber $-m+1$. Since the ratio of the number of physical to
 total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, this
-padding scheme is often referred to as the ``{\it $2/3$ padding rule}''.
+padding scheme is often referred to as the {\it $2/3$ padding rule}.
 
 For explicit padding, one usually chooses the padded vector length
 $N$ to be a power of $2$, with $m=\floor{(n+2)/3}$. However, for implicit
