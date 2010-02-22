@@ -106,7 +106,7 @@ pair[] fft0pad(pair[] f, bool unscramble=true)
     pair f2k=Zetak*f2[k];
     Zetak *= zeta;
     F[k-1]=f0k+zeta3*f1k+conj(zeta3)*f2k;
-    F[m+k-1]=f0k+f1k+f2k;
+    F[m-1+k]=f0k+f1k+f2k;
   }
 
   return F;

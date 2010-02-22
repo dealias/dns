@@ -284,7 +284,8 @@ $m$.}\label{cconv}
 \includegraphics{timing1c}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 1D convolutions of two vectors of
-(unpadded) length $m$.}
+(unpadded) length $m$. The storage requirements of the two algorithms are
+identical.}
 \label{timing1c}
 \end{center}
 \end{minipage}
@@ -362,23 +363,49 @@ transforms is asymptotic to $3Km\log m$.
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
   $\xu[0] \leftarrow \xf[m-1]$\;
-  \For{$k$ = 1 \KwTo m-1}{
-    $\xA \leftarrow \zeta^k*\[\Re \xf[m-1-k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Re \xf[k]\]$\;
-    $\xB \leftarrow i*\zeta^k*\[\Im \xf[m-1-k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Im \xf[k]\]$\;
-    $\xf[m-1-k] \leftarrow \xA+\xB$\;
+  \For{$k=1$ \KwTo $m-1$}{
+    $\xA \leftarrow \zeta_N^k*\[\Re \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Re \xf[k]\]$\;
+    $\xB \leftarrow i\zeta_N^k*\[\Im \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Im \xf[k]\]$\;
+    $\xf[m-1+k] \leftarrow \xA+\xB$\;
     $\xu[k] \leftarrow \conj{\xA-\xB}$\;
     $\xf[0] \leftarrow \xf[k]$\;
-    $\xf[k] \leftarrow \xf[k]+\xf[m-1-k]$\;
+    $\xf[k] \leftarrow \xf[k]+\xf[m-1+k]$\;
   }
 
-  $\xf[0,\ldots,m-1] \leftarrow {\tt fft}(\xf[0,\ldots,m-1])$\;
+  $\xf[0,\ldots,m-1] \leftarrow {\tt fft}\inv(\xf[0,\ldots,m-1])$\;
   $\xu[m] \leftarrow \xf[m-1]$\;
   $\xf[m-1] \leftarrow \xu[0]$\;
-  $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}(\xf[m-1,\ldots,2m-2])$\;
-  $\xu[0,\ldots,m-1] \leftarrow {\tt fft}(\xu[0,\ldots,m-1])$\;
+  $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}\inv(\xf[m-1,\ldots,2m-2])$\;
+  $\xu[0,\ldots,m-1] \leftarrow {\tt fft}\inv(\xu[0,\ldots,m-1])$\;
   \caption{fft0padBackwards(vector {\sf f}, vector {\sf u}) returns the scrambled
 $3m$ implicitly padded backwards Fourier transform values of a vector {\sf f} of length
-$2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0pad}
+$2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0padBackwards}
+\end{procedure}
+
+\begin{procedure}[htp]
+  \SetKwData{xf}{f}
+  \SetKwData{xu}{u}
+  \SetKwData{xf}{f}
+  \SetKwData{xA}{A}
+  \SetKwData{xB}{B}
+  \KwIn{vector \xf, vector \xu}
+  \KwOut{vector \xf}
+
+  $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}(\xf[m-1,\ldots,2m-2])$\;
+  $\xu[m] \leftrightarrow \xf[m-1]$\;
+
+  $\xf[0,\ldots,m-1] \leftarrow {\tt fft}(\xf[0,\ldots,m-1])$\;
+  $\xu[0,\ldots,m-1] \leftarrow {\tt fft}(\xu[0,\ldots,m-1])$\;
+
+  $\xu[m] \leftarrow \xf[0]+\xu[m]+\xu[0]$\;
+  \For{$k=1$ \KwTo $m-1$}{
+    $\xf[k-1]=\xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_N^{-k}*\xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_N^k*\xu[k]$\;
+    $\xf[m-1+k]=\xf[k]+\zeta_N^{-k}*\xf[m-1+k]+\zeta_N^k*\xu[k]$\;
+  }
+  $\xf[m-1] \leftarrow \xu[m]$\;
+
+  \caption{fft0padForwards(vector {\sf f}) is the $3m$ times the inverse
+of fft0padBackwards(vector {\sf f}, vector {\sf u}).}\label{fft0padForwards}
 \end{procedure}
 
 \subsection{Hermitian convolution}
@@ -386,16 +413,16 @@ $2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0pa
 In this frequently encountered case (relevant to the pseudospectral
 method), each input vector is the Fourier transform of real-valued data;
 that is, it satisfies the {\it Hermiticity condition} $U_{-k}=\conj{U_k}$.
-While the physical data would be of length $2m-1$, with the Fourier origin
-in the center, the redundant negative frequencies do not need to be
-included in the input vectors. The input vectors of thus of length $m$,
+While the physical data would be of length $2m-1$, centered about the
+Fourier origin, the redundant negative wavenumbers are not
+included in the input vectors. The input vectors are thus of length $m$,
 with the Fourier origin at index $0$. Just as in Section~\ref{fft0},
 the unsymmetrized physical data needs to be padded with at least $m-1$ zeros.
 Hermitian symmetry then requires us to pad the $m$ non-negative
-frequencies with at least $c\doteq\floor{m/2}$ zeros.
+wavenumbers with at least $c\doteq\floor{m/2}$ zeros.
 The resulting $2/3$ padding ratio (for even $m$) turns out to work
 particularly well for developing implicitly dealiased Hermitian convolutions.
-We again choose the Fourier size $N=3m$.
+As in the centered case, we again choose the Fourier size to be $N=3m$.
 
 Given that $U_k=0$ for $k\ge m$, the backwards (complex-to-real) transform
 appears as \Eq{fft0backwardsA}, but now with
