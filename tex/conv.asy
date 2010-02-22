@@ -188,6 +188,7 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
 
   real A=fc.x;
   real B=sqrt(3)*fc.y;
+  
   fc=f[c];
   f[c]=2.0*A;
   u[c]=A+B;

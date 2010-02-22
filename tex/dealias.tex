@@ -160,15 +160,14 @@ padded 1D convolution is identical to that for a conventional explicitly
 padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
 buffer can be reused for other one-dimensional convolutions.
-As a result, for dimensions greater than one, the memory usage of our
-standard (centered) 
-%FIXME: define? Centered is standard usage; defined in detail later
-convolution is asymptotically one-half (two-thirds)
-of the memory requirements imposed by zero padding.
-Of course, if memory savings alone were the goal, this savings could
+As a result, for dimensions greater than one,
+an implicitly padded standard convolution asymptotically uses half of the
+memory required by explicit padding. For the case where the Fourier origin is
+centered in the domain, memory usage is reduced by one third.
+Of course, if memory savings alone were the goal, these savings could
 also be achieved with explicit zero padding by copying the data for the
 innermost convolution to an external padded buffer, but such extra data
-communication turns is prohibitively expensive. The fact that our
+communication degrades performance. The fact that our
 one-dimensional convolution does not require this extra copying is the key
 feature that was exploited to obtain simultaneous improvements in memory
 usage and performance.
@@ -483,7 +482,29 @@ obtained by the substitution $k'=c-k$. One can omit the factors of
 $(-1)^j$ since they will cancel during the real term-by-term multiplication
 of the two transformed input vectors.
 
-% Add procedure build(f,u); build(g,v);
+\begin{procedure}[htbp]
+  \SetKwData{xf}{f}
+  \SetKwData{xu}{u}
+  \SetKwData{xFk}{F}
+  \SetKwData{xA}{A}
+  \SetKwData{xB}{B}
+  \KwIn{vector \xf}
+  \KwOut{vector \xf, vector \xu}
+  $\xu[0] \leftarrow \xf[0]$\;
+  $\xFk \leftarrow \conj{f[m-1]}$\;
+  $\xf[m-1] \leftarrow \xf[0]$\;
+  \For{$k=1$ \KwTo $c-1$}{
+    $\xA \leftarrow \zeta_N^k*\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xFk\]$\;
+    $\xB \leftarrow -i\zeta_N^k*\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xFk\]$\;
+    $\xf[k] \leftarrow \xf[k]+\xFk$\;
+    $\xu[k] \leftarrow \xA-\xB$\;
+    $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
+    $\xf[m-1-k] \leftarrow \xA+\xB$\;
+  }
+  \caption{build(vector {\sf f}, vector {\sf u}) builds the Hermitian FFT arrays
+from an unpadded vector {\sf f} of length $2c$ into {\sf f} and an auxillary
+vector~{\sf u} of length $c+1$.}\label{build} 
+\end{procedure}
 
 \begin{function}[htbp]
   \SetKwData{xf}{f}
@@ -496,32 +517,14 @@ of the two transformed input vectors.
   \SetKwData{xw}{w}
   \SetKwData{xA}{A}
   \SetKwData{xB}{B}
+  \SetKwFunction{build}{build}
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
-  $\xu[0] \leftarrow \xf[0]$\;
-  $\xv[0] \leftarrow \xg[0]$\;
   $\xz \leftarrow \xf[c]$\;
   $\xw \leftarrow \xg[c]$\;
-  $\xFk \leftarrow \conj{f[m-1]}$\;
-  $\xGk \leftarrow \conj{g[m-1]}$\;
-  $\xf[m-1] \leftarrow \xf[0]$\;
-  $\xg[m-1] \leftarrow \xg[0]$\;
-  \For{$k=1$ \KwTo $c-1$}{
-    $\xA \leftarrow \zeta_N^k*\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xFk\]$\;
-    $\xB \leftarrow -i\zeta_N^k*\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xFk\]$\;
-    $\xf[k] \leftarrow \xf[k]+\xFk$\;
-    $\xu[k] \leftarrow \xA-\xB$\;
-    $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
-    $\xf[m-1-k] \leftarrow \xA+\xB$\;
-    \medskip
-    $\xA \leftarrow \zeta_N^k*\[\Re \xg[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xGk\]$\;
-    $\xB \leftarrow -i\zeta_N^k*\[\Im \xg[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xGk\]$\;
-    $\xg[k] \leftarrow \xg[k]+\xGk$\;
-    $\xv[k] \leftarrow \xA-\xB$\;
-    $\xGk \leftarrow \conj{\xg[m-1-k]}$\;
-    $\xg[m-1-k] \leftarrow \xA+\xB$\;
-  }
-
+  \build{\xf,\xu}\;
+  \build{\xg,\xv}\;
+  \medskip
   $\xf_c \leftarrow \xf[c]$\;
   $\xf[c] \leftarrow 2\Re \xz$\;
   $\xu[c] \leftarrow \Re \xz+\sqrt{3}\Im \xz$\;
