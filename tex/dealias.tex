@@ -351,8 +351,12 @@ B_k&\doteq i\zeta_N^k\(\Im U_k+\zeta_3^{-1} \Im U_{k-m}\),
 \end{align*}
 where $\zeta_3^{-1}=\(-\half,-\fr{\sqrt{3}}{2}\)$, so that for $k > 0$,
 $w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
-The operation count for the implictly padded forwards and backwards
-transforms is asymptotic to $3Km\log m$.
+The resulting transforms,
+Procedures \ref{fft0padBackwards} and \ref{fft0padForwards},
+each have an operation count asymptotic to $3Km\log m$. As they
+operate fully in-place on their arguments, with no further storage
+requirements, it is straightforward to implement strided multivector
+versions of these routines.
 
 \begin{procedure}[htp]
   \SetKwData{xf}{f}
@@ -404,8 +408,8 @@ $2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0pa
   }
   $\xf[m-1] \leftarrow \xu[m]$\;
 
-  \caption{fft0padForwards(vector {\sf f}) is the $3m$ times the inverse
-of fft0padBackwards(vector {\sf f}, vector {\sf u}).}\label{fft0padForwards}
+  \caption{fft0padForwards(vector {\sf f}, vector {\sf u}) is $3m$ times
+the inverse of fft0padBackwards(vector {\sf f}, vector {\sf u}).}\label{fft0padForwards}
 \end{procedure}
 
 \subsection{Hermitian convolution}
@@ -413,8 +417,8 @@ of fft0padBackwards(vector {\sf f}, vector {\sf u}).}\label{fft0padForwards}
 In this frequently encountered case (relevant to the pseudospectral
 method), each input vector is the Fourier transform of real-valued data;
 that is, it satisfies the {\it Hermiticity condition} $U_{-k}=\conj{U_k}$.
-While the physical data would be of length $2m-1$, centered about the
-Fourier origin, the redundant negative wavenumbers are not
+While the physical data represented is of length $2m-1$, centered
+about the Fourier origin, the redundant negative wavenumbers are not
 included in the input vectors. The input vectors are thus of length $m$,
 with the Fourier origin at index $0$. Just as in Section~\ref{fft0},
 the unsymmetrized physical data needs to be padded with at least $m-1$ zeros.
@@ -439,7 +443,7 @@ $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
 be real-valued. This allows us to build a backwards implicitly padded
 Hermitian transform using three complex-to-real Fourier transforms of the
-first $c+1$ components of $w_{k,r}$ (for $r\in\{-1,0,1\}$). The forwards
+first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The forwards
 transform is given 
 by
 \belc
@@ -452,8 +456,8 @@ compute the first $c+1$ frequencies of
 $\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}$; the remaining $m-c-1$
 frequencies needed in \Eq{fft0forwardsB} are then computed using Hermitian
 symmetry. Since there are two input vectors and
-one output vector, the complete convolution then requires a total of nine
-Hermitian Fourier transforms of size $c+1$ for an overall computational
+one output vector, the complete convolution requires a total of nine
+Hermitian Fourier transforms of size $m$, for an overall computational
 scaling of $\fr{9}{2}K m \log m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
 We see in Algorithm~\ref{conv} that seven out of these nine Fourier
@@ -524,11 +528,12 @@ NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 \ee
 \end{comment}
 
-The computation times for implicit padding of a centered is compared with
-explicit zero padding in Figure~\ref{timing1r}. For the intended
-application to partial differential equations, there is flexibility in the
-choice of the exact convolution size. This is why we consider for each
-algorithm only those vector lengths that maximize performance.
+The computation times for implicit padding of a Hermitian implicitly padded
+convolution is compared with explicit zero padding in
+Figure~\ref{timing1r}. For the intended application to partial differential
+equations, there is flexibility in the choice of the exact convolution
+size. This is why we consider for each algorithm only those vector lengths
+that maximize performance.
 
 On the other hand, for those applications where the size of the convolution
 is dictated by external criteria, implicit padding effectively expands the
