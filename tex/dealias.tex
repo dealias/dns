@@ -48,7 +48,7 @@
 \maketitle
 
 \begin{abstract}
-An algorithm is described for dealiasing linear convolution sums
+An algorithm is described for calculating dealiased linear convolution sums
 without the expense of conventional zero-padding or phase-shift
 techniques. For one-dimensional in-place convolutions, the memory
 requirements are identical with the zero-padding technique, with the important
@@ -161,37 +161,40 @@ padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
 buffer can be reused for other one-dimensional convolutions.
 As a result, for dimensions greater than one, the memory usage of our
-unshifted (centered) convolution is asymptotically one-half (two-thirds)
+unshifted (centered) %FIXME: define?
+convolution is asymptotically one-half (two-thirds)
 of the memory requirements imposed by zero padding.
 Of course, if memory savings alone were the goal, this savings could
 also be achieved with explicit zero padding by copying the data for the
 innermost convolution to an external padded buffer, but such extra data
-communication turns out to be prohibitively expensive. The fact that our
+communication turns is prohibitively expensive. The fact that our
 one-dimensional convolution does not require this extra copying is the key
 feature that was exploited to obtain simultaneous improvements in memory
 usage and performance.
 
-Nevertheless, the task of writing an efficient implicitly padded one-dimensional
-convolution is onerous, particularly if one tries to compete with an
-explicitly problem-dependent and architecture-adaptive FFTW algorithm such
-as the award-winning \cite{FFTW} library, which empirically predetermines a
-near optimal butterfly graph at each subdivision. Effectively one wants to
-perform the first FFT subdivision manually, dropping the zero terms and
+Nevertheless, the task of writing an efficient implicitly padded
+one-dimensional convolution is onerous, particularly if one tries to
+compete with an explicitly problem-dependent and architecture-adaptive
+FFTW algorithm such as the award-winning \cite{FFTW} library, which
+empirically predetermines a near optimal butterfly graph
+FIXME:REForDEFN at each subdivision. Effectively one wants to perform
+the first FFT subdivision manually, dropping the zero terms and
 leaving the inner transforms to be computed with the usual library
-routine. But this places an artificial restriction, at least at the highest
-subdivision, on the possible adaptive algorithm that can be
-used. Fortunately, there are a number of features of our algorithm that
-help to offset this disadvantage. First, since the goal is to produce a
-convolution, bit-reversal for the manual (highest) subdivision is
-unnecessary: the scrambled Fourier subtransforms of the two input vectors
-can be multiplied together as they are produced (perhaps while are still
-accessible in the cache). Second, the implicit method allows most 
-of the subtransforms for an in-place convolution to be computed as
-out-of-place transforms, which execute faster than in-place transforms
-since they require no extra (pre-, post-, or interlaced) bit-reversal stage.
-These savings helped keep our one-dimensional in-place implicit convolution
-competitive with the explicitly padded convolution based on the same highly
-optimized library.
+routine. But this places an artificial restriction, at least at the
+highest subdivision, on the possible adaptive algorithm that can be
+used. Fortunately, there are a number of features of our algorithm
+that help to offset this disadvantage. First, if the goal is to
+produce a convolution, bit-reversal for the manual (highest)
+subdivision is unnecessary: the scrambled Fourier subtransforms of the
+two input vectors can be multiplied together as they are produced
+(perhaps while still accessible in the cache). Second, the implicit
+method allows most of the subtransforms for an in-place convolution to
+be computed as out-of-place transforms, which execute faster than
+in-place transforms since they require no extra (pre-, post-, or
+interlaced) bit-reversal stage.  These savings helped keep our
+one-dimensional in-place implicit convolution competitive with the
+explicitly padded convolution based on the same highly optimized
+library.
 
 \section{Implicitly dealiased 1D convolutions}
 \subsection{Complex convolution}
@@ -202,9 +205,9 @@ contaminate mode~$N=0\mod N$. However, since FFT sizes with small prime
 factors in practice yield the most efficient implementations, it is normally
 desirable to extend the padding to $N=2m$.
 
-In terms of the $N$th primitive root of unity,
-$\zeta_N\doteq \exp\(2 \pi i/N\)$, where $\doteq$ indicates a definition,
-the unnormalized backwards discrete Fourier transform of a complex vector
+Using the $N$th primitive root of unity, $\zeta_N\doteq \exp\(2 \pi i/N\)$, 
+(here $\doteq$ indicates a definition), the unnormalized backwards discrete 
+Fourier transform of a complex vector
 $\{U_k: k=0,\ldots,N\}$ may be written
 $$
 u_j\doteq\sum_{k=0}^{N-1}\zeta_N^{jk} U_k\qquad j=0,\ldots,N-1.
@@ -238,7 +241,7 @@ NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 \qquad k\no=0,\ldots,\fr{N}{2}-1.\label{cconv1forwards}
 \eel
 One can thus compute a dealiased convolution of (unpadded) length $m$ using
-for each input vector two arrays of size $m$ instead of one array of size $2m$.
+two arrays of size $m$ as input vectors instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
 convolutions described in Sections~\ref{conv2} and~\ref{conv3}.
@@ -310,7 +313,7 @@ Here, one needs to pad to $N\ge 3m-2$ to prevent
 mode $m-1$ from beating with itself to contaminate the most negative
 (first) mode, at wavenumber $-m+1$. Since the ratio of the number of physical to
 total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, this
-padding scheme is often referred to as the {\it $2/3$ padding rule}.
+padding scheme is often referred to as the ``{\it $2/3$ padding rule}''.
 
 For explicit padding, one usually chooses the padded vector length
 $N$ to be a power of $2$, with $m=\floor{(n+2)/3}$. However, for implicit
