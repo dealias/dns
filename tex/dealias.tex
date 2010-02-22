@@ -248,7 +248,9 @@ complex Fourier transforms of size $m$ can be done out of place.
 \setlength{\algomargin}{0.8em}
 \SetAlCapSkip{3pt}
 \SetAlgoCaptionLayout{textit}
-\def\FFT{\tt fft}
+\def\fft{\tt fft}
+\def\crfft{\tt crfft}
+\def\rcfft{\tt rcfft}
 
 \begin{figure}[htbp]
 \begin{minipage}{.49\linewidth}
@@ -261,15 +263,15 @@ complex Fourier transforms of size $m$ can be done out of place.
   \xu $\leftarrow$ $\z_N^k$ \xf\;
   \xv $\leftarrow$ $\z_N^k$ \xg\;
   \medskip
-  $\xu \leftarrow \FFT\inv(\xu)$\;
-  $\xv \leftarrow \FFT\inv(\xv)$\;
+  $\xu \leftarrow \fft\inv(\xu)$\;
+  $\xv \leftarrow \fft\inv(\xv)$\;
   $\xv \leftarrow \xu * \xv$\;
-  $\xu \leftarrow \FFT(\xv)$\;
+  $\xu \leftarrow \fft(\xv)$\;
   \medskip
-  $\xv \leftarrow \FFT\inv(\xf)$\;
-  $\xf \leftarrow \FFT\inv(\xg)$\;
+  $\xv \leftarrow \fft\inv(\xf)$\;
+  $\xf \leftarrow \fft\inv(\xg)$\;
   $\xv \leftarrow \xv * \xf$\;
-  $\xf \leftarrow \FFT(\xv)$\;
+  $\xf \leftarrow \fft(\xv)$\;
   \Return f;
 \caption{cconv(vector {\sf f}, vector {\sf g}) computes
 an in-place implicitly padded convolution of two complex vectors {\sf f}
@@ -361,7 +363,6 @@ versions of these routines.
 \begin{procedure}[htp]
   \SetKwData{xf}{f}
   \SetKwData{xu}{u}
-  \SetKwData{xf}{f}
   \SetKwData{xA}{A}
   \SetKwData{xB}{B}
   \KwIn{vector \xf}
@@ -389,7 +390,6 @@ $2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0pa
 \begin{procedure}[htp]
   \SetKwData{xf}{f}
   \SetKwData{xu}{u}
-  \SetKwData{xf}{f}
   \SetKwData{xA}{A}
   \SetKwData{xB}{B}
   \KwIn{vector \xf, vector \xu}
@@ -443,9 +443,8 @@ $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
 be real-valued. This allows us to build a backwards implicitly padded
 Hermitian transform using three complex-to-real Fourier transforms of the
-first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The forwards
-transform is given 
-by
+first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
+forwards transform is given by
 \belc
 NU_k
 =\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
@@ -463,29 +462,94 @@ leading-order scaling of an explicitly padded centered Hermitian convolution.
 We see in Algorithm~\ref{conv} that seven out of these nine Fourier
 transforms can be done out of place.
 
-\SetKwFunction{rcFFT}{rcfft}
-\SetKwFunction{crFFT}{crfft}
+For simplicity, we first consider the case where $m=2c$.
+To facilitate an in-place implementation of the backwards transform, we
+store the conjugate of the transformed values for $r=1$ in reverse order in
+the upper half of the $f$ vector, using the identity (for real $u_j$)
+$$
+u_j=\conj{u_j}=\sum_{k=-c+1}^{c}\zeta_m^{-jk} \conj{U_k}
+=\sum_{k'=m-1}^{0}\zeta_m^{j(k'-c)} \conj{U_{c-k'}}
+=(-1)^j\sum_{k=0}^{m-1}\zeta_m^{jk'} \conj{U_{c-k'}}
+$$
+obtained by the substitution $k'=c-k$. One can omit the factors of
+$(-1)^j$ since they will cancel during the real term-by-term multiplication
+of the two transformed input vectors.
 
-\begin{figure}[htbp]
-\begin{minipage}{.49\linewidth}
-\begin{center}
-\begin{function}[H]
+% Add procedure build(f,u); build(g,v);
+
+\begin{function}[htbp]
   \SetKwData{xf}{f}
   \SetKwData{xg}{g}
   \SetKwData{xu}{u}
   \SetKwData{xv}{v}
-  \KwIn{vector \xf, vector \xg}
-  \KwOut{vector \xf}
+  \SetKwData{xFk}{F}
+  \SetKwData{xGk}{G}
+  \SetKwData{xz}{z}
+  \SetKwData{xw}{w}
+  \SetKwData{xA}{A}
+  \SetKwData{xB}{B}
+  \KwIn{vector \xf}
+  \KwOut{vector \xf, vector \xu}
+  $\xu[0] \leftarrow \xf[0]$\;
+  $\xv[0] \leftarrow \xg[0]$\;
+  $\xz \leftarrow \xf[c]$\;
+  $\xw \leftarrow \xg[c]$\;
+  $\xFk \leftarrow \conj{f[m-1]}$\;
+  $\xGk \leftarrow \conj{g[m-1]}$\;
+  $\xf[m-1] \leftarrow \xf[0]$\;
+  $\xg[m-1] \leftarrow \xg[0]$\;
+  \For{$k=1$ \KwTo $c-1$}{
+    $\xA \leftarrow \zeta_N^k*\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xFk\]$\;
+    $\xB \leftarrow -i\zeta_N^k*\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xFk\]$\;
+    $\xf[k] \leftarrow \xf[k]+\xFk$\;
+    $\xu[k] \leftarrow \xA-\xB$\;
+    $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
+    $\xf[m-1-k] \leftarrow \xA+\xB$\;
+    \medskip
+    $\xA \leftarrow \zeta_N^k*\[\Re \xg[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xGk\]$\;
+    $\xB \leftarrow -i\zeta_N^k*\[\Im \xg[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xGk\]$\;
+    $\xg[k] \leftarrow \xg[k]+\xGk$\;
+    $\xv[k] \leftarrow \xA-\xB$\;
+    $\xGk \leftarrow \conj{\xg[m-1-k]}$\;
+    $\xg[m-1-k] \leftarrow \xA+\xB$\;
+  }
+
+  $\xf_c \leftarrow \xf[c]$\;
+  $\xf[c] \leftarrow 2\Re \xz$\;
+  $\xu[c] \leftarrow \Re \xz+\sqrt{3}\Im \xz$\;
   \medskip
+  $\xg_c \leftarrow \xg[c]$\;
+  $\xg[c] \leftarrow 2\Re \xw$\;
+  $\xv[c] \leftarrow \Re \xw+\sqrt{3}\Im \xw$\;
+  \medskip
+  $\xu \leftarrow \crfft(\xu)$\;
+  $\xv \leftarrow \crfft(\xv)$\;
+  $\xv \leftarrow \xv * \xu$\;
+  $\xu \leftarrow \rcfft(\xv)$\;
+  \medskip
+  $\xv \leftarrow \crfft(\xf[0,\ldots,c])$\;
+  $\xf[0,\ldots,c] \leftarrow \crfft(\xg[0,\ldots,c])$\;
+  $\xv \leftarrow \xv * \xf$\;
+  $\xf[0,\ldots,c] \leftarrow \rcfft(\xv)$\;
+  \medskip
+  $\xf[c-1]=\Re \xz-\sqrt{3}\Im \xz$\;
+  $\xf[c]=f_c$\;
+  $\xg[c-1]=\Re \xw-\sqrt{3}\Im \xw$\;
+  $\xg[c]=g_c$\;
+  \medskip
+  $\xv \leftarrow \crfft(\xg[c-1,\ldots,m-1])$\;
+  $\xg[0,\ldots,c-1] \leftarrow \crfft(\xf[c-1,\ldots,m-1])$\;
+  $\xg \leftarrow \xg * \xv$\;
+  $\xv[0,\ldots,c] \leftarrow \rcfft(\xg[0,\ldots,c-1])$\;
+  TODO\;
   \Return f;
 \caption{conv(vector {\sf f}, vector {\sf g}) computes
 an in-place implicitly padded convolution of two centered Hermitian vectors
-{\sf f} and {\sf g} using two temporary vectors {\sf u} and {\sf v}, all of length
-$m$.}\label{conv}
+{\sf f} and {\sf g} of length $m=2c$ using two temporary vectors {\sf u} and
+{\sf v} of length $c+1$.}\label{conv}
 \end{function}
-\end{center}
-\end{minipage}
-\begin{minipage}{0.49\linewidth}
+
+\begin{figure}[htbp]
 \begin{center}
 %On orcinus, using N=100000000.
 \includegraphics{timing1r}
@@ -494,7 +558,6 @@ dealiased centered Hermitian in-place 1D convolutions of two vectors of
 (unpadded) length $(2m-1)$.}
 \label{timing1r}
 \end{center}
-\end{minipage}
 \end{figure}
 
 \begin{comment}
