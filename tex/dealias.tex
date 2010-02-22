@@ -98,15 +98,15 @@ pseudospectral method, in-place transform, bit reversal
 \bibliographystyle{siam}
 
 \section{Introduction}
-Discrete linear convolution sums based on the fast Fourier transform (FFT)
-algorithm \cite{Gauss1866,Cooley65} have become important tools for image
-filtering, digital signal
-processing, and correlation analysis. They are also widely used in
-computational physics to solve nonlinear partial differential equations
-such as the Navier--Stokes equations in periodic domains. In some of these
-applications, notably direct numerical pseudospectral simulations of fluid
-turbulence, memory usage is a critical limiting factor: in-place
-multidimensional Fourier transforms are typically used to reduce the memory
+Discrete linear convolution sums based on the fast Fourier transform
+(FFT) algorithm \cite{Gauss1866,Cooley65} have become important tools
+for image filtering, digital signal processing, and correlation
+analysis. They are also widely used in computational physics to solve
+nonlinear partial differential equations, such as the Navier--Stokes
+equations, in periodic domains. In some of these applications, notably
+direct numerical pseudospectral simulations of fluid turbulence,
+memory usage is a critical limiting factor, and in-place
+multidimensional Fourier transforms are used to reduce the memory
 footprint of the required spectral convolutions.
 
 Because the discrete convolution, which produces cyclic output from cyclic
@@ -130,7 +130,8 @@ computationally more expensive, requiring $6K m\log_2 m$ operations.
 An explicit application of the zero-padding technique has the rather
 obvious inefficiency of summing over a large number of data values that
 are known {\it a priori\/} to be zero.
-To a frequently asked question by FFT users who want to avoid this
+To a frequently asked question by FFTW %FIXME:ref?
+ users who want to avoid this
 unnecessary expense in computing a dealiased convolution,
 Steven G. Johnson has provided this
 answer \cite{http://www.fftw.org/pruned.html}:
@@ -170,7 +171,7 @@ innermost convolution to an external padded buffer, but such extra data
 communication degrades performance. The fact that our
 one-dimensional convolution does not require this extra copying is the key
 feature that was exploited to obtain simultaneous improvements in memory
-usage and performance.
+usage and speed.
 
 Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
@@ -231,7 +232,7 @@ u_{2\ell+1}
 \ell=0,1,\ldots m-1.\label{cconv1backwards}
 \eelc
 Since this requires computing two subtransforms, each of size $m$,
-the overall computational scaling is of order $2m\log m=N\log(m)$.
+the overall computational scaling is of order $2m\log m=N\log m$.
 
 The odd and even terms of the convolution can then be computed separately
 (without the need for a bit reversal stage), multiplied term-by-term, and

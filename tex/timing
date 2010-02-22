@@ -5,6 +5,18 @@ stop=13
 if [ "$1" != "" ]; then
     stop=$1
 fi
+if [ "$2" == "" ]; then
+    echo please specify program: ctiming "["int"]" "["conv, cconv, conv2, or cconv2"]"
+    exit
+fi
+
+complex=no
+if [ "$2" == "cconv" ]; then
+    complex=yes
+fi
+if [ "$2" == "cconv2" ]; then
+    complex=yes
+fi
 
 rm -rf explicit implicit pruned
 touch explicit implicit pruned
@@ -14,9 +26,10 @@ for (( i=$start; i<=$stop; i++ ))
 do
     echo $i
     m=$(asy -c "2^$i")
-    echo -e "$m \t $(./a.out $m 0 | grep -A 1 Implicit | tail -n 1)"| cat >> implicit
-    m=$(asy -c "floor((2^($i+1)+2)/3);")
-    echo -e "$m \t $(./a.out $m 1 | grep -A 1 Explicit | tail -n 1)" | cat >> explicit
-    m=$(asy -c "floor((2^($i+1)+2)/3);")
-    echo -e "$m \t $(./a.out $m 1 | grep -A 1 Pruned | tail -n 1)" | cat >> pruned
+    echo -e "$m \t $(./$2 $m 0 | grep -A 1 Implicit | tail -n 1)"| cat >> implicit
+    if [ "$complex" == "no" ]; then
+	m=$(asy -c "floor((2^($i+1)+2)/3);")
+    fi
+    echo -e "$m \t $(./$2 $m 1 | grep -A 1 Explicit | tail -n 1)" | cat >> explicit
+    echo -e "$m \t $(./$2 $m 1 | grep -A 1 Pruned | tail -n 1)" | cat >> pruned
 done
