@@ -1,7 +1,13 @@
 % Put legends inside graphs.
 
 \documentclass[final]{siamltex}
-%\documentclass[12pt]{article}
+\usepackage[lined,algonl,boxed]{algorithm2e}
+
+\let\ocases\cases
+\let\matrixo\matrix
+\usepackage{amsmath}
+\let\cases\ocases
+\let\matrix\matrixo
 
 \usepackage{hyperref}
 \usepackage{mathdef}
@@ -31,7 +37,8 @@
 \def\es{\end{dsuspend}}
 \def\no{\hiderel}
 
-\newcommand{\Fourier}[0]{\mathcal{F}}
+\def\Re{\mathop{\rm Re}\nolimits}
+\def\Im{\mathop{\rm Im}\nolimits}
 
 \begin{document}
 
@@ -85,8 +92,6 @@ pseudospectral method, in-place transform, bit reversal
 % CRAY power-of-2 stride issue
 % Supports efficient convolutions of power of 2 sizes
 %
-% memory requirements of phase-shift \cite{Patterson and Orszag 71} (doubles
-% memory usage).
 
 % Think about parallelization issues (another advantage of removing zeros).
 
@@ -110,13 +115,17 @@ to remove aliases from the convolution. Typically the data array is
 extended by padding it with enough zeros so that the wave beats of the
 the positive frequencies cannot wrap around and contaminate
 the negative frequencies. The convolution is then performed using a
-correspondingly larger Fourier transform size. Alternatively, phase
-shift dealiasing \cite{Patterson71,Canuto} can be used to cancel out the
-aliasing errors between two convolutions with two different phase
-shifts. However, this second technique is rarely used in practice, since in
-addition to doubling the memory requirements, it is computationally more
-expensive ($15N\log_2 N$ operations) than zero padding
-($\fr{45/4}N\log_2 N$ operations) \cite[p.~136]{Canuto}. 
+correspondingly larger Fourier transform size $N$. For example, if the cost of 
+computing a complex Fourier transform of size $n$ is asymptotic to 
+$K n\log_2 n$ as $n\goesto\infty$ (the lowest bound currently 
+achievable is $K=34/9$ \cite{Johnson07,Lundy07}), evaluating a centered 
+Hermitian~1D convolution of two vectors of length $2m-1$ requires
+$\fr{9}{2}Km\log_2 m$.
+Alternatively, phase shift dealiasing \cite{Patterson71,Canuto} can be used
+to cancel out the aliasing errors between two convolutions with two
+different phase shifts. However, this second technique is rarely used in
+practice, since in addition to doubling the memory requirements, it is
+computationally more expensive, requiring $6K m\log_2 m$ operations.
 
 An explicit application of the zero-padding technique has the rather
 obvious inefficiency of summing over a large number of data values that
@@ -138,9 +147,9 @@ two or so simply by skipping 1d sub-transforms that are zero).
 \end{quotation}
 
 The reasoning behind the assertion that such one-dimensional pruned FFTs
-are not worth thinking about is that if $K$ of the $N$ inputs are zero,
-the computational cost is reduced only from $N\log N$ to $N\log K$.
-For example, if $K=N/2$, the savings is a minuscule $1/\log_2 N$.
+are not worth thinking about is that if $m$ of the $N$ inputs are nonzero,
+the computational cost is reduced only from $N\log N$ to $N\log m$.
+For example, if $m=N/2$, the savings is a minuscule $1/\log_2 N$.
 Nevertheless, in this work we demonstrate that pruning the zero-padded
 elements of one-dimensional convolutions is indeed worth thinking about,
 primarily because it provides a more effective building block for constructing
@@ -176,13 +185,13 @@ help to offset this disadvantage. First, since the goal is to produce a
 convolution, bit-reversal for the manual (highest) subdivision is
 unnecessary: the scrambled Fourier subtransforms of the two input vectors
 can be multiplied together as they are produced (perhaps while are still
-accessible in the cache). Second, the implicit method allows most (four out
-of six for the complex unshifted case and seven out of nine for the
-Hermitian centered case) of the subtransforms for an in-place convolution
-to be computed as out-of-place transforms, which are typically faster than
-in-place transforms.  These savings helped keep our one-dimensional in-place
-implicit convolution competitive with the explicitly padded convolution
-based on the same highly optimized library.
+accessible in the cache). Second, the implicit method allows most 
+of the subtransforms for an in-place convolution to be computed as
+out-of-place transforms, which execute faster than in-place transforms
+since they require no extra (pre-, post-, or interlaced) bit-reversal stage.
+These savings helped keep our one-dimensional in-place implicit convolution
+competitive with the explicitly padded convolution based on the same highly
+optimized library.
 
 \section{Implicitly dealiased 1D convolutions}
 \subsection{Complex convolution}
@@ -204,7 +213,7 @@ The fast Fourier transform method exploits the properties that
 $\zeta_N^r=\zeta_{N/r}$ and $\zeta_N^N=1$.
 
 If $U_k=0$ for $k \ge m$, one can easily avoid looping over the
-unwanted zero Fourier modes by decimating in frequency:
+unwanted zero Fourier modes by decimating in wavenumber:
 \belc
 u_{2\ell}
 =\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} U_k,
@@ -233,6 +242,35 @@ for each input vector two arrays of size $m$ instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
 convolutions described in Sections~\ref{conv2} and~\ref{conv3}.
+Moreover, in Algorithm~\ref{cconv} we see that four out the six
+complex Fourier transforms of size $m$ can be done out of place.
+
+\SetAlCapSkip{3pt}
+\SetKwFunction{FFTinv}{fft$\inv$}
+\SetKwFunction{FFT}{fft}
+
+\begin{algorithm}[htp]
+  \SetKwData{xf}{f}
+  \SetKwData{xg}{g}
+  \SetKwData{xu}{u}
+  \SetKwData{xv}{v}
+  \KwIn{vector \xf, vector \xg}
+  \KwOut{vector \xf}
+  \xu $\leftarrow$ $\z_N^k$ \xf\;
+  \xv $\leftarrow$ $\z_N^k$ \xg\;
+  \medskip
+  \xu $\leftarrow$ \FFTinv{\xu}\;
+  \xv $\leftarrow$ \FFTinv{\xv}\;
+  \xv $\leftarrow$ \xu * \xv\;
+  \xu $\leftarrow$ \FFT{\xv}\;
+  \medskip
+  \xv $\leftarrow$ \FFTinv{\xf}\;
+  \xf $\leftarrow$ \FFTinv{\xg}\;
+  \xv $\leftarrow$ \xv * \xf\;
+  \xf $\leftarrow$ \FFT{\xv}\;
+  
+  \caption{In-place convolution of two complex vectors.}\label{cconv}
+\end{algorithm}
 
 Referring to the computation times shown in Figure~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
@@ -312,8 +350,16 @@ NU_k=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r
 The use of the remainder $r=-1$ instead of $r=2$ allows us to exploit
 the optimization $\zeta_N^{-k}=\conj{\zeta_N^ k}$ in \Eqs{fft0backwardsB}
 and~\hEq{fft0forwards}.
-
-%Thus, the total number of operations is $3 m \log m = N \log\frac{N}{3}$.
+Also, the operation count in the two complex multiplications
+in \Eq{fft0backwardsB} can be reduced by introducing the quantities
+\begin{align*}
+A_k&\doteq \zeta_N^k\(\Re U_k+\conj{z} \Re U_{k-m}\),\\
+B_k&\doteq i\zeta_N^k\(\Im U_k+\conj{z} \Im U_{k-m}\),
+\end{align*}
+where $z\doteq\zeta_3^1=\(-\half,\sqrt{3}/2\)$ so that for $k > 0$,
+$w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
+The operation count for these implictly padded transforms is asymptotic to
+$3Km\log m$. 
 
 \subsection{Hermitian convolution}
 
@@ -341,27 +387,59 @@ U_0&if $k=0$,\cr
 }
 \eelc
 
-The forwards transform for this case is
-\be
-NU_k
-=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
-\qquad k\no =0,\ldots,m-1.\label{fft0forwardsB}
-\ee
-
 We note that $w_{k,r}$ obeys the unshifted Hermitian symmetry 
 $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
-be real-valued. This allows us to build our implicitly padded Hermitian
-backwards transform using three complex-to-real Fourier transforms of the
-first $c+1$ components of $w_{k,r}$. Since there are two input vectors and
-one output vector, the complete convolution requires a total of nine
-Fourier transforms of size $c+1$.
-If a complex-to-real or real-to-complex FFT of length $n$
-were to require $\fr{n}{2}\log n$ operations, this would require 
-a total of $\fr{9}{2} m \log m$ FFT operations, in addition to the cost
-of evaluating \Eq{fft0forwardsB} and the term-by-term multiplication.
-In comparison, an explicitly padded convolution would require
-$\fr{3N}{2}\log N=\fr{9m}{2}(\log m+\log 3)$ operations.
+be real-valued. This allows us to build a backwards implicitly padded
+Hermitian transform using three complex-to-real Fourier transforms of the
+first $c+1$ components of $w_{k,r}$ (for $r\in\{-1,0,1\}$). The forwards
+transform is given 
+by
+\belc
+NU_k
+=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
+\qquad k\no =0,\ldots,m-1.\label{fft0forwardsB}
+\eelc
+Since $u_{3\ell+r}$ is real, a real-to-complex transform can be used to
+compute the first $c+1$ frequencies of
+$\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}$; the remaining $m-c-1$
+frequencies needed in \Eq{fft0forwardsB} are then computed using Hermitian
+symmetry. Since there are two input vectors and
+one output vector, the complete convolution then requires a total of nine
+Hermitian Fourier transforms of size $c+1$ for an overall computational
+scaling of $\fr{9}{2}K m \log m$ operations, in agreement with the
+leading-order scaling of an explicitly padded centered Hermitian convolution.
+We see in Algorithm~\ref{conv} that seven out of these nine Fourier
+transforms can be done out of place.
+
+\SetKwFunction{rcFFT}{rcfft}
+\SetKwFunction{crFFT}{crfft}
+
+\begin{algorithm}[htp]
+  \SetKwData{xf}{f}
+  \SetKwData{xg}{g}
+  \SetKwData{xu}{u}
+  \SetKwData{xv}{v}
+  \SetKwData{xA}{A}
+  \KwIn{vector \xf, vector \xg}
+  \KwOut{vector \xf}
+  ...
+  in progress\;
+  \xu $\leftarrow$ $\z_N^k$ \xf\;
+  \xv $\leftarrow$ $\z_N^k$ \xg\;
+  \medskip
+  \xu $\leftarrow$ \FFTinv{\xu}\;
+  \xv $\leftarrow$ \FFTinv{\xv}\;
+  \xv $\leftarrow$ \xu * \xv\;
+  \xu $\leftarrow$ \FFT{\xv}\;
+  \medskip
+  \xv $\leftarrow$ \FFTinv{\xf}\;
+  \xf $\leftarrow$ \FFTinv{\xg}\;
+  \xv $\leftarrow$ \xv * \xf\;
+  \xf $\leftarrow$ \FFT{\xv}\;
+  
+  \caption{In-place convolution of two centered Hermitian vectors.}\label{conv}
+\end{algorithm}
 
 \begin{comment}
 $$
@@ -402,12 +480,16 @@ algorithm only those vector lengths that maximize performance.
 
 On the other hand, for those applications where the size of the convolution
 is dictated by external criteria, implicit padding effectively expands the
-set of efficient convolutions sizes to include integral powers of $2$, a
-case of practical significance. The existence of implicit convolutions in
+available set of efficient convolutions sizes to include integral powers of
+$2$, a case of practical significance. The existence of implicit convolutions in
 fact nullifies the argument of Canuto...
 % Address slightly misleading implication of Canuto page 136
 % (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
 % application).
+
+\section{Implicitly dealiased 2D convolutions}
+
+\subsection{Complex convolution}
 
 \subsubsection{2D Complex to Real Transforms of 2/3 Dealiased Data}
 The Hermiticity condition is now $U_{-k,-\ell}=\conj{U_{k,\ell}}$.
