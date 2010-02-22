@@ -467,7 +467,9 @@ Hermitian Fourier transforms of size $m$, for an overall computational
 scaling of $\fr{9}{2}K m \log m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
 We see in Algorithm~\ref{conv} that seven out of these nine Fourier
-transforms can be done out of place.
+transforms can be performed out of place using the same amount of memory,
+$2(N/2+1)=6c+2$, as would be used to compute a centered Hermitian convolution with
+explicit padding.
 
 For simplicity, we first consider the case where $m=2c$.
 To facilitate an in-place implementation of the backwards transform, we
@@ -482,7 +484,10 @@ obtained by the substitution $k'=c-k$. One can omit the factors of
 $(-1)^j$ since they will cancel during the real term-by-term multiplication
 of the two transformed input vectors.
 
-\begin{procedure}[htbp]
+\begin{figure}[htbp]
+\begin{minipage}{.49\linewidth}
+\begin{center}
+\begin{procedure}[H]
   \SetKwData{xf}{f}
   \SetKwData{xu}{u}
   \SetKwData{xFk}{F}
@@ -505,6 +510,19 @@ of the two transformed input vectors.
 from an unpadded vector {\sf f} of length $2c$ into {\sf f} and an auxillary
 vector~{\sf u} of length $c+1$.}\label{build} 
 \end{procedure}
+\end{center}
+\end{minipage}
+\begin{minipage}{0.49\linewidth}
+\begin{center}
+%On orcinus, using N=100000000.
+\includegraphics{timing1r}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased centered Hermitian in-place 1D convolutions of two vectors of
+(unpadded) length $(2m-1)$.}
+\label{timing1r}
+\end{center}
+\end{minipage}
+\end{figure}
 
 \begin{function}[htbp]
   \SetKwData{xf}{f}
@@ -572,16 +590,6 @@ an in-place implicitly dealiased convolution of two centered Hermitian vectors
 {\sf v} of length $c+1$.}\label{conv}
 \end{function}
 
-\begin{figure}[htbp]
-\begin{center}
-%On orcinus, using N=100000000.
-\includegraphics{timing1r}
-\caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 1D convolutions of two vectors of
-(unpadded) length $(2m-1)$.}
-\label{timing1r}
-\end{center}
-\end{figure}
 
 \begin{comment}
 $$
