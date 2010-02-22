@@ -428,15 +428,15 @@ public:
     double overlap1=f[c].re;
 
     // r=1:
-    f[cm1]=A;
-    f[c]=fc;
     Complex *f1=f+cm1;
+    f1[0]=A;
+    f1[1]=fc;
     Complex *g1=g+cm1;
-    G=(double *) g;
-    g[cm1]=C;
-    g[c]=gc;
+    g1[0]=C;
+    g1[1]=gc;
     V=(double *) v;
     cro->fft(g1,V);
+    G=(double *) g1;
     cro->fft(f1,G);
     for(int i=0; i < m; ++i)
       G[i] *= V[i];
