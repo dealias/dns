@@ -205,6 +205,11 @@ one-dimensional in-place implicit convolution competitive with the
 explicitly padded convolution based on the same highly optimized
 library.
 
+%Add outline
+We also show how implicit padding can be used to efficiently
+dealias the hyperconvolution 
+$\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
+
 \section{Implicitly dealiased 1D convolutions}
 \subsection{Complex convolution}
 The Fourier origin for unshifted convolutions is located at index zero.
