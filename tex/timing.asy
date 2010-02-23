@@ -5,19 +5,26 @@ size(175,200,IgnoreAspect);
 scale(Log,Log);
 real[] mp,p,mu,u,mP,P;
 
-file fin=input("explicit").line();
+string pname=getstring("program name");
+string dir;
+if(pname == "conv") dir="timings1r";
+if(pname == "conv2") dir="timings2r";
+if(pname == "cconv") dir="timings1c";
+if(pname == "cconv2") dir="timings2c";
+
+file fin=input(dir+"/explicit").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);
 mp=a[0]; p=a[1];
 
-file fin=input("pruned").line();
+file fin=input(dir+"/pruned").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);
 if(a.length > 1) {
   mP=a[0]; P=a[1];
 }
 
-file fin=input("implicit").line();
+file fin=input(dir+"/implicit").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);
 mu=a[0]; u=a[1];
