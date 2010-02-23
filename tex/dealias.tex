@@ -135,7 +135,7 @@ To a frequently asked question by FFTW %FIXME:ref?
 unnecessary expense in computing a dealiased convolution,
 Steven G. Johnson has provided this
 answer \cite{http://www.fftw.org/pruned.html}:
-\begin{quotation}
+\begin{quotation}\label{quote}
 {\it
 The most common case where people seem to want a pruned FFT is for
 zero-padded convolutions, where roughly 50\% of your inputs are zero (to
@@ -245,8 +245,12 @@ NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 +\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell+1}
 \qquad k\no=0,\ldots,\fr{N}{2}-1.\label{cconv1forwards}
 \eel
-One can thus compute a dealiased convolution of (unpadded) length $m$ using
-two arrays of size $m$ as input vectors instead of one array of size $2m$.
+The transforms described by~\Eqs{cconv1backwards} and~\ref{cconv1forwards}
+are implemented as Procedure~\ref{fftpadBackwards} and
+Function~\ref{fft0padForwards}.
+These algorithms are combined in Function~\ref{cconv} to 
+compute a dealiased convolution of (unpadded) length $m$ using
+two arrays of size~$m$ as input vectors instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
 convolutions described in Sections~\ref{conv2} and~\ref{conv3}.
@@ -259,17 +263,59 @@ complex Fourier transforms of size $m$ can be done out of place.
 \def\fft{\tt fft}
 \def\crfft{\tt crfft}
 \def\rcfft{\tt rcfft}
+\SetKwData{xf}{f}
+\SetKwData{xu}{u}
+\SetKwData{xFk}{F}
+\SetKwData{xA}{A}
+\SetKwData{xB}{B}
+\SetKwData{xg}{g}
+\SetKwData{xv}{v}
+\SetKwData{xA}{A}
+\SetKwData{xB}{B}
+\SetKwData{xC}{C}
+\SetKwData{xD}{D}
+\SetKwData{xF}{F}
+\SetKwData{xG}{G}
+\SetKwData{xS}{S}
+\SetKwData{xT}{T}
+\SetKwData{xU}{U}
+\SetKwData{xV}{V}
 
 \begin{figure}[htbp]
-\begin{minipage}{.49\linewidth}
-\begin{center}
+\begin{minipage}{0.52\linewidth}
+\begin{procedure}[H]
+  \For{$k=0$ \KwTo $m-1$}{
+    $\xu[k] \leftarrow \z_{2m}^k * \xf[k]$\;
+  }
+  $\xf \leftarrow \fft\inv(\xf)$\;
+  $\xu \leftarrow \fft\inv(\xu)$\;
+  \caption{fftpadBackwards(vector~{\sf f}, vector {\sf u}) stores the scrambled
+$2m$ implicitly dealiased backwards Fourier transform values of a vector
+{\sf f} of length $m$ in {\sf f} and an auxillary vector~{\sf u} of length $m$.}\label{fftpadBackwards}
+\end{procedure}
+\end{minipage}
+\begin{minipage}{0.48\linewidth}
 \begin{function}[H]
-  \SetKwData{xf}{f}
-  \SetKwData{xg}{g}
-  \SetKwData{xu}{u}
-  \SetKwData{xv}{v}
-  \xu $\leftarrow$ $\z_{3m}^k$ \xf\;
-  \xv $\leftarrow$ $\z_{3m}^k$ \xg\;
+  $\xf \leftarrow \fft(\xf)$\;
+  $\xu \leftarrow \fft(\xu)$\;
+  \For{$k=0$ \KwTo $m-1$}{
+    $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k} * \xu[k]$\;
+  }
+  \Return f/(2m)\;
+  \caption{fftpadForwards(vector {\sf f}, vector {\sf u}) returns the
+inverse of fftpadBackwards(vector {\sf f}, vector {\sf
+u}).}\label{fftpadForwards} 
+\end{function}
+\end{minipage}
+\end{figure}
+
+\begin{figure}[htbp]
+\begin{minipage}{0.5\linewidth}
+\begin{function}[H]
+  \For{$k=0$ \KwTo $m-1$}{
+    $\xu[k] \leftarrow \z_{2m}^k * \xf[k]$\;
+    $\xv[k] \leftarrow \z_{2m}^k * \xg[k]$\;
+  }
   \medskip
   $\xu \leftarrow \fft\inv(\xu)$\;
   $\xv \leftarrow \fft\inv(\xv)$\;
@@ -280,13 +326,12 @@ complex Fourier transforms of size $m$ can be done out of place.
   $\xf \leftarrow \fft\inv(\xg)$\;
   $\xv \leftarrow \xv * \xf$\;
   $\xf \leftarrow \fft(\xv)$\;
-  \Return f/(3m);
+  \Return f/(2m)\;
 \caption{cconv(vector {\sf f}, vector~{\sf g}) computes
 an in-place implicitly dealiased convolution of two complex vectors {\sf f}
 and {\sf g} using two temporary vectors {\sf u} and {\sf v}, all of
 length~$m$.}\label{cconv}
 \end{function}
-\end{center}
 \end{minipage}
 \begin{minipage}{0.5\linewidth}
 \begin{center}
@@ -368,9 +413,7 @@ operate fully in-place on their arguments, with no further storage
 requirements, it is straightforward to implement strided multivector
 versions of these routines.
 
-\begin{procedure}[htp]
-  \SetKwData{xf}{f}
-  \SetKwData{xu}{u}
+\begin{procedure}[htbp]
   \SetKwData{xA}{A}
   \SetKwData{xB}{B}
   \KwIn{vector \xf}
@@ -390,16 +433,12 @@ versions of these routines.
   $\xf[m-1] \leftarrow \xu[0]$\;
   $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}\inv(\xf[m-1,\ldots,2m-2])$\;
   $\xu[0,\ldots,m-1] \leftarrow {\tt fft}\inv(\xu[0,\ldots,m-1])$\;
-  \caption{fft0padBackwards(vector {\sf f}, vector {\sf u}) returns the scrambled
+  \caption{fft0padBackwards(vector {\sf f}, vector {\sf u}) stores the scrambled
 $3m$ implicitly dealiased backwards Fourier transform values of a vector {\sf f} of length
 $2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0padBackwards}
 \end{procedure}
 
-\begin{procedure}[htp]
-  \SetKwData{xf}{f}
-  \SetKwData{xu}{u}
-  \SetKwData{xA}{A}
-  \SetKwData{xB}{B}
+\begin{function}[htbp]
   \KwIn{vector \xf, vector \xu}
   \KwOut{vector \xf}
 
@@ -415,10 +454,11 @@ $2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0pa
     $\xf[m-1+k]=\xf[k]+\zeta_{3m}^{-k}*\xf[m-1+k]+\zeta_{3m}^k*\xu[k]$\;
   }
   $\xf[m-1] \leftarrow \xu[m]$\;
-
-  \caption{fft0padForwards(vector {\sf f}, vector {\sf u}) is $3m$ times
-the inverse of fft0padBackwards(vector {\sf f}, vector {\sf u}).}\label{fft0padForwards}
-\end{procedure}
+  \Return \xf/(3m)\;
+  \caption{fft0padForwards(vector {\sf f}, vector {\sf u}) returns the
+inverse of fft0padBackwards(vector {\sf f}, vector {\sf u}).}
+\label{fft0padForwards}
+\end{function}
 
 \subsection{Hermitian convolution}
 
@@ -449,7 +489,7 @@ U_0&if $k=0$,\cr
 We note that $w_{k,r}$ obeys the unshifted Hermitian symmetry 
 $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
-be real-valued. This allows us to build a backwards implicitly deliased
+be real valued. This allows us to build a backwards implicitly deliased
 Hermitian transform using three complex-to-real Fourier transforms of the
 first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
 forwards transform is given by
@@ -486,16 +526,6 @@ $(-1)^j$ since they will cancel during the real term-by-term multiplication
 of the two transformed input vectors.
 
 \begin{function}[htbp]
-  \SetKwData{xf}{f}
-  \SetKwData{xg}{g}
-  \SetKwData{xu}{u}
-  \SetKwData{xv}{v}
-  \SetKwData{xC}{C}
-  \SetKwData{xD}{D}
-  \SetKwData{xF}{F}
-  \SetKwData{xG}{G}
-  \SetKwData{xS}{S}
-  \SetKwData{xT}{T}
   \SetKwFunction{build}{build}
   \KwIn{vector \xf, vector \xg}
   \KwOut{vector \xf}
@@ -545,7 +575,7 @@ of the two transformed input vectors.
   $\xf[c]=T-\(-\half,\fr{\sqrt{3}}{2}\)*\xv[c]-\(-\half,-\fr{\sqrt{3}}{2}\)*\xu[c]$\;
   $\xf[c+1]=\conj{S}+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{c-1}*\conj{\xv[c-1]}+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{1-c}*\conj{\xu[c-1]}$\;
 
-  \Return f/(6c);
+  \Return f/(6c)\;
 \caption{conv(vector {\sf f}, vector {\sf g}) 
 uses Procedure~\ref{build} to compute
 an in-place implicitly dealiased convolution of centered Hermitian vectors
@@ -555,13 +585,7 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
 
 \begin{figure}[htbp]
 \begin{minipage}{0.5\linewidth}
-\begin{center}
 \begin{procedure}[H]
-  \SetKwData{xf}{f}
-  \SetKwData{xu}{u}
-  \SetKwData{xFk}{F}
-  \SetKwData{xA}{A}
-  \SetKwData{xB}{B}
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
   $\xu[0] \leftarrow \xf[0]$\;
@@ -582,7 +606,6 @@ required for Procedure~\ref{conv} from an unpadded vector {\sf f} of length
 $2c$ into {\sf f} and an auxillary vector~{\sf u} of length
 $c+1$.}\label{build}
 \end{procedure}
-\end{center}
 \end{minipage}
 \begin{minipage}{0.5\linewidth}
 \begin{center}
@@ -647,47 +670,96 @@ fact nullifies the argument of Canuto...
 \section{Implicitly dealiased 2D convolutions}
 
 \subsection{Complex 2D convolution}
-We now show how the previous routines can be used as building blocks 
-to construct efficient implicitly padded 2D convolutions.
+The algorithms developed in the previous sections can be used as building
+blocks to construct the efficient implicitly padded 2D convolution shown in
+Algorithm~\ref{cconv2}. As shown in Figure~\ref{timing2c}, the implicit
+algorithm now outperforms the explicit version. 
+For example, a $1024\times 1024$ complex convolution runs $48\%$ faster
+than an explict convolution. The gains appear to increase with transform
+size: a $8192\times 8192$ implicit convolution runs $52\%$ faster than an
+explicit one.
+
+The third sentence of the quote from Steven G. Johnson
+on page~\ref{quote} suggests a very reasonable optimization
+to explicitly padded 2D convolutions.
+However there are other optimization possibilites lost in directly
+expressing a 2D convolution in terms of 1D transforms: as illustrated in
+Figure~\ref{cconv2}, while the pruned explicit convolution is 27\% faster
+than a conventional 2D explicit convolution for size $1024\times 1024$ but
+$71\%$ slower for a $8192\times 8192$ convolution. Our implicitly dealised
+convolution is also subject to these same losses, but the savings due to
+implicit padding, ignoring outer bit reversal, in-place subtransforms, 
+and computing the convolution of each column as it is transformed (and
+thereby perhaps still in cache) more than outweighs these losses.
+%CHECK timing again when using mfft in both directions for pruned algorithm.
+
+Because the same temporary arrays $u$ and $v$ are used for each column
+of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
+words in comparison to the $8m_xm_y$ complex words required for an
+explicitly padded convolution. Asymptotically, as $m_x\goesto\infty$,
+a 2D implicit complex convolution therefore requires half the memory
+required by zero padding.
+
+%Discuss proper storage direction & use of multiple ffts.
 
 \begin{function}[htbp]
-  \For{$k=1$ \KwTo $m-1$}{
+  \SetKwFunction{fftpadBackwards}{fftpadBackwards}
+  \SetKwFunction{fftpadForwards}{fftpadForwards}
+  \SetKwFunction{cconv}{cconv}
+  \For{$j=0$ \KwTo $m_y-1$}{
+    $\fftpadBackwards(\xf^T[j],\xU^T[j])$\;
+    $\fftpadBackwards(\xg^T[j],\xV^T[j])$\;
   }
-
-\caption{cconv(matrix~{\sf f}, matrix~{\sf g}) 
-uses Procedure~\ref{build} to compute
-an in-place implicitly dealiased convolution of centered Hermitian matrices
-{\sf f} and {\sf g} of length $m\times m$ using temporary matrices 
-{\sf U} and {\sf V} of length $m\times m$ and temporary vectors
-{\sf u} and {\sf v} of length $m$.
+  \For{$i=0$ \KwTo $m_x-1$}{
+    $\cconv(\xf[i],\xg[i])$\;
+    $\cconv(\xU[i],\xV[i])$\;
+  }
+  \For{$j=0$ \KwTo $m_y-1$}{
+    $\fftpadForwards(\xf^T[j],\xU^T[j])$\;
+  }
+  \Return \xf\;
+\caption{cconv2(matrix~{\sf f}, matrix~{\sf g}) 
+returns an in-place implicitly dealiased convolution of
+{\sf f} and {\sf g} of length $m_x\times m_y$ using temporary matrices 
+{\sf U} and {\sf V} of length $m_x\times m_y$ and temporary vectors
+{\sf u} and {\sf v} of length $m_y$.
 .}\label{cconv2}
 \end{function}
 
 \subsection{Centered 2D Hermitian convolution}
 
-\subsubsection{2D Complex to Real Transforms of 2/3 Dealiased Data}
-The Hermiticity condition is now $U_{-k,-\ell}=\conj{U_{k,\ell}}$.
-\begin{comment}
-The procedure is analagous as in 1D,
-where we interpret each index as a vector, add dot products,
-split the two-dimensional sum into lower and upper halves, and use the
-change of variables $\vk=(m_x,m_y)+\vk'$.
-\bec
-u_{3u+r,3v+s}\no=\sum_{k=-m-1}^{m-1}\sum_{\ell=-m-1}^{m-1}
-\z_m^{u k} \z_m^{v \ell} \z_N^{rk} \z_N^{s\ell} U_{k,\ell}
-=\sum_{k=-m-1}^{m-1}\z_m^{u k}\z_N^{rk}  
-\sum_{\ell=1}^{m-1} \z_m^{v \ell} \z_N^{s(\ell'-m)} U_{k,\ell'-m}
-+\sum_{k=-m-1}^{m-1}\z_m^{u k}\z_N^{rk}
-\sum_{\ell=0}^{m-1} \z_m^{v \ell} \z_N^{s\ell} U_{k,\ell}
-=\sum_{k=-m-1}^{m-1}\z_m^{-u k}\z_N^{-rk}  
-\sum_{\ell=1}^{m-1} \z_m^{v \ell} \z_N^{-s(m-\ell')} \conj{U_{k,m-\ell'}}
-+\sum_{k=-m-1}^{m-1}\z_m^{u k}\z_N^{rk}
-\sum_{\ell=0}^{m-1} \z_m^{v \ell} \z_N^{s\ell} U_{k,\ell}
-\ee
-\end{comment}
+In two dimensions, the Fourier-centered Hermiticity condition appears as
+$U_{-k,-\ell}=\conj{U_{k,\ell}}$. 
+This symmetry is exploited to develop the centered Hermitian convolution
+algorithm described in Function~\ref{cconv2}. As shown in
+Figure~\ref{timing2c}, the implicit 
+Again, one finds dramatica
 
-%Our 1024x1024 complex convolution is now 48\% faster (the pruned one is
-%27\% faster)!
+\begin{function}[htbp]
+  \SetKwFunction{fftpadBackwards}{fftpadBackwards}
+  \SetKwFunction{fftpadForwards}{fftpadForwards}
+  \SetKwFunction{cconv}{cconv}
+  \For{$j=0$ \KwTo $m_y-1$}{
+    $\fft0padBackwards(\xf^T[j],\xU^T[j])$\;
+    $\fft0padBackwards(\xg^T[j],\xV^T[j])$\;
+  }
+  \For{$i=0$ \KwTo $2m_x-1$}{
+    $\conv(\xf[i],\xg[i],u,v)$\;
+  }
+  \For{$i=0$ \KwTo $m_x$}{
+    $\conv(\xU[i],\xV[i],u,v)$\;
+  }
+  \For{$j=0$ \KwTo $m_y-1$}{
+    $\fft0padForwards(\xf^T[j],\xU^T[j])$\;
+  }
+  \Return \xf\;
+\caption{conv2(matrix~{\sf f}, matrix~{\sf g}) 
+returns an in-place implicitly dealiased convolution of
+{\sf f} and {\sf g} of length $(2m_x-1)\times m_y$ using temporary matrices 
+{\sf U} and {\sf V} of length $(m_x+1)\times m_y$ and temporary vectors
+{\sf u} and {\sf v} of length $m_y$.
+.}\label{conv2}
+\end{function}
 
 \begin{figure}[htbp]
 \begin{center}
@@ -713,8 +785,6 @@ dealiased centered Hermitian in-place 2D convolutions of two vectors of
 \end{center}
 \end{figure}
 
-
-\newpage
 \subsection{$p/q$ Dealiased Data}
 
 In general, consider a ``$p/q$'' padding in which $N=qm$, and only $pm$ modes
@@ -783,6 +853,8 @@ buffer for all necessary transformations.
 In this work we develop an efficient method for avoiding explicit zero
 padding in multidimensional convolutions, saving both memory and
 computation time.
+
+%Copying issue: additional memory savings for user.
 
 \bibliography{refs}
 \end{document}
