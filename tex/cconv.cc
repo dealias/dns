@@ -2,9 +2,7 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
-#define TEST yes
-const double E=2.71828182845904523536;
-const  Complex I(0,1);
+//#define TEST yes
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3 -march=native
 
 // icpc -O3 -ansi-alias -malign-double -fp-model fast=2 cconv.cc fftw++.cc -lfftw3
@@ -17,6 +15,8 @@ const  Complex I(0,1);
 // Number of iterations.
 #ifdef TEST
 unsigned int N=1;
+const double E=2.71828182845904523536;
+const  Complex I(0,1);
 #else
 unsigned int N=10000000;
 #endif
@@ -165,7 +165,8 @@ int main(int argc, char* argv[])
 #endif
   }
   
-  if(false)
+#ifdef TEST
+  //  if(false)
     {
     DirectConvolution C(m);
     init(f,g);
@@ -186,7 +187,6 @@ int main(int argc, char* argv[])
 
     // test accuracy of convolution methods:
     double error=0.0;
-#ifdef TEST
     for(unsigned int i=0; i < m; i++) {
       // exact solution for test case.
       h[i]=(i+1)*pow(E,2*m*I);
@@ -198,9 +198,10 @@ int main(int argc, char* argv[])
     cout << "error="<<error<<endl;
     if (error > 1e-12)
       cerr << "Caution! error="<<error<<endl;
-#endif    
     FFTWdelete(h);
   }
+#endif    
+
   
   FFTWdelete(g);
   FFTWdelete(f);
