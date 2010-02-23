@@ -114,18 +114,22 @@ input, is applied to nonperiodic (wavenumber-space) data, it is important
 to remove aliases from the convolution. Typically the data array is
 extended by padding it with enough zeros so that the wave beats of the
 the positive frequencies cannot wrap around and contaminate
-the negative frequencies. The convolution is then performed using a
-correspondingly larger Fourier transform size $N$. For example, if the cost of 
+the negative frequencies. A cyclic convolution $\sum_{p=0}^{N-1} f_p g_{k-p}$ is then performed using a
+correspondingly larger Fourier transform size $N$. If the cost of 
 computing a complex Fourier transform of size $N$ is asymptotic to 
-$K N\log_2 N$ as $N\goesto\infty$ (the lowest bound currently 
-achievable is $K=34/9$ \cite{Johnson07,Lundy07}), evaluating a centered 
-Hermitian~1D convolution of two vectors of length $2m-1$ requires
-$\fr{9}{2}Km\log_2 m$.
+$K N\log_2 N$ as \hbox{$N\goesto\infty$} (the lowest bound currently 
+achievable is $K=34/9$ \cite{Johnson07,Lundy07}), the asymptotic cost of
+computing the convolution of two vectors of unpadded length $m$ is
+$6Km\log_2 m$ (using $N=2m$ and three Fourier transforms).
+Another important case in practice is the centered Hermitian~1D convolution,
+$\sum_{p=-m+1}^{m-1} f_p g_{k-p}$, which requires $\fr{9}{2}Km\log_2 m$
+operations.
 Alternatively, phase shift dealiasing \cite{Patterson71,Canuto} can be used
 to cancel out the aliasing errors between two convolutions with two
 different phase shifts. However, this second technique is rarely used in
 practice, since in addition to doubling the memory requirements, it is
-computationally more expensive, requiring $6K m\log_2 m$ operations.
+computationally more expensive, requiring for a centered Hermitian convolution
+$6K m\log_2 m$ operations.
 
 An explicit application of the zero-padding technique has the rather
 obvious inefficiency of summing over a large number of data values that
@@ -162,7 +166,8 @@ padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
 buffer can be reused for other one-dimensional convolutions.
 As a result, for dimensions greater than one,
-an implicitly dealised standard convolution asymptotically uses half of the
+an implicitly dealised standard convolution $\sum_{p=0}^{m-1} f_p g_{k-p}$
+asymptotically uses half of the
 memory required by explicit padding. For the case where the Fourier origin is
 centered in the domain, memory usage is reduced by one third.
 Of course, if memory savings alone were the goal, these savings could
