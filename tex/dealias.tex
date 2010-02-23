@@ -579,7 +579,7 @@ of the two transformed input vectors.
 \caption{conv(vector {\sf f}, vector {\sf g}) 
 uses Procedure~\ref{build} to compute
 an in-place implicitly dealiased convolution of centered Hermitian vectors
-{\sf f} and {\sf g} of length $2c$ using temporary vectors {\sf u} and
+{\sf f} and {\sf g} of length~$2c$ using temporary vectors {\sf u} and
 {\sf v} of length $c+1$.}\label{conv}
 \end{function}
 
@@ -743,7 +743,7 @@ Again, one finds dramatica
     $\fft0padBackwards(\xf^T[j],\xU^T[j])$\;
     $\fft0padBackwards(\xg^T[j],\xV^T[j])$\;
   }
-  \For{$i=0$ \KwTo $2m_x-1$}{
+  \For{$i=0$ \KwTo $2m_x-2$}{
     $\conv(\xf[i],\xg[i],u,v)$\;
   }
   \For{$i=0$ \KwTo $m_x$}{
