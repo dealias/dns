@@ -131,13 +131,13 @@ practice, since in addition to doubling the memory requirements, it is
 computationally more expensive, requiring for a centered Hermitian convolution
 $6K m\log_2 m$ operations.
 
-An explicit application of the zero-padding technique has the rather
+An explicit application of the zero-padding technique involves the rather
 obvious inefficiency of summing over a large number of data values that
 are known {\it a priori\/} to be zero.
-To a frequently asked question about the possibility of avoiding this
-unnecessary expense in computing a dealiased convolution,
-Steven G. Johnson has provided this
-answer \cite{http://www.fftw.org/pruned.html}:
+However, it is first worth understanding the following answer 
+provided by Steven G. Johnson to a frequently asked question in the
+community about avoiding this unnecessary
+expense \cite{http://www.fftw.org/pruned.html}:
 \begin{quotation}\label{quote}
 {\it
 The most common case where people seem to want a pruned FFT is for
