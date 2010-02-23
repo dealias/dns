@@ -25,9 +25,6 @@
 
 typedef __m128d Vec;
 
-#define UNPACKL _mm_unpacklo_pd
-#define UNPACKH _mm_unpackhi_pd
-
 union uvec {
   unsigned u[4];
   Vec v;
@@ -72,6 +69,16 @@ static inline void operator *=(Vec& a, const Vec& b)
   a=_mm_mul_pd(a,b);
 }
 #endif
+
+static inline Vec UNPACKL(const Vec& z, const Vec& w)
+{
+  return _mm_unpacklo_pd(z,w);
+}
+
+static inline Vec UNPACKH(const Vec& z, const Vec& w)
+{
+  return _mm_unpackhi_pd(z,w);
+}
 
 static inline Vec FLIP(const Vec& z)
 {

@@ -116,8 +116,8 @@ extended by padding it with enough zeros so that the wave beats of the
 the positive frequencies cannot wrap around and contaminate
 the negative frequencies. The convolution is then performed using a
 correspondingly larger Fourier transform size $N$. For example, if the cost of 
-computing a complex Fourier transform of size $n$ is asymptotic to 
-$K n\log_2 n$ as $n\goesto\infty$ (the lowest bound currently 
+computing a complex Fourier transform of size $N$ is asymptotic to 
+$K N\log_2 N$ as $N\goesto\infty$ (the lowest bound currently 
 achievable is $K=34/9$ \cite{Johnson07,Lundy07}), evaluating a centered 
 Hermitian~1D convolution of two vectors of length $2m-1$ requires
 $\fr{9}{2}Km\log_2 m$.
@@ -688,7 +688,7 @@ Figure~\ref{cconv2}, while the pruned explicit convolution is 27\% faster
 than a conventional 2D explicit convolution for size $1024\times 1024$ but
 $71\%$ slower for a $8192\times 8192$ convolution. Our implicitly dealised
 convolution is also subject to these same losses, but the savings due to
-implicit padding, ignoring outer bit reversal, in-place subtransforms, 
+implicit padding, ignoring high-level bit reversal, in-place subtransforms, 
 and computing the convolution of each column as it is transformed (and
 thereby perhaps still in cache) more than outweighs these losses.
 %CHECK timing again when using mfft in both directions for pruned algorithm.
