@@ -5,9 +5,10 @@ CC=g++
 CFLAGS=-g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse -march=native
 
 #For icpc
-CPPFLAGS += -O3 -ansi-alias -malign-double -fp-model fast=2 
+#CC=icpc
+#CFLAGS=-O3 -ansi-alias -malign-double -fp-model fast=2 
 
-LDFLAGS=-lfftw3 -march=native
+LDFLAGS=-lfftw3
 
 icpc: all
 	CC=icpc
