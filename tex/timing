@@ -8,30 +8,45 @@ if [ "$1" == "" ]; then
     exit
 fi
 
-complex=no
+
+if [ "$1" == "conv" ]; then
+    complex=no
+    outdir=timings1r
+fi
+if [ "$1" == "conv2" ]; then
+    complex=no
+    outdir=timings2r
+fi
 if [ "$1" == "cconv" ]; then
     complex=yes
+    outdir=timings1c
 fi
 if [ "$1" == "cconv2" ]; then
     complex=yes
+    outdir=timings2c
 fi
+if [ "$outdir" == "" ]; then
+    echo "wrong program name!"
+    exit
+fi
+mkdir -p $outdir
+cd $outdir
+rm -rf explicit implicit pruned
+touch explicit implicit pruned
+cd ..
 
 if [ "$2" != "" ]; then
     stop=$2
 fi
-
-rm -rf explicit implicit pruned
-touch explicit implicit pruned
-
 echo Timing:
 for (( i=$start; i<=$stop; i++ ))
 do
     echo $i
     m=$(asy -c "2^$i")
-    echo -e "$m \t $(./$1 $m 0 | grep -A 1 Implicit | tail -n 1)"| cat >> implicit
+    echo -e "$m \t $(./$1 $m 0 | grep -A 1 Implicit | tail -n 1)"| cat >> $outdir/implicit
     if [ "$complex" == "no" ]; then
 	m=$(asy -c "floor((2^($i+1)+2)/3);")
     fi
-    echo -e "$m \t $(./$1 $m 1 | grep -A 1 Explicit | tail -n 1)" | cat >> explicit
-    echo -e "$m \t $(./$1 $m 1 | grep -A 1 Pruned | tail -n 1)" | cat >> pruned
+    echo -e "$m \t $(./$1 $m 1 | grep -A 1 Explicit | tail -n 1)" | cat >> $outdir/explicit
+    echo -e "$m \t $(./$1 $m 1 | grep -A 1 Pruned | tail -n 1)" | cat >> $outdir/pruned
 done
