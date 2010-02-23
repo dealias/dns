@@ -5,8 +5,11 @@ CC=g++
 CFLAGS=-g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse -march=native
 
 #For icpc
-#CC=icpc
-#CFLAGS=-O3 -ansi-alias -malign-double -fp-model fast=2 
+a:=$(shell which icpc |  tail -c5)
+ifeq ($(a),icpc)
+CC=icpc
+CFLAGS=-O3 -ansi-alias -malign-double -fp-model fast=2 
+endif
 
 LDFLAGS=-lfftw3
 
