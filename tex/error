@@ -1,0 +1,58 @@
+#!/bin/bash
+
+start=6
+stop=13
+
+if [ "$1" == "" ]; then
+    echo please specify program: error "["int"]" "["conv, cconv, conv2, or cconv2"]"
+    exit
+fi
+
+
+if [ "$1" == "conv" ]; then
+    complex=no
+    outdir=timings1r
+fi
+if [ "$1" == "conv2" ]; then
+    complex=no
+    outdir=timings2r
+fi
+if [ "$1" == "cconv" ]; then
+    complex=yes
+    outdir=timings1c
+    workingcase=yes
+fi
+if [ "$1" == "cconv2" ]; then
+    complex=yes
+    outdir=timings2c
+fi
+if [ "$workingcase" != "yes" ]; then
+    echo Only works for cconv!
+    exit
+fi
+
+if [ "$outdir" == "" ]; then
+    echo "wrong program name!"
+    exit
+fi
+mkdir -p $outdir
+cd $outdir
+rm -rf explicit implicit pruned
+touch explicit implicit pruned
+cd ..
+
+if [ "$2" != "" ]; then
+    stop=$2
+fi
+echo Timing:
+for (( i=$start; i<=$stop; i++ ))
+do
+    echo $i
+    m=$(asy -c "2^$i")
+    echo -e "$m \t $(./$1 $m 0 | grep error | sed s/error=//)"| cat >> $outdir/error.implicit
+    if [ "$complex" == "no" ]; then
+	m=$(asy -c "floor((2^($i+1)+2)/3);")
+    fi
+    echo -e "$m \t $(./$1 $m 1 | grep error | sed s/error=//)" | cat >> $outdir/error.explicit
+    echo -e "$m \t $(./$1 $m 1 | grep error | sed s/error=//)" | cat >> $outdir/error.pruned
+done
