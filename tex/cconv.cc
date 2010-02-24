@@ -196,9 +196,9 @@ int main(int argc, char* argv[])
   }
   for(unsigned int i=0; i < m; i++) 
     error += abs2(h[i]-pseudoh[i]);
-  error /= m;
+  error=sqrt(error/m);
   cout << "error="<<error<<endl;
-  if (error > 1e-12)
+  if (error > 1e-8)
     cerr << "Caution! error="<<error<<endl;
   FFTWdelete(h);
 #endif    
