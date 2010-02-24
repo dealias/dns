@@ -1002,6 +1002,7 @@ protected:
   unsigned int nx,ny;
   unsigned int mx,my;
   bool prune; // Skip Fourier transforming rows containing all zeroes?
+  bool odd;   // Is nx odd?
   mfft1d *xBackwards;
   mfft1d *xForwards;
   mcrfft1d *yBackwards;
@@ -1015,12 +1016,18 @@ public:
     nx(nx), ny(ny), mx(mx), my(my), prune(pruned) {
     unsigned int nyp=ny/2+1;
     // Odd nx requires interleaving of shift with x and y transforms.
-    if(nx % 2 == 1) prune=true;
+    unsigned int My=my;
+    if(nx % 2 == 1) {
+      odd=true;
+      if(!prune) My=nyp;
+      prune=true;
+    }
+
     if(prune) {
-      xBackwards=new mfft1d(nx,1,my,nyp,1,f);
+      xBackwards=new mfft1d(nx,1,My,nyp,1,f);
       yBackwards=new mcrfft1d(ny,nx,1,nyp,f);
       yForwards=new mrcfft1d(ny,nx,1,nyp,f);
-      xForwards=new mfft1d(nx,-1,my,nyp,1,f);
+      xForwards=new mfft1d(nx,-1,My,nyp,1,f);
     } else {
       Backwards=new crfft2d(nx,ny,f);
       Forwards=new rcfft2d(nx,ny,f);
@@ -1065,7 +1072,7 @@ public:
     
     if(prune) {
       xBackwards->fft(f);
-      fftw::Shift(f,nx,ny,-1);
+      if(odd) fftw::Shift(f,nx,ny,-1);
       yBackwards->fft(f);
     } else
       Backwards->fft(f);
@@ -1184,6 +1191,7 @@ protected:
   unsigned int nx,ny;
   unsigned int mx,my;
   bool prune; // Skip Fourier transforming rows containing all zeroes?
+  bool odd;   // Is nx odd?
   mfft1d *xBackwards;
   mfft1d *xForwards;
   mcrfft1d *yBackwards;
@@ -1197,12 +1205,18 @@ public:
     nx(nx), ny(ny), mx(mx), my(my), prune(pruned) {
     unsigned int nyp=ny/2+1;
     // Odd nx requires interleaving of shift with x and y transforms.
-    if(nx % 2 == 1) prune=true;
+    unsigned int My=my;
+    if(nx % 2 == 1) {
+      odd=true;
+      if(!prune) My=nyp;
+      prune=true;
+    }
+    
     if(prune) {
-      xBackwards=new mfft1d(nx,1,my,nyp,1,f);
+      xBackwards=new mfft1d(nx,1,My,nyp,1,f);
       yBackwards=new mcrfft1d(ny,nx,1,nyp,f);
       yForwards=new mrcfft1d(ny,nx,1,nyp,f);
-      xForwards=new mfft1d(nx,-1,my,nyp,1,f);
+      xForwards=new mfft1d(nx,-1,My,nyp,1,f);
     } else {
       Backwards=new crfft2d(nx,ny,f);
       Forwards=new rcfft2d(nx,ny,f);
@@ -1221,7 +1235,7 @@ public:
     }
   }    
   
-  void padBackwards(Complex *f) {
+  void padBackwards(Complex *f, bool shift=false) {
     unsigned int nyp=ny/2+1;
     unsigned int nx2=nx/2;
     unsigned int end=nx2-mx;
@@ -1247,16 +1261,16 @@ public:
 
     if(prune) {
       xBackwards->fft(f);
-      fftw::Shift(f,nx,ny,-1);
+      if(shift) fftw::Shift(f,nx,ny,-1);
       yBackwards->fft(f);
     } else
-      Backwards->fft(f);
+      return shift ? Backwards->fft0(f) : Backwards->fft(f);
   }
   
   void convolve(Complex *e, Complex *f, Complex *g) {
-    padBackwards(e);
-    padBackwards(f);
-    padBackwards(g);
+    padBackwards(e,odd);
+    padBackwards(f,odd);
+    padBackwards(g,true);
     
     double *E=(double *) e;
     double *F=(double *) f;
