@@ -188,6 +188,7 @@ int main(int argc, char* argv[])
   Complex *h=FFTWComplex(n);
   // test accuracy of convolution methods:
   double error=0.0;
+  cout << endl;
   for(unsigned int i=0; i < m; i++) {
     // exact solution for test case.
     h[i]=(i+1)*pow(E,i*I);

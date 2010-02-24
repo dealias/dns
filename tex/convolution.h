@@ -65,7 +65,9 @@ public:
   
   // u and v are distinct temporary arrays each of size m.
   ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : n(2*m), m(m) {
-    double arg=2.0*M_PI/n;
+    static const double pi=acos(-1.0);
+//    double arg=2.0*M_PI/n;
+    double arg=2.0*pi/n;
     Cos=cos(arg);
     Sin=sin(arg);
 
