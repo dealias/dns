@@ -691,7 +691,7 @@ explicit one.
 
 The third sentence of the quote from Steven G. Johnson
 on page~\ref{quote} suggests a very reasonable optimization
-to explicitly padded 2D convolutions.
+for explicitly padded 2D convolutions.
 However there are other optimization possibilites lost in directly
 expressing a 2D convolution in terms of 1D transforms: as illustrated in
 Figure~\ref{cconv2}, while the pruned explicit convolution is 27\% faster
@@ -700,7 +700,7 @@ $71\%$ slower for a $8192\times 8192$ convolution. Our implicitly dealised
 convolution is also subject to these same losses, but the savings due to
 implicit padding, ignoring high-level bit reversal, in-place subtransforms, 
 and computing the convolution of each column as it is transformed (and
-thereby perhaps still in cache) more than outweighs these losses.
+thereby perhaps still in cache) outweighs these losses.
 %CHECK timing again when using mfft in both directions for pruned algorithm.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
@@ -806,7 +806,7 @@ dealiased centered Hermitian in-place 2D convolutions of two vectors of
 
 \section{Implicitly dealiased hyperconvolutions}\label{hyper}
 
-\subsection{Implicitly dealiased centered hyperconvolution}
+\subsection{Implicitly dealiased centered 1D hyperconvolution}
 Implicit padding is well-suited to dealiasing the centered
 hyperconvolution 
 $$
@@ -892,7 +892,7 @@ inverse of fft0bipadBackwards(vector {\sf f}, vector {\sf u}).}
 \label{fft0bipadForwards}
 \end{function}
 
-\subsection{Implicitly dealiased centered Hermitian hyperconvolution}
+\subsection{Implicitly dealiased centered Hermitian 1D hyperconvolution}
 
 We again suppose that $U_k=0$ for $k\ge m$.
 On decomposing $j=2\ell+r$, where $r\in\{0,1\}$, the 

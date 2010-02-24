@@ -1,3 +1,4 @@
+// TODO: auto-symmetrize 2D Hermitian data.
 // TODO: try using simd instructions everywhere for the real term-by-term
 // multiply.
 
@@ -217,9 +218,10 @@ public:
     delete rc;
   }
     
-  void pad(Complex *f) {
+  void padBackwards(Complex *f) {
     unsigned int n2=n/2;
     for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
+    cr->fft(f);
   }
   
 // Compute f (*) g, where f and g contain the m non-negative Fourier
@@ -230,14 +232,12 @@ public:
 // (contents not preserved). The output is returned in the first m elements
 // of f.
   void convolve(Complex *f, Complex *g) {
-    pad(f);
-    cr->fft(f);
-    
-    pad(g);
-    cr->fft(g);
+    padBackwards(f);
+    padBackwards(g);
 	
     double *F=(double *) f;
     double *G=(double *) g;
+    
     double ninv=1.0/n;
     for(unsigned int i=0; i < n; ++i)
       F[i] *= G[i]*ninv;
@@ -896,7 +896,7 @@ public:
     }
   }    
   
-  void pad(Complex *f) {
+  void padBackwards(Complex *f) {
     for(unsigned int i=0; i < mx; ++i) {
       unsigned int nyi=ny*i;
       unsigned int stop=nyi+ny;
@@ -910,22 +910,17 @@ public:
       for(unsigned int j=nyi; j < stop; ++j)
         f[j]=0.0;
     }
-  }
-  
-  void convolve(Complex *f, Complex *g) {
-    pad(f);
+    
     if(prune) {
       xBackwards->fft(f);
       yBackwards->fft(f);
     } else
       Backwards->fft(f);
+  }
   
-    pad(g);
-    if(prune) {
-      xBackwards->fft(g);
-      yBackwards->fft(g);
-    } else
-      Backwards->fft(g);
+  void convolve(Complex *f, Complex *g) {
+    padBackwards(f);
+    padBackwards(g);
     
     unsigned int nxy=nx*ny;
     double ninv=1.0/nxy;
@@ -1044,7 +1039,7 @@ public:
     }
   }    
   
-  void pad(Complex *f) {
+  void padBackwards(Complex *f) {
     unsigned int nyp=ny/2+1;
     unsigned int nx2=nx/2;
     unsigned int end=nx2-mx;
@@ -1067,10 +1062,6 @@ public:
       for(unsigned int j=nypi+my; j < stop; ++j)
         f[j]=0.0;
     }
-  }
-  
-  void convolve(Complex *f, Complex *g) {
-    pad(f);
     
     if(prune) {
       xBackwards->fft(f);
@@ -1078,14 +1069,11 @@ public:
       yBackwards->fft(f);
     } else
       Backwards->fft(f);
-    
-    pad(g);
-    if(prune) {
-      xBackwards->fft(g);
-      fftw::Shift(g,nx,ny,-1);
-      yBackwards->fft(g);
-    } else
-      Backwards->fft(g);
+  }
+  
+  void convolve(Complex *f, Complex *g) {
+    padBackwards(f);
+    padBackwards(g);
     
     double *F=(double *) f;
     double *G=(double *) g;
@@ -1162,10 +1150,9 @@ public:
   DirectHConvolution2(unsigned int mx, unsigned int my) : mx(mx), my(my) {}
   
   void convolve(Complex *h, Complex *f, Complex *g) {
-    unsigned int nx=2*mx-1;
     unsigned int xorigin=mx-1;
     int xstart=-xorigin;
-    int xstop=nx-xorigin;
+    int xstop=mx;
     int ystop=my;
     int ystart=1-my;
     for(int kx=xstart; kx < xstop; ++kx) {
@@ -1181,6 +1168,153 @@ public:
                         conj(f[(xorigin-px)*my-py])) *
                   ((qy >= 0) ? g[(xorigin+qx)*my+qy] : 
                    conj(g[(xorigin-qx)*my-qy]));
+              }
+            }
+          }
+          h[(xorigin+kx)*my+ky]=sum;
+        }
+      }
+    }	
+  }
+};
+
+// In-place explicitly dealiased 2D Hermitian biconvolution.
+class ExplicitHBiConvolution2 {
+protected:
+  unsigned int nx,ny;
+  unsigned int mx,my;
+  bool prune; // Skip Fourier transforming rows containing all zeroes?
+  mfft1d *xBackwards;
+  mfft1d *xForwards;
+  mcrfft1d *yBackwards;
+  mrcfft1d *yForwards;
+  crfft2d *Backwards;
+  rcfft2d *Forwards;
+public:  
+  ExplicitHBiConvolution2(unsigned int nx, unsigned int ny, 
+                          unsigned int mx, unsigned int my, Complex *f,
+                          bool pruned=false) :
+    nx(nx), ny(ny), mx(mx), my(my), prune(pruned) {
+    unsigned int nyp=ny/2+1;
+    // Odd nx requires interleaving of shift with x and y transforms.
+    if(nx % 2 == 1) prune=true;
+    if(prune) {
+      xBackwards=new mfft1d(nx,1,my,nyp,1,f);
+      yBackwards=new mcrfft1d(ny,nx,1,nyp,f);
+      yForwards=new mrcfft1d(ny,nx,1,nyp,f);
+      xForwards=new mfft1d(nx,-1,my,nyp,1,f);
+    } else {
+      Backwards=new crfft2d(nx,ny,f);
+      Forwards=new rcfft2d(nx,ny,f);
+    }
+  }
+  
+  ~ExplicitHBiConvolution2() {
+    if(prune) {
+      delete xForwards;
+      delete yForwards;
+      delete yBackwards;
+      delete xBackwards;
+   } else {
+      delete Forwards;
+      delete Backwards;
+    }
+  }    
+  
+  void padBackwards(Complex *f) {
+    unsigned int nyp=ny/2+1;
+    unsigned int nx2=nx/2;
+    unsigned int end=nx2-mx;
+    for(unsigned int i=0; i <= end; ++i) {
+      unsigned int nypi=nyp*i;
+      unsigned int stop=nypi+nyp;
+      for(unsigned int j=nypi; j < stop; ++j)
+        f[j]=0.0;
+    }
+    
+    for(unsigned int i=nx2+mx; i < nx; ++i) {
+      unsigned int nypi=nyp*i;
+      unsigned int stop=nypi+nyp;
+      for(unsigned int j=nypi; j < stop; ++j)
+        f[j]=0.0;
+    }
+    for(unsigned int i=0; i < nx; ++i) {
+      unsigned int nypi=nyp*i;
+      unsigned int stop=nypi+nyp;
+      for(unsigned int j=nypi+my; j < stop; ++j)
+        f[j]=0.0;
+    }
+
+    if(prune) {
+      xBackwards->fft(f);
+      fftw::Shift(f,nx,ny,-1);
+      yBackwards->fft(f);
+    } else
+      Backwards->fft(f);
+  }
+  
+  void convolve(Complex *e, Complex *f, Complex *g) {
+    padBackwards(e);
+    padBackwards(f);
+    padBackwards(g);
+    
+    double *E=(double *) e;
+    double *F=(double *) f;
+    double *G=(double *) g;
+    
+    double ninv=1.0/(nx*ny);
+    unsigned int nyp=ny/2+1;
+    unsigned int nyp2=2*nyp;
+
+    for(unsigned int i=0; i < nx; ++i) {
+      unsigned int nyp2i=nyp2*i;
+      unsigned int stop=nyp2i+ny;
+      for(unsigned int j=nyp2i; j < stop; ++j)
+        E[j] *= F[j]*G[j]*ninv;
+    }
+	
+    if(prune) {
+      yForwards->fft(e);
+      fftw::Shift(e,nx,ny,1);
+      xForwards->fft(e);
+    } else
+      Forwards->fft0(e);
+  }
+};
+
+// Out-of-place direct 2D Hermitian biconvolution.
+class DirectHBiConvolution2 {
+protected:  
+  unsigned int mx,my;
+  
+public:
+  DirectHBiConvolution2(unsigned int mx, unsigned int my) : mx(mx), my(my) {}
+  
+  void convolve(Complex *h, Complex *e, Complex *f, Complex *g) {
+    unsigned int xorigin=mx-1;
+    int xstart=-xorigin;
+    int xstop=mx;
+    int ystop=my;
+    int ystart=1-my;
+    for(int kx=xstart; kx < xstop; ++kx) {
+      for(int ky=0; ky < ystop; ++ky) {
+        Complex sum=0.0;
+        for(int px=xstart; px < xstop; ++px) {
+          for(int py=ystart; py < ystop; ++py) {
+            for(int qx=xstart; qx < xstop; ++qx) {
+              for(int qy=ystart; qy < ystop; ++qy) {
+                int rx=kx-px-qx;
+                if(rx >= xstart && rx < xstop) {
+                  int ry=ky-py-qy;
+                  if(ry >= ystart && ry < ystop) {
+                    sum += ((py >= 0) ? e[(xorigin+px)*my+py] : 
+                            conj(e[(xorigin-px)*my-py])) *
+                      ((py >= 0) ? f[(xorigin+qx)*my+qy] : 
+                            conj(f[(xorigin-qx)*my-qy])) *
+                      ((ry >= 0) ? g[(xorigin+rx)*my+ry] : 
+                       conj(g[(xorigin-rx)*my-ry]));
+                  }
+                }
               }
             }
           }
