@@ -48,8 +48,7 @@ inline void init(Complex *f, Complex *g)
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
 
 #ifdef TEST
-  for(unsigned int i=0; i < m; i++) f[i]=pow(E,m*I);
-  for(unsigned int i=0; i < m; i++) g[i]=pow(E,m*I);
+  for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
 #else
   for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
   for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
@@ -191,7 +190,7 @@ int main(int argc, char* argv[])
   double error=0.0;
   for(unsigned int i=0; i < m; i++) {
     // exact solution for test case.
-    h[i]=(i+1)*pow(E,2*m*I);
+    h[i]=(i+1)*pow(E,i*I);
     cout << h[i] << endl;
   }
   for(unsigned int i=0; i < m; i++) 
