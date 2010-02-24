@@ -1,4 +1,4 @@
-% Put legends inside graphs.
+% Add Input/Output to all Procedures (and Functions?).
 
 \documentclass[final]{siamltex}
 \usepackage[lined,algonl,boxed]{algorithm2e}
@@ -359,10 +359,11 @@ Referring to the computation times shown in Figure~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
 and~\hEq{cconv1forwards}
 can be implemented to be quite competitive with an explicitly padded
-convolution. Both the FFTW library and the convolution layer we built on top of it were compiled with the
-Intel C/C++ compiler on a 64-bit Intel processor using the same optimization
-options. Like the FFTW library, our algorithm was vectorized with
-specialized single-instruction multiple-data (SIMD) code.
+convolution. Both the FFTW library and the convolution layer we built on
+top of it were compiled with the Intel C/C++ compiler, using
+the same optimization options, on a 64-bit 3GHz Intel E5450 Xenon processor
+with 6MB cache. Like the FFTW library, our algorithm was vectorized with
+specialized single-instruction multiple-data (SIMD) code. 
 
 \subsection{Implicitly dealiased centered Fourier transform}\label{fft0}
 A basic building block for constructing multidimensional pseudospectral
@@ -729,10 +730,9 @@ required by zero padding.
   \Return \xf\;
 \caption{cconv2(matrix~{\sf f}, matrix~{\sf g}) 
 returns an in-place implicitly dealiased convolution of
-{\sf f} and {\sf g} of length $m_x\times m_y$ using temporary matrices 
-{\sf U} and {\sf V} of length $m_x\times m_y$ and temporary vectors
-{\sf u} and {\sf v} of length $m_y$.
-.}\label{cconv2}
+$m_x\times m_y$ matrices {\sf f} and {\sf g} using temporary $m_x\times m_y$
+matrices {\sf U} and {\sf V} and temporary vectors {\sf u} and {\sf v} of
+length $m_y$.}\label{cconv2}
 \end{function}
 
 \subsection{Centered 2D Hermitian convolution}
@@ -763,10 +763,9 @@ Again, one finds dramatica
   }
   \Return \xf\;
 \caption{conv2(matrix~{\sf f}, matrix~{\sf g}) 
-returns an in-place implicitly dealiased convolution of
-{\sf f} and {\sf g} of length $(2m_x-1)\times m_y$ using temporary matrices 
-{\sf U} and {\sf V} of length $(m_x+1)\times m_y$ and temporary vectors
-{\sf u} and {\sf v} of length $m_y$.
+returns an in-place implicitly dealiased convolution of $(2m_x-1)\times
+m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices 
+{\sf U} and {\sf V} and temporary vectors {\sf u} and {\sf v} of length $m_y$.
 .}\label{conv2}
 \end{function}
 
@@ -807,6 +806,101 @@ dealiased centered Hermitian in-place 2D convolutions of two vectors of
 \section{Implicitly dealiased 3D convolutions}\label{3d}
 
 \section{Implicitly dealiased hyperconvolutions}\label{hyper}
+Implicit padding is well-suited to dealiasing the centered
+hyperconvolution 
+$\sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1} f_p g_q h_r\d_{p+q+r,k}$.
+Again the input data length is $2m-1$, with the Fourier origin at index
+$m-1$ and one needs to pad to $N\ge 4m-3$ to prevent contamination due to
+wave beating.
+For explicit padding, one chooses $N$ to be a power of $2$, with
+$m=\floor{(n+3)/4}$; for implicit we choose $m$ to be a power of $2$ and $N=4m$.
+
+We again suppose that $U_k=0$ for $k\ge m$.
+On decomposing $j=(2\ell+r)\mod N$, where $r\in\{0,1\}$, the 
+substitution $k'=m+k$ allows us to write the backwards transform as
+\bel
+u_{2\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_{2m}^{\ell k} \z_N^{rk} U_k
+=\sum_{k'=1}^{m-1}\z_{2m}^{\ell k'} \z_N^{r(k'-m)} U_{k'-m}
++\sum_{k=0}^{m-1}\z_{2m}^{\ell k} \z_N^{rk} U_k
+=\sum_{k=0}^{m-1}\z_{2m}^{\ell k} w_{k,r},\label{fft0bibackwardsA}
+\eel
+where
+\belc
+w_{k,r}\doteq
+\cases{
+U_0&if $k=0$,\cr
+\z_N^{rk}(U_k+\z_4^{-r}U_{k-m})&if $1\le k\le m-1$.\cr
+}\label{fft0bibackwardsB}
+\eelc
+The forwards transform is then
+\belc
+NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_{2m}^{-\ell k} u_{2\ell+r}
+\qquad k\no =-m+1,\ldots,m-1.\label{fft0biforwards}
+\eelc
+The use of the remainder $r=-1$ instead of $r=2$ allows us to exploit
+the optimization $\zeta_N^{-k}=\conj{\zeta_N^ k}$ in \Eqs{fft0bibackwardsB}
+and~\hEq{fft0biforwards}.
+The number of complex multiplies needed to evaluate \Eq{fft0bibackwardsB} 
+for $r=\pm 1$ can be reduced by computing the intermediate complex quantities
+\begin{align*}
+A_k&\doteq \zeta_N^k\(\Re U_k+\zeta_3^{-1} \Re U_{k-m}\),\\
+B_k&\doteq i\zeta_N^k\(\Im U_k+\zeta_3^{-1} \Im U_{k-m}\),
+\end{align*}
+where $\zeta_3^{-1}=\(-\half,-\fr{\sqrt{3}}{2}\)$, so that for $k > 0$,
+$w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
+The resulting transforms,
+Procedures \ref{fft0bipadBackwards} and \ref{fft0bipadForwards},
+each have an operation count asymptotic to $3Km\log m$. As they
+operate fully in-place on their arguments, with no further storage
+requirements, it is straightforward to implement strided multivector
+versions of these routines.
+
+\begin{procedure}[htbp]
+  \SetKwData{xA}{A}
+  \SetKwData{xB}{B}
+  \KwIn{vector \xf}
+  \KwOut{vector \xf, vector \xu}
+  $\xu[0] \leftarrow \xf[m-1]$\;
+  \For{$k=1$ \KwTo $m-1$}{
+    $\xA \leftarrow \zeta_{3m}^k*\[\Re \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Re \xf[k]\]$\;
+    $\xB \leftarrow i\zeta_{3m}^k*\[\Im \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Im \xf[k]\]$\;
+    $\xf[m-1+k] \leftarrow \xA+\xB$\;
+    $\xu[k] \leftarrow \conj{\xA-\xB}$\;
+    $\xf[0] \leftarrow \xf[k]$\;
+    $\xf[k] \leftarrow \xf[k]+\xf[m-1+k]$\;
+  }
+
+  $\xf[0,\ldots,m-1] \leftarrow {\tt fft}\inv(\xf[0,\ldots,m-1])$\;
+  $\xu[m] \leftarrow \xf[m-1]$\;
+  $\xf[m-1] \leftarrow \xu[0]$\;
+  $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}\inv(\xf[m-1,\ldots,2m-2])$\;
+  $\xu[0,\ldots,m-1] \leftarrow {\tt fft}\inv(\xu[0,\ldots,m-1])$\;
+  \caption{fft0bipadBackwards(vector {\sf f}, vector {\sf u}) stores the scrambled
+$3m$ implicitly dealiased backwards Fourier transform values of a vector {\sf f} of length
+$2m-1$ in {\sf f} and an auxillary vector~{\sf u} of length $m+1$.}\label{fft0bipadBackwards}
+\end{procedure}
+
+\begin{function}[htbp]
+  \KwIn{vector \xf, vector \xu}
+  \KwOut{vector \xf}
+
+  $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}(\xf[m-1,\ldots,2m-2])$\;
+  $\xu[m] \leftrightarrow \xf[m-1]$\;
+
+  $\xf[0,\ldots,m-1] \leftarrow {\tt fft}(\xf[0,\ldots,m-1])$\;
+  $\xu[0,\ldots,m-1] \leftarrow {\tt fft}(\xu[0,\ldots,m-1])$\;
+
+  $\xu[m] \leftarrow \xf[0]+\xu[m]+\xu[0]$\;
+  \For{$k=1$ \KwTo $m-1$}{
+    $\xf[k-1]=\xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{3m}^{-k}*\xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{3m}^k*\xu[k]$\;
+    $\xf[m-1+k]=\xf[k]+\zeta_{3m}^{-k}*\xf[m-1+k]+\zeta_{3m}^k*\xu[k]$\;
+  }
+  $\xf[m-1] \leftarrow \xu[m]$\;
+  \Return \xf/(3m)\;
+  \caption{fft0bipadForwards(vector {\sf f}, vector {\sf u}) returns the
+inverse of fft0bipadBackwards(vector {\sf f}, vector {\sf u}).}
+\label{fft0bipadForwards}
+\end{function}
 
 \section{Implicit $p/q$ Padding}
 

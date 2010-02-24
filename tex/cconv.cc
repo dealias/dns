@@ -2,7 +2,7 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
-//#define TEST yes
+#define TEST yes
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3 -march=native
 
 // icpc -O3 -ansi-alias -malign-double -fp-model fast=2 cconv.cc fftw++.cc -lfftw3
@@ -165,8 +165,7 @@ int main(int argc, char* argv[])
 #endif
   }
   
-#ifdef TEST
-  //  if(false)
+  if(false)
     {
     DirectConvolution C(m);
     init(f,g);
@@ -183,23 +182,25 @@ int main(int argc, char* argv[])
     if(m < 100)
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
-
-
-    // test accuracy of convolution methods:
-    double error=0.0;
-    for(unsigned int i=0; i < m; i++) {
-      // exact solution for test case.
-      h[i]=(i+1)*pow(E,2*m*I);
-      cout << h[i] << endl;
-    }
-    for(unsigned int i=0; i < m; i++) 
-      error += abs2(h[i]-pseudoh[i]);
-    error /= m;
-    cout << "error="<<error<<endl;
-    if (error > 1e-12)
-      cerr << "Caution! error="<<error<<endl;
     FFTWdelete(h);
+    }
+    
+#ifdef TEST
+  Complex *h=FFTWComplex(n);
+  // test accuracy of convolution methods:
+  double error=0.0;
+  for(unsigned int i=0; i < m; i++) {
+    // exact solution for test case.
+    h[i]=(i+1)*pow(E,2*m*I);
+    cout << h[i] << endl;
   }
+  for(unsigned int i=0; i < m; i++) 
+    error += abs2(h[i]-pseudoh[i]);
+  error /= m;
+  cout << "error="<<error<<endl;
+  if (error > 1e-12)
+    cerr << "Caution! error="<<error<<endl;
+  FFTWdelete(h);
 #endif    
 
   
