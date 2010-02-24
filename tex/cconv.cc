@@ -13,13 +13,12 @@ using namespace std;
 // usage: aout [int m] [int pad]
 
 // Number of iterations.
-#ifdef TEST
-unsigned int N=1;
+
+// TEST stuff
 static const double E=exp(1.0);
 const  Complex I(0,1);
-#else
+
 unsigned int N=10000000;
-#endif
   
 
 Complex d[]={Complex(-5,3),Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
@@ -42,32 +41,64 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(Complex *f, Complex *g) 
+inline void init(Complex *f, Complex *g, bool dotest) 
 {
 //  for(unsigned int i=0; i < m; i++) f[i]=d[i];
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
 
-#ifdef TEST
-  for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
-#else
-  for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
-  for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
-#endif 
-
+  if(dotest)
+    for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
+  else {
+    for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
+    for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
+  }
 }
 
 int main(int argc, char* argv[])
 {
 //  fftw::effort |= FFTW_NO_SIMD;
   
+
+  bool dodirect=0, doimplicit=0, doexplicit=0, dotest=0;
   int pad=0;
-  
+  int optind=1;
+  // decode arguments
+  while ((optind < argc) && (argv[optind][0]=='-')) {
+    string sw = argv[optind];
+    if (sw=="-e") {
+      pad=1;
+      doexplicit=1;
+      cout <<"pad="<<pad<<endl;
+    }
+    else if (sw=="-i") {
+      pad=0;
+      doimplicit=1;
+      cout <<"pad="<<pad<<endl;
+    }
+    else if (sw=="-m") {
+      // set buffer size  
+      optind++;
+      m=atoi(argv[optind]);
+    }
+    else if (sw=="-t") {
+      dotest=1;
+      N=1;
+    }
+    else {
+      cerr << "Unknown switch: " 
+	   << argv[optind] << endl;
+      exit(1);
+    }
+    optind++;
+  }
+
+  /*
   if(argc >= 2)
     m=atoi(argv[1]);
  
   if(argc >= 3)
     pad=atoi(argv[2]);
-  
+  */
   n=2*m;
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
@@ -84,9 +115,8 @@ int main(int argc, char* argv[])
   int np=pad ? n : m;
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
-#ifdef TEST  
-  Complex pseudoh[m];
-#endif
+
+  Complex pseudoh[dotest ? m : 0 ];
 
   double offset=0.0;
   seconds();
@@ -95,7 +125,7 @@ int main(int argc, char* argv[])
     offset += seconds();
   }
 
-  if(false) 
+  if(false)  // What is this for?
     {
     unsigned int L=m;
     Complex *f=FFTWComplex(2*L);
@@ -116,12 +146,12 @@ int main(int argc, char* argv[])
   }
   
   double sum=0.0;
-  if(!pad) {
+  if(doimplicit) {
     Complex *u=FFTWComplex(m);
     Complex *v=FFTWComplex(m);
     ImplicitConvolution C(m,u,v);
     for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
+      init(f,g,dotest);
       seconds();
       C.convolve(f,g,u,v);
       sum += seconds();
@@ -136,16 +166,14 @@ int main(int argc, char* argv[])
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
     else cout << f[0] << endl;
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
-#endif    
+    if(dotest) for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
   }
   
-  if(pad) {
+  if(doexplicit) {
     sum=0.0;
     ExplicitConvolution C(n,m,f);
     for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
+      init(f,g,dotest);
       seconds();
       C.convolve(f,g);
       sum += seconds();
@@ -158,15 +186,12 @@ int main(int argc, char* argv[])
       for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
     else cout << f[0] << endl;
     cout << endl;
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
-#endif
+    if(dotest) for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
   }
   
-  if(false)
-    {
+  if(dodirect) {
     DirectConvolution C(m);
-    init(f,g);
+    init(f,g,dotest);
     Complex *h=FFTWComplex(n);
     seconds();
     C.convolve(h,f,g);
@@ -181,26 +206,26 @@ int main(int argc, char* argv[])
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
     FFTWdelete(h);
-    }
-    
-#ifdef TEST
-  Complex *h=FFTWComplex(n);
-  // test accuracy of convolution methods:
-  double error=0.0;
-  cout << endl;
-  for(unsigned int i=0; i < m; i++) {
-    // exact solution for test case.
-    h[i]=(i+1)*pow(E,i*I);
-    cout << h[i] << endl;
   }
-  for(unsigned int i=0; i < m; i++) 
-    error += abs2(h[i]-pseudoh[i]);
-  error=sqrt(error/m);
-  cout << "error="<<error<<endl;
-  if (error > 1e-8)
-    cerr << "Caution! error="<<error<<endl;
-  FFTWdelete(h);
-#endif    
+    
+  if(dotest) {
+    Complex *h=FFTWComplex(n);
+    // test accuracy of convolution methods:
+    double error=0.0;
+    cout << endl;
+    for(unsigned int i=0; i < m; i++) {
+      // exact solution for test case.
+      h[i]=(i+1)*pow(E,i*I);
+      cout << h[i] << endl;
+    }
+    for(unsigned int i=0; i < m; i++) 
+      error += abs2(h[i]-pseudoh[i]);
+    error=sqrt(error/m);
+    cout << "error="<<error<<endl;
+    if (error > 1e-8)
+      cerr << "Caution! error="<<error<<endl;
+    FFTWdelete(h);
+  }
 
   
   FFTWdelete(g);
