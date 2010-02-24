@@ -44,16 +44,6 @@ clean:  FORCE
 	${CXX} $(MAKEDEPEND) $(INCL) $(MDOPTS) $< > $@.$$$$ 2>/dev/null && \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
-.c.d:
-	@echo Creating $@; \
-	rm -f $@; \
-	${CC} $(MAKEDEPEND) $(INCL) $(MDOPTS) $< > $@.$$$$ 2>/dev/null && \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
-
-ifeq (,$(findstring clean,${MAKECMDGOALS}))
--include $(FILES:=.d)
-endif
 
 ifeq (,$(findstring clean,${MAKECMDGOALS}))
 -include $(FILES:=.d)
