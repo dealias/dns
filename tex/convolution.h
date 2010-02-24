@@ -1309,7 +1309,7 @@ public:
                   if(ry >= ystart && ry < ystop) {
                     sum += ((py >= 0) ? e[(xorigin+px)*my+py] : 
                             conj(e[(xorigin-px)*my-py])) *
-                      ((py >= 0) ? f[(xorigin+qx)*my+qy] : 
+                      ((qy >= 0) ? f[(xorigin+qx)*my+qy] : 
                             conj(f[(xorigin-qx)*my-qy])) *
                       ((ry >= 0) ? g[(xorigin+rx)*my+ry] : 
                        conj(g[(xorigin-rx)*my-ry]));

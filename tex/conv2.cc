@@ -156,7 +156,6 @@ int main(int argc, char* argv[])
       sum=0.0;
       ExplicitHConvolution2 C(nx,ny,mx,my,f,prune);
       for(unsigned int i=0; i < N; ++i) {
-        // FFTW out-of-place cr routines destroy the input arrays.
         init(f,g);
         seconds();
         C.convolve(f,g);
