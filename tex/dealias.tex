@@ -206,9 +206,10 @@ explicitly padded convolution based on the same highly optimized
 library.
 
 %Add outline
-We also show how implicit padding can be used to efficiently
-dealias the hyperconvolution 
-$\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
+Implicit padding can be used to efficiently dealias hyperconvolutions
+such as $\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
+For example, in section~\ref{hconv} we compute a centered Hermitian
+hyperconvolution.
 
 \section{Implicitly dealiased 1D convolutions}
 \subsection{Complex convolution}
@@ -419,7 +420,7 @@ $w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
 The resulting transforms,
 Procedures \ref{fft0padBackwards} and \ref{fft0padForwards},
 each have an operation count asymptotic to $3Km\log m$. As they
-operate fully in place on their arguments, with no further storage
+operate fully in place on their arguments, with no additional storage
 requirements, it is straightforward to implement strided multivector
 versions of these routines.
 
@@ -839,7 +840,7 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\el
 The resulting transforms,
 Procedures \ref{fft0bipadBackwards} and \ref{fft0bipadForwards},
 each have an operation count asymptotic to $3Km\log m$. As they
-operate fully in place on their arguments, with no further storage
+operate fully in place on their arguments, with no additional storage
 requirements, it is straightforward to implement strided multivector
 versions of these routines.
 
