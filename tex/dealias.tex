@@ -821,7 +821,7 @@ $m=\floor{(n+3)/4}$; for implicit we choose $m$ to be a power of $2$ and $N=4m$.
 and set $U_k=0$ for $k\ge m$. 
 
 On decomposing $j=2\ell+r$, where $r\in\{0,1\}$, we find, on substituting
-$k'=k+m$ and padding the input vector by one element $U_{-m}=0$,
+$k'=k+m$ and padding the input vector with one additional element $U_{-m}=0$,
 \belc
 u_{2\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_{2m}^{\ell k} \z_N^{rk} U_k
 =\sum_{k'=1}^{2m-1}\z_{2m}^{\ell (k'-m)} \z_N^{r(k'-m)} U_{k'-m}
