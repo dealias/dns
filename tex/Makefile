@@ -2,7 +2,7 @@ all: conv cconv conv2 cconv2
 
 #For g++
 CC=g++
-CFLAGS=-g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse -march=native
+CFLAGS=-g -Wall -ansi -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse -march=native
 
 #For icpc
 a:=$(shell which icpc 2>&1 | tail -c5)

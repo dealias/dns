@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
   // Choose next power of 2 for maximal efficiency.
-  for(log2n=0; n > (1 << log2n); log2n++);
+  for(log2n=0; n > ((unsigned int) 1 << log2n); log2n++);
   n=1 << log2n;
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
   
   double offset=0.0;
   seconds();
-  for(int i=0; i < N; ++i) {
+  for(unsigned int i=0; i < N; ++i) {
     seconds();
     offset += seconds();
   }
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
     Complex *u=FFTWComplex(c+1);
     Complex *v=FFTWComplex(c+1);
     ImplicitHConvolution C(m,u,v);
-    for(int i=0; i < N; ++i) {
+    for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
       C.convolve(f,g,u,v);
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
   if(pad) {
     sum=0.0;
     ExplicitHConvolution C(n,m,f);
-    for(int i=0; i < N; ++i) {
+    for(unsigned int i=0; i < N; ++i) {
       // FFTW out-of-place cr routines destroy the input arrays.
       init(f,g);
       seconds();

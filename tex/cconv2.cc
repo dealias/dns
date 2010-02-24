@@ -60,7 +60,7 @@ unsigned int padding(unsigned int m)
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
   // Choose next power of 2 for maximal efficiency.
-  for(log2n=0; n > (1 << log2n); log2n++);
+  for(log2n=0; n > ((unsigned int) 1 << log2n); log2n++);
   return 1 << log2n;
 }
 
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
 
   double offset=0.0;
   seconds();
-  for(int i=0; i < N; ++i) {
+  for(unsigned int i=0; i < N; ++i) {
     seconds();
     offset += seconds();
   }
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
     Complex *u2=FFTWComplex(mx*my);
     Complex *v2=FFTWComplex(mx*my);
     ImplicitConvolution2 C(mx,my,u1,v1,u2);
-    for(int i=0; i < N; ++i) {
+    for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
       C.convolve(f,g,u1,v1,u2,v2);
@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
     for(int prune=0; prune <= 1; ++prune) {
       sum=0.0;
       ExplicitConvolution2 C(nx,ny,mx,my,f,prune);
-      for(int i=0; i < N; ++i) {
+      for(unsigned int i=0; i < N; ++i) {
         init(f,g);
         seconds();
         C.convolve(f,g);
@@ -177,9 +177,6 @@ int main(int argc, char* argv[])
           cout << h[i][j] << "\t";
         cout << endl;
       } else cout << h[0][0] << endl;
-
-    // test accuracy of convolution methods:
-    double error=0.0;
   }
 }
 

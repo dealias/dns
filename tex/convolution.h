@@ -299,13 +299,9 @@ public:
     Complex fc=f[c];
     unsigned int m1=m-1;
     Complex fmk=f[m1];
-    double fmkre=fmk.re;
-    double fmkim=fmk.im;
     f[m1]=f0;
     Complex gc=g[c];
     Complex gmk=g[m1];
-    double gmkre=gmk.re;
-    double gmkim=gmk.im;
     g[m1]=g0;
     
 #ifdef __SSE2__      
@@ -320,6 +316,10 @@ public:
     Vec Mhalf=LOAD(&mhalf);
     Vec HSqrt3=LOAD(&hSqrt3);
 #else
+    double fmkre=fmk.re;
+    double fmkim=fmk.im;
+    double gmkre=gmk.re;
+    double gmkim=gmk.im;
     double Re=Cos;
     double Im=-Sin;
 #endif
@@ -413,7 +413,7 @@ public:
     cr->fft(v);
     double *U=(double *) u;
     double *V=(double *) v;
-    for(int i=0; i < m; ++i)
+    for(unsigned int i=0; i < m; ++i)
       V[i] *= U[i];
     rco->fft(v,U); // v is now free
 
@@ -422,7 +422,7 @@ public:
     cro->fft(f,V);
     double *F=(double *) f;
     cro->fft(g,F);
-    for(int i=0; i < m; ++i)
+    for(unsigned int i=0; i < m; ++i)
       V[i] *= F[i];
     rco->fft(V,f);
     unsigned int cm1=c-1;
@@ -440,7 +440,7 @@ public:
     cro->fft(g1,V);
     G=(double *) g1;
     cro->fft(f1,G);
-    for(int i=0; i < m; ++i)
+    for(unsigned int i=0; i < m; ++i)
       G[i] *= V[i];
     rco->fft(G,v);
 
@@ -1150,6 +1150,44 @@ public:
       yconvolve->convolve(u2+i,v2+i,u1,v1);
     
     xfftpad->forwards(f,u2);
+  }
+};
+
+// Out-of-place direct 2D Hermitian convolution.
+class DirectHConvolution2 {
+protected:  
+  unsigned int mx,my;
+  
+public:
+  DirectHConvolution2(unsigned int mx, unsigned int my) : mx(mx), my(my) {}
+  
+  void convolve(Complex *h, Complex *f, Complex *g) {
+    unsigned int nx=2*mx-1;
+    unsigned int xorigin=mx-1;
+    int xstart=-xorigin;
+    int xstop=nx-xorigin;
+    int ystop=my;
+    int ystart=1-my;
+    for(int kx=xstart; kx < xstop; ++kx) {
+      for(int ky=0; ky < ystop; ++ky) {
+        Complex sum=0.0;
+        for(int px=xstart; px < xstop; ++px) {
+          for(int py=ystart; py < ystop; ++py) {
+            int qx=kx-px;
+            if(qx >= xstart && qx < xstop) {
+              int qy=ky-py;
+              if(qy >= ystart && qy < ystop) {
+                sum += ((py >= 0) ? f[(xorigin+px)*my+py] : 
+                        conj(f[(xorigin-px)*my-py])) *
+                  ((qy >= 0) ? g[(xorigin+qx)*my+qy] : 
+                   conj(g[(xorigin-qx)*my-qy]));
+              }
+            }
+          }
+          h[(xorigin+kx)*my+ky]=sum;
+        }
+      }
+    }	
   }
 };
 

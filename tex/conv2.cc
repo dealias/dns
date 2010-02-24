@@ -74,7 +74,7 @@ unsigned int padding(unsigned int m)
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
   // Choose next power of 2 for maximal efficiency.
-  for(log2n=0; n > (1 << log2n); log2n++);
+  for(log2n=0; n > ((unsigned int) 1 << log2n); log2n++);
   return 1 << log2n;
 }
 
@@ -101,6 +101,7 @@ int main(int argc, char* argv[])
   
   N=N/(nx*ny);
   if(N < 10) N=10;
+  N=1;
   cout << "N=" << N << endl;
     
   size_t align=sizeof(Complex);
@@ -111,7 +112,7 @@ int main(int argc, char* argv[])
 
   double offset=0.0;
   seconds();
-  for(int i=0; i < N; ++i) {
+  for(unsigned int i=0; i < N; ++i) {
     seconds();
     offset += seconds();
   }
@@ -125,7 +126,7 @@ int main(int argc, char* argv[])
     Complex *u2=FFTWComplex(mxpmy);
     Complex *v2=FFTWComplex(mxpmy);
     ImplicitHConvolution2 C(mx,my,u1,v1,u2);
-    for(int i=0; i < N; ++i) {
+    for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
       C.convolve(f,g,u1,v1,u2,v2);
@@ -151,10 +152,10 @@ int main(int argc, char* argv[])
   }
   
   if(pad) {
-    for(int prune=0; prune <= 1; ++prune) {
+    for(unsigned int prune=0; prune <= 1; ++prune) {
       sum=0.0;
       ExplicitHConvolution2 C(nx,ny,mx,my,f,prune);
-      for(int i=0; i < N; ++i) {
+      for(unsigned int i=0; i < N; ++i) {
         // FFTW out-of-place cr routines destroy the input arrays.
         init(f,g);
         seconds();
@@ -173,6 +174,32 @@ int main(int argc, char* argv[])
           cout << endl;
         } else cout << f[offset][0] << endl;
     }
+  }
+  
+//  if(false)
+  {
+    pad=0;
+    unsigned int nxp=2*mx-1;
+    array2<Complex> f(nxp,my,align);
+    array2<Complex> g(nxp,my,align);
+    array2<Complex> h(nxp,my,align);
+    DirectHConvolution2 C(mx,my);
+    init(f,g);
+    seconds();
+    C.convolve(h,f,g);
+    sum=seconds();
+  
+    cout << endl;
+    cout << "Direct:" << endl;
+    cout << sum-offset/N << endl;
+    cout << endl;
+
+    if(nxp*my < outlimit)
+      for(unsigned int i=0; i < nxp; i++) {
+        for(unsigned int j=0; j < my; j++)
+          cout << h[i][j] << "\t";
+        cout << endl;
+      } else cout << h[0][0] << endl;
   }
 }
 
