@@ -37,8 +37,8 @@ if [ "$outdir" == "" ]; then
 fi
 mkdir -p $outdir
 cd $outdir
-rm -rf error.explicit error.implicit error.pruned
-touch error.explicit error.implicit error.pruned
+rm -rf error.explicit error.implicit
+touch error.explicit error.implicit
 cd ..
 
 if [ "$2" != "" ]; then
@@ -54,5 +54,4 @@ do
 	m=$(asy -c "floor((2^($i+1)+2)/3);")
     fi
     echo -e "$m \t $(./$1 $m 1 | grep error | sed s/error=//)" | cat >> $outdir/error.explicit
-    echo -e "$m \t $(./$1 $m 1 | grep error | sed s/error=//)" | cat >> $outdir/error.pruned
 done
