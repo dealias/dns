@@ -1017,8 +1017,8 @@ public:
     unsigned int nyp=ny/2+1;
     // Odd nx requires interleaving of shift with x and y transforms.
     unsigned int My=my;
-    if(nx % 2 == 1) {
-      odd=true;
+    odd=nx % 2 == 1;
+    if(odd) {
       if(!prune) My=nyp;
       prune=true;
     }
@@ -1206,8 +1206,8 @@ public:
     unsigned int nyp=ny/2+1;
     // Odd nx requires interleaving of shift with x and y transforms.
     unsigned int My=my;
-    if(nx % 2 == 1) {
-      odd=true;
+    odd=nx % 2 == 1;
+    if(odd) {
       if(!prune) My=nyp;
       prune=true;
     }

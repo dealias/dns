@@ -11,7 +11,7 @@ MAKEDEPEND=$(CFLAGS) -O0 -M -DDEPEND
 LDFLAGS=-lfftw3
 
 FILES=conv cconv conv2 cconv2 biconv2
-EXTRA=fftw++
+ALL=fftw++ $(FILES)
 
 all: $(FILES)
 
@@ -34,7 +34,7 @@ biconv2: biconv2.o fftw++.o
 	$(CC) $(CFLAGS) biconv2.o fftw++.o $(LDFLAGS) -o biconv2
 
 clean:  FORCE
-	rm -rf $(FILES) $(FILES:=.o) $(FILES:=.d)
+	rm -rf $(ALL) $(ALL:=.o) $(ALL:=.d)
 
 .SUFFIXES: .c .cc .o .d
 .cc.o:
@@ -47,7 +47,7 @@ clean:  FORCE
 	rm -f $@.$$$$
 
 ifeq (,$(findstring clean,${MAKECMDGOALS}))
--include $(FILES:=.d)
+-include $(ALL:=.d)
 endif
 
 FORCE:
