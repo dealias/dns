@@ -5,7 +5,7 @@ CC=g++
 CFLAGS=-g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse -march=native
 
 #For icpc
-a:=$(shell which icpc |  tail -c5)
+a:=$(shell which icpc 2>&1 | tail -c5)
 ifeq ($(a),icpc)
 CC=icpc
 CFLAGS=-O3 -ansi-alias -malign-double -fp-model fast=2 
@@ -28,5 +28,7 @@ conv2: conv2.cc fftw++.cc
 cconv2: cconv2.cc fftw++.cc
 	$(CC)  $(CFLAGS) cconv2.cc fftw++.cc $(LDFLAGS) -o cconv2
 
-clean: 
+clean:  FORCE
 	rm -rf conv cconv conv2 cconv2
+
+FORCE:

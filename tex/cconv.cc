@@ -15,7 +15,7 @@ using namespace std;
 // Number of iterations.
 #ifdef TEST
 unsigned int N=1;
-const double E=2.71828182845904523536;
+static const double E=exp(1);
 const  Complex I(0,1);
 #else
 unsigned int N=10000000;
