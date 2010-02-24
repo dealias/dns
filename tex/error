@@ -37,8 +37,8 @@ if [ "$outdir" == "" ]; then
 fi
 mkdir -p $outdir
 cd $outdir
-rm -rf explicit implicit pruned
-touch explicit implicit pruned
+rm -rf error.explicit error.implicit error.pruned
+touch error.explicit error.implicit error.pruned
 cd ..
 
 if [ "$2" != "" ]; then
