@@ -3,12 +3,6 @@
 \documentclass[final]{siamltex}
 \usepackage[lined,algonl,boxed]{algorithm2e}
 
-\let\ocases\cases
-\let\matrixo\matrix
-\usepackage{amsmath}
-\let\cases\ocases
-\let\matrix\matrixo
-
 \usepackage{hyperref}
 \usepackage{mathdef}
 
@@ -232,15 +226,16 @@ $\zeta_N^r=\zeta_{N/r}$ and $\zeta_N^N=1$.
 
 If $U_k=0$ for $k \ge m$, one can easily avoid looping over the
 unwanted zero Fourier modes by decimating in wavenumber:
-\belc
+\begin{equation}
 u_{2\ell}
 =\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} U_k,
 \qquad
 u_{2\ell+1}
 =\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \zeta_N^kU_k
 \qquad
-\ell=0,1,\ldots m-1.\label{cconv1backwards}
-\eelc
+\ell=0,1,\ldots m-1.
+\end{equation}
+
 Since this requires computing two subtransforms, each of size $m$,
 the overall computational scaling is of order $2m\log m=N\log m$.
 
@@ -387,34 +382,38 @@ that only two of the three subtransforms of length $m$ need to be retained.
 Suppose then that $U_k=0$ for $k\ge m$.
 On decomposing $j=(3\ell+r)\mod N$, where $r\in\{-1,0,1\}$, the 
 substitution $k'=m+k$ allows us to write the backwards transform as
-\belc
+\bel
 u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_m^{\ell k} \z_N^{rk} U_k
 =\sum_{k'=1}^{m-1}\z_m^{\ell k'} \z_N^{r(k'-m)} U_{k'-m}
 +\sum_{k=0}^{m-1}\z_m^{\ell k} \z_N^{rk} U_k
 =\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r},\label{fft0backwardsA}
-\eelc
+\eel
 where
-\belc
+\bel
 w_{k,r}\doteq
 \cases{
 U_0&if $k=0$,\cr
 \z_N^{rk}(U_k+\z_3^{-r}U_{k-m})&if $1\le k\le m-1$.\cr
 }\label{fft0backwardsB}
-\eelc
+\eel
 The forwards transform is then
-\belc
+\bel
 NU_k=\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =-m+1,\ldots,m-1.\label{fft0forwards}
-\eelc
+\eel
 The use of the remainder $r=-1$ instead of $r=2$ allows us to exploit
 the optimization $\zeta_N^{-k}=\conj{\zeta_N^ k}$ in \Eqs{fft0backwardsB}
 and~\hEq{fft0forwards}.
 The number of complex multiplies needed to evaluate \Eq{fft0backwardsB} 
 for $r=\pm 1$ can be reduced by computing the intermediate complex quantities
-\begin{align*}
-A_k&\doteq \zeta_N^k\(\Re U_k+\zeta_3^{-1} \Re U_{k-m}\),\\
-B_k&\doteq i\zeta_N^k\(\Im U_k+\zeta_3^{-1} \Im U_{k-m}\),
-\end{align*}
+\bg
+\be
+A_k\doteq \zeta_N^k\(\Re U_k+\zeta_3^{-1} \Re U_{k-m}\),
+\ee
+\be
+B_k\doteq i\zeta_N^k\(\Im U_k+\zeta_3^{-1} \Im U_{k-m}\),
+\ee
+\eg
 where $\zeta_3^{-1}=\(-\half,-\fr{\sqrt{3}}{2}\)$, so that for $k > 0$,
 $w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
 The resulting transforms,
@@ -489,13 +488,13 @@ As in the centered case, we again choose the Fourier size to be $N=3m$.
 
 Given that $U_k=0$ for $k\ge m$, the backwards (complex-to-real) transform
 appears as \Eq{fft0backwardsA}, but now with
-\belc
+\bel
 w_{k,r}\doteq
 \cases{
 U_0&if $k=0$,\cr
 \z_N^{rk}\(U_k+\z_3^{-r}\conj{U_{m-k}}\)&if $1\le k\le m-1$.\cr
 }
-\eelc
+\eel
 
 We note that $w_{k,r}$ obeys the unshifted Hermitian symmetry 
 $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
@@ -504,11 +503,11 @@ be real valued. This allows us to build a backwards implicitly deliased
 Hermitian transform using three complex-to-real Fourier transforms of the
 first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
 forwards transform is given by
-\belc
+\bel
 NU_k
 =\sum_{r=-1}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =0,\ldots,m-1.\label{fft0forwardsB}
-\eelc
+\eel
 Since $u_{3\ell+r}$ is real, a real-to-complex transform can be used to
 compute the first $c+1$ frequencies of
 $\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}$; the remaining $m-c-1$
@@ -822,14 +821,13 @@ and set $U_k=0$ for $k\ge m$.
 
 On decomposing $j=2\ell+r$, where $r\in\{0,1\}$, we find, on substituting
 $k'=k+m$ and padding the input vector with one additional element $U_{-m}=0$,
-\belc
+\bec
 u_{2\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_{2m}^{\ell k} \z_N^{rk} U_k
 =\sum_{k'=1}^{2m-1}\z_{2m}^{\ell (k'-m)} \z_N^{r(k'-m)} U_{k'-m}
-=(-1)^\ell i^{-r}\sum_{k=0}^{2m-1}\z_{2m}^{\ell k} \z_N^{rk} U_{k-m}
-\eelc
+=(-1)^\ell i^{-r}\sum_{k=0}^{2m-1}\z_{2m}^{\ell k} \z_N^{rk} U_{k-m},
+\eec
 where $\ell=0,\ldots, 2m-1$.
 The forwards transform is then
-%FIXME: dmath LHS LABEL BUG.
 \bel
 NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\ell+r},
 \qquad k\no =-m+1,\ldots,m-1
@@ -898,25 +896,25 @@ inverse of fft0bipadBackwards(vector {\sf f}, vector {\sf u}).}
 We again suppose that $U_k=0$ for $k\ge m$.
 On decomposing $j=2\ell+r$, where $r\in\{0,1\}$, the 
 substitution $k'=m+k$ allows us to write the backwards transform as
-\bel
-u_{2\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_{2m}^{\ell k} \z_N^{rk} U_k
+\bec
+u_{2\ell +r}=\sum_{k=-m+1}^{m-1}\z_{2m}^{\ell k} \z_N^{rk} U_k
 =\sum_{k'=1}^{m-1}\z_{2m}^{\ell k'} \z_N^{r(k'-m)} U_{k'-m}
 +\sum_{k=0}^{m-1}\z_{2m}^{\ell k} \z_N^{rk} U_k
 =\sum_{k=0}^{m-1}\z_{2m}^{\ell k} w_{k,r},
-\eel
+\eec
 where
-\belc
+\bel
 w_{k,r}\doteq
 \cases{
 U_0&if $k=0$,\cr
 \z_N^{rk}(U_k+i^{-r}\conj{U_{m-k}})&if $1\le k\le m-1$.\cr
 }
-\eelc
+\eel
 The forwards transform is then
-\belc
+\be
 NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_{2m}^{-\ell k} u_{2\ell+r}
 \qquad k\no =0,\ldots,m-1.
-\eelc
+\ee
 
 \section{Arbitrary $p/q$ Padding}
 
