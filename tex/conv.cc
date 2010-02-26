@@ -9,11 +9,11 @@ using namespace std;
 // FFTW: 
 // configure --enable-sse2 CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
 
-// usage: aout [int m] [int pad]
-
 // Number of iterations.
 unsigned int N=10000000;
   
+bool Direct=false, Implicit=true, Explicit=false, Test=false;
+
 using namespace std;
 
 #include <sys/time.h>
@@ -45,16 +45,43 @@ inline void init(Complex *f, Complex *g)
 
 int main(int argc, char* argv[])
 {
-//  fftw::effort |= FFTW_NO_SIMD;
+#ifndef __SSE2__
+  fftw::effort |= FFTW_NO_SIMD;
+#endif  
   
-  int pad=0;
-  
-  if(argc >= 2)
-    m=atoi(argv[1]);
- 
-  if(argc >= 3)
-    pad=atoi(argv[2]);
-  
+#ifdef __GNUC__	
+  optind=0;
+#endif	
+  for (;;) {
+    int c = getopt(argc,argv,"deitN:x:");
+    if (c == -1) break;
+		
+    switch (c) {
+    case 0:
+      break;
+    case 'd':
+      Direct=true;
+      break;
+    case 'e':
+      Explicit=true;
+      Implicit=false;
+      break;
+    case 'i':
+      Implicit=true;
+      Explicit=false;
+      break;
+    case 'N':
+      N=atoi(optarg);
+      break;
+    case 't':
+      Test=true;
+      break;
+    case 'x':
+      m=atoi(optarg);
+      break;
+    }
+  }
+
   unsigned int n=3*m-2;
   cout << "min padded buffer=" << n << endl;
   unsigned int log2n;
@@ -68,13 +95,13 @@ int main(int argc, char* argv[])
   if(N < 10) N=10;
   cout << "N=" << N << endl;
   
-  unsigned int np=pad ? n/2+1 : m;
+  unsigned int np=Explicit ? n/2+1 : m;
     
   Complex *f=FFTWComplex(np);
   Complex *g=FFTWComplex(np);
-#ifdef TEST  
-  Complex pseudoh[m];
-#endif
+
+  Complex *h0=NULL;
+  if(Test) h0=FFTWComplex(m);
 
   /*
   Complex *d=FFTWComplex(m);
@@ -90,7 +117,7 @@ int main(int argc, char* argv[])
   }
 
   double sum=0.0;
-  if(!pad) {
+  if(Implicit) {
     unsigned int c=m/2;
     Complex *u=FFTWComplex(c+1);
     Complex *v=FFTWComplex(c+1);
@@ -111,12 +138,11 @@ int main(int argc, char* argv[])
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
     else cout << f[0] << endl;
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
-#endif    
+    if(Test)
+      for(unsigned int i=0; i < m; i++) h0[i]=f[i];
   }
   
-  if(pad) {
+  if(Explicit) {
     sum=0.0;
     ExplicitHConvolution C(n,m,f);
     for(unsigned int i=0; i < N; ++i) {
@@ -133,13 +159,10 @@ int main(int argc, char* argv[])
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
     else cout << f[0] << endl;
-#ifdef TEST    
-    for(unsigned int i=0; i < m; i++) pseudoh[i]=f[i];
-#endif
+    if(Test) for(unsigned int i=0; i < m; i++) h0[i]=f[i];
   }
   
-  if(false)
-  {
+  if(Direct) {
     DirectHConvolution C(m);
     init(f,g);
     Complex *h=FFTWComplex(m);
@@ -154,17 +177,20 @@ int main(int argc, char* argv[])
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
+    FFTWdelete(h);
+    if(Test) for(unsigned int i=0; i < m; i++) h0[i]=h[i];
+  }
 
-    // test accuracy of convolution methods:
-#ifdef TEST
+  if(Test) {
+    Complex *h=FFTWComplex(m);
     double error=0.0;
     cout << endl;
+    cout << "Exact:" << endl;
     for(unsigned int i=0; i < m; i++) 
-      error += abs2(h[i]-pseudoh[i]);
+      error += abs2(h[i]-h0[i]);
     cout << "error="<<error<<endl;
     if (error > 1e-12)
       cerr << "Caution! error="<<error<<endl;
-#endif
     FFTWdelete(h);
   }
   

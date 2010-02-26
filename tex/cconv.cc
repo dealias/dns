@@ -10,13 +10,11 @@ using namespace std;
 // FFTW: 
 // configure --enable-sse2 CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
 
-// usage: aout [int m] [int pad]
-
 // Number of iterations.
 
 // TEST stuff
-static const double E=exp(1.0);
-const  Complex I(0,1);
+const double E=exp(1.0);
+const Complex I(0,1);
 
 unsigned int N0=10000000;
 unsigned int N=0;
@@ -58,7 +56,9 @@ inline void init(Complex *f, Complex *g)
 
 int main(int argc, char* argv[])
 {
-//  fftw::effort |= FFTW_NO_SIMD;
+#ifndef __SSE2__
+  fftw::effort |= FFTW_NO_SIMD;
+#endif  
   
 #ifdef __GNUC__	
   optind=0;
