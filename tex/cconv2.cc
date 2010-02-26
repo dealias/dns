@@ -66,7 +66,9 @@ unsigned int padding(unsigned int m)
 
 int main(int argc, char* argv[])
 {
-//  fftw::effort |= FFTW_NO_SIMD;
+#ifndef __SSE2__
+  fftw::effort |= FFTW_NO_SIMD;
+#endif  
   
 #ifdef __GNUC__	
   optind=0;
