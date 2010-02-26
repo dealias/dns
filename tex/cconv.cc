@@ -105,8 +105,8 @@ int main(int argc, char* argv[])
   if(N == 0) {
     N=N0/n;
     if(N < 10) N=10;
-    cout << "N=" << N << endl;
   }
+  cout << "N=" << N << endl;
   
   int np=Explicit ? n : m;
   Complex *f=FFTWComplex(np);

@@ -17,11 +17,15 @@ using namespace Array;
 // usage: aout [int m] [int pad]
 
 // Number of iterations.
-unsigned int N=10000000;
+unsigned int N0=10000000;
+unsigned int N=0;
 unsigned int nx=0;
 unsigned int ny=0;
 unsigned int mx=4;
 unsigned int my=4;
+
+bool Direct=false, Implicit=true, Explicit=false, Pruned=false, Test=false;
+bool pad=true;
 
 using namespace std;
 
@@ -50,7 +54,6 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
   }
 }
 
-int pad=0;
   
 unsigned int outlimit=100;
 
@@ -68,6 +71,51 @@ int main(int argc, char* argv[])
 {
 //  fftw::effort |= FFTW_NO_SIMD;
   
+#ifdef __GNUC__	
+  optind=0;
+#endif	
+  for (;;) {
+    int c = getopt(argc,argv,"deiptN:x:y:");
+    if (c == -1) break;
+		
+    switch (c) {
+    case 0:
+      break;
+    case 'd':
+      Direct=true;
+      break;
+    case 'e':
+      Explicit=true;
+      Implicit=false;
+      Pruned=false;
+      break;
+    case 'i':
+      Implicit=true;
+      Explicit=false;
+      Pruned=false;
+      break;
+    case 'p':
+      Implicit=false;
+      Explicit=false;
+      Pruned=true;
+      break;
+    case 'N':
+      N=atoi(optarg);
+      break;
+    case 't':
+      Test=true;
+      break;
+    case 'x':
+      mx=atoi(optarg);
+      break;
+    case 'y':
+      my=atoi(optarg);
+      break;
+    }
+  }
+  pad=(Pruned || Explicit);
+
+  /*
   if(argc >= 2)
     mx=my=atoi(argv[1]);
  
@@ -76,15 +124,20 @@ int main(int argc, char* argv[])
   
   if(argc >= 4)
     my=atoi(argv[3]);
-  
+  */
+  if(my == 0) my=mx;
+
+  nx=padding(mx);
+  ny=padding(my);
+
   cout << "nx=" << nx << ", ny=" << ny << endl;
   cout << "mx=" << mx << ", my=" << my << endl;
   
-  nx=padding(mx);
-  ny=padding(my);
-  
-  N=N/(nx*ny);
-  if(N < 10) N=10;
+
+  if(N == 0) {
+    N=N0/(nx*ny);
+    if(N < 10) N=10;
+  }
   cout << "N=" << N << endl;
   
   size_t align=sizeof(Complex);
@@ -101,7 +154,7 @@ int main(int argc, char* argv[])
   }
 
   double sum=0.0;
-  if(!pad) {
+  if(Implicit) {
     Complex *u1=FFTWComplex(my);
     Complex *v1=FFTWComplex(my);
     Complex *u2=FFTWComplex(mx*my);
@@ -132,31 +185,32 @@ int main(int argc, char* argv[])
     cout << endl;
   }
   
-  if(pad) {
+  if(Explicit || Pruned) {
     for(int prune=0; prune <= 1; ++prune) {
-      sum=0.0;
-      ExplicitConvolution2 C(nx,ny,mx,my,f,prune);
-      for(unsigned int i=0; i < N; ++i) {
-        init(f,g);
-        seconds();
-        C.convolve(f,g);
-        sum += seconds();
+      if((prune == 0 && Explicit) || (prune == 1 && Pruned)) {
+	sum=0.0;
+	ExplicitConvolution2 C(nx,ny,mx,my,f,prune);
+	for(unsigned int i=0; i < N; ++i) {
+	  init(f,g);
+	  seconds();
+	  C.convolve(f,g);
+	  sum += seconds();
+	}
+	cout << endl;
+	cout << (prune ? "Pruned:" : "Explicit:") << endl;
+	cout << (sum-offset)/N << endl;
+	cout << endl;
+	if(mx*my < outlimit) 
+	  for(unsigned int i=0; i < mx; i++) {
+	    for(unsigned int j=0; j < my; j++)
+	      cout << f[i][j] << "\t";
+	    cout << endl;
+	  } else cout << f[0][0] << endl;
       }
-      cout << endl;
-      cout << (prune ? "Pruned:" : "Explicit:") << endl;
-      cout << (sum-offset)/N << endl;
-      cout << endl;
-      if(mx*my < outlimit) 
-        for(unsigned int i=0; i < mx; i++) {
-          for(unsigned int j=0; j < my; j++)
-            cout << f[i][j] << "\t";
-          cout << endl;
-        } else cout << f[0][0] << endl;
     }
   }
 
-  if(false)
-  {
+  if(Direct) {
     array2<Complex> f(mx,my,align);
     array2<Complex> g(mx,my,align);
     array2<Complex> h(mx,my,align);
