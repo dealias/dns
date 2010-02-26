@@ -1235,7 +1235,7 @@ public:
     }
   }    
   
-  void padBackwards(Complex *f, bool shift=false) {
+  void padBackwards(Complex *f) {
     unsigned int nyp=ny/2+1;
     unsigned int nx2=nx/2;
     unsigned int end=nx2-mx;
@@ -1261,16 +1261,16 @@ public:
 
     if(prune) {
       xBackwards->fft(f);
-      if(shift) fftw::Shift(f,nx,ny,-1);
+      if(odd) fftw::Shift(f,nx,ny,-1);
       yBackwards->fft(f);
     } else
-      return shift ? Backwards->fft0(f) : Backwards->fft(f);
+      return Backwards->fft(f);
   }
   
   void convolve(Complex *e, Complex *f, Complex *g) {
-    padBackwards(e,odd);
-    padBackwards(f,odd);
-    padBackwards(g,true);
+    padBackwards(e);
+    padBackwards(f);
+    padBackwards(g);
     
     double *E=(double *) e;
     double *F=(double *) f;
@@ -1289,10 +1289,10 @@ public:
 	
     if(prune) {
       yForwards->fft(e);
-      fftw::Shift(e,nx,ny,1);
+      if(odd) fftw::Shift(e,nx,ny,1);
       xForwards->fft(e);
     } else
-      Forwards->fft0(e);
+      Forwards->fft(e);
   }
 };
 
