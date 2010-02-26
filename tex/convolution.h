@@ -1185,6 +1185,83 @@ public:
   }
 };
 
+// In-place explicitly dealiased Hermitian biconvolution.
+class ExplicitHBiConvolution {
+protected:
+  unsigned int n;
+  unsigned int m;
+  rcfft1d *rc;
+  crfft1d *cr;
+public:
+  // u is a temporary array of size n.
+  ExplicitHBiConvolution(unsigned int n, unsigned int m, Complex *u) :
+    n(n), m(m) {
+    rc=new rcfft1d(n,u);
+    cr=new crfft1d(n,u);
+  }
+  
+  ~ExplicitHBiConvolution() {
+    delete cr;
+    delete rc;
+  }
+    
+  void padBackwards(Complex *f) {
+    unsigned int n2=n/2;
+    for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
+    cr->fft(f);
+  }
+  
+// Compute the biconvolution of e, f, and g, where e, f, and g contain the
+// m non-negative Fourier components of real functions. Dealiasing is
+// internally implemented via explicit zero-padding to size n >= 3*m.
+//
+// The (distinct) input arrays e, f, and g must each be allocated to size n/2+1
+// (contents not preserved). The output is returned in the first m elements
+// of e.
+  void convolve(Complex *e, Complex *f, Complex *g) {
+    padBackwards(e);
+    padBackwards(f);
+    padBackwards(g);
+	
+    double *E=(double *) e;
+    double *F=(double *) f;
+    double *G=(double *) g;
+    
+    double ninv=1.0/n;
+    for(unsigned int i=0; i < n; ++i)
+      E[i] *= F[i]*G[i]*ninv;
+    rc->fft(e);
+  }
+};
+
+// Out-of-place direct 1D Hermitian biconvolution.
+class DirectHBiConvolution {
+protected:  
+  unsigned int m;
+  
+public:
+  DirectHBiConvolution(unsigned int m) : m(m) {}
+  
+  void convolve(Complex *h, Complex *e, Complex *f, Complex *g) {
+    int stop=m;
+    int start=1-m;
+    for(int k=0; k < stop; ++k) {
+      Complex sum=0.0;
+      for(int p=start; p < stop; ++p) {
+        Complex E=(p >= 0) ? e[p] : conj(e[-p]);
+        for(int q=start; q < stop; ++q) {
+          int r=k-p-q;
+          if(r >= start && r < stop)
+            sum += E*
+              ((q >= 0) ? f[q] : conj(f[-q]))*
+              ((r >= 0) ? g[r] : conj(g[-r]));
+        }
+      }
+      h[k]=sum;
+    }
+  }
+};
+
 // In-place explicitly dealiased 2D Hermitian biconvolution.
 class ExplicitHBiConvolution2 {
 protected:
@@ -1315,16 +1392,17 @@ public:
         Complex sum=0.0;
         for(int px=xstart; px < xstop; ++px) {
           for(int py=ystart; py < ystop; ++py) {
+            Complex E=(py >= 0) ? e[(xorigin+px)*my+py] : 
+              conj(e[(xorigin-px)*my-py]);
             for(int qx=xstart; qx < xstop; ++qx) {
               for(int qy=ystart; qy < ystop; ++qy) {
                 int rx=kx-px-qx;
                 if(rx >= xstart && rx < xstop) {
                   int ry=ky-py-qy;
                   if(ry >= ystart && ry < ystop) {
-                    sum += ((py >= 0) ? e[(xorigin+px)*my+py] : 
-                            conj(e[(xorigin-px)*my-py])) *
+                    sum += E *
                       ((qy >= 0) ? f[(xorigin+qx)*my+qy] : 
-                            conj(f[(xorigin-qx)*my-qy])) *
+                       conj(f[(xorigin-qx)*my-qy])) *
                       ((ry >= 0) ? g[(xorigin+rx)*my+ry] : 
                        conj(g[(xorigin-rx)*my-ry]));
                   }
