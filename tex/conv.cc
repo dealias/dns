@@ -108,12 +108,6 @@ int main(int argc, char* argv[])
   Complex *h0=NULL;
   if(Test) h0=FFTWComplex(m);
 
-  /*
-    Complex *d=FFTWComplex(m);
-    d[0]=1.0;
-    for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
-  */
-  
   double offset=0.0;
   seconds();
   for(unsigned int i=0; i < N; ++i) {
@@ -133,8 +127,8 @@ int main(int argc, char* argv[])
       C.convolve(f,g,u,v);
       sum += seconds();
     }
-    FFTWdelete(u);
     FFTWdelete(v);
+    FFTWdelete(u);
     
     cout << endl;
     cout << "Implicit:" << endl;

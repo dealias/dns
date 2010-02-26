@@ -66,9 +66,7 @@ public:
   
   // u and v are distinct temporary arrays each of size m.
   ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : n(2*m), m(m) {
-    static const double pi=acos(-1.0);
-//    double arg=2.0*M_PI/n;
-    double arg=2.0*pi/n;
+    double arg=M_PI/m;
     Cos=cos(arg);
     Sin=sin(arg);
 
@@ -551,9 +549,8 @@ class fftpad {
 
 public:  
   fftpad(unsigned int m, unsigned int M,
-         unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
-    n=2*m;
-    double arg=2.0*M_PI/n;
+         unsigned int stride, Complex *f) : n(2*m), m(m), M(M), stride(stride) {
+    double arg=M_PI/m;
     Cos=cos(arg);
     Sin=sin(arg);
     
@@ -644,7 +641,7 @@ public:
         p->im=ninv*fki.im+im*fkm.re+re*fkm.im;
       }
       double temp=re*Cos+im*Sin;
-      im=-re*Sin+im*Cos;
+      im=im*Cos-re*Sin;
       re=temp;
 #endif     
     }
@@ -676,8 +673,7 @@ class fft0pad {
   double Cos,Sin;
 public:  
   fft0pad(unsigned int m, unsigned int M, unsigned int stride, Complex *u)
-    : m(m), M(M), stride(stride) {
-    n=3*m;
+    : n(3*m), m(m), M(M), stride(stride) {
     double arg=2.0*M_PI/n;
     Cos=cos(arg);
     Sin=sin(arg);
@@ -1231,6 +1227,131 @@ public:
     for(unsigned int i=0; i < n; ++i)
       E[i] *= F[i]*G[i]*ninv;
     rc->fft(e);
+  }
+};
+
+// In-place implicitly dealiased Hermitian biconvolution.
+class ImplicitHBiConvolution {
+protected:
+  unsigned int n,m;
+  rcfft1d *rc, *rco;
+  crfft1d *cr, *cro;
+  double Cos,Sin;
+public:  
+  
+  // u and v are distinct temporary arrays each of size m.
+  ImplicitHBiConvolution(unsigned int m, Complex *u, Complex *v) : 
+    n(4*m), m(m) {
+    double arg=M_PI/m;
+    Cos=cos(arg);
+    Sin=sin(arg);
+
+    rc=new rcfft1d(m,u);
+    cr=new crfft1d(m,u);
+    
+    double *U=(double *) u;
+    rco=new rcfft1d(m,U,v);
+    cro=new crfft1d(m,v,U);
+  }
+  
+  ~ImplicitHBiConvolution() {
+    delete cro;
+    delete rco;
+    delete cr;
+    delete rc;
+  }
+  
+  // In-place implicitly dealiased convolution.
+  // The input arrays f, g, and h are each of size m (contents not preserved).
+  // The output is returned in f.
+  // u, v, and w are temporary arrays each of size m.
+  void convolve(Complex *f, Complex *g, Complex *h,
+                Complex *u, Complex *v, Complex *w) {
+#ifdef __SSE2__      
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    Vec CC=LOAD(&cc);
+    Vec SS=LOAD(&ss);
+    const Complex I(0.0,1.0);
+    Vec Zetak=LOAD(&I);
+#else    
+    double re=0.0;
+    double im=1.0;
+#endif
+    for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__      
+      STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
+      STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
+      STORE(w+k,ZMULT(Zetak,LOAD(h+k)));
+      Zetak=ZMULT(CC,SS,Zetak);
+#else
+      Complex *P=u+k;
+      Complex *Q=v+k;
+      Complex *R=w+k;
+      Complex fk=*(f+k);
+      Complex gk=*(g+k);
+      Complex hk=*(h+k);
+      P->re=re*fk.re-im*fk.im;
+      P->im=im*fk.re+re*fk.im;
+      Q->re=re*gk.re-im*gk.im;
+      Q->im=im*gk.re+re*gk.im;
+      R->re=re*hk.re-im*hk.im;
+      R->im=im*hk.re+re*hk.im;
+      double temp=re*Cos-im*Sin; 
+      im=re*Sin+im*Cos;
+      re=temp;
+#endif      
+    }  
+    
+    // five of eight FFTs are out-of-place
+    
+    cr->fft(u);
+    cr->fft(v);
+    cr->fft(w);
+    
+    double *U=(double *) u;
+    double *V=(double *) v;
+    double *W=(double *) w;
+    for(unsigned int i=0; i < m; ++i)
+      V[i] *= U[i]*W[i];
+    rco->fft(v,U); // v and w are now free
+
+    V=(double *) v;
+    cro->fft(f,V);
+    double *F=(double *) f;
+    cro->fft(g,F);
+    double *G=(double *) g;
+    cro->fft(h,G);
+    for(unsigned int i=0; i < m; ++i)
+      V[i] *= F[i]*G[i];
+    rco->fft(V,f);
+    
+    double ninv=1.0/n;
+#ifdef __SSE2__      
+    SS=-LOAD(&ss);
+    const Complex Ninv(0.0,ninv);
+    const Complex Ninv2(ninv,ninv);
+    Zetak=LOAD(&Ninv);
+    Vec ninv2=LOAD(&Ninv2);
+#else    
+    re=0.0;
+    im=ninv;
+#endif    
+    for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__
+      STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
+      Zetak=ZMULT(CC,SS,Zetak);
+#else      
+      Complex *p=f+k;
+      Complex fk=*p;
+      Complex fkm=*(u+k);
+      p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
+      p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+      double temp=re*Cos+im*Sin;
+      im=im*Cos-re*Sin;
+      re=temp;
+#endif      
+    }
   }
 };
 
