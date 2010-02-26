@@ -27,7 +27,6 @@ unsigned int nxp;
 unsigned int nyp;
 
 bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
-bool pad=true;
 
 unsigned int outlimit=100;
 
@@ -48,7 +47,7 @@ inline double seconds()
 
 inline void init(array2<Complex>& f, array2<Complex>& g) 
 {
-  unsigned int offset=pad ? nx/2-mx+1 : 0;
+  unsigned int offset=Explicit ? nx/2-mx+1 : 0;
   unsigned int origin=offset+mx-1;
   unsigned int stop=origin+mx;
   
@@ -105,11 +104,10 @@ int main(int argc, char* argv[])
     case 'i':
       Implicit=true;
       Explicit=false;
-      Pruned=false;
       break;
     case 'p':
+      Explicit=true;
       Implicit=false;
-      Explicit=false;
       Pruned=true;
       break;
     case 'N':
@@ -123,7 +121,6 @@ int main(int argc, char* argv[])
       break;
     }
   }
-  pad=(Pruned || Explicit);
 
   nx=padding(mx);
   ny=padding(my);
@@ -137,8 +134,8 @@ int main(int argc, char* argv[])
   cout << "N=" << N << endl;
     
   size_t align=sizeof(Complex);
-  nxp=pad ? nx : 2*mx-1;
-  nyp=pad ? ny/2+1 : my;
+  nxp=Explicit ? nx : 2*mx-1;
+  nyp=Explicit ? ny/2+1 : my;
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
 
@@ -183,34 +180,30 @@ int main(int argc, char* argv[])
     cout << endl;
   }
   
-  if(Explicit || Pruned) {
-    for(unsigned int prune=0; prune <= 1; ++prune) {
-      if((prune == 0 && Explicit) || (prune == 1 && Pruned)) {
-	sum=0.0;
-	ExplicitHConvolution2 C(nx,ny,mx,my,f,prune);
-	for(unsigned int i=0; i < N; ++i) {
-	  init(f,g);
-	  seconds();
-	  C.convolve(f,g);
-	  sum += seconds();
-	}
-	cout << endl;
-	cout << (prune ? "Pruned:" : "Explicit:") << endl;
-	cout << (sum-offset)/N << endl;
-	cout << endl;
-	unsigned int offset=nx/2-mx+1;
-	if(2*(mx-1)*my < outlimit) 
-	  for(unsigned int i=offset; i < offset+2*mx-1; i++) {
-	    for(unsigned int j=0; j < my; j++)
-	      cout << f[i][j] << "\t";
-	    cout << endl;
-	  } else cout << f[offset][0] << endl;
-      }
+  if(Explicit) {
+    sum=0.0;
+    ExplicitHConvolution2 C(nx,ny,mx,my,f,Pruned);
+    for(unsigned int i=0; i < N; ++i) {
+      init(f,g);
+      seconds();
+      C.convolve(f,g);
+      sum += seconds();
     }
+    cout << endl;
+    cout << (Pruned ? "Pruned:" : "Explicit:") << endl;
+    cout << (sum-offset)/N << endl;
+    cout << endl;
+    unsigned int offset=nx/2-mx+1;
+    if(2*(mx-1)*my < outlimit) 
+      for(unsigned int i=offset; i < offset+2*mx-1; i++) {
+        for(unsigned int j=0; j < my; j++)
+          cout << f[i][j] << "\t";
+        cout << endl;
+      } else cout << f[offset][0] << endl;
   }
   
   if(Direct) {
-    pad=0;
+    Explicit=0;
     unsigned int nxp=2*mx-1;
     array2<Complex> f(nxp,my,align);
     array2<Complex> g(nxp,my,align);

@@ -14,8 +14,6 @@ using namespace Array;
 // FFTW: 
 // configure --enable-sse2 CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
 
-// usage: aout [int m] [int pad]
-
 // Number of iterations.
 unsigned int N0=10000000;
 unsigned int N=0;
@@ -25,7 +23,6 @@ unsigned int mx=4;
 unsigned int my=4;
 
 bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
-bool pad=true;
 
 using namespace std;
 
@@ -92,11 +89,10 @@ int main(int argc, char* argv[])
     case 'i':
       Implicit=true;
       Explicit=false;
-      Pruned=false;
       break;
     case 'p':
+      Explicit=true;
       Implicit=false;
-      Explicit=false;
       Pruned=true;
       break;
     case 'N':
@@ -110,7 +106,6 @@ int main(int argc, char* argv[])
       break;
     }
   }
-  pad=(Pruned || Explicit);
 
   if(my == 0) my=mx;
 
@@ -128,8 +123,8 @@ int main(int argc, char* argv[])
   cout << "N=" << N << endl;
   
   size_t align=sizeof(Complex);
-  int nxp=pad ? nx : mx;
-  int nyp=pad ? ny : my;
+  int nxp=Explicit ? nx : mx;
+  int nyp=Explicit ? ny : my;
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
 
@@ -172,29 +167,25 @@ int main(int argc, char* argv[])
     cout << endl;
   }
   
-  if(Explicit || Pruned) {
-    for(int prune=0; prune <= 1; ++prune) {
-      if((prune == 0 && Explicit) || (prune == 1 && Pruned)) {
-	sum=0.0;
-	ExplicitConvolution2 C(nx,ny,mx,my,f,prune);
-	for(unsigned int i=0; i < N; ++i) {
-	  init(f,g);
-	  seconds();
-	  C.convolve(f,g);
-	  sum += seconds();
-	}
-	cout << endl;
-	cout << (prune ? "Pruned:" : "Explicit:") << endl;
-	cout << (sum-offset)/N << endl;
-	cout << endl;
-	if(mx*my < outlimit) 
-	  for(unsigned int i=0; i < mx; i++) {
-	    for(unsigned int j=0; j < my; j++)
-	      cout << f[i][j] << "\t";
-	    cout << endl;
-	  } else cout << f[0][0] << endl;
-      }
+  if(Explicit) {
+    sum=0.0;
+    ExplicitConvolution2 C(nx,ny,mx,my,f,Pruned);
+    for(unsigned int i=0; i < N; ++i) {
+      init(f,g);
+      seconds();
+      C.convolve(f,g);
+      sum += seconds();
     }
+    cout << endl;
+    cout << (Pruned ? "Pruned:" : "Explicit:") << endl;
+    cout << (sum-offset)/N << endl;
+    cout << endl;
+    if(mx*my < outlimit) 
+      for(unsigned int i=0; i < mx; i++) {
+        for(unsigned int j=0; j < my; j++)
+          cout << f[i][j] << "\t";
+        cout << endl;
+      } else cout << f[0][0] << endl;
   }
 
   if(Direct) {
