@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deitN:x:");
+    int c = getopt(argc,argv,"deiptN:x:");
     if (c == -1) break;
 		
     switch (c) {
@@ -80,6 +80,8 @@ int main(int argc, char* argv[])
     case 'i':
       Implicit=true;
       Explicit=false;
+      break;
+    case 'p':
       break;
     case 'N':
       N=atoi(optarg);

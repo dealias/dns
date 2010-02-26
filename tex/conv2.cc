@@ -14,8 +14,6 @@ using namespace Array;
 // FFTW: 
 // configure --enable-sse2 CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
 
-// usage: aout [int m] [int pad]
-
 // Number of iterations.
 unsigned int N0=10000000;
 unsigned int N=0;
@@ -128,9 +126,10 @@ int main(int argc, char* argv[])
   cout << "nx=" << nx << ", ny=" << ny << endl;
   cout << "mx=" << mx << ", my=" << my << endl;
   
-  N=N/(nx*ny);
-  if(N < 10) N=10;
-  N=1;
+  if(N == 0) {
+    N=N0/(nx*ny);
+    if(N < 10) N=10;
+  }
   cout << "N=" << N << endl;
     
   size_t align=sizeof(Complex);

@@ -115,7 +115,6 @@ int main(int argc, char* argv[])
   cout << "nx=" << nx << ", ny=" << ny << endl;
   cout << "mx=" << mx << ", my=" << my << endl;
   
-
   if(N == 0) {
     N=N0/(nx*ny);
     if(N < 10) N=10;

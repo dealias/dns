@@ -5,7 +5,7 @@ stop=13
 N=1
 
 if [ "$1" == "" ]; then
-    echo please specify program: timing "["int"]" "["conv, cconv, conv2, or cconv2"]"
+    echo please specify program: timing "["conv\|cconv\|conv2\|cconv2"]" "["level"]"
     exit
 fi
 
