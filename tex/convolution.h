@@ -1278,7 +1278,7 @@ public:
     double re=0.0;
     double im=1.0;
 #endif
-    for(unsigned int k=0; k < m; ++k) {
+    for(unsigned int k=0; k <= m; ++k) {
 #ifdef __SSE2__      
       STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
       STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
@@ -1337,7 +1337,7 @@ public:
     re=0.0;
     im=ninv;
 #endif    
-    for(unsigned int k=0; k < m; ++k) {
+    for(unsigned int k=0; k <= m; ++k) {
 #ifdef __SSE2__
       STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
       Zetak=ZMULT(CC,SS,Zetak);
