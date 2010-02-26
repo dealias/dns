@@ -58,30 +58,30 @@ int main(int argc, char* argv[])
     if (c == -1) break;
 		
     switch (c) {
-    case 0:
-      break;
-    case 'd':
-      Direct=true;
-      break;
-    case 'e':
-      Explicit=true;
-      Implicit=false;
-      break;
-    case 'i':
-      Implicit=true;
-      Explicit=false;
-      break;
-    case 'p':
-      break;
-    case 'N':
-      N=atoi(optarg);
-      break;
-    case 't':
-      Test=true;
-      break;
-    case 'x':
-      m=atoi(optarg);
-      break;
+      case 0:
+        break;
+      case 'd':
+        Direct=true;
+        break;
+      case 'e':
+        Explicit=true;
+        Implicit=false;
+        break;
+      case 'i':
+        Implicit=true;
+        Explicit=false;
+        break;
+      case 'p':
+        break;
+      case 'N':
+        N=atoi(optarg);
+        break;
+      case 't':
+        Test=true;
+        break;
+      case 'x':
+        m=atoi(optarg);
+        break;
     }
   }
 
@@ -109,9 +109,9 @@ int main(int argc, char* argv[])
   if(Test) h0=FFTWComplex(m);
 
   /*
-  Complex *d=FFTWComplex(m);
-  d[0]=1.0;
-  for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
+    Complex *d=FFTWComplex(m);
+    d[0]=1.0;
+    for(unsigned int i=1; i < m; i++) d[i]=Complex(3.0,2.0);
   */
   
   double offset=0.0;

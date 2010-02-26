@@ -78,34 +78,34 @@ int main(int argc, char* argv[])
     if (c == -1) break;
 		
     switch (c) {
-    case 0:
-      break;
-    case 'd':
-      Direct=true;
-      break;
-    case 'e':
-      Explicit=true;
-      Implicit=false;
-      Pruned=false;
-      break;
-    case 'i':
-      Implicit=true;
-      Explicit=false;
-      break;
-    case 'p':
-      Explicit=true;
-      Implicit=false;
-      Pruned=true;
-      break;
-    case 'N':
-      N=atoi(optarg);
-      break;
-    case 'x':
-      mx=atoi(optarg);
-      break;
-    case 'y':
-      my=atoi(optarg);
-      break;
+      case 0:
+        break;
+      case 'd':
+        Direct=true;
+        break;
+      case 'e':
+        Explicit=true;
+        Implicit=false;
+        Pruned=false;
+        break;
+      case 'i':
+        Implicit=true;
+        Explicit=false;
+        break;
+      case 'p':
+        Explicit=true;
+        Implicit=false;
+        Pruned=true;
+        break;
+      case 'N':
+        N=atoi(optarg);
+        break;
+      case 'x':
+        mx=atoi(optarg);
+        break;
+      case 'y':
+        my=atoi(optarg);
+        break;
     }
   }
 
