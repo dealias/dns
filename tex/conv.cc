@@ -10,7 +10,8 @@ using namespace std;
 // configure --enable-sse2 CC=icpc CFLAGS="-O3 -ansi-alias -malign-double -fp-model fast=2"
 
 // Number of iterations.
-unsigned int N=10000000;
+unsigned int N0=10000000;
+unsigned int N=0;
   
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
 
@@ -91,8 +92,10 @@ int main(int argc, char* argv[])
   cout << "n=" << n << endl;
   cout << "m=" << m << endl;
   
-  N=N/n;
-  if(N < 10) N=10;
+  if(N == 0) {
+    N=N0/n;
+    if(N < 10) N=10;
+  }
   cout << "N=" << N << endl;
   
   unsigned int np=Explicit ? n/2+1 : m;
