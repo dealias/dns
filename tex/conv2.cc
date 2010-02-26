@@ -17,7 +17,8 @@ using namespace Array;
 // usage: aout [int m] [int pad]
 
 // Number of iterations.
-unsigned int N=10000000;
+unsigned int N0=10000000;
+unsigned int N=0;
 unsigned int nx=0;
 unsigned int ny=0;
 unsigned int mx=4;
@@ -25,7 +26,8 @@ unsigned int my=4;
 unsigned int nxp;
 unsigned int nyp;
 
-int pad;
+bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
+bool pad=true;
 
 unsigned int outlimit=100;
 
@@ -82,17 +84,47 @@ int main(int argc, char* argv[])
 {
 //  fftw::effort |= FFTW_NO_SIMD;
   
-  pad=0;
-  
-  if(argc >= 2)
-    mx=my=atoi(argv[1]);
- 
-  if(argc >= 3)
-    pad=atoi(argv[2]);
-  
-  if(argc >= 4)
-    my=atoi(argv[3]);
-  
+#ifdef __GNUC__	
+  optind=0;
+#endif	
+  for (;;) {
+    int c = getopt(argc,argv,"deiptN:x:y:");
+    if (c == -1) break;
+		
+    switch (c) {
+    case 0:
+      break;
+    case 'd':
+      Direct=true;
+      break;
+    case 'e':
+      Explicit=true;
+      Implicit=false;
+      Pruned=false;
+      break;
+    case 'i':
+      Implicit=true;
+      Explicit=false;
+      Pruned=false;
+      break;
+    case 'p':
+      Implicit=false;
+      Explicit=false;
+      Pruned=true;
+      break;
+    case 'N':
+      N=atoi(optarg);
+      break;
+    case 'x':
+      mx=atoi(optarg);
+      break;
+    case 'y':
+      my=atoi(optarg);
+      break;
+    }
+  }
+  pad=(Pruned || Explicit);
+
   nx=padding(mx);
   ny=padding(my);
   
@@ -118,7 +150,7 @@ int main(int argc, char* argv[])
   }
 
   double sum=0.0;
-  if(!pad) {
+  if(Implicit) {
     unsigned int c=my/2;
     unsigned int mxpmy=(mx+1)*my;
     Complex *u1=FFTWComplex(c+1);
@@ -151,32 +183,33 @@ int main(int argc, char* argv[])
     cout << endl;
   }
   
-  if(pad) {
+  if(Explicit || Pruned) {
     for(unsigned int prune=0; prune <= 1; ++prune) {
-      sum=0.0;
-      ExplicitHConvolution2 C(nx,ny,mx,my,f,prune);
-      for(unsigned int i=0; i < N; ++i) {
-        init(f,g);
-        seconds();
-        C.convolve(f,g);
-        sum += seconds();
+      if((prune == 0 && Explicit) || (prune == 1 && Pruned)) {
+	sum=0.0;
+	ExplicitHConvolution2 C(nx,ny,mx,my,f,prune);
+	for(unsigned int i=0; i < N; ++i) {
+	  init(f,g);
+	  seconds();
+	  C.convolve(f,g);
+	  sum += seconds();
+	}
+	cout << endl;
+	cout << (prune ? "Pruned:" : "Explicit:") << endl;
+	cout << (sum-offset)/N << endl;
+	cout << endl;
+	unsigned int offset=nx/2-mx+1;
+	if(2*(mx-1)*my < outlimit) 
+	  for(unsigned int i=offset; i < offset+2*mx-1; i++) {
+	    for(unsigned int j=0; j < my; j++)
+	      cout << f[i][j] << "\t";
+	    cout << endl;
+	  } else cout << f[offset][0] << endl;
       }
-      cout << endl;
-      cout << (prune ? "Pruned:" : "Explicit:") << endl;
-      cout << (sum-offset)/N << endl;
-      cout << endl;
-      unsigned int offset=nx/2-mx+1;
-      if(2*(mx-1)*my < outlimit) 
-        for(unsigned int i=offset; i < offset+2*mx-1; i++) {
-          for(unsigned int j=0; j < my; j++)
-            cout << f[i][j] << "\t";
-          cout << endl;
-        } else cout << f[offset][0] << endl;
     }
   }
   
-//  if(false)
-  {
+  if(Direct) {
     pad=0;
     unsigned int nxp=2*mx-1;
     array2<Complex> f(nxp,my,align);

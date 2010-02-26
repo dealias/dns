@@ -24,7 +24,7 @@ unsigned int ny=0;
 unsigned int mx=4;
 unsigned int my=4;
 
-bool Direct=false, Implicit=true, Explicit=false, Pruned=false, Test=false;
+bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 bool pad=true;
 
 using namespace std;
@@ -102,9 +102,6 @@ int main(int argc, char* argv[])
     case 'N':
       N=atoi(optarg);
       break;
-    case 't':
-      Test=true;
-      break;
     case 'x':
       mx=atoi(optarg);
       break;
@@ -115,16 +112,6 @@ int main(int argc, char* argv[])
   }
   pad=(Pruned || Explicit);
 
-  /*
-  if(argc >= 2)
-    mx=my=atoi(argv[1]);
- 
-  if(argc >= 3)
-    pad=atoi(argv[2]);
-  
-  if(argc >= 4)
-    my=atoi(argv[3]);
-  */
   if(my == 0) my=mx;
 
   nx=padding(mx);
