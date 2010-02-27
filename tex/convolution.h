@@ -1242,7 +1242,7 @@ public:
   // u and v are distinct temporary arrays each of size m+1.
   ImplicitHBiConvolution(unsigned int m, Complex *u, Complex *v) : 
     n(4*m), m(m) {
-    double arg=M_PI/m;
+    double arg=2.0*M_PI/n;
     Cos=cos(arg);
     Sin=sin(arg);
 
@@ -1313,7 +1313,9 @@ public:
     double *U=(double *) u;
     double *V=(double *) v;
     double *W=(double *) w;
-    for(unsigned int i=0; i < m; ++i)
+    
+    unsigned int twom=2*m;
+    for(unsigned int i=0; i < twom; ++i)
       V[i] *= U[i]*W[i];
     rco->fft(v,U); // v and w are now free
 
@@ -1323,7 +1325,7 @@ public:
     cro->fft(g,F);
     double *G=(double *) g;
     cro->fft(h,G);
-    for(unsigned int i=0; i < m; ++i)
+    for(unsigned int i=0; i < twom; ++i)
       V[i] *= F[i]*G[i];
     rco->fft(V,f);
     

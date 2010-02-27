@@ -918,15 +918,15 @@ an operation count of $8Km\log m$.
   \KwIn{vector \xf, vector \xg, vector \xh}
   \KwOut{vector \xf}
   \For{$k=0$ \KwTo $m-1$}{
-    $\xu[k] \leftarrow i\z_{2m}^k * \xf[k]$\;
-    $\xv[k] \leftarrow i\z_{2m}^k * \xg[k]$\;
-    $\xw[k] \leftarrow i\z_{2m}^k * \xh[k]$\;
+    $\xu[k] \leftarrow i\z_{4m}^k * \xf[k]$\;
+    $\xv[k] \leftarrow i\z_{4m}^k * \xg[k]$\;
+    $\xw[k] \leftarrow i\z_{4m}^k * \xh[k]$\;
   }
   \medskip
   $\xu \leftarrow \crfft\inv(\xu)$\;
   $\xv \leftarrow \crfft\inv(\xv)$\;
   $\xw \leftarrow \crfft\inv(\xw)$\;
-  $\xv \leftarrow \xu * \xv * \vw$\;
+  $\xv \leftarrow \xu * \xv * \xw$\;
   $\xu \leftarrow \rcfft(\xv)$\;
   \medskip
   $\xv \leftarrow \crfft\inv(\xf)$\;
@@ -936,13 +936,13 @@ an operation count of $8Km\log m$.
   $\xf \leftarrow \rcfft(\xv)$\;
   \medskip
   \For{$k=0$ \KwTo $m-1$}{
-    $\xf[k] \leftarrow \xf[k] + i\z_{2m}^{-k} * \xu[k]$\;
+    $\xf[k] \leftarrow \xf[k] + i\z_{4m}^{-k} * \xu[k]$\;
   }
   \Return f/(4m)\;
 \caption{biconv(vector {\sf f}, vector~{\sf g}, vector~{\sf h}) computes
 an in-place implicitly dealiased biconvolution of three complex centered
 Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
-{\sf u}, {\sf v}, and {\sf w}, each of length~$m$.}\label{biconv}
+{\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}
 \end{function}
 
 \section{Arbitrary $p/q$ Padding}
