@@ -860,11 +860,12 @@ versions of these routines.
 \begin{procedure}[htbp]
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
-  \For{$k=0$ \KwTo $2m-1$}{
+  \For{$k=1$ \KwTo $2m-1$}{
     $\xu[k] \leftarrow \z_{4m}^k * \xf[k]$\;
   }
-  $\xf[-1]=0$\;
+  $\xf[0]=0$\;
   $\xf \leftarrow \fft\inv(\xf)$\;
+  $\xu[0]=0$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
   \Return f;
   \caption{fft0bipadBackwards(vector {\sf f}, vector {\sf u}) stores the scrambled
@@ -878,7 +879,7 @@ length $2m$.}\label{fft0bipadBackwards}
   \KwOut{vector \xf}
   $\xf \leftarrow \fft(\xf)$\;
   $\xu \leftarrow \fft(\xu)$\;
-  \For{$k=0$ \KwTo $2m-1$}{
+  \For{$k=1$ \KwTo $2m-1$}{
     $\xf[k] \leftarrow \xf[k] - \z_{4m}^{-k} * \xu[k]$\;
   }
   \Return \xf/(4m)\;
@@ -918,12 +919,18 @@ an operation count of $8Km\log m$.
     $\xw[k] \leftarrow \z_{4m}^k * \xh[k]$\;
   }
   \medskip
+  $\xu[m]=0$\;
+  $\xv[m]=0$\;
+  $\xw[m]=0$\;
   $\xu \leftarrow \crfft\inv(\xu)$\;
   $\xv \leftarrow \crfft\inv(\xv)$\;
   $\xw \leftarrow \crfft\inv(\xw)$\;
   $\xv \leftarrow \xu * \xv * \xw$\;
   $\xu \leftarrow \rcfft(\xv)$\;
   \medskip
+  $\xf[m]=0$\;
+  $\xg[m]=0$\;
+  $\xh[m]=0$\;
   $\xv \leftarrow \crfft\inv(\xf)$\;
   $\xf \leftarrow \crfft\inv(\xg)$\;
   $\xg \leftarrow \crfft\inv(\xh)$\;
@@ -935,7 +942,7 @@ an operation count of $8Km\log m$.
   }
   \Return f/(4m)\;
 \caption{biconv(vector {\sf f}, vector~{\sf g}, vector~{\sf h}) computes
-an in-place implicitly dealiased biconvolution of three complex centered
+an in-place implicitly dealiased biconvolution of three centered
 Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 {\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}
 \end{function}
