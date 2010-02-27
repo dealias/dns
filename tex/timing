@@ -4,28 +4,37 @@ start=6
 stop=13
 
 if [ "$1" == "" ]; then
-    echo please specify program: timing "["conv\|cconv\|conv2\|cconv2"]" "["level"]"
+    echo please specify program: timing "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2"]" "["level"]"
     exit
 fi
 
 prune=no
 
 if [ "$1" == "conv" ]; then
-    complex=no
+    double=no
     outdir=timings1r
 fi
 if [ "$1" == "conv2" ]; then
-    complex=no
+    double=no
     outdir=timings2r
     prune=yes
 fi
 if [ "$1" == "cconv" ]; then
-    complex=yes
+    double=yes
     outdir=timings1c
 fi
 if [ "$1" == "cconv2" ]; then
-    complex=yes
+    double=yes
     outdir=timings2c
+    prune=yes
+fi
+if [ "$1" == "biconv" ]; then
+    double=yes
+    outdir=timings1b
+fi
+if [ "$1" == "biconv2" ]; then
+    double=yes
+    outdir=timings2b
     prune=yes
 fi
 if [ "$outdir" == "" ]; then
@@ -47,7 +56,7 @@ do
     echo $i
     m=$(asy -c "2^$i")
     echo -e "$m \t $(./$1 -x $m -i | grep -A 1 Implicit | tail -n 1)"| cat >> $outdir/implicit
-    if [ "$complex" == "no" ]; then
+    if [ "$double" == "no" ]; then
 	m=$(asy -c "floor((2^($i+1)+2)/3);")
     fi
     echo -e "$m \t $(./$1 -x $m -e | grep -A 1 Explicit | tail -n 1)" | cat >> $outdir/explicit

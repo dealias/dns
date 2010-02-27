@@ -10,14 +10,10 @@ string dir;
 bool prune=false;
 if(pname == "conv") dir="timings1r";
 if(pname == "cconv") dir="timings1c";
-if(pname == "conv2") {
-  dir="timings2r";
-  prune=true;
-}
-if(pname == "cconv2") {
-  dir="timings2c";
-  prune=true;
-}
+if(pname == "conv2") {dir="timings2r";prune=true;}
+if(pname == "cconv2") {dir="timings2c";prune=true;}
+if(pname == "biconv") dir="timings1b";
+if(pname == "biconv2") dir="timings2b";
   
 file fin=input(dir+"/explicit").line();
 real[][] a=fin.dimension(0,0);
