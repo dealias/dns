@@ -293,6 +293,7 @@ complex Fourier transforms of size $m$ can be done out of place.
 \SetKwData{xT}{T}
 \SetKwData{xU}{U}
 \SetKwData{xV}{V}
+\SetKwData{xW}{W}
 
 \begin{figure}[htbp]
 \begin{minipage}{0.52\linewidth}
@@ -728,28 +729,6 @@ required by zero padding.
 
 %Discuss proper storage direction & use of multiple ffts.
 
-\begin{function}[htbp]
-  \KwIn{matrix \xf, matrix \xg}
-  \KwOut{matrix \xf}
-  \For{$j=0$ \KwTo $m_y-1$}{
-    $\fftpadBackwards(\xf^T[j],\xU^T[j])$\;
-    $\fftpadBackwards(\xg^T[j],\xV^T[j])$\;
-  }
-  \For{$i=0$ \KwTo $m_x-1$}{
-    $\cconv(\xf[i],\xg[i])$\;
-    $\cconv(\xU[i],\xV[i])$\;
-  }
-  \For{$j=0$ \KwTo $m_y-1$}{
-    $\fftpadForwards(\xf^T[j],\xU^T[j])$\;
-  }
-  \Return \xf\;
-\caption{cconv2(matrix~{\sf f}, matrix~{\sf g}) 
-returns an in-place implicitly dealiased convolution of
-$m_x\times m_y$ matrices {\sf f} and {\sf g} using temporary $m_x\times m_y$
-matrices {\sf U} and {\sf V} and temporary vectors {\sf u} and {\sf v} of
-length $m_y$.}\label{cconv2}
-\end{function}
-
 \subsection{Centered 2D Hermitian convolution}
 
 In two dimensions, the Fourier-centered Hermiticity condition appears as
@@ -763,8 +742,32 @@ convolution is $2(2m-1)m+2(m+1)m+2(m/2+1)=6m^2+m+2$ complex words,
 compared with a minimum of $2(3m-2)(3m/2)=9m^2-6m$ complex words for an explicit
 transform.
 
-
-\begin{function}[htbp]
+\begin{figure}[htbp]
+\begin{minipage}{0.49\linewidth}
+\begin{function}[H]
+  \KwIn{matrix \xf, matrix \xg}
+  \KwOut{matrix \xf}
+  \For{$j=0$ \KwTo $m_y-1$}{
+    $\fftpadBackwards(\xf^T[j],\xU^T[j])$\;
+    $\fftpadBackwards(\xg^T[j],\xV^T[j])$\;
+  }
+  \For{$i=0$ \KwTo $m_x-1$}{
+    $\cconv(\xf[i],\xg[i],\xu,\xv)$\;
+    $\cconv(\xU[i],\xV[i],\xu,\xv)$\;
+  }
+  \For{$j=0$ \KwTo $m_y-1$}{
+    $\fftpadForwards(\xf^T[j],\xU^T[j])$\;
+  }
+  \Return \xf\;
+\caption{cconv2(matrix~{\sf f}, matrix~{\sf g}) 
+returns an in-place implicitly dealiased convolution of
+$m_x\times m_y$ matrices {\sf f} and {\sf g} using temporary $m_x\times m_y$
+matrices {\sf U} and {\sf V} and temporary vectors {\sf u} and {\sf v} of
+length $m_y$.}\label{cconv2}
+\end{function}
+\end{minipage}
+\begin{minipage}{0.51\linewidth}
+\begin{function}[H]
   \KwIn{matrix \xf, matrix \xg}
   \KwOut{matrix \xf}
   \For{$j=0$ \KwTo $m_y-1$}{
@@ -772,10 +775,10 @@ transform.
     $\fftOpadBackwards(\xg^T[j],\xV^T[j])$\;
   }
   \For{$i=0$ \KwTo $2m_x-2$}{
-    $\conv(\xf[i],\xg[i],u,v)$\;
+    $\conv(\xf[i],\xg[i],\xu,\xv)$\;
   }
   \For{$i=0$ \KwTo $m_x$}{
-    $\conv(\xU[i],\xV[i],u,v)$\;
+    $\conv(\xU[i],\xV[i],\xu,\xv)$\;
   }
   \For{$j=0$ \KwTo $m_y-1$}{
     $\fftOpadForwards(\xf^T[j],\xU^T[j])$\;
@@ -785,8 +788,10 @@ transform.
 returns an in-place implicitly dealiased convolution of $(2m_x-1)\times
 m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices 
 {\sf U} and {\sf V} and temporary vectors {\sf u} and {\sf v} of length $m_y$.
-.}\label{conv2}
+}\label{conv2}
 \end{function}
+\end{minipage}
+\end{figure}
 
 \begin{figure}[htbp]
 \begin{center}
@@ -911,6 +916,8 @@ scrambled signed~$4m$-padded centered backwards Fourier transform values of a
 vector {\sf f} of length~$2m$ in {\sf f} and an auxiliary vector~{\sf u} of
 length $2m$.}\label{fft0bipadBackwards}
 \end{procedure}
+\end{minipage}
+\begin{minipage}{0.49\linewidth}
 \begin{function}[H]
   \KwIn{vector \xf, vector \xu}
   \KwOut{vector \xf}
@@ -925,7 +932,20 @@ inverse of fft0bipadBackwards(\hbox{vector~{\sf f}, vector~{\sf u}}).}
 \label{fft0bipadForwards}
 \end{function}
 \end{minipage}
-\begin{minipage}{0.49\linewidth}
+\end{figure}
+
+Just as for convolutions, the performance and memory benefits of
+evaluating implicitly padded hyperconvolutions manifest themselves only in
+higher dimensions. For example, in Figure~\ref{timing2b}, we observe 
+that a implicit $8192\times 8192$ Hermitian biconvolution requires $53\%$
+of the computation time required for an explicit biconvolution.
+The memory usage for a $(2m-1)\times (2m-1)$ Hermitian biconvolution
+is $6\cdot 2m(m+1)+3(m+1)=12m^2+15m+1$ complex words, compared with
+$3\cdot 4m(2m+1)=24m^2+12m$ complex words for an explicit power-of-two
+transform.
+
+\begin{figure}[htbp]
+\begin{minipage}{0.445\linewidth}
 \begin{function}[H]
   \KwIn{vector \xf, vector \xg, vector \xh}
   \KwOut{vector \xf}
@@ -959,17 +979,32 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 {\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}
 \end{function}
 \end{minipage}
+\begin{minipage}{0.545\linewidth}
+\begin{function}[H]
+  \KwIn{matrix \xf, matrix \xg, matrix \xh}
+  \KwOut{matrix \xf}
+  \For{$j=0$ \KwTo $m_y-1$}{
+    $\fftObipadBackwards(\xf^T[j],\xU^T[j])$\;
+    $\fftObipadBackwards(\xg^T[j],\xV^T[j])$\;
+    $\fftObipadBackwards(\xh^T[j],\xW^T[j])$\;
+  }
+  \For{$i=0$ \KwTo $2m_x-1$}{
+    $\biconv(\xf[i],\xg[i],\xh[i],\xu,\xv,\xw)$\;
+    $\biconv(\xU[i],\xV[i],\xW[i],\xu,\xv,\xw)$\;
+  }
+  \For{$j=0$ \KwTo $m_y-1$}{
+    $\fftObipadForwards(\xf^T[j],\xU^T[j])$\;
+  }
+  \Return \xf\;
+\caption{biconv2(matrix~{\sf f}, matrix~{\sf g}, matrix~{\sf h}) 
+returns an in-place implicitly dealiased convolution of \hbox{$2m_x\times
+(m_y+1)$} matrices~{\sf f},~{\sf g}, and~{\sf h} using
+temporary \hbox{$2m_x\times (m_y+1)$} matrices~{\sf U}, {\sf V}, and~{\sf W} and
+temporary vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
+}\label{biconv2}
+\end{function}
+\end{minipage}
 \end{figure}
-
-Just as for convolutions, the performance and memory benefits of
-evaluating implicitly padded hyperconvolutions manifest themselves only in
-higher dimensions. For example, in Figure~\ref{timing2b}, we observe 
-that a implicit $8192\times 8192$ Hermitian biconvolution requires $53\%$
-of the computation time required for an explicit biconvolution.
-The memory usage for a $(2m-1)\times (2m-1)$ Hermitian biconvolution
-is $6\cdot 2m(m+1)+3(m+1)=12m^2+15m+1$ complex words, compared with
-$3\cdot 4m(2m+1)=24m^2+12m$ complex words for an explicit power-of-two
-transform.
 
 \begin{figure}[htbp]
 \begin{center}
