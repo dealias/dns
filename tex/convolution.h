@@ -1239,7 +1239,7 @@ protected:
   double Cos,Sin;
 public:  
   
-  // u and v are distinct temporary arrays each of size m.
+  // u and v are distinct temporary arrays each of size m+1.
   ImplicitHBiConvolution(unsigned int m, Complex *u, Complex *v) : 
     n(4*m), m(m) {
     double arg=M_PI/m;
@@ -1250,8 +1250,9 @@ public:
     cr=new crfft1d(m,u);
     
     double *U=(double *) u;
-    rco=new rcfft1d(m,U,v);
-    cro=new crfft1d(m,v,U);
+    unsigned int twom=2*m;
+    rco=new rcfft1d(twom,U,v);
+    cro=new crfft1d(twom,v,U);
   }
   
   ~ImplicitHBiConvolution() {
@@ -1262,9 +1263,9 @@ public:
   }
   
   // In-place implicitly dealiased convolution.
-  // The input arrays f, g, and h are each of size m (contents not preserved).
+  // The input arrays f, g, and h are each of size m+1 (contents not preserved).
   // The output is returned in f.
-  // u, v, and w are temporary arrays each of size m.
+  // u, v, and w are temporary arrays each of size m+1.
   void convolve(Complex *f, Complex *g, Complex *h,
                 Complex *u, Complex *v, Complex *w) {
 #ifdef __SSE2__      
