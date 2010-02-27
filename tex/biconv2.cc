@@ -155,13 +155,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    unsigned int twomxmy1=2*mx*nyp;
+    unsigned int nxpnyp=nxp*nyp;
     Complex *u1=FFTWComplex(nyp);
     Complex *v1=FFTWComplex(nyp);
     Complex *w1=FFTWComplex(nyp);
-    Complex *u2=FFTWComplex(twomxmy1);
-    Complex *v2=FFTWComplex(twomxmy1);
-    Complex *w2=FFTWComplex(twomxmy1);
+    Complex *u2=FFTWComplex(nxpnyp);
+    Complex *v2=FFTWComplex(nxpnyp);
+    Complex *w2=FFTWComplex(nxpnyp);
     ImplicitHBiConvolution2 C(mx,my,u1,v1,u2);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);

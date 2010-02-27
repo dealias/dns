@@ -754,9 +754,15 @@ length $m_y$.}\label{cconv2}
 
 In two dimensions, the Fourier-centered Hermiticity condition appears as
 $U_{-k,-\ell}=\conj{U_{k,\ell}}$. 
-This symmetry is exploited to develop the centered Hermitian convolution
-algorithm described in Function~\ref{cconv2}. As shown in
+This symmetry is exploited in the centered Hermitian convolution
+algorithm described in Function~\ref{conv2}. As shown in
 Figure~\ref{timing2c}, one again observes a dramatic improvement in speed.
+
+When $m$ is even, the memory usage for a $(2m-1)\times (2m-1)$ Hermitian
+convolution is $2(2m-1)m+2(m+1)m+2(m/2+1)=6m^2+m+2$ complex words,
+compared with a minimum of $2(3m-2)(3m/2)=9m^2-6m$ complex words for an explicit
+transform.
+
 
 \begin{function}[htbp]
   \KwIn{matrix \xf, matrix \xg}
@@ -891,12 +897,9 @@ inverse of fft0bipadBackwards(vector {\sf f}, vector {\sf u}).}
 \end{function}
 
 \subsection{Implicitly dealiased centered Hermitian 1D biconvolution}
-Let us now consider a Hermitian biconvolution using the same setup, with
-$N=4m$, as in Section~\ref{fft0bi}.
-For explicit padding, one must pad the $m$ non-negative wavenumbers with at
-least $m-1$ zeros, for a total vector length of $2m-1$.
-For both implicit and explicit padding, it is therefore best to choose $m$
-to be a power of $2$.
+Let us now consider a Hermitian biconvolution with $N=4m$, where $m$ is a
+power of $2$. For explicit padding, one needs to pad the $m$ non-negative
+wavenumbers with $m+1$ zeros, for a total vector length of $2m+1$.
 
 On decomposing $j=2\ell+r$, where
 $\ell=0,\ldots, 2m-1$ and $r\in\{0,1\}$, the backwards transform is given
@@ -918,7 +921,7 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}
 The resulting implicitly padded Hermitian biconvolution,
 Procedure \ref{biconv}, has an operation count of $8Km\log m$. In
 Fig.~\ref{timing1b} we show that this algorithm is competitive with
-explicit padding. Explicit padding requires $3(2m-1)=6m-3$ complex words,
+explicit padding. Explicit padding requires $3(2m+1)=6m+3$ complex words,
 whereas implicit padding requires $6(m+1)$ complex words of storage.
 
 \begin{function}[htbp]
@@ -954,14 +957,15 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 {\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}
 \end{function}
 
-Just as for uniconvolutions, the performance and memory benefits of
+Just as for convolutions, the performance and memory benefits of
 evaluating implicitly padded hyperconvolutions manifest themselves only in
 higher dimensions. For example, in Figure~\ref{timing2b}, we observe 
 that a implicit $8192\times 8192$ Hermitian biconvolution requires $53\%$
 of the computation time required for an explicit biconvolution.
 The memory usage for a $(2m-1)\times (2m-1)$ Hermitian biconvolution
-is $12m^2+15m+1$ complex words in comparision with 
-$24m^2-30m+9$ complex words for an explicit transform.
+is $6\cdot 2m(m+1)+3(m+1)=12m^2+15m+1$ complex words, compared with
+$3\cdot 4m(2m+1)=24m^2+12m$ complex words for an explicit power-of-two
+transform.
 
 \begin{figure}[htbp]
 \begin{center}

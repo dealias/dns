@@ -9,31 +9,38 @@ if [ "$1" == "" ]; then
 fi
 
 prune=no
+divisor=0;
 
 if [ "$1" == "conv" ]; then
-    double=no
+    shift=1;
+    offset=2;
+    divisor=3;
     outdir=timings1r
 fi
 if [ "$1" == "conv2" ]; then
-    double=no
+    shift=1;
+    offset=2;
+    divisor=3;
     outdir=timings2r
     prune=yes
 fi
 if [ "$1" == "cconv" ]; then
-    double=yes
     outdir=timings1c
 fi
 if [ "$1" == "cconv2" ]; then
-    double=yes
     outdir=timings2c
     prune=yes
 fi
 if [ "$1" == "biconv" ]; then
-    double=yes
+    shift=2;
+    offset=3;
+    divisor=4;
     outdir=timings1b
 fi
 if [ "$1" == "biconv2" ]; then
-    double=yes
+    shift=2;
+    offset=3;
+    divisor=4;
     outdir=timings2b
     prune=yes
 fi
@@ -56,8 +63,8 @@ do
     echo $i
     m=$(asy -c "2^$i")
     echo -e "$m \t $(./$1 -x $m -i | grep -A 1 Implicit | tail -n 1)"| cat >> $outdir/implicit
-    if [ "$double" == "no" ]; then
-	m=$(asy -c "floor((2^($i+1)+2)/3);")
+    if [ "$divisor" != "0" ]; then
+	m=$(asy -c "quotient(2^($i+$shift)+$offset,$divisor)")
     fi
     echo -e "$m \t $(./$1 -x $m -e | grep -A 1 Explicit | tail -n 1)" | cat >> $outdir/explicit
     if [ "$prune" == "yes" ]; then
