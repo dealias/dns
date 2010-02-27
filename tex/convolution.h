@@ -567,7 +567,6 @@ public:
 #ifdef __SSE2__
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-    const Complex one(1.0,0.0);
     Vec CC=LOAD(&cc);
     Vec SS=LOAD(&ss);
     Vec Zetak=LOAD(&one);
@@ -1434,13 +1433,13 @@ public:
 #ifdef __SSE2__
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-    const Complex one(1.0,0.0);
     Vec CC=LOAD(&cc);
     Vec SS=LOAD(&ss);
-    Vec Zetak=LOAD(&one);
+    Complex zeta(Cos,Sin);
+    Vec Zetak=LOAD(&zeta);
 #else
-    double re=1.0;
-    double im=0.0;
+    double re=Cos;
+    double im=Sin;
 #endif    
     for(unsigned int i=0; i < M; ++i)
       u[i]=f[i]=0.0;
@@ -1480,15 +1479,15 @@ public:
 #ifdef __SSE2__
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-    const Complex ninv1(ninv,0.0);
+    const Complex ninv1(ninv*Cos,-ninv*Sin);
     const Complex ninv2(ninv,ninv);
     Vec CC=LOAD(&cc);
     Vec SS=-LOAD(&ss);
     Vec Zetak=LOAD(&ninv1);
     Vec Ninv2=LOAD(&ninv2);
 #else
-    double re=ninv;
-    double im=0.0;
+    double re=ninv*Cos;
+    double im=-ninv*Sin;
 #endif    
     unsigned int stop=2*m*stride;
     for(unsigned int k=stride; k < stop; k += stride) {
@@ -1665,6 +1664,7 @@ public:
 
     unsigned int my1=my+1;
     unsigned int stop=2*mx*my1;
+
     for(unsigned int i=0; i < stop; i += my1)
       yconvolve->convolve(f+i,g+i,h+i,u1,v1,w1);
     for(unsigned int i=0; i < stop; i += my1)
