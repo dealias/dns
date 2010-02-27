@@ -866,36 +866,6 @@ operate fully in place on their arguments, with no additional storage
 requirements, it is straightforward to implement strided multivector
 versions of these routines.
 
-\begin{procedure}[htbp]
-  \KwIn{vector \xf}
-  \KwOut{vector \xf, vector \xu}
-  $\xu[0]=\xf[0]=0$\;
-  \For{$k=1$ \KwTo $2m-1$}{
-    $\xu[k] \leftarrow -i\z_{4m}^k * \xf[k]$\;
-  }
-  $\xf \leftarrow \fft\inv(\xf)$\;
-  $\xu \leftarrow \fft\inv(\xu)$\;
-  \Return f;
-  \caption{fft0bipadBackwards(vector {\sf f}, vector {\sf u}) stores the 
-scrambled signed~$4m$-padded centered backwards Fourier transform values of a
-vector {\sf f} of length~$2m$ in {\sf f} and an auxiliary vector~{\sf u} of
-length $2m$.}\label{fft0bipadBackwards}
-\end{procedure}
-
-\begin{function}[htbp]
-  \KwIn{vector \xf, vector \xu}
-  \KwOut{vector \xf}
-  $\xf \leftarrow \fft(\xf)$\;
-  $\xu \leftarrow \fft(\xu)$\;
-  \For{$k=1$ \KwTo $2m-1$}{
-    $\xf[k] \leftarrow \xf[k] +i \z_{4m}^{-k} * \xu[k]$\;
-  }
-  \Return \xf/(4m)\;
-  \caption{fft0bipadForwards(vector {\sf f}, vector {\sf u}) returns the
-inverse of fft0bipadBackwards(vector {\sf f}, vector {\sf u}).}
-\label{fft0bipadForwards}
-\end{function}
-
 \subsection{Implicitly dealiased centered Hermitian 1D biconvolution}
 Let us now consider a Hermitian biconvolution with $N=4m$, where $m$ is a
 power of $2$. For explicit padding, one needs to pad the $m$ non-negative
@@ -924,7 +894,39 @@ Fig.~\ref{timing1b} we show that this algorithm is competitive with
 explicit padding. Explicit padding requires $3(2m+1)=6m+3$ complex words,
 whereas implicit padding requires $6(m+1)$ complex words of storage.
 
-\begin{function}[htbp]
+\begin{figure}[htbp]
+\begin{minipage}{0.51\linewidth}
+\begin{procedure}[H]
+  \KwIn{vector \xf}
+  \KwOut{vector \xf, vector \xu}
+  $\xu[0]=\xf[0]=0$\;
+  \For{$k=1$ \KwTo $2m-1$}{
+    $\xu[k] \leftarrow -i\z_{4m}^k * \xf[k]$\;
+  }
+  $\xf \leftarrow \fft\inv(\xf)$\;
+  $\xu \leftarrow \fft\inv(\xu)$\;
+  \Return f;
+  \caption{fft0bipadBackwards(vector~{\sf f}, vector~{\sf u}) stores the 
+scrambled signed~$4m$-padded centered backwards Fourier transform values of a
+vector {\sf f} of length~$2m$ in {\sf f} and an auxiliary vector~{\sf u} of
+length $2m$.}\label{fft0bipadBackwards}
+\end{procedure}
+\begin{function}[H]
+  \KwIn{vector \xf, vector \xu}
+  \KwOut{vector \xf}
+  $\xf \leftarrow \fft(\xf)$\;
+  $\xu \leftarrow \fft(\xu)$\;
+  \For{$k=1$ \KwTo $2m-1$}{
+    $\xf[k] \leftarrow \xf[k] +i \z_{4m}^{-k} * \xu[k]$\;
+  }
+  \Return \xf/(4m)\;
+  \caption{fft0bipadForwards(vector~{\sf f}, vector~{\sf u}) returns the
+inverse of fft0bipadBackwards(\hbox{vector~{\sf f}, vector~{\sf u}}).}
+\label{fft0bipadForwards}
+\end{function}
+\end{minipage}
+\begin{minipage}{0.49\linewidth}
+\begin{function}[H]
   \KwIn{vector \xf, vector \xg, vector \xh}
   \KwOut{vector \xf}
   \For{$k=0$ \KwTo $m-1$}{
@@ -956,6 +958,8 @@ an in-place implicitly dealiased biconvolution of three centered
 Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 {\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}
 \end{function}
+\end{minipage}
+\end{figure}
 
 Just as for convolutions, the performance and memory benefits of
 evaluating implicitly padded hyperconvolutions manifest themselves only in
