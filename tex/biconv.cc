@@ -126,9 +126,6 @@ int main(int argc, char* argv[])
     ImplicitHBiConvolution C(m,u,v);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);
-      e[m]=0.0;
-      f[m]=0.0;
-      g[m]=0.0;
       seconds();
       C.convolve(e,f,g,u,v,w);
       sum += seconds();

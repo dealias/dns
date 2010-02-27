@@ -1246,11 +1246,12 @@ public:
     Cos=cos(arg);
     Sin=sin(arg);
 
-    rc=new rcfft1d(m,u);
-    cr=new crfft1d(m,u);
+    unsigned int twom=2*m;
+    
+    rc=new rcfft1d(twom,u);
+    cr=new crfft1d(twom,u);
     
     double *U=(double *) u;
-    unsigned int twom=2*m;
     rco=new rcfft1d(twom,U,v);
     cro=new crfft1d(twom,v,U);
   }
@@ -1273,13 +1274,12 @@ public:
     const Complex ss(-Sin,Sin);
     Vec CC=LOAD(&cc);
     Vec SS=LOAD(&ss);
-    const Complex I(0.0,1.0);
-    Vec Zetak=LOAD(&I);
+    Vec Zetak=LOAD(&one);
 #else    
-    double re=0.0;
-    double im=1.0;
+    double re=1.0;
+    double im=0.0;
 #endif
-    for(unsigned int k=0; k <= m; ++k) {
+    for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
       STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
       STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
@@ -1306,8 +1306,11 @@ public:
     
     // five of eight FFTs are out-of-place
     
+    u[m]=0.0;
     cr->fft(u);
+    v[m]=0.0;
     cr->fft(v);
+    w[m]=0.0;
     cr->fft(w);
     
     double *U=(double *) u;
@@ -1320,10 +1323,13 @@ public:
     rco->fft(v,U); // v and w are now free
 
     V=(double *) v;
+    f[m]=0.0;
     cro->fft(f,V);
     double *F=(double *) f;
+    g[m]=0.0;
     cro->fft(g,F);
     double *G=(double *) g;
+    h[m]=0.0;
     cro->fft(h,G);
     for(unsigned int i=0; i < twom; ++i)
       V[i] *= F[i]*G[i];
@@ -1332,15 +1338,15 @@ public:
     double ninv=1.0/n;
 #ifdef __SSE2__      
     SS=-LOAD(&ss);
-    const Complex Ninv(0.0,ninv);
+    const Complex Ninv(ninv,0.0);
     const Complex Ninv2(ninv,ninv);
     Zetak=LOAD(&Ninv);
     Vec ninv2=LOAD(&Ninv2);
 #else    
-    re=0.0;
-    im=ninv;
+    re=ninv;
+    im=0.0;
 #endif    
-    for(unsigned int k=0; k <= m; ++k) {
+    for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__
       STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
       Zetak=ZMULT(CC,SS,Zetak);

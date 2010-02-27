@@ -918,9 +918,9 @@ an operation count of $8Km\log m$.
   \KwIn{vector \xf, vector \xg, vector \xh}
   \KwOut{vector \xf}
   \For{$k=0$ \KwTo $m-1$}{
-    $\xu[k] \leftarrow i\z_{4m}^k * \xf[k]$\;
-    $\xv[k] \leftarrow i\z_{4m}^k * \xg[k]$\;
-    $\xw[k] \leftarrow i\z_{4m}^k * \xh[k]$\;
+    $\xu[k] \leftarrow \z_{4m}^k * \xf[k]$\;
+    $\xv[k] \leftarrow \z_{4m}^k * \xg[k]$\;
+    $\xw[k] \leftarrow \z_{4m}^k * \xh[k]$\;
   }
   \medskip
   $\xu \leftarrow \crfft\inv(\xu)$\;
@@ -936,7 +936,7 @@ an operation count of $8Km\log m$.
   $\xf \leftarrow \rcfft(\xv)$\;
   \medskip
   \For{$k=0$ \KwTo $m-1$}{
-    $\xf[k] \leftarrow \xf[k] + i\z_{4m}^{-k} * \xu[k]$\;
+    $\xf[k] \leftarrow \xf[k] + \z_{4m}^{-k} * \xu[k]$\;
   }
   \Return f/(4m)\;
 \caption{biconv(vector {\sf f}, vector~{\sf g}, vector~{\sf h}) computes
