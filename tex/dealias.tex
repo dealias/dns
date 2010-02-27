@@ -1,4 +1,9 @@
 % Emphasize we only handle even m case.
+
+%In 3D we can make use of the decoupling of our
+%2D arrays to reduce memory usage to 1/4 of the explicit usage in the
+%standard case and 4/9 in the centered case.
+
 \documentclass[final]{siamltex}
 \usepackage[lined,algonl,boxed]{algorithm2e}
 
@@ -850,7 +855,8 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\el
 \eel
 For a biconvolution, the product of the three factors $(-1)^\ell i^{-r}$
 (one for each input vector) arising from \Eq{fft0bibackwards}
-and the factor $(-1)^\ell i^r$ in \Eq{fft0biforwards} reduces to $(-1)^r$.
+and the factor $(-1)^\ell i^r$ in \Eq{fft0biforwards} reduces to 
+***FIXME*** $(-1)^r$.
 Procedures \ref{fft0bipadBackwards} and \ref{fft0bipadForwards},
 each have an operation count asymptotic to $4Km\log m$. As they
 operate fully in place on their arguments, with no additional storage
@@ -860,12 +866,11 @@ versions of these routines.
 \begin{procedure}[htbp]
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
+  $\xu[0]=\xf[0]=0$\;
   \For{$k=1$ \KwTo $2m-1$}{
     $\xu[k] \leftarrow \z_{4m}^k * \xf[k]$\;
   }
-  $\xf[0]=0$\;
   $\xf \leftarrow \fft\inv(\xf)$\;
-  $\xu[0]=0$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
   \Return f;
   \caption{fft0bipadBackwards(vector {\sf f}, vector {\sf u}) stores the scrambled
@@ -880,7 +885,7 @@ length $2m$.}\label{fft0bipadBackwards}
   $\xf \leftarrow \fft(\xf)$\;
   $\xu \leftarrow \fft(\xu)$\;
   \For{$k=1$ \KwTo $2m-1$}{
-    $\xf[k] \leftarrow \xf[k] - \z_{4m}^{-k} * \xu[k]$\;
+    $\xf[k] \leftarrow \xf[k] + \z_{4m}^{-k} * \xu[k]$\;
   }
   \Return \xf/(4m)\;
   \caption{fft0bipadForwards(vector {\sf f}, vector {\sf u}) returns the
@@ -919,18 +924,14 @@ an operation count of $8Km\log m$.
     $\xw[k] \leftarrow \z_{4m}^k * \xh[k]$\;
   }
   \medskip
-  $\xu[m]=0$\;
-  $\xv[m]=0$\;
-  $\xw[m]=0$\;
+  $\xu[m]=\xv[m]=\xw[m]=0$\;
   $\xu \leftarrow \crfft\inv(\xu)$\;
   $\xv \leftarrow \crfft\inv(\xv)$\;
   $\xw \leftarrow \crfft\inv(\xw)$\;
   $\xv \leftarrow \xu * \xv * \xw$\;
   $\xu \leftarrow \rcfft(\xv)$\;
   \medskip
-  $\xf[m]=0$\;
-  $\xg[m]=0$\;
-  $\xh[m]=0$\;
+  $\xf[m]=\xg[m]=\xh[m]=0$\;
   $\xv \leftarrow \crfft\inv(\xf)$\;
   $\xf \leftarrow \crfft\inv(\xg)$\;
   $\xg \leftarrow \crfft\inv(\xh)$\;

@@ -45,7 +45,7 @@ inline double seconds()
 
 inline void init(array2<Complex>& e, array2<Complex>& f, array2<Complex>& g) 
 {
-  unsigned int offset=Explicit ? nx/2-mx+1 : 0;
+  unsigned int offset=Explicit ? nx/2-mx+1 : (Implicit ? 1 : 0);
   unsigned int origin=offset+mx-1;
   unsigned int stop=origin+mx;
   
@@ -98,6 +98,7 @@ int main(int argc, char* argv[])
         break;
       case 'd':
         Direct=true;
+        Implicit=false;
         break;
       case 'e':
         Explicit=true;
@@ -106,6 +107,7 @@ int main(int argc, char* argv[])
         break;
       case 'i':
         Implicit=true;
+        Direct=false;
         Explicit=false;
         break;
       case 'p':
@@ -138,8 +140,8 @@ int main(int argc, char* argv[])
   cout << "N=" << N << endl;
     
   size_t align=sizeof(Complex);
-  nxp=Explicit ? nx : 2*mx-1;
-  nyp=Explicit ? ny/2+1 : my;
+  nxp=Explicit ? nx : (Implicit ? 2*mx : 2*mx-1);
+  nyp=Explicit ? ny/2+1 : (Implicit ? my+1 : my);
   array2<Complex> e(nxp,nyp,align);
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
@@ -152,23 +154,26 @@ int main(int argc, char* argv[])
   }
 
   double sum=0.0;
-  if(Implicit && false) {
-    unsigned int c=my/2;
-    unsigned int mxpmy=(mx+1)*my;
-    Complex *u1=FFTWComplex(c+1);
-    Complex *v1=FFTWComplex(c+1);
-    Complex *u2=FFTWComplex(mxpmy);
-    Complex *v2=FFTWComplex(mxpmy);
-    ImplicitHConvolution2 C(mx,my,u1,v1,u2);
+  if(Implicit) {
+    unsigned int twomxmy1=2*mx*nyp;
+    Complex *u1=FFTWComplex(nyp);
+    Complex *v1=FFTWComplex(nyp);
+    Complex *w1=FFTWComplex(nyp);
+    Complex *u2=FFTWComplex(twomxmy1);
+    Complex *v2=FFTWComplex(twomxmy1);
+    Complex *w2=FFTWComplex(twomxmy1);
+    ImplicitHBiConvolution2 C(mx,my,u1,v1,u2);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);
       seconds();
-      C.convolve(f,g,u1,v1,u2,v2);
+      C.convolve(e,f,g,u1,v1,w1,u2,v2,w2);
       sum += seconds();
     }
     
+    FFTWdelete(w2);
     FFTWdelete(v2);
     FFTWdelete(u2);
+    FFTWdelete(w1);
     FFTWdelete(v1);
     FFTWdelete(u1);
     
@@ -177,11 +182,11 @@ int main(int argc, char* argv[])
     cout << (sum-offset)/N << endl;
     cout << endl;
     if(nxp*my < outlimit)
-      for(unsigned int i=0; i < nxp; i++) {
+      for(unsigned int i=1; i < nxp; i++) {
         for(unsigned int j=0; j < my; j++)
-          cout << f[i][j] << " ";
+          cout << e[i][j] << " ";
         cout << endl;
-      } else cout << f[0][0] << endl;
+      } else cout << e[1][0] << endl;
     cout << endl;
   }
   

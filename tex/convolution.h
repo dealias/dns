@@ -527,8 +527,8 @@ public:
 
 // Compute the scrambled virtual m-padded complex Fourier transform of M complex
 // vectors, each of length m.
-// Before calling fft(), the arrays in and out (which may coincide), along
-// with the array u, must be allocated as Complex[M*m].
+// The arrays in and out (which may coincide), along with the array u, must
+// be allocated as Complex[M*m].
 //
 //   fftpad fft(m,M,stride);
 //   fft.backwards(in,u);
@@ -651,9 +651,8 @@ public:
 // Compute the scrambled virtual m-padded complex Fourier transform of M complex
 // vectors, each of length 2m-1 with the origin at index m-1
 // (i.e. physical wavenumber k=-m+1 to k=m-1).
-// Before calling fft(), the arrays in and out (which may coincide)
-// must be allocated as Complex[M*(2m-1)].
-// The array u must be allocated as Complex[M*(m+1)].
+// The arrays in and out (which may coincide) must be allocated as
+// Complex[M*(2m-1)]. The array u must be allocated as Complex[M*(m+1)].
 //
 //   fft0pad fft(m,M,stride);
 //   fft.backwards(in,u);
@@ -1392,6 +1391,133 @@ public:
   }
 };
 
+// Compute the scrambled virtual 2m-padded complex Fourier transform of M
+// complex vectors, each of length 2m with the Fourier origin at index m.
+// The arrays in and out (which may coincide), along
+// with the array u, must be allocated as Complex[M*2m].
+//
+//   fft0bipad fft(m,M,stride);
+//   fft.backwards(in,u);
+//   fft.forwards(in,u);
+//
+// Notes:
+//   stride is the spacing between the elements of each Complex vector.
+//
+class fft0bipad {
+  unsigned int n;
+  unsigned int m;
+  unsigned int M;
+  unsigned int stride;
+  unsigned int dist;
+  mfft1d *Backwards;
+  mfft1d *Forwards;
+  double Cos,Sin;
+
+public:  
+  fft0bipad(unsigned int m, unsigned int M, unsigned int stride,
+            Complex *f) : n(4*m), m(m), M(M), stride(stride) {
+    double arg=2.0*M_PI/n;
+    Cos=cos(arg);
+    Sin=sin(arg);
+    
+    unsigned int twom=2*m;
+    Backwards=new mfft1d(twom,1,M,stride,1,f);
+    Forwards=new mfft1d(twom,-1,M,stride,1,f);
+  }
+  
+  ~fft0bipad() {
+    delete Forwards;
+    delete Backwards;
+  }
+  
+  void backwards(Complex *f, Complex *u) {
+#ifdef __SSE2__
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    const Complex one(1.0,0.0);
+    Vec CC=LOAD(&cc);
+    Vec SS=LOAD(&ss);
+    Vec Zetak=LOAD(&one);
+#else
+    double re=1.0;
+    double im=0.0;
+#endif    
+    for(unsigned int i=0; i < M; ++i)
+      u[i]=f[i]=0.0;
+    
+    unsigned int stop=2*m*stride;
+    for(unsigned int k=stride; k < stop; k += stride) {
+      Complex *fk=f+k;
+      Complex *uk=u+k;
+#ifdef __SSE2__      
+      Vec X=UNPACKL(Zetak,Zetak);
+      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
+      for(unsigned int i=0; i < M; ++i)
+        STORE(uk+i,ZMULT(X,Y,LOAD(fk+i)));
+      Zetak=ZMULT(CC,SS,Zetak);
+#else
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=uk+i;
+        Complex fki=*(fk+i);
+        p->re=re*fki.re-im*fki.im;
+        p->im=im*fki.re+re*fki.im;
+      }
+      double temp=re*Cos-im*Sin; 
+      im=re*Sin+im*Cos;
+      re=temp;
+#endif      
+    }
+    
+    Backwards->fft(f);
+    Backwards->fft(u);
+  }
+  
+  void forwards(Complex *f, Complex *u) {
+    Forwards->fft(f);
+    Forwards->fft(u);
+
+    double ninv=1.0/n;
+#ifdef __SSE2__
+    const Complex cc(Cos,Cos);
+    const Complex ss(-Sin,Sin);
+    const Complex ninv1(ninv,0.0);
+    const Complex ninv2(ninv,ninv);
+    Vec CC=LOAD(&cc);
+    Vec SS=-LOAD(&ss);
+    Vec Zetak=LOAD(&ninv1);
+    Vec Ninv2=LOAD(&ninv2);
+#else
+    double re=ninv;
+    double im=0.0;
+#endif    
+    unsigned int stop=2*m*stride;
+    for(unsigned int k=stride; k < stop; k += stride) {
+      Complex *uk=u+k;
+      Complex *fk=f+k;
+#ifdef __SSE2__      
+      Vec X=UNPACKL(Zetak,Zetak);
+      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fk+i;
+        STORE(p,LOAD(p)*Ninv2+ZMULT(X,Y,LOAD(uk+i)));
+      }
+      Zetak=ZMULT(CC,SS,Zetak);
+#else        
+      for(unsigned int i=0; i < M; ++i) {
+        Complex *p=fk+i;
+        Complex fki=*p;
+        Complex fkm=*(uk+i);
+        p->re=ninv*fki.re+re*fkm.re-im*fkm.im;
+        p->im=ninv*fki.im+im*fkm.re+re*fkm.im;
+      }
+      double temp=re*Cos+im*Sin;
+      im=im*Cos-re*Sin;
+      re=temp;
+#endif     
+    }
+  }
+};
+  
 // In-place explicitly dealiased 2D Hermitian biconvolution.
 class ExplicitHBiConvolution2 {
 protected:
@@ -1500,6 +1626,51 @@ public:
       xForwards->fft(e);
     } else
       Forwards->fft(e);
+  }
+};
+
+// In-place implicitly dealiased 2D Hermitian biconvolution.
+class ImplicitHBiConvolution2 {
+protected:
+  unsigned int nx,ny;
+  unsigned int mx,my;
+  fft0bipad *xfftpad;
+  ImplicitHBiConvolution *yconvolve;
+public:  
+  // u1 and v1 are temporary arrays of size my+1.
+  // u2 is a temporary array of size 2mx*(my+1);
+  ImplicitHBiConvolution2(unsigned int mx, unsigned int my,
+                          Complex *u1, Complex *v1, Complex *u2) :
+    mx(mx), my(my) {
+    xfftpad=new fft0bipad(mx,my,my+1,u2);
+    yconvolve=new ImplicitHBiConvolution(my,u1,v1);
+  }
+  
+  ~ImplicitHBiConvolution2() {
+    delete yconvolve;
+    delete xfftpad;
+  }
+  
+  // The distinct input arrays f, g, and h must be allocated as 
+  // Complex[2mx*(my+1)] (not preserved).
+  // u1, v1, and w1 are temporary arrays allocated as Complex[my+1].
+  // u2, v2, and w2 are temporary arrays allocated as Complex [2mx*(my+1)];
+  // The output is returned in f.
+  void convolve(Complex *f, Complex *g, Complex *h,
+                Complex *u1, Complex *v1, Complex *w1,
+                Complex *u2, Complex *v2, Complex *w2) {
+    xfftpad->backwards(f,u2);
+    xfftpad->backwards(g,v2);
+    xfftpad->backwards(h,w2);
+
+    unsigned int my1=my+1;
+    unsigned int stop=2*mx*my1;
+    for(unsigned int i=0; i < stop; i += my1)
+      yconvolve->convolve(f+i,g+i,h+i,u1,v1,w1);
+    for(unsigned int i=0; i < stop; i += my1)
+      yconvolve->convolve(u2+i,v2+i,w2+i,u1,v1,w1);
+    
+    xfftpad->forwards(f,u2);
   }
 };
 
