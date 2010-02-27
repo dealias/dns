@@ -890,23 +890,18 @@ inverse of fft0bipadBackwards(vector {\sf f}, vector {\sf u}).}
 \subsection{Implicitly dealiased centered Hermitian 1D biconvolution}
 Let us now consider a Hermitian biconvolution using the same setup, with
 $N=4m$, as in Section~\ref{fft0bi}. On decomposing $j=2\ell+r$, where
-$\ell=0,\ldots, 2m-1$ and $r\in\{0,1\}$, it is convenient to scale the
-backwards transform by $i^r$:
+$\ell=0,\ldots, 2m-1$ and $r\in\{0,1\}$, the backwards transform is given
+by
 \bec
-i^r u_{2\ell +r}=\sum_{k=-m}^{m-1} \z_{2m}^{\ell k} i^r\z_N^{rk} U_k,
+u_{2\ell +r}=\sum_{k=-m}^{m-1} \z_{2m}^{\ell k} \z_N^{rk} U_k.
 \eec
-This scaling allows us to exploit the Hermitian symmetry
-$$
-\z_{2m}^{\ell (2m-k)} i^r\z_N^{r(2m-k)} U_{2m-k}
-= \z_{2m}^{\ell (-k)} i^r(-1)^r \z_N^{-rk} U_{-k}
-=\conj{\z_{2m}^{\ell k} i^r \z_N^{rk} U_k},
-$$
-so that only the components corresponding to non-negative wavenumbers need
-to be transformed, yielding a real-valued result.
+If we set $U_m=0$, the real components $u_{2\ell +r}$ can thus be computed
+by taking a complex-to-real $2m$ transform of
+$\{\z_N^{rk} U_k : k=0,\ldots m\}$.
 
-The forwards transform is then
+The forwards transform is
 \be
-NU_k=\sum_{r=0}^{1}i^r\zeta_N^{-rk}
+NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}
 \sum_{\ell=0}^{2m-1} \zeta_{2m}^{-\ell k} u_{2\ell+r}
 \qquad k\no =-m+1,\ldots,m-1.
 \ee
