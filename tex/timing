@@ -50,8 +50,8 @@ if [ "$outdir" == "" ]; then
 fi
 mkdir -p $outdir
 cd $outdir
-rm -rf explicit implicit
-touch explicit implicit
+rm -rf explicit implicit pruned
+touch explicit implicit pruned
 cd ..
 
 if [ "$2" != "" ]; then
@@ -68,9 +68,9 @@ do
     fi
     echo -e "$m \t $(./$1 -x $m -e | grep -A 1 Explicit | tail -n 1)" | cat >> $outdir/explicit
     if [ "$prune" == "yes" ]; then
-	rm -rf $outdir/pruned
-	touch $outdir/pruned
 	echo -e "$m \t $(./$1 -x $m -p | grep -A 1 Pruned | tail -n 1)" | cat >> $outdir/pruned
+    else
+        rm -f pruned
     fi
 
 done
