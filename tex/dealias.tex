@@ -305,7 +305,7 @@ complex Fourier transforms of size $m$ can be done out of place.
   $\xf \leftarrow \fft\inv(\xf)$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
   \caption{fftpadBackwards(vector~{\sf f}, vector {\sf u}) stores the scrambled
-$2m$ implicitly padded backwards Fourier transform values of a vector
+$2m$-padded backwards Fourier transform values of a vector
 {\sf f} of length $m$ in {\sf f} and an auxiliary vector~{\sf u} of length $m$.}\label{fftpadBackwards}
 \end{procedure}
 \end{minipage}
@@ -460,7 +460,7 @@ versions of these routines.
   $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}\inv(\xf[m-1,\ldots,2m-2])$\;
   $\xu[0,\ldots,m-1] \leftarrow {\tt fft}\inv(\xu[0,\ldots,m-1])$\;
   \caption{fft0padBackwards(vector {\sf f}, vector {\sf u}) stores the scrambled
-$3m$ implicitly padded centered backwards Fourier transform values of a vector {\sf f} of length
+$3m$-padded centered backwards Fourier transform values of a vector {\sf f} of length
 $2m-1$ in {\sf f} and an auxiliary vector~{\sf u} of length $m+1$.}\label{fft0padBackwards}
 \end{procedure}
 
@@ -853,10 +853,9 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\el
 =\sum_{r=0}^{1}\zeta_N^{-rk'}i^r\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k'}(-1)^\ell u_{2\ell+r},
 \qquad k'\no =1,\ldots,2m-1.\label{fft0biforwards}
 \eel
-For a biconvolution, the product of the three factors $(-1)^\ell i^{-r}$
+For a biconvolution, the product of the three factors $(-1)^\ell$
 (one for each input vector) arising from \Eq{fft0bibackwards}
-and the factor $(-1)^\ell i^r$ in \Eq{fft0biforwards} reduces to 
-***FIXME*** $(-1)^r$.
+and the factor $(-1)^\ell$ in \Eq{fft0biforwards} cancel.
 Procedures \ref{fft0bipadBackwards} and \ref{fft0bipadForwards},
 each have an operation count asymptotic to $4Km\log m$. As they
 operate fully in place on their arguments, with no additional storage
@@ -868,13 +867,13 @@ versions of these routines.
   \KwOut{vector \xf, vector \xu}
   $\xu[0]=\xf[0]=0$\;
   \For{$k=1$ \KwTo $2m-1$}{
-    $\xu[k] \leftarrow \z_{4m}^k * \xf[k]$\;
+    $\xu[k] \leftarrow -i\z_{4m}^k * \xf[k]$\;
   }
   $\xf \leftarrow \fft\inv(\xf)$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
   \Return f;
-  \caption{fft0bipadBackwards(vector {\sf f}, vector {\sf u}) stores the scrambled
-$4m$ implicitly padded centered backwards Fourier transform values of a
+  \caption{fft0bipadBackwards(vector {\sf f}, vector {\sf u}) stores the 
+scrambled signed~$4m$-padded centered backwards Fourier transform values of a
 vector {\sf f} of length~$2m$ in {\sf f} and an auxiliary vector~{\sf u} of
 length $2m$.}\label{fft0bipadBackwards}
 \end{procedure}
@@ -885,7 +884,7 @@ length $2m$.}\label{fft0bipadBackwards}
   $\xf \leftarrow \fft(\xf)$\;
   $\xu \leftarrow \fft(\xu)$\;
   \For{$k=1$ \KwTo $2m-1$}{
-    $\xf[k] \leftarrow \xf[k] + \z_{4m}^{-k} * \xu[k]$\;
+    $\xf[k] \leftarrow \xf[k] +i \z_{4m}^{-k} * \xu[k]$\;
   }
   \Return \xf/(4m)\;
   \caption{fft0bipadForwards(vector {\sf f}, vector {\sf u}) returns the

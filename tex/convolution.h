@@ -1435,14 +1435,16 @@ public:
     const Complex ss(-Sin,Sin);
     Vec CC=LOAD(&cc);
     Vec SS=LOAD(&ss);
-    Complex zeta(Cos,Sin);
-    Vec Zetak=LOAD(&zeta);
+    Complex mizeta(Sin,-Cos);
+    Vec Zetak=LOAD(&mizeta);
 #else
-    double re=Cos;
-    double im=Sin;
+    double re=Sin;
+    double im=-Cos;
 #endif    
     for(unsigned int i=0; i < M; ++i)
-      u[i]=f[i]=0.0;
+      f[i]=0.0;
+    for(unsigned int i=0; i < M; ++i)
+      u[i]=0.0;
     
     unsigned int stop=2*m*stride;
     for(unsigned int k=stride; k < stop; k += stride) {
@@ -1479,15 +1481,15 @@ public:
 #ifdef __SSE2__
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-    const Complex ninv1(ninv*Cos,-ninv*Sin);
+    const Complex ninv1(Sin*ninv,Cos*ninv);
     const Complex ninv2(ninv,ninv);
     Vec CC=LOAD(&cc);
     Vec SS=-LOAD(&ss);
     Vec Zetak=LOAD(&ninv1);
     Vec Ninv2=LOAD(&ninv2);
 #else
-    double re=ninv*Cos;
-    double im=-ninv*Sin;
+    double re=Sin*ninv;
+    double im=Cos*ninv;
 #endif    
     unsigned int stop=2*m*stride;
     for(unsigned int k=stride; k < stop; k += stride) {
@@ -1666,9 +1668,9 @@ public:
     unsigned int stop=2*mx*my1;
 
     for(unsigned int i=0; i < stop; i += my1)
-      yconvolve->convolve(f+i,g+i,h+i,u1,v1,w1);
+    yconvolve->convolve(f+i,g+i,h+i,u1,v1,w1);
     for(unsigned int i=0; i < stop; i += my1)
-      yconvolve->convolve(u2+i,v2+i,w2+i,u1,v1,w1);
+    yconvolve->convolve(u2+i,v2+i,w2+i,u1,v1,w1);
     
     xfftpad->forwards(f,u2);
   }
