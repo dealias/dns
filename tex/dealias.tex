@@ -894,7 +894,8 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}
 \ee
 
 The resulting implicitly padded Hermitian biconvolution,
-Procedure \ref{biconv}, has an operation count of $8Km\log m$. In
+Procedure \ref{biconv}, has an operation count of $8Km\log m$. 
+Five of the eight required Fourier transforms can be done out-of-place.
 Fig.~\ref{timing1b} we show that this algorithm is competitive with
 explicit padding. Explicit padding requires $3(2m+1)=6m+3$ complex words,
 whereas implicit padding requires $6(m+1)$ complex words of storage.
