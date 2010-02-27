@@ -21,10 +21,10 @@ a=transpose(a);
 mp=a[0]; p=a[1];
 
 file fin=input(dir+"/pruned",check=false).line();
-real[][] a=fin.dimension(0,0);
-a=transpose(a);
-bool pruned=a.length > 1;
+bool pruned=!error(fin);
 if(pruned) {
+  real[][] a=fin.dimension(0,0);
+  a=transpose(a);
   mP=a[0]; P=a[1];
 }
 
