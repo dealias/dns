@@ -940,14 +940,12 @@ evaluating implicitly padded hyperconvolutions manifest themselves only in
 higher dimensions. For example, in Figure~\ref{timing2b}, we observe 
 that an implicit $8192\times 8192$ Hermitian biconvolution requires $46\%$
 of the computation time required for an explicit biconvolution.
-The memory usage for a $(2m-1)\times (2m-1)$ Hermitian biconvolution
+The memory usage for a $(2m-1)\times (2m-1)$ Hermitian biconvolution,
 is $6\cdot 2m(m+1)+3(m+1)=12m^2+15m+1$ complex words, compared with
-$3\cdot 4m(2m+1)=24m^2+12m$ complex words for an explicit power-of-two
-transform. For small sizes, $y$-pruned biconvolutions appear to be
-faster than the other two algorithms, while for large sizes implicit
-padding is best. For example, an $8192\times 8192$ $y$-pruned biconvolution
-requires $63\%$ of the computation time and the same amount of storage as
-an explicitly padded biconvolution.
+$3\cdot 4m(2m+1)=24m^2+12m$ complex words (when $m$ is a power of $2$) 
+for an explicit biconvolution. For example, an $8192\times 8192$ $y$-pruned
+biconvolution requires $**$ of the computation time but the same amount
+of storage as an explicitly padded biconvolution.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.445\linewidth}
