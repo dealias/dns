@@ -17,7 +17,6 @@ real[][] a=fin.dimension(0,0);
 a=transpose(a);
 mp=a[0]; p=a[1];
 
-
 file fin=input(dir+"implicit").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);

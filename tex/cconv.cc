@@ -47,7 +47,8 @@ inline void init(Complex *f, Complex *g)
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
 
   if(Test)
-    for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
+//    for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
+    for(unsigned int i=0; i < m; i++) f[i]=g[i]=i;
   else {
     for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
     for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
@@ -194,10 +195,11 @@ int main(int argc, char* argv[])
     double error=0.0;
     cout << endl;
     cout << "Exact:" << endl;
-    for(unsigned int i=0; i < m; i++) {
+    for(unsigned int k=0; k < m; k++) {
       // exact solution for test case.
-      h[i]=(i+1)*pow(E,i*I);
-      cout << h[i] << endl;
+//      h[i]=(k+1)*pow(E,k*I);
+      h[k]=k*(k+1)/2.0*(k-(2*k+1)/3.0);
+      cout << h[k] << endl;
     }
     for(unsigned int i=0; i < m; i++) 
       error += abs2(h[i]-h0[i]);
