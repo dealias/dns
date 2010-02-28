@@ -1,9 +1,3 @@
-% Emphasize we only handle even m case.
-
-%In 3D we can make use of the decoupling of our
-%2D arrays to reduce memory usage to 1/4 of the explicit usage in the
-%standard case and 4/9 in the centered case.
-
 \documentclass[final]{siamltex}
 \usepackage[lined,algonl,boxed]{algorithm2e}
 
@@ -51,7 +45,7 @@ without the expense of conventional zero-padding or phase-shift
 techniques. For one-dimensional in-place convolutions, the memory
 requirements are identical with the zero-padding technique, with the important
 distinction that the additional work memory need not be contiguous with the
-data. This decoupling of the data and work arrays significantly reduces
+data. This decoupling of the data and work arrays dramatically reduces
 the memory and computation time required to evaluate higher-dimensional
 in-place convolutions. The technique also allows one to efficiently dealias the
 hyperconvolutions that arise on Fourier transforming cubic and higher powers.
@@ -73,23 +67,6 @@ pseudospectral method, in-place transform, bit reversal
 
 \pagestyle{myheadings}
 
-%use out-of-place Fourier transforms where possible (percent?)
-
-% decoupling is more convenient for the user, 
-% 
-
-%padding to smooth data vs. chirp-z algorithm
-
-%highly optimized
-
-%avoids inconvenience of and extra copying required by zero padding
-
-% CRAY power-of-2 stride issue
-% Supports efficient convolutions of power of 2 sizes
-%
-
-% Think about parallelization issues (another advantage of removing zeros).
-
 \bibliographystyle{siam}
 
 \section{Introduction}
@@ -100,9 +77,9 @@ analysis. They are also widely used in computational physics to solve
 nonlinear partial differential equations, such as the Navier--Stokes
 equations, in periodic domains. In some of these applications, notably
 direct numerical pseudospectral simulations of fluid turbulence,
-memory usage is a critical limiting factor, and in-place
-multidimensional Fourier transforms are used to reduce the memory
-footprint of the required spectral convolutions.
+memory usage is a critical limiting factor, and self-sorting in-place
+multidimensional Fourier transforms \cite{SIAM91} are typically used to
+reduce the memory footprint of the required spectral convolutions.
 
 Because the discrete convolution, which produces cyclic output from cyclic
 input, is applied to nonperiodic (wavenumber-space) data, it is important
@@ -542,13 +519,14 @@ scaling of $\fr{9}{2}K m \log m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
 We see in Function~\ref{conv} that seven out of these nine Fourier
 transforms can be performed out of place using the same amount of memory,
-$2(N/2+1)=6c+2$, as would be used to compute a centered Hermitian convolution with
-explicit padding.
+$2(N/2+1)=6c+2$, as would be used to compute a centered Hermitian
+convolution with explicit padding.
 
-For simplicity, we first consider the case where $m=2c$.
-To facilitate an in-place implementation of the backwards transform, we
-store the conjugate of the transformed values for $r=1$ in reverse order in
-the upper half of the $f$ vector, using the identity (for real $u_j$)
+For simplicity, in this work we only document the case of practical
+importance, where $m=2c$. To facilitate an in-place implementation of the
+backwards transform, we store the conjugate of the transformed values for
+$r=1$ in reverse order in the upper half of the $f$ vector, using the
+identity (for real $u_j$)
 $$
 u_j=\conj{u_j}=\sum_{k=-c+1}^{c}\zeta_m^{-jk} \conj{U_k}
 =\sum_{k'=m-1}^{0}\zeta_m^{j(k'-c)} \conj{U_{c-k'}}
@@ -837,15 +815,26 @@ dealiased centered Hermitian in-place 2D convolutions of two matrices of
 
 %TODO: Improve, show column convolutions, strides, dimensions, padding,
 %etc.  Also make a 3D version.
-\begin{figure}[htbp]
-  \begin{center}
-    \includegraphics{dealias2d}
-    \caption{Two-dimensional convolution procedure.}
-    \label{dealias2d}
-  \end{center}
-\end{figure}
+%\begin{figure}[htbp]
+%  \begin{center}
+%   \includegraphics{dealias2d}
+%    \caption{Two-dimensional convolution procedure.}
+%    \label{dealias2d}
+%  \end{center}
+%\end{figure}
 
 \section{Implicitly dealiased 3D convolutions}\label{3d}
+
+The decoupling of the 2D work arrays in Procedure~\ref{cconv2}
+also allows us to construct the efficient 3D implicit complex convolution
+in Procedure~\ref{cconv3}. The memory usage is
+$4m_xm_ym_z+2m_y m_z+2m_z$ complex words, asymptotically (as $m_x\goesto\infty$)
+one-quarter of the $16m_xm_ym_z$ complex words required for by an explicit
+convolution.
+
+Implicit Hermitian 3D convolutions can be implemented in an analogous
+manner, yielding a memory usage asymptotic to $4/9$ of the explicit
+requirement.
 
 \begin{function}[htbp]
   \KwIn{matrix \xf, matrix \xg}
@@ -1094,42 +1083,34 @@ dealiased centered Hermitian in-place 2D biconvolutions of two matrices of
 
 \section{Arbitrary $p/q$ Padding}
 
-In general, consider a ``$p/q$'' padding in which $N=qm$, and only $pm$ modes
-are non-zero, with $p$ and $q$ relatively prime. Consider $u_{q\ell+r}$, with
-$\ell=0 \dots m-1$, $r=0 \dots q-1$.
-Then
-\be
-u_{q\ell+r} = \sum_{k=0}^{N-1}\z_N^{(q\ell+r)k} U_k
-= \sum_{k=0}^{pm-1}\z_{qm}^{(q\ell+r)k} U_k
-= \sum_{k=0}^{pm-1}\z_m^{\ell k}\z_{N}^{rk} U_k
-= \sum_{\a=0}^{p-1} \sum_{k=\a m}^{(\a+1)m-1}\z_m^{\ell k}\z_{N}^{rk} U_k
-= \sum_{\a=0}^{p-1} \sum_{\k=0}^{m-1}\z_m^{\ell (\k+\a m)}\z_{N}^{r(\k+\a m)}
-U_{\k+\a m}
-%=  \sum_{\a=0}^{p-1}\z_N^{r \a m} \sum_{\k=0}^{m-1}\z_m^{\ell\k}\z_N^{r\k}U_{\k+\a m}
-=  \sum_{\k=0}^{m-1}\z_m^{\ell\k}\sum_{\a=0}^{p-1}\z_N^{r(\k+\a m)} U_{\k+\a m}
-\ee .
-Note that, in the last line, we have the choice of which $\z$ to use, since
-$\z_q^{r \a}=\z_N^{r \a m}$. Since there are $m$ choices of $r$ and $q$ choices
-for $\ell$, we are left with $mq=N$ FFTs of length $p$, leaving on the order
-of $N \log p = N \log (N/q)$ operations.  Again, while the computational
-savings is only marginal, this formulation affords significant improvements
-in memory use and parallelizability.
+Implicit padding corresponding to an arbitrary $p/q$ rule is also
+possible. Suppose that $N=qm$, where only $pm$ modes are non-zero, with $p$
+and $q$ relatively prime. We decompose $j=q\ell+r$, where
+$\ell=0,\dots,m-1$ and $r=0,\dots,q-1$.
+Similarly, we express $k=t m+s$, where $t=0,\dots,p-1$ and $s=0,\dots, m-1$:
+$$
+u_{q\ell+r}=\sum_{k=0}^{pm-1}\z_N^{(q\ell+r)k} U_k
+=\sum_{s=0}^{m-1}\sum_{t=0}^{p-1} \z_m^{\ell (t m+s)}\z_{N}^{r(t m+s)}
+U_{t m+s}
+=\sum_{s=0}^{m-1}\z_m^{\ell s}\sum_{t=0}^{p-1}\z_N^{r(t m+s)} U_{t m+s}.
+$$
+The computation thus reduces to $m$
 
-The forward Fourier transform appears as
-\be
-NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
-=\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-q\ell k} u_{q\ell+r}
-=\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{q\ell+r}
-\qquad k\no =0,\ldots,pm-1.
-\ee
+Since there are $q$ choices of $r$, the problem reduces
+to computing $q$ Fouier transforms of length~$m$, which requires
+$K q m\log_2 m=K N\log_2 (N/q)$ operations.
+While the computational savings for a one-dimensional transform is again only
+marginal, in higher dimensions this formulation
+yields significant improvements in memory usage and performance.
 
-%TODO: I think that this can be generalized in the following fashion:
-%if $m$ of the $N$ modes are non-zero, let $p=N/\gcd(m,N)$. Then we
-%have can divide up the DFT into $p$ DFTs of length $m$. Must work out
-%the details.
-
-
-
+As we have seen, the forward implicit transform
+$$
+NU_k
+=\sum_{\ell=0}^{m-1}\sum_{r=0}^{q-1} \zeta_N^{-(q\ell+r)k} u_{q\ell+r}
+=\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{q\ell+r}
+\qquad k\no =0,\ldots,pm-1
+$$
+also requires $q$ Fourier transforms of length $m$.
 
 \begin{comment}
 \section{2D, 2/3-dealiased transforms}
@@ -1158,7 +1139,25 @@ In this work we have developed an efficient method for avoiding explicit zero
 padding in multidimensional convolutions, saving both memory and
 computation time.
 
-%Copying issue: additional memory savings for user.
+Even in one dimension, since implicit padding can be implemented
+competitively, there are in practice other benefits, such as the 
+ability of the algorithm to work directly on raw unpadded user data without the
+inconvenience or extra storage requirements of a separate padding buffer.
+Having a prepackaged dealiased convolution that internally takes care of
+dealiasing is also a major convenience for the user. For example,
+writing a pseudospectral code for nonlinear partial differential
+equations a relatively straightforward exercise using the 
+open source {\tt fftw++} package that contains the algorithms developed in
+this work.
+
+% decoupling & reuse helps keep data within cache
+
+% Mention parallelization issues (another advantage of removing zeros).
+
+% CRAY power-of-2 stride issue
+%Use out-of-place Fourier transforms where possible.
+%padding to smooth data vs. chirp-z algorithm
+
 
 \bibliography{refs}
 \end{document}
