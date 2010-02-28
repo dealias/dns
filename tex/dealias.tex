@@ -202,12 +202,16 @@ explicitly padded convolution based on the same highly optimized
 library.
 
 %Add outline
-Implicit padding can be used to efficiently dealias hyperconvolutions
+Implicit padding can also be used to efficiently dealias hyperconvolutions
 such as $\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
-For example, in section~\ref{hconv} we compute a centered Hermitian
-biconvolution.
+For example, in section~\ref{hyperconv} we illustrate how the technique 
+can be applied to compute a centered Hermitian biconvolution.
 
 \section{Implicitly dealiased 1D convolutions}
+In this section we describe the highly optimized 1D building blocks
+that are used in subsequent sections to construct higher-dimensional
+implicitly dealiased convolutions.
+
 \subsection{Complex convolution}
 The Fourier origin for standard convolutions is located at index zero.
 Therefore, input data vectors of length $m$ must be padded with zeros to
@@ -695,20 +699,35 @@ fact nullifies the argument of Canuto...
 % application).
 
 \section{Implicitly dealiased 2D convolutions}\label{2d}
-
-\subsection{Complex 2D convolution}
 The algorithms developed in the previous sections can be used as building
-blocks to construct the efficient implicitly padded 2D convolution shown in
-Algorithm~\ref{cconv2}. As shown in Figure~\ref{timing2c}, the implicit
-algorithm now outperforms the explicit version. 
-For example, a $1024\times 1024$ complex convolution runs $48\%$ faster
-than an explicit convolution. The gains appear to increase with transform
-size: a $8192\times 8192$ implicit convolution runs $52\%$ faster than an
-explicit one.
+blocks to construct efficient implicitly padded 2D convolutions.
+In this section, we consider both the standard 2D complex convolution and the
+centered 2D Hermitian convolution.
+\subsection{Complex 2D convolution}
+The implicitly padded 2D convolution shown in Algorithm~\ref{cconv2} 
+is designed for data stored with a stride of one in the $y$
+direction. Efficient multivector versions of Procedures \ref{fft0padBackwards}
+and \ref{fft0padForwards} are used for the transform in the $x$ direction;
+this allows a single $\zeta_{3m}^k$ factor to be applied to a consecutive
+column of data at constant $x$. In principle, one could also develop a
+multivector version of Procedure~\ref{cconv} to perform simultaneous
+convolutions in the $y$ direction, but our timing tests indicate that this
+would only slightly enhance the overall performance (since the data for constant
+$y$ is not consecutive) and would prevent the 1D convolution
+work arrays from being reused for the $y$-convolution for each fixed $x$. The
+memory savings in our method comes precisely from this reuse of work
+arrays, which in turn requires that the $y$ convolutions be computed serially.
+
+As shown in Figure~\ref{timing2c}, the resulting implicit
+2D algorithm dramatically outperforms the explicit version. For example, a
+$1024\times 1024$ complex convolution runs $48\%$ faster than an explicit 
+convolution. The gains appear to increase with transform size: a
+$8192\times 8192$ implicit convolution runs $52\%$ faster than an explicit one.
 
 The third sentence of the quote from Steven G. Johnson
 on page~\ref{quote} suggests a very reasonable optimization
-for explicitly padded 2D convolutions.
+for explicitly padded 2D convolutions: one can omit the backwards and
+forwards Fourier transforms in the $x$ direction for $m \le y < 2m$.
 However there are other optimization possibilities lost in directly
 expressing a 2D convolution in terms of 1D transforms: as illustrated in
 Figure~\ref{cconv2}, while the $y$-pruned explicit convolution is 27\% faster
@@ -718,7 +737,6 @@ convolution is also subject to these same losses, but the savings due to
 implicit padding, ignoring high-level bit reversal, in-place subtransforms, 
 and computing the convolution of each column as it is transformed (and
 thereby perhaps still in cache) outweighs these losses.
-%CHECK timing again when using mfft in both directions for pruned algorithm.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
 of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
@@ -726,8 +744,6 @@ words in comparison to the $8m_xm_y$ complex words required for an
 explicitly padded convolution. Asymptotically, as $m_x\goesto\infty$,
 a 2D implicit complex convolution therefore requires half the memory
 required by zero padding.
-
-%Discuss proper storage direction & use of multiple ffts.
 
 \subsection{Centered 2D Hermitian convolution}
 
@@ -829,14 +845,16 @@ dealiased centered Hermitian in-place 2D convolutions of two matrices of
 
 \section{Implicitly dealiased 3D convolutions}\label{3d}
 
-\section{Implicitly dealiased biconvolutions}\label{hyper}
-
-\subsection{Implicitly double dealiased centered Fourier transform}
-\label{fft0bi}
-Implicit padding is well-suited to dealiasing the centered biconvolution 
+\section{Implicitly dealiased biconvolutions}\label{hyperconv}
+In this section, we show that implicit padding is well suited to
+dealiasing the centered biconvolution
 $$
 \sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1} f_p g_q h_r\d_{p+q+r,k}.
 $$
+The basic building blocks for this problem are the centered $x$ transform
+and the Hermitian $y$ convolution.
+\subsection{Implicitly double dealiased centered Fourier transform}
+\label{fft0bi}
 Here the input data length is $2m-1$, with the Fourier origin at index
 $m-1$, so one needs to pad to $N\ge 4m-3$ to prevent contamination due to
 wave beating.
@@ -1093,7 +1111,9 @@ buffer for all necessary transformations.
 \end{comment}
 
 \section{Conclusions}
-In this work we develop an efficient method for avoiding explicit zero
+Explicitly padded Fourier transforms are frequently used to dealias
+convolutions in one or more dimensions.
+In this work we have developed an efficient method for avoiding explicit zero
 padding in multidimensional convolutions, saving both memory and
 computation time.
 
