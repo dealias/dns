@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:x:");
+    int c = getopt(argc,argv,"deiptN:m:");
     if (c == -1) break;
 		
     switch (c) {
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
       case 't':
         Test=true;
         break;
-      case 'x':
+      case 'm':
         m=atoi(optarg);
         break;
     }
