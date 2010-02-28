@@ -42,9 +42,9 @@ marker mark1=marker(g1,Draw(Pen(2)));
 marker mark2=marker(g2,Draw(Pen(1)));
 
 pen lp=fontsize(8pt);
-draw(graph(mp,p,p>0),Pen(0),Label("Explicit",Pen(0)+lp),mark0);
-if(pruned) draw(graph(mP,P,P>0),Pen(2),Label("Y-pruned",Pen(2)+lp),mark1);
-draw(graph(mu,u,u>0),Pen(1),Label("Implicit",Pen(1)+lp),mark2);
+draw(graph(mp,p,p>0),Pen(0),Label("explicit",Pen(0)+lp),mark0);
+if(pruned) draw(graph(mP,P,P>0),Pen(2),Label("y-pruned",Pen(2)+lp),mark1);
+draw(graph(mu,u,u>0),Pen(1),Label("implicit",Pen(1)+lp),mark2);
 
 xaxis("$m$",BottomTop,LeftTicks);
 yaxis("time (sec)",LeftRight,RightTicks);
