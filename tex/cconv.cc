@@ -195,18 +195,18 @@ int main(int argc, char* argv[])
     double error=0.0;
     cout << endl;
     cout << "Exact:" << endl;
+    double norm=0.0;
     for(unsigned int k=0; k < m; k++) {
       // exact solution for test case.
 //      h[i]=(k+1)*pow(E,k*I);
       h[k]=k*(k+1)/2.0*(k-(2*k+1)/3.0);
-      cout << h[k] << endl;
+      norm += abs2(h[k]);
+      error += abs2(h[k]-h0[k]);
     }
-    for(unsigned int i=0; i < m; i++) 
-      error += abs2(h[i]-h0[i]);
-    error=sqrt(error/m);
-    cout << "error="<<error<<endl;
+    error=sqrt(error/norm);
+    cout << "error=" << error << endl;
     if (error > 1e-8)
-      cerr << "Caution! error="<<error<<endl;
+      cerr << "Caution! error=" << error << endl;
     FFTWdelete(h);
   }
 

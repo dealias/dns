@@ -33,7 +33,7 @@ draw(graph(mp,p,p>0),Pen(0),Label("Explicit",Pen(0)+lp),mark0);
 draw(graph(mu,u,u>0),Pen(1),Label("Implicit",Pen(1)+lp),mark1);
 
 xaxis("$m$",BottomTop,LeftTicks);
-yaxis("error",LeftRight,RightTicks);
+yaxis("normalized error",LeftRight,RightTicks);
 
 legendlinelength=0.5cm;
 attach(legend(),point(NW),10SE);
