@@ -4,7 +4,7 @@ start=6
 stop=13
 
 if [ "$1" == "" ]; then
-    echo Usage: timing "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2\|cconv3"]" "["start"]" "["stop"]"
+    echo Usage: $0 "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2\|cconv3"]" "["start"]" "["stop"]"
     exit
 fi
 
@@ -48,14 +48,14 @@ if [ "$1" == "cconv3" ]; then
     outdir=timings3c
     prune=yes
 fi
+
 if [ "$outdir" == "" ]; then
     echo "wrong program name!"
     exit
 fi
 mkdir -p $outdir
 cd $outdir
-rm -rf explicit implicit pruned
-touch explicit implicit pruned
+rm -f explicit implicit pruned
 cd ..
 
 if [ "$2" != "" ]; then
@@ -78,8 +78,6 @@ do
     echo -e "$m \t $(./$1 -m $m -e | grep -A 1 Explicit | tail -n 1)" | cat >> $outdir/explicit
     if [ "$prune" == "yes" ]; then
 	echo -e "$m \t $(./$1 -m $m -p | grep -A 1 Pruned | tail -n 1)" | cat >> $outdir/pruned
-    else
-        rm -f pruned
     fi
 
 done

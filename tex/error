@@ -4,30 +4,54 @@ start=6
 stop=13
 
 if [ "$1" == "" ]; then
-    echo please specify program: error "["int"]" "["conv, cconv, conv2, or cconv2"]"
+    echo Usage: $0 "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2\|cconv3"]" "["start"]" "["stop"]"
+    echo please specify program: error "["conv, cconv, conv2, or cconv2"]" "["start"]" "["stop"]"
     exit
 fi
 
+divisor=0;
 
 if [ "$1" == "conv" ]; then
-    complex=no
+    shift=1;
+    offset=2;
+    divisor=3;
     outdir=timings1r
 fi
 if [ "$1" == "conv2" ]; then
-    complex=no
+    shift=1;
+    offset=2;
+    divisor=3;
     outdir=timings2r
+    prune=yes
 fi
 if [ "$1" == "cconv" ]; then
-    complex=yes
     outdir=timings1c
     workingcase=yes
 fi
 if [ "$1" == "cconv2" ]; then
-    complex=yes
     outdir=timings2c
+    prune=yes
 fi
+if [ "$1" == "biconv" ]; then
+    shift=2;
+    offset=3;
+    divisor=4;
+    outdir=timings1b
+fi
+if [ "$1" == "biconv2" ]; then
+    shift=2;
+    offset=3;
+    divisor=4;
+    outdir=timings2b
+    prune=yes
+fi
+if [ "$1" == "cconv3" ]; then
+    outdir=timings3c
+    prune=yes
+fi
+
 if [ "$workingcase" != "yes" ]; then
-    echo Only works for cconv!
+    echo Not yet implemented!
     exit
 fi
 
@@ -35,10 +59,10 @@ if [ "$outdir" == "" ]; then
     echo "wrong program name!"
     exit
 fi
+
 mkdir -p $outdir
 cd $outdir
-rm -rf error.explicit error.implicit
-touch error.explicit error.implicit
+rm -f error.explicit error.implicit
 cd ..
 
 if [ "$2" != "" ]; then
@@ -50,8 +74,8 @@ do
     echo $i
     m=$(asy -c "2^$i")
     echo -e "$m \t $(./$1 $m 0 | grep error | sed s/error=//)"| cat >> $outdir/error.implicit
-    if [ "$complex" == "no" ]; then
-	m=$(asy -c "floor((2^($i+1)+2)/3);")
+    if [ "$divisor" != "0" ]; then
+	m=$(asy -c "quotient(2^($i+$shift)+$offset,$divisor)")
     fi
     echo -e "$m \t $(./$1 $m 1 | grep error | sed s/error=//)" | cat >> $outdir/error.explicit
 done
