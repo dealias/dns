@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
     if(mx*my < outlimit) 
       for(unsigned int i=0; i < mx; i++) {
         for(unsigned int j=0; j < my; j++)
-          cout << f[i][j] << " ";
+          cout << f[i][j] << "\t";
         cout << endl;
       } else cout << f[0][0] << endl;
     cout << endl;

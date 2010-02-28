@@ -1202,12 +1202,12 @@ public:
     ninv=1.0/nxyz;
     nyz=ny*nz;
     if(prune) {
-      zBackwards=new mfft1d(nz,1,nxy,1,nz,f);
-      yBackwards=new mfft1d(ny,1,nz,nz,1,f);
       xBackwards=new mfft1d(nx,1,nyz,nyz,1,f);
-      xForwards=new mfft1d(nx,-1,nyz,nyz,1,f);
-      yForwards=new mfft1d(ny,-1,nz,nz,1,f);
+      yBackwards=new mfft1d(ny,1,mz,nz,1,f);
+      zBackwards=new mfft1d(nz,1,nxy,1,nz,f);
       zForwards=new mfft1d(nz,-1,nxy,1,nz,f);
+      yForwards=new mfft1d(ny,-1,mz,nz,1,f);
+      xForwards=new mfft1d(nx,-1,nyz,nyz,1,f);
     } else {
       Backwards=new fft3d(nx,ny,nz,1,f);
       Forwards=new fft3d(nx,ny,nz,-1,f);
@@ -1216,12 +1216,12 @@ public:
   
   ~ExplicitConvolution3() {
     if(prune) {
-      delete zForwards;
-      delete yForwards;
       delete xForwards;
-      delete xBackwards;
-      delete yBackwards;
+      delete yForwards;
+      delete zForwards;
       delete zBackwards;
+      delete yBackwards;
+      delete xBackwards;
     } else {
       delete Forwards;
       delete Backwards;
@@ -1260,10 +1260,10 @@ public:
     }
 
     if(prune) {
-      zBackwards->fft(f);
-      for(unsigned int i=0; i < nx; i++)
+      for(unsigned int i=0; i < mx; i++)
         yBackwards->fft(f+i*nyz);
       xBackwards->fft(f);
+      zBackwards->fft(f);
     } else
       Backwards->fft(f);
   }
@@ -1276,11 +1276,11 @@ public:
       f[i] *= g[i]*ninv;
 	
     if(prune) {
-      xForwards->fft(f);
-      for(unsigned int i=0; i < nx; i++)
-        yForwards->fft(f+i*nyz);
       zForwards->fft(f);
-    } else
+      xForwards->fft(f);
+     for(unsigned int i=0; i < mx; i++)
+        yForwards->fft(f+i*nyz);
+     } else
     Forwards->fft(f);
   }
 };
