@@ -924,9 +924,8 @@ public:
     if(prune) {
       yForwards->fft(f);
       xForwards->fft(f);
-    } else {
+    } else
       Forwards->fft(f);
-    }
   }
 };
 
@@ -1179,6 +1178,181 @@ public:
   }
 };
 
+// In-place explicitly dealiased 3D complex convolution.
+class ExplicitConvolution3 {
+protected:
+  unsigned int nx,ny,nz;
+  unsigned int mx,my,mz;
+  unsigned int nxy;
+  unsigned int nxyz;
+  unsigned int nyz;
+  double ninv;
+  bool prune; // Skip Fourier transforming rows containing all zeroes?
+  mfft1d *xBackwards, *xForwards;
+  mfft1d *yBackwards, *yForwards;
+  mfft1d *zBackwards, *zForwards;
+  fft3d *Backwards, *Forwards;
+public:
+  ExplicitConvolution3(unsigned int nx, unsigned int ny, unsigned int nz,
+                       unsigned int mx, unsigned int my, unsigned int mz,
+                       Complex *f, bool prune=false) :
+    nx(nx), ny(ny), nz(nz), mx(mx), my(my), mz(mz), prune(prune) {
+    nxy=nx*ny;
+    nxyz=nxy*nz;
+    ninv=1.0/nxyz;
+    nyz=ny*nz;
+    if(prune) {
+      zBackwards=new mfft1d(nz,1,nxy,1,nz,f);
+      yBackwards=new mfft1d(ny,1,nz,nz,1,f);
+      xBackwards=new mfft1d(nx,1,nyz,nyz,1,f);
+      xForwards=new mfft1d(nx,-1,nyz,nyz,1,f);
+      yForwards=new mfft1d(ny,-1,nz,nz,1,f);
+      zForwards=new mfft1d(nz,-1,nxy,1,nz,f);
+    } else {
+      Backwards=new fft3d(nx,ny,nz,1,f);
+      Forwards=new fft3d(nx,ny,nz,-1,f);
+    }
+  }
+  
+  ~ExplicitConvolution3() {
+    if(prune) {
+      delete zForwards;
+      delete yForwards;
+      delete xForwards;
+      delete xBackwards;
+      delete yBackwards;
+      delete zBackwards;
+    } else {
+      delete Forwards;
+      delete Backwards;
+    }
+  }    
+  
+  void padBackwards(Complex *f) {
+    for(unsigned int i=0; i < mx; ++i) {
+      unsigned int nyi=ny*i;
+      for(unsigned int j=0; j < my; ++j) {
+        unsigned int nyzij=nz*(nyi+j);
+        unsigned int stop=nyzij+nz;
+        for(unsigned int k=nyzij+mz; k < stop; ++k)
+          f[k]=0.0;
+      }
+    }
+    
+    for(unsigned int i=mx; i < nx; ++i) {
+      unsigned int nyzi=nyz*i;
+      for(unsigned int j=0; j < ny; ++j) {
+        unsigned int nyzij=nyzi+nz*j;
+        unsigned int stop=nyzij+nz;
+        for(unsigned int k=nyzij; k < stop; ++k)
+          f[k]=0.0;
+      }
+    }
+    
+    for(unsigned int i=0; i < nx; ++i) {
+      unsigned int nyzi=nyz*i;
+      for(unsigned int j=mx; j < ny; ++j) {
+        unsigned int nyzij=nyzi+nz*j;
+        unsigned int stop=nyzij+nz;
+        for(unsigned int k=nyzij; k < stop; ++k)
+          f[k]=0.0;
+      }
+    }
+
+    if(prune) {
+      zBackwards->fft(f);
+      for(unsigned int i=0; i < nx; i++)
+        yBackwards->fft(f+i*nyz);
+      xBackwards->fft(f);
+    } else
+      Backwards->fft(f);
+  }
+  
+  void convolve(Complex *f, Complex *g) {
+    padBackwards(f);
+    padBackwards(g);
+    
+    for(unsigned int i=0; i < nxyz; ++i)
+      f[i] *= g[i]*ninv;
+	
+    if(prune) {
+      xForwards->fft(f);
+      for(unsigned int i=0; i < nx; i++)
+        yForwards->fft(f+i*nyz);
+      zForwards->fft(f);
+    } else
+    Forwards->fft(f);
+  }
+};
+
+// In-place implicitly dealiased 2D complex convolution.
+class ImplicitConvolution3 {
+protected:
+  unsigned int mx,my,mz;
+  fftpad *xfftpad;
+  ImplicitConvolution2 *yzconvolve;
+public:  
+  // u1 and v1 are temporary arrays of size mz.
+  // u2 is a temporary array of size my*mz.
+  // u3 is a temporary array of size mx*my*mz.
+  ImplicitConvolution3(unsigned int mx, unsigned int my, unsigned int mz,
+                       Complex *u1, Complex *v1, Complex *u2, Complex *u3) : 
+    mx(mx), my(my), mz(mz) {
+    xfftpad=new fftpad(mx,my*mz,my*mz,u3);
+    yzconvolve=new ImplicitConvolution2(my,mz,u1,v1,u2);
+  }
+  
+  ~ImplicitConvolution3() {
+    delete yzconvolve;
+    delete xfftpad;
+  }
+  
+  // The distinct input arrays f and g must be allocated as Complex[mx*my]. 
+  // u1 and v1 are temporary arrays of size mz.
+  // u2 and v2 are temporary arrays of size mx*my.
+  // u3 and v3 are temporary arrays of size mx*my*mz.
+  // The output is returned in f.
+  void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
+                Complex *u2, Complex *v2, Complex *u3, Complex *v3) {
+    xfftpad->backwards(f,u3);
+    xfftpad->backwards(g,v3);
+
+    unsigned int myz=my*mz;
+    unsigned int mxyz=mx*myz;
+    for(unsigned int i=0; i < mxyz; i += myz)
+      yzconvolve->convolve(f+i,g+i,u1,v1,u2,v2);
+    for(unsigned int i=0; i < mxyz; i += myz)
+      yzconvolve->convolve(u3+i,v3+i,u1,v1,u2,v2);
+    
+    xfftpad->forwards(f,u3);
+  }
+};
+
+// Out-of-place direct 3D complex convolution.
+class DirectConvolution3 {
+protected:  
+  unsigned int mx,my,mz;
+  unsigned int myz;
+public:
+  DirectConvolution3(unsigned int mx, unsigned int my, unsigned int mz) : 
+    mx(mx), my(my), mz(mz), myz(my*mz) {}
+  
+  void convolve(Complex *h, Complex *f, Complex *g) {
+    for(unsigned int i=0; i < mx; ++i) {
+      for(unsigned int j=0; j < my; ++j) {
+        for(unsigned int k=0; k < mz; ++k) {
+          Complex sum=0.0;
+          for(unsigned int r=0; r <= i; ++r)
+            for(unsigned int p=0; p <= j; ++p)
+              for(unsigned int q=0; q <= k; ++q)
+                sum += f[r*myz+p*mz+q]*g[(i-r)*myz+(j-p)*mz+(k-q)];
+          h[i*myz+j*mz+k]=sum;
+        }
+      }
+    }
+  }	
+};
+
 // In-place explicitly dealiased Hermitian biconvolution.
 class ExplicitHBiConvolution {
 protected:
@@ -1366,7 +1540,6 @@ public:
 class DirectHBiConvolution {
 protected:  
   unsigned int m;
-  
 public:
   DirectHBiConvolution(unsigned int m) : m(m) {}
   
@@ -1411,7 +1584,6 @@ class fft0bipad {
   mfft1d *Backwards;
   mfft1d *Forwards;
   double Cos,Sin;
-
 public:  
   fft0bipad(unsigned int m, unsigned int M, unsigned int stride,
             Complex *f) : n(4*m), m(m), M(M), stride(stride) {
@@ -1680,7 +1852,6 @@ public:
 class DirectHBiConvolution2 {
 protected:  
   unsigned int mx,my;
-  
 public:
   DirectHBiConvolution2(unsigned int mx, unsigned int my) : mx(mx), my(my) {}
   

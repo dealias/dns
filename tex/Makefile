@@ -10,7 +10,7 @@ endif
 MAKEDEPEND=$(CFLAGS) -O0 -M -DDEPEND
 LDFLAGS=-lfftw3
 
-FILES=conv cconv conv2 cconv2 biconv biconv2
+FILES=conv cconv conv2 cconv2 cconv3 biconv biconv2
 ALL=fftw++ $(FILES)
 
 all: $(FILES)
@@ -29,6 +29,9 @@ conv2: conv2.o fftw++.o
 
 cconv2: cconv2.o fftw++.o
 	$(CC) $(CFLAGS) cconv2.o fftw++.o $(LDFLAGS) -o cconv2
+
+cconv3: cconv3.o fftw++.o
+	$(CC) $(CFLAGS) cconv3.o fftw++.o $(LDFLAGS) -o cconv3
 
 biconv: biconv.o fftw++.o
 	$(CC) $(CFLAGS) biconv.o fftw++.o $(LDFLAGS) -o biconv

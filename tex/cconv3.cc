@@ -19,8 +19,10 @@ unsigned int N0=10000000;
 unsigned int N=0;
 unsigned int nx=0;
 unsigned int ny=0;
+unsigned int nz=0;
 unsigned int mx=4;
 unsigned int my=4;
+unsigned int mz=4;
 
 bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 
@@ -39,20 +41,19 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(array2<Complex>& f, array2<Complex>& g) 
+inline void init(array3<Complex>& f, array3<Complex>& g) 
 {
   for(unsigned int i=0; i < mx; i++) {
     for(unsigned int j=0; j < my; j++) {
-      f[i][j]=Complex(3.0,2.0);
-      g[i][j]=Complex(5.0,3.0);
-//      f[i][j]=i+j;
-//      g[i][j]=i+j;
+      for(unsigned int k=0; k < mz; k++) {
+        f[i][j][k]=Complex(3.0,2.0);
+        g[i][j][k]=Complex(5.0,3.0);
+      }
     }
   }
 }
 
-  
-unsigned int outlimit=100;
+unsigned int outlimit=300;
 
 unsigned int padding(unsigned int m)
 {
@@ -101,13 +102,16 @@ int main(int argc, char* argv[])
         N=atoi(optarg);
         break;
       case 'm':
-        mx=my=atoi(optarg);
+        mx=my=mz=atoi(optarg);
         break;
       case 'x':
         mx=atoi(optarg);
         break;
       case 'y':
         my=atoi(optarg);
+        break;
+      case 'z':
+        mz=atoi(optarg);
         break;
     }
   }
@@ -116,12 +120,13 @@ int main(int argc, char* argv[])
 
   nx=padding(mx);
   ny=padding(my);
-
-  cout << "nx=" << nx << ", ny=" << ny << endl;
-  cout << "mx=" << mx << ", my=" << my << endl;
+  nz=padding(mz);
+  
+  cout << "nx=" << nx << ", ny=" << ny << ", nz=" << ny << endl;
+  cout << "mx=" << mx << ", my=" << my << ", mz=" << mz << endl;
   
   if(N == 0) {
-    N=N0/(nx*ny);
+    N=N0/(nx*ny*nz);
     if(N < 10) N=10;
   }
   cout << "N=" << N << endl;
@@ -129,8 +134,9 @@ int main(int argc, char* argv[])
   size_t align=sizeof(Complex);
   int nxp=Explicit ? nx : mx;
   int nyp=Explicit ? ny : my;
-  array2<Complex> f(nxp,nyp,align);
-  array2<Complex> g(nxp,nyp,align);
+  int nzp=Explicit ? nz : mz;
+  array3<Complex> f(nxp,nyp,nzp,align);
+  array3<Complex> g(nxp,nyp,nzp,align);
 
   double offset=0.0;
   seconds();
@@ -140,19 +146,24 @@ int main(int argc, char* argv[])
   }
 
   double sum=0.0;
+
   if(Implicit) {
-    Complex *u1=FFTWComplex(my);
-    Complex *v1=FFTWComplex(my);
-    Complex *u2=FFTWComplex(mx*my);
-    Complex *v2=FFTWComplex(mx*my);
-    ImplicitConvolution2 C(mx,my,u1,v1,u2);
+    Complex *u1=FFTWComplex(mz);
+    Complex *v1=FFTWComplex(mz);
+    Complex *u2=FFTWComplex(my*mz);
+    Complex *v2=FFTWComplex(my*mz);
+    Complex *u3=FFTWComplex(mx*my*mz);
+    Complex *v3=FFTWComplex(mx*my*mz);
+    ImplicitConvolution3 C(mx,my,mz,u1,v1,u2,u3);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      C.convolve(f,g,u1,v1,u2,v2);
+      C.convolve(f,g,u1,v1,u2,v2,u3,v3);
       sum += seconds();
     }
     
+    FFTWdelete(v3);
+    FFTWdelete(u3);
     FFTWdelete(v2);
     FFTWdelete(u2);
     FFTWdelete(v1);
@@ -164,16 +175,19 @@ int main(int argc, char* argv[])
     cout << endl;
     if(mx*my < outlimit) 
       for(unsigned int i=0; i < mx; i++) {
-        for(unsigned int j=0; j < my; j++)
-          cout << f[i][j] << " ";
+        for(unsigned int j=0; j < my; j++) {
+          for(unsigned int k=0; k < mz; k++) 
+            cout << f[i][j][k] << "\t";
+          cout << endl;
+        }
         cout << endl;
-      } else cout << f[0][0] << endl;
+      } else cout << f[0][0][0] << endl;
     cout << endl;
   }
   
   if(Explicit) {
     sum=0.0;
-    ExplicitConvolution2 C(nx,ny,mx,my,f,Pruned);
+    ExplicitConvolution3 C(nx,ny,nz,mx,my,mz,f,Pruned);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
@@ -184,19 +198,23 @@ int main(int argc, char* argv[])
     cout << (Pruned ? "Pruned:" : "Explicit:") << endl;
     cout << (sum-offset)/N << endl;
     cout << endl;
-    if(mx*my < outlimit) 
+    if(mx*my*mz < outlimit) {
       for(unsigned int i=0; i < mx; i++) {
-        for(unsigned int j=0; j < my; j++)
-          cout << f[i][j] << "\t";
+        for(unsigned int j=0; j < my; j++) {
+          for(unsigned int k=0; k < mz; k++)
+            cout << f[i][j][k] << "\t";
+          cout << endl;
+        }
         cout << endl;
-      } else cout << f[0][0] << endl;
+      }
+    } else cout << f[0][0][0] << endl;
   }
 
   if(Direct) {
-    array2<Complex> f(mx,my,align);
-    array2<Complex> g(mx,my,align);
-    array2<Complex> h(mx,my,align);
-    DirectConvolution2 C(mx,my);
+    array3<Complex> f(mx,my,mz,align);
+    array3<Complex> g(mx,my,mz,align);
+    array3<Complex> h(mx,my,mz,align);
+    DirectConvolution3 C(mx,my,mz);
     init(f,g);
     seconds();
     C.convolve(h,f,g);
@@ -207,12 +225,15 @@ int main(int argc, char* argv[])
     cout << sum-offset/N << endl;
     cout << endl;
 
-    if(mx*my < outlimit) 
+    if(mx*my < outlimit) {
       for(unsigned int i=0; i < mx; i++) {
-        for(unsigned int j=0; j < my; j++)
-          cout << h[i][j] << "\t";
+        for(unsigned int j=0; j < my; j++) {
+          for(unsigned int k=0; k < mz; k++)
+            cout << h[i][j][k] << "\t";
+          cout << endl;
+        }
         cout << endl;
-      } else cout << h[0][0] << endl;
+      }
+    } else cout << h[0][0][0] << endl;
   }
 }
-
