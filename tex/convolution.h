@@ -1307,9 +1307,9 @@ public:
     delete xfftpad;
   }
   
-  // The distinct input arrays f and g must be allocated as Complex[mx*my]. 
+  // The distinct input arrays f and g must be allocated as Complex[mx*my*mz]. 
   // u1 and v1 are temporary arrays of size mz.
-  // u2 and v2 are temporary arrays of size mx*my.
+  // u2 and v2 are temporary arrays of size my*mz.
   // u3 and v3 are temporary arrays of size mx*my*mz.
   // The output is returned in f.
   void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,

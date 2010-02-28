@@ -4,7 +4,7 @@ start=6
 stop=13
 
 if [ "$1" == "" ]; then
-    echo Usage: timing "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2\|cconv3"]" "["level"]"
+    echo Usage: timing "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2\|cconv3"]" "["start"]" "["stop"]"
     exit
 fi
 
@@ -59,8 +59,13 @@ touch explicit implicit pruned
 cd ..
 
 if [ "$2" != "" ]; then
-    stop=$2
+    start=$2
 fi
+
+if [ "$3" != "" ]; then
+    stop=$3
+fi
+
 echo Timing:
 for (( i=$start; i<=$stop; i++ ))
 do

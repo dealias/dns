@@ -313,6 +313,7 @@ complex Fourier transforms of size $m$ can be done out of place.
 $2m$-padded backwards Fourier transform values of a vector
 {\sf f} of length $m$ in {\sf f} and an auxiliary vector~{\sf u} of length $m$.}\label{fftpadBackwards}
 \end{procedure}
+%
 \end{minipage}
 \begin{minipage}{0.48\linewidth}
 \begin{function}[H]
@@ -361,6 +362,7 @@ and {\sf g} using two temporary vectors {\sf u} and {\sf v}, each of
 length~$m$.}\label{cconv}
 \end{function}
 \end{minipage}
+%
 \begin{minipage}{0.5\linewidth}
 \begin{center}
 %On orcinus, using N=100000000.
@@ -638,6 +640,7 @@ $2c$ into {\sf f} and an auxiliary vector~{\sf u} of length
 $c+1$.}\label{build}
 \end{procedure}
 \end{minipage}
+%
 \begin{minipage}{0.5\linewidth}
 \begin{center}
 %On orcinus, using N=100000000.
@@ -782,6 +785,7 @@ matrices {\sf U} and {\sf V} and temporary vectors {\sf u} and {\sf v} of
 length $m_y$.}\label{cconv2}
 \end{function}
 \end{minipage}
+%
 \begin{minipage}{0.51\linewidth}
 \begin{function}[H]
   \KwIn{matrix \xf, matrix \xg}
@@ -803,34 +807,32 @@ length $m_y$.}\label{cconv2}
 \caption{conv2(matrix~{\sf f}, matrix~{\sf g}) 
 returns an in-place implicitly dealiased convolution of $(2m_x-1)\times
 m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices 
-{\sf U} and {\sf V} and temporary vectors {\sf u} and {\sf v} of length $m_y$.
+{\sf U} and {\sf V} and vectors {\sf u} and {\sf v} of length $m_y$.
 }\label{conv2}
 \end{function}
 \end{minipage}
 \end{figure}
 
 \begin{figure}[htbp]
-\begin{center}
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.5\linewidth}
 \begin{center}
 \includegraphics{timing2c}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 2D convolutions of two matrices of
-(unpadded) length $m\times m$.}
+(unpadded) size $m\times m$.}
 \label{timing2c}
 \end{center}
 \end{minipage}
 %
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.5\linewidth}
 \begin{center}
 \includegraphics{timing2r}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased centered Hermitian in-place 2D convolutions of two matrices of
-(unpadded) length $(2m-1)\times m$.}
+(unpadded) size $(2m-1)\times m$.}
 \label{timing2r}
 \end{center}
 \end{minipage}
-\end{center}
 \end{figure}
 
 %TODO: Improve, show column convolutions, strides, dimensions, padding,
@@ -844,6 +846,43 @@ dealiased centered Hermitian in-place 2D convolutions of two matrices of
 \end{figure}
 
 \section{Implicitly dealiased 3D convolutions}\label{3d}
+
+\begin{function}[htbp]
+  \KwIn{matrix \xf, matrix \xg}
+  \KwOut{matrix \xf}
+  \For{$j=0$ \KwTo $m_y-1$}{
+    \For{$k=0$ \KwTo $m_z-1$}{
+      $\fftpadBackwards(\xf^T[k][j],\xU^T[k][j])$\;
+      $\fftpadBackwards(\xg^T[k][j],\xV^T[k][j])$\;
+    }
+  }
+  \For{$i=0$ \KwTo $m_x-1$}{
+    $\cconv2(\xf[i],\xg[i],\xu_1,\xv_1,\xu_2,\xv_2)$\;
+    $\cconv2(\xU[i],\xV[i],\xu_1,\xv_1,\xu_2,\xv_2)$\;
+  }
+  \For{$j=0$ \KwTo $m_y-1$}{
+    \For{$k=0$ \KwTo $m_z-1$}{
+      $\fftpadForwards(\xf^T[k][j],\xU^T[k][j])$\;
+    }
+  }
+  \Return \xf\;
+\caption{cconv3(matrix~{\sf f}, matrix~{\sf g}) 
+returns an in-place implicitly dealiased convolution of
+$m_x\times m_y\times m_z$ matrices {\sf f} and {\sf g} using temporary
+$m_x\times m_y\times m_z$ matrices ${\sf U}$ and ${\sf V}$, 
+$m_y\times m_z$ matrices ${\sf u}_2$ and ${\sf v}_2$,
+and vectors ${\sf u}_1$ and ${\sf v}_1$ of length~$m_z$.}\label{cconv3}
+\end{function}
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics{timing3c}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased complex in-place 3D convolutions of two matrices of
+(unpadded) size $m\times m\times m$.}
+\label{timing3c}
+\end{center}
+\end{figure}
 
 \section{Implicitly dealiased biconvolutions}\label{hyperconv}
 In this section, we show that implicit padding is well suited to
@@ -936,6 +975,7 @@ vector {\sf f} of length~$2m$ in {\sf f} and an auxiliary vector~{\sf u} of
 length $2m$.}\label{fft0bipadBackwards}
 \end{procedure}
 \end{minipage}
+%
 \begin{minipage}{0.49\linewidth}
 \begin{function}[H]
   \KwIn{vector \xf, vector \xu}
@@ -1000,6 +1040,7 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 {\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}
 \end{function}
 \end{minipage}
+%
 \begin{minipage}{0.545\linewidth}
 \begin{function}[H]
   \KwIn{matrix \xf, matrix \xg, matrix \xh}
@@ -1021,7 +1062,7 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 returns an in-place implicitly dealiased convolution of \hbox{$2m_x\times
 (m_y+1)$} matrices~{\sf f},~{\sf g}, and~{\sf h} using
 temporary \hbox{$2m_x\times (m_y+1)$} matrices~{\sf U}, {\sf V}, and~{\sf W} and
-temporary vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
+vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 }\label{biconv2}
 \end{function}
 \end{minipage}
