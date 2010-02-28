@@ -14,6 +14,7 @@ if(pname == "biconv") dir="timings1b";
 if(pname == "conv2") dir="timings2r";
 if(pname == "cconv2") dir="timings2c";
 if(pname == "biconv2") dir="timings2b";
+if(pname == "cconv3") dir="timings3c";
   
 file fin=input(dir+"/explicit").line();
 real[][] a=fin.dimension(0,0);

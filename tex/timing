@@ -4,7 +4,7 @@ start=6
 stop=13
 
 if [ "$1" == "" ]; then
-    echo please specify program: timing "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2"]" "["level"]"
+    echo Usage: timing "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2\|cconv3"]" "["level"]"
     exit
 fi
 
@@ -42,6 +42,10 @@ if [ "$1" == "biconv2" ]; then
     offset=3;
     divisor=4;
     outdir=timings2b
+    prune=yes
+fi
+if [ "$1" == "cconv3" ]; then
+    outdir=timings3c
     prune=yes
 fi
 if [ "$outdir" == "" ]; then
