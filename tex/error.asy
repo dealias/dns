@@ -2,7 +2,7 @@ include graph;
 
 size(175,200,IgnoreAspect);
 
-scale(Log,Log);
+scale(Log,Log(true,true));
 real[] mp,p,mu,u,mP,P;
 
 string pname="cconv";

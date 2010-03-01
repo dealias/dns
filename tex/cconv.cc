@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
     }
     error=sqrt(error/norm);
     cout << "error=" << error << endl;
-    if (error > 1e-8)
+    if (error > 1e-10)
       cerr << "Caution! error=" << error << endl;
     FFTWdelete(h);
   }
