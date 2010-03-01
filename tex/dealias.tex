@@ -244,8 +244,10 @@ and reduced storage requirements of the higher-dimensional implicit
 convolutions described in Sections~\ref{2d} and~\ref{3d}.
 Moreover, in Function~\ref{cconv} we see that four out the six
 complex Fourier transforms of size $m$ can be done out of place.
+In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
+(vector) multiply.
 
-%\setlength{\algomargin}{0.5em}
+\setlength{\algomargin}{0.6em}
 \SetAlCapSkip{3pt}
 \SetAlgoCaptionLayout{textit}
 \def\fft{{\tt fft}}
@@ -282,7 +284,7 @@ complex Fourier transforms of size $m$ can be done out of place.
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
   \For{$k=0$ \KwTo $m-1$}{
-    $\xu[k] \leftarrow \z_{2m}^k * \xf[k]$\;
+    $\xu[k] \leftarrow \z_{2m}^k\xf[k]$\;
   }
   $\xf \leftarrow \fft\inv(\xf)$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
@@ -299,7 +301,7 @@ $2m$-padded backwards Fourier transform values of a vector
   $\xf \leftarrow \fft(\xf)$\;
   $\xu \leftarrow \fft(\xu)$\;
   \For{$k=0$ \KwTo $m-1$}{
-    $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k} * \xu[k]$\;
+    $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k}\xu[k]$\;
   }
   \Return f/(2m)\;
   \caption{fftpadForwards(vector {\sf f}, vector {\sf u}) returns the
@@ -315,8 +317,8 @@ u}).}\label{fftpadForwards}
   \KwIn{vector \xf, vector \xg}
   \KwOut{vector \xf}
   \For{$k=0$ \KwTo $m-1$}{
-    $\xu[k] \leftarrow \z_{2m}^k * \xf[k]$\;
-    $\xv[k] \leftarrow \z_{2m}^k * \xg[k]$\;
+    $\xu[k] \leftarrow \z_{2m}^k\xf[k]$\;
+    $\xv[k] \leftarrow \z_{2m}^k\xg[k]$\;
   }
   \medskip
   $\xu \leftarrow \fft\inv(\xu)$\;
@@ -330,7 +332,7 @@ u}).}\label{fftpadForwards}
   $\xf \leftarrow \fft(\xv)$\;
   \medskip
   \For{$k=0$ \KwTo $m-1$}{
-    $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k} * \xu[k]$\;
+    $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k}\xu[k]$\;
   }
   \Return f/(2m)\;
 \caption{cconv(vector {\sf f}, vector~{\sf g}) computes
@@ -430,8 +432,8 @@ versions of these routines.
   \KwOut{vector \xf, vector \xu}
   $\xu[0] \leftarrow \xf[m-1]$\;
   \For{$k=1$ \KwTo $m-1$}{
-    $\xA \leftarrow \zeta_{3m}^k*\[\Re \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Re \xf[k]\]$\;
-    $\xB \leftarrow i\zeta_{3m}^k*\[\Im \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\Im \xf[k]\]$\;
+    $\xA \leftarrow \zeta_{3m}^k\[\Re \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)\Re \xf[k]\]$\;
+    $\xB \leftarrow i\zeta_{3m}^k\[\Im \xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)\Im \xf[k]\]$\;
     $\xf[m-1+k] \leftarrow \xA+\xB$\;
     $\xu[k] \leftarrow \conj{\xA-\xB}$\;
     $\xf[0] \leftarrow \xf[k]$\;
@@ -460,8 +462,8 @@ $2m-1$ in {\sf f} and an auxiliary vector~{\sf u} of length $m+1$.}\label{fft0pa
 
   $\xu[m] \leftarrow \xf[0]+\xu[m]+\xu[0]$\;
   \For{$k=1$ \KwTo $m-1$}{
-    $\xf[k-1]=\xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{3m}^{-k}*\xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{3m}^k*\xu[k]$\;
-    $\xf[m-1+k]=\xf[k]+\zeta_{3m}^{-k}*\xf[m-1+k]+\zeta_{3m}^k*\xu[k]$\;
+    $\xf[k-1]=\xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)\zeta_{3m}^{-k}\xf[m-1+k]+\(-\half,-\fr{\sqrt{3}}{2}\)\zeta_{3m}^k\xu[k]$\;
+    $\xf[m-1+k]=\xf[k]+\zeta_{3m}^{-k}\xf[m-1+k]+\zeta_{3m}^k\xu[k]$\;
   }
   $\xf[m-1] \leftarrow \xu[m]$\;
   \Return \xf/(3m)\;
@@ -578,13 +580,13 @@ of the two transformed input vectors.
   \medskip
 
   \For{$k=1$ \KwTo $c-2$}{
-    $\xf[k]=\xf[k]+\zeta_{6c}^{-k}*\xv[k]+\zeta_{6c}^k*\xu[k]$\;
-    $\xf[2c-k]=\conj{\xf[k]}+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{6c}^k*\conj{\xv[k]}+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{-k}*\conj{\xu[k]}$\;
+    $\xf[k]=\xf[k]+\zeta_{6c}^{-k}\xv[k]+\zeta_{6c}^k\xu[k]$\;
+    $\xf[2c-k]=\conj{\xf[k]}+\(-\half,-\fr{\sqrt{3}}{2}\)\zeta_{6c}^k\conj{\xv[k]}+\(-\half,\fr{\sqrt{3}}{2}\)\zeta_{6c}^{-k}\conj{\xu[k]}$\;
   }
 
-  $\xf[c-1]=S+\zeta_{6c}^{1-c}*\xv[c-1]+\zeta_{6c}^{c-1}*\xu[c-1]$\;
-  $\xf[c]=T-\(-\half,\fr{\sqrt{3}}{2}\)*\xv[c]-\(-\half,-\fr{\sqrt{3}}{2}\)*\xu[c]$\;
-  $\xf[c+1]=\conj{S}+\(-\half,-\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{c-1}*\conj{\xv[c-1]}+\(-\half,\fr{\sqrt{3}}{2}\)*\zeta_{6c}^{1-c}*\conj{\xu[c-1]}$\;
+  $\xf[c-1]=S+\zeta_{6c}^{1-c}\xv[c-1]+\zeta_{6c}^{c-1}\xu[c-1]$\;
+  $\xf[c]=T-\(-\half,\fr{\sqrt{3}}{2}\)\xv[c]-\(-\half,-\fr{\sqrt{3}}{2}\)\xu[c]$\;
+  $\xf[c+1]=\conj{S}+\(-\half,-\fr{\sqrt{3}}{2}\)\zeta_{6c}^{c-1}\conj{\xv[c-1]}+\(-\half,\fr{\sqrt{3}}{2}\)\zeta_{6c}^{1-c}\conj{\xu[c-1]}$\;
 
   \Return f/(6c)\;
 \caption{conv(vector {\sf f}, vector {\sf g}) 
@@ -595,7 +597,7 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
 \end{function}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.51\linewidth}
 \begin{procedure}[H]
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
@@ -603,10 +605,10 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
   $\xFk \leftarrow \conj{f[m-1]}$\;
   $\xf[m-1] \leftarrow \xf[0]$\;
   \For{$k=1$ \KwTo $c-1$}{
-    $\xA \leftarrow \zeta_{6c}^k*\phantom{\quad}
-\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Re \xFk\]$\;
-    $\xB \leftarrow -i\zeta_{6c}^k*\phantom{\quad}
-\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)*\Im \xFk\]$\;
+    $\xA \leftarrow \zeta_{6c}^k 
+\[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)\Re \xFk\]$\;
+    $\xB \leftarrow -i\zeta_{6c}^k
+\[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)\Im \xFk\]$\;
     $\xf[k] \leftarrow \xf[k]+\xFk$\;
     $\xu[k] \leftarrow \xA-\xB$\;
     $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
@@ -619,7 +621,7 @@ $c+1$.}\label{build}
 \end{procedure}
 \end{minipage}
 %
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 %On orcinus, using N=100000000.
 \includegraphics{timing1r}
@@ -740,7 +742,7 @@ compared with a minimum of $2(3m-2)(3m/2)=9m^2-6m$ complex words for an explicit
 transform.
 
 \begin{figure}[htbp]
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.5\linewidth}
 \begin{function}[H]
   \KwIn{matrix \xf, matrix \xg}
   \KwOut{matrix \xf}
@@ -764,7 +766,7 @@ length $m_y$.}\label{cconv2}
 \end{function}
 \end{minipage}
 %
-\begin{minipage}{0.51\linewidth}
+\begin{minipage}{0.5\linewidth}
 \begin{function}[H]
   \KwIn{matrix \xf, matrix \xg}
   \KwOut{matrix \xf}
@@ -953,7 +955,7 @@ whereas implicit padding requires $6(m+1)$ complex words of storage.
   \KwOut{vector \xf, vector \xu}
   $\xu[0]=\xf[0]=0$\;
   \For{$k=1$ \KwTo $2m-1$}{
-    $\xu[k] \leftarrow -i\z_{4m}^k * \xf[k]$\;
+    $\xu[k] \leftarrow -i\z_{4m}^k\xf[k]$\;
   }
   $\xf \leftarrow \fft\inv(\xf)$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
@@ -972,7 +974,7 @@ length $2m$.}\label{fft0bipadBackwards}
   $\xf \leftarrow \fft(\xf)$\;
   $\xu \leftarrow \fft(\xu)$\;
   \For{$k=1$ \KwTo $2m-1$}{
-    $\xf[k] \leftarrow \xf[k] +i \z_{4m}^{-k} * \xu[k]$\;
+    $\xf[k] \leftarrow \xf[k] +i \z_{4m}^{-k}\xu[k]$\;
   }
   \Return \xf/(4m)\;
   \caption{fft0bipadForwards(vector~{\sf f}, vector~{\sf u}) returns the
@@ -985,13 +987,13 @@ inverse of fft0bipadBackwards(\hbox{vector~{\sf f}, vector~{\sf u}}).}
 Just as for convolutions, the performance and memory benefits of
 evaluating implicitly padded hyperconvolutions manifest themselves only in
 higher dimensions. For example, in Figure~\ref{timing2b}, we observe 
-that an implicit $8192\times 8192$ Hermitian biconvolution requires $46\%$
+that an implicit $4096\times 4096$ Hermitian biconvolution requires $43\%$
 of the computation time required for an explicit biconvolution.
 The memory usage for a $(2m-1)\times (2m-1)$ Hermitian biconvolution,
 is $6\cdot 2m(m+1)+3(m+1)=12m^2+15m+1$ complex words, compared with
 $3\cdot 4m(2m+1)=24m^2+12m$ complex words (when $m$ is a power of $2$) 
-for an explicit biconvolution. For example, an $8192\times 8192$ $y$-pruned
-biconvolution requires $**$ of the computation time but the same amount
+for an explicit biconvolution. An $4096\times 4096$ $y$-pruned
+biconvolution requires $68\%$ of the computation time but the same amount
 of storage as an explicitly padded biconvolution.
 
 \begin{figure}[htbp]
@@ -1000,9 +1002,9 @@ of storage as an explicitly padded biconvolution.
   \KwIn{vector \xf, vector \xg, vector \xh}
   \KwOut{vector \xf}
   \For{$k=0$ \KwTo $m-1$}{
-    $\xu[k] \leftarrow \z_{4m}^k * \xf[k]$\;
-    $\xv[k] \leftarrow \z_{4m}^k * \xg[k]$\;
-    $\xw[k] \leftarrow \z_{4m}^k * \xh[k]$\;
+    $\xu[k] \leftarrow \z_{4m}^k \xf[k]$\;
+    $\xv[k] \leftarrow \z_{4m}^k \xg[k]$\;
+    $\xw[k] \leftarrow \z_{4m}^k \xh[k]$\;
   }
   \medskip
   $\xu[m]=\xv[m]=\xw[m]=0$\;
@@ -1020,7 +1022,7 @@ of storage as an explicitly padded biconvolution.
   $\xf \leftarrow \rcfft(\xv)$\;
   \medskip
   \For{$k=0$ \KwTo $m-1$}{
-    $\xf[k] \leftarrow \xf[k] + \z_{4m}^{-k} * \xu[k]$\;
+    $\xf[k] \leftarrow \xf[k] + \z_{4m}^{-k}\xu[k]$\;
   }
   \Return f/(4m)\;
 \caption{biconv(vector {\sf f}, vector~{\sf g}, vector~{\sf h}) computes
@@ -1030,7 +1032,7 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 \end{function}
 \end{minipage}
 %
-\begin{minipage}{0.545\linewidth}
+\begin{minipage}{0.5\linewidth}
 \begin{function}[H]
   \KwIn{matrix \xf, matrix \xg, matrix \xh}
   \KwOut{matrix \xf}
@@ -1059,7 +1061,7 @@ vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 
 \begin{figure}[htbp]
 \begin{center}
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.5\linewidth}
 \begin{center}
 \includegraphics{timing1b}
 \caption{Comparison of computation times for explicitly and implicitly
