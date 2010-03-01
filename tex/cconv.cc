@@ -2,7 +2,6 @@ using namespace std;
 #include "Complex.h"
 #include "convolution.h"
 
-#define TEST yes
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3 -march=native
 
 // icpc -O3 -ansi-alias -malign-double -fp-model fast=2 cconv.cc fftw++.cc -lfftw3

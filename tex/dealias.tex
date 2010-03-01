@@ -153,7 +153,7 @@ Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
 %platform-adaptive
 compete with an explicitly problem-dependent and architecture-adaptive
-FFTW algorithm such as the award-winning \cite{FFTW} library, which
+FFT algorithm such as the award-winning \cite{FFTW} library, which
 empirically predetermines a near optimal butterfly graph
 %FIXME:REForDEFN
 %Standard term from graph theory/FFT literature 
@@ -501,7 +501,7 @@ U_0&if $k=0$,\cr
 We note that $w_{k,r}$ obeys the Hermitian symmetry 
 $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
-be real valued. This allows us to build a backwards implicitly dealiased
+be real-valued. This allows us to build a backwards implicitly dealiased
 Hermitian transform using three complex-to-real Fourier transforms of the
 first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
 forwards transform is given by
@@ -703,23 +703,24 @@ arrays, which in turn requires that the $y$ convolutions be computed serially.
 
 As shown in Figure~\ref{timing2c}, the resulting implicit
 2D algorithm dramatically outperforms the explicit version. For example, a
-$1024\times 1024$ complex convolution runs $48\%$ faster than an explicit 
+$1024\times 1024$ complex convolution takes $52\%$ the time of an explicit 
 convolution. The gains appear to increase with transform size: a
-$8192\times 8192$ implicit convolution runs $52\%$ faster than an explicit one.
+$8192\times 8192$ implicit convolution takes $48\%$ the time of an explicit one.
 
-The third sentence of the quote from Steven G. Johnson
-on page~\ref{quote} suggests a very reasonable optimization
-for explicitly padded 2D convolutions: one can omit the backwards and
+The third sentence of the quote from Steven G. Johnson on
+page~\ref{quote} suggests a very reasonable optimization for
+explicitly padded 2D convolutions: one can omit the backwards and
 forwards Fourier transforms in the $x$ direction for $m \le y < 2m$.
 However there are other optimization possibilities lost in directly
-expressing a 2D convolution in terms of 1D transforms: as illustrated in
-Figure~\ref{cconv2}, while the $y$-pruned explicit convolution is 27\% faster
-than a conventional 2D explicit convolution for size $1024\times 1024$ but
-$71\%$ slower for a $8192\times 8192$ convolution. Our implicitly dealised
-convolution is also subject to these same losses, but the savings due to
-implicit padding, ignoring high-level bit reversal, in-place subtransforms, 
-and computing the convolution of each column as it is transformed (and
-thereby perhaps still in cache) outweighs these losses.
+expressing a 2D convolution in terms of 1D transforms: as illustrated
+in Figure~\ref{cconv2}, while the $y$-pruned explicit convolution
+takes 73\% the time of a conventional 2D explicit convolution for size
+$1024\times 1024$ but takes $171\%$ the time of a $8192\times 8192$
+convolution. Our implicitly dealised convolution is also subject to
+these same losses, but the savings due to implicit padding, ignoring
+high-level bit reversal, in-place subtransforms, and computing the
+convolution of each column as it is transformed (and thereby perhaps
+still in cache) outweighs these losses.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
 of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
