@@ -62,6 +62,14 @@ protected:
   fft1d *Backwards,*Forwards;
   fft1d *Backwardso,*Forwardso;
   double Cos,Sin;
+#ifdef __SSE2__
+  Complex *HalfSec;
+#else
+  double *HalfSec;
+#endif
+  Complex *Exp;
+  Complex *Exp0;
+  unsigned int L;
 public:  
   
   // u and v are distinct temporary arrays each of size m.
@@ -75,6 +83,33 @@ public:
     
     Backwardso=new fft1d(m,1,u,v);
     Forwardso=new fft1d(m,-1,u,v);
+    
+    unsigned int n4=4*n;
+    L=__builtin_clz(1)-__builtin_clz(n4);
+    // Add check HERE.
+    unsigned int M=1 << L;
+    if(M < n4) {++L; M *= 2;}
+#ifdef __SSE2__
+    HalfSec=FFTWComplex(L);
+#else    
+    HalfSec=new double[L];
+#endif    
+    Exp=FFTWComplex(L);
+    Exp0=FFTWComplex(L);
+    double delta=M_PI*M/n;
+    unsigned int K=1;
+    for(unsigned int k=0; k < L; ++k) {
+      double arg=delta/K;
+      double C=cos(arg);
+      double temp=0.5/C;
+#ifdef __SSE2__      
+      HalfSec[k]=Complex(temp,temp);
+#else      
+      HalfSec[k]=temp;
+#endif      
+      Exp0[k]=Complex(C,sin(arg));
+      K *= 2;
+    }
   }
   
   ~ImplicitConvolution() {
@@ -92,18 +127,34 @@ public:
 #ifdef __SSE2__      
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
+#ifdef UNSTABLE    
     Vec CC=LOAD(&cc);
     Vec SS=LOAD(&ss);
+#endif    
     Vec Zetak=LOAD(&one);
 #else    
     double re=1.0;
     double im=0.0;
 #endif
-    for(unsigned int k=0; k < m; ++k) {
+#define UNSTABLE 0
+    for(unsigned int k=0; k < L; ++k) 
+      Exp[k]=Exp0[k];
+    for(unsigned int k=0; k < m;) {
 #ifdef __SSE2__      
       STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
       STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
+      ++k;
+#if UNSTABLE      
       Zetak=ZMULT(CC,SS,Zetak);
+#else
+      unsigned int j=L-__builtin_ctz(k)-1;
+      Complex *Expj=Exp+j;
+      Zetak=LOAD(Expj);
+      unsigned int I=k & -k;
+      unsigned int I2=I+I;
+      STORE(Expj,LOAD(HalfSec+j)*(LOAD(Expj-1)+
+                                  LOAD(Exp+L-1-__builtin_ctz(I2+(I2|(k-I))))));
+#endif      
 #else      
       Complex *P=u+k;
       Complex *Q=v+k;
@@ -113,9 +164,18 @@ public:
       P->im=im*fk.re+re*fk.im;
       Q->re=re*gk.re-im*gk.im;
       Q->im=im*gk.re+re*gk.im;
+      ++k;
+#if UNSTABLE      
       double temp=re*Cos-im*Sin; 
       im=re*Sin+im*Cos;
       re=temp;
+#else      
+      unsigned int j=L-__builtin_ctz(k)-1;
+      re=Exp[j].re;     
+      im=Exp[j].im;     
+      unsigned int I=k & -k;
+      Exp[j]=HalfSec[j]*(Exp[j-1]+Exp[L-1-__builtin_ctz(2*I+((2*I) | (k-I)))]);
+#endif      
 #endif      
     }  
     
@@ -153,28 +213,49 @@ public:
     
     double ninv=1.0/n;
 #ifdef __SSE2__      
-    SS=-LOAD(&ss);
     const Complex Ninv(ninv,0.0);
     const Complex Ninv2(ninv,ninv);
-    Zetak=LOAD(&Ninv);
+    Zetak=LOAD(&one);
     Vec ninv2=LOAD(&Ninv2);
 #else    
-    re=ninv;
+    re=1.0;
     im=0.0;
 #endif    
-    for(unsigned int k=0; k < m; ++k) {
+    for(unsigned int k=0; k < L; ++k) 
+      Exp[k]=Exp0[k];
+    for(unsigned int k=0; k < m;) {
 #ifdef __SSE2__
-      STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
+      STORE(f+k,ninv2*(ZMULTC(Zetak,LOAD(u+k))+LOAD(f+k)));
+      ++k;
+#if UNSTABLE      
       Zetak=ZMULT(CC,SS,Zetak);
+#else
+      unsigned int j=L-__builtin_ctz(k)-1;
+      Complex *Expj=Exp+j;
+      Zetak=LOAD(Expj);
+      unsigned int I=k & -k;
+      unsigned int I2=I+I;
+      STORE(Expj,LOAD(HalfSec+j)*(LOAD(Expj-1)+
+                                  LOAD(Exp+L-1-__builtin_ctz(I2+(I2|(k-I))))));
+#endif      
 #else      
       Complex *p=f+k;
       Complex fk=*p;
       Complex fkm=*(u+k);
       p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
       p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+      ++k;
+#if UNSTABLE
       double temp=re*Cos+im*Sin;
       im=-re*Sin+im*Cos;
       re=temp;
+#else
+      unsigned int j=L-__builtin_ctz(k)-1;
+      re=Exp[j].re;     
+      im=Exp[j].im;     
+      unsigned int I=k & -k;
+      Exp[j]=HalfSec[j]*(Exp[j-1]+Exp[L-1-__builtin_ctz(2*I+((2*I) | (k-I)))]);
+#endif      
 #endif      
     }
   }
@@ -460,7 +541,7 @@ public:
       Complex *s=fm-k;
 #ifdef __SSE2__      
       Vec F0=LOAD(p)*ninv2;
-      Vec F1=ZMULT(CONJ(Zetak),LOAD(v+k));
+      Vec F1=ZMULTC(Zetak,LOAD(v+k));
       Vec F2=ZMULT(Zetak,LOAD(u+k));
       Vec S=F1+F2;
       STORE(p,F0+S);

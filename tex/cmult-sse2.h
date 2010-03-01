@@ -90,7 +90,7 @@ static inline Vec CONJ(const Vec& z)
   return _mm_xor_pd(sse2_pm.v,z);
 }
 
-// Return the complex product of iz.
+// Return I*z.
 static inline Vec ZMULTI(const Vec& z)
 {
   return FLIP(CONJ(z));
@@ -100,6 +100,12 @@ static inline Vec ZMULTI(const Vec& z)
 static inline Vec ZMULT(const Vec& z, const Vec& w)
 {
   return w*UNPACKL(z,z)+UNPACKH(z,z)*ZMULTI(w);
+}
+
+// Return the complex product of CONJ(z) and w.
+static inline Vec ZMULTC(const Vec& z, const Vec& w)
+{
+  return w*UNPACKL(z,z)-UNPACKH(z,z)*ZMULTI(w);
 }
 
 // Return the complex product of z and I*w.
