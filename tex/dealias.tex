@@ -501,7 +501,7 @@ U_0&if $k=0$,\cr
 We note that $w_{k,r}$ obeys the Hermitian symmetry 
 $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
-be real-valued. This allows us to build a backwards implicitly dealiased
+be real valued. This allows us to build a backwards implicitly dealiased
 Hermitian transform using three complex-to-real Fourier transforms of the
 first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
 forwards transform is given by
@@ -703,9 +703,10 @@ arrays, which in turn requires that the $y$ convolutions be computed serially.
 
 As shown in Figure~\ref{timing2c}, the resulting implicit
 2D algorithm dramatically outperforms the explicit version. For example, a
-$1024\times 1024$ complex convolution takes $52\%$ the time of an explicit 
-convolution. The gains appear to increase with transform size: a
-$8192\times 8192$ implicit convolution takes $48\%$ the time of an explicit one.
+$1024\times 1024$ complex convolution runs $1.92$ times faster than
+an explicit convolution. The gains appear to increase with transform size: a
+$8192\times 8192$ implicit convolution runs in $48\%$ of the time for an
+explicit one. 
 
 The third sentence of the quote from Steven G. Johnson on
 page~\ref{quote} suggests a very reasonable optimization for

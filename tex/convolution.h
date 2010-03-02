@@ -1,6 +1,4 @@
 // TODO: auto-symmetrize 2D Hermitian data.
-// TODO: try using simd instructions everywhere for the real term-by-term
-// multiply.
 
 #include "fftw++.h"
 
@@ -41,15 +39,22 @@ public:
   // The distinct) input arrays f and g are each of size n (contents not
   // preserved). The output is returned in f.
   void convolve(Complex *f, Complex *g) {
-    for(unsigned int i=m; i < n; i++) f[i]=0.0;
+    for(unsigned int k=m; k < n; k++) f[k]=0.0;
     Backwards->fft(f);
   
-    for(unsigned int i=m; i < n; i++) g[i]=0.0;
+    for(unsigned int k=m; k < n; k++) g[k]=0.0;
     Backwards->fft(g);
       
     double ninv=1.0/n;
-    for(unsigned int i=0; i < n; ++i)
-      f[i] *= g[i]*ninv;
+#ifdef __SSE2__      
+    const Complex ninv2(ninv,ninv);
+    Vec Ninv=LOAD(&ninv2);
+    for(unsigned int k=0; k < n; ++k)
+      STORE(f+k,Ninv*ZMULT(LOAD(f+k),LOAD(g+k)));
+#else    
+    for(unsigned int k=0; k < n; ++k)
+      f[k] *= g[k]*ninv;
+#endif    
 	
     Forwards->fft(f);
   }
@@ -101,7 +106,7 @@ public:
     for(unsigned int k=0; k < L; ++k) {
       double arg=delta/K;
       double C=cos(arg);
-      double temp=0.5/C;
+      double temp=C != 0.0 ? 0.5/C : 0.0;
 #ifdef __SSE2__      
       HalfSec[k]=Complex(temp,temp);
 #else      
@@ -110,6 +115,20 @@ public:
       Exp0[k]=Complex(C,sin(arg));
       K *= 2;
     }
+    
+    if(n > 3) {
+      static const double x=-0.1*DBL_EPSILON;
+      double temp=-0.5/x;
+#ifdef __SSE2__      
+      HalfSec[3]=Complex(temp,temp);
+#else      
+      HalfSec[3]=temp;
+#endif      
+      Exp0[0]=Complex(1.0,5.0*x);
+      Exp0[1]=Complex(1.0,x);
+      Exp0[2]=Complex(-1.0,x);
+    }
+    
   }
   
   ~ImplicitConvolution() {
@@ -213,10 +232,9 @@ public:
     
     double ninv=1.0/n;
 #ifdef __SSE2__      
-    const Complex Ninv(ninv,0.0);
-    const Complex Ninv2(ninv,ninv);
+    const Complex ninv2(ninv,ninv);
+    Vec Ninv=LOAD(&ninv2);
     Zetak=LOAD(&one);
-    Vec ninv2=LOAD(&Ninv2);
 #else    
     re=1.0;
     im=0.0;
@@ -225,7 +243,7 @@ public:
       Exp[k]=Exp0[k];
     for(unsigned int k=0; k < m;) {
 #ifdef __SSE2__
-      STORE(f+k,ninv2*(ZMULTC(Zetak,LOAD(u+k))+LOAD(f+k)));
+      STORE(f+k,Ninv*(ZMULTC(Zetak,LOAD(u+k))+LOAD(f+k)));
       ++k;
 #if UNSTABLE      
       Zetak=ZMULT(CC,SS,Zetak);
@@ -318,8 +336,8 @@ public:
     double *G=(double *) g;
     
     double ninv=1.0/n;
-    for(unsigned int i=0; i < n; ++i)
-      F[i] *= G[i]*ninv;
+    for(unsigned int k=0; k < n; ++k)
+      F[k] *= G[k]*ninv;
     rc->fft(f);
   }
 };
@@ -997,10 +1015,17 @@ public:
     padBackwards(f);
     padBackwards(g);
     
-    unsigned int nxy=nx*ny;
-    double ninv=1.0/nxy;
-    for(unsigned int i=0; i < nxy; ++i)
-      f[i] *= g[i]*ninv;
+    unsigned int n=nx*ny;
+    double ninv=1.0/n;
+#ifdef __SSE2__      
+    const Complex ninv2(ninv,ninv);
+    Vec Ninv=LOAD(&ninv2);
+    for(unsigned int k=0; k < n; ++k)
+      STORE(f+k,Ninv*ZMULT(LOAD(f+k),LOAD(g+k)));
+#else    
+    for(unsigned int k=0; k < n; ++k)
+      f[k] *= g[k]*ninv;
+#endif    
 	
     if(prune) {
       yForwards->fft(f);
@@ -1265,9 +1290,7 @@ protected:
   unsigned int nx,ny,nz;
   unsigned int mx,my,mz;
   unsigned int nxy;
-  unsigned int nxyz;
   unsigned int nyz;
-  double ninv;
   bool prune; // Skip Fourier transforming rows containing all zeroes?
   mfft1d *xBackwards, *xForwards;
   mfft1d *yBackwards, *yForwards;
@@ -1279,8 +1302,6 @@ public:
                        Complex *f, bool prune=false) :
     nx(nx), ny(ny), nz(nz), mx(mx), my(my), mz(mz), prune(prune) {
     nxy=nx*ny;
-    nxyz=nxy*nz;
-    ninv=1.0/nxyz;
     nyz=ny*nz;
     if(prune) {
       xBackwards=new mfft1d(nx,1,nyz,nyz,1,f);
@@ -1353,8 +1374,17 @@ public:
     padBackwards(f);
     padBackwards(g);
     
-    for(unsigned int i=0; i < nxyz; ++i)
-      f[i] *= g[i]*ninv;
+    unsigned int n=nxy*nz;
+    double ninv=1.0/n;
+#ifdef __SSE2__      
+    const Complex ninv2(ninv,ninv);
+    Vec Ninv=LOAD(&ninv2);
+    for(unsigned int k=0; k < n; ++k)
+      STORE(f+k,Ninv*ZMULT(LOAD(f+k),LOAD(g+k)));
+#else    
+    for(unsigned int k=0; k < n; ++k)
+      f[k] *= g[k]*ninv;
+#endif    
 	
     if(prune) {
       zForwards->fft(f);
@@ -1477,8 +1507,9 @@ public:
     double *G=(double *) g;
     
     double ninv=1.0/n;
-    for(unsigned int i=0; i < n; ++i)
-      E[i] *= F[i]*G[i]*ninv;
+    for(unsigned int k=0; k < n; ++k)
+      E[k] *= F[k]*G[k]*ninv;
+
     rc->fft(e);
   }
 };
