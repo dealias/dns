@@ -1,13 +1,14 @@
-int N=17;
+int N=11;
 
 bool autorestore=false; // Will autorestore most of table if N is a power of 2.
+
 int N4;
 int offset;
 if(autorestore) {
-  N4=8N;
+  N4=8*N;
   offset=1;
 } else {
-  N4=4N;
+  N4=4*N;
   offset=0;
 }
 
@@ -29,13 +30,14 @@ pair zeta(int k)
   return zeta;
 }
   
-real x=2/realEpsilon;
-if(M == N4) {
-  HalfSec[3+offset]=0.5*x;
+real x=0.5*realEpsilon;
 
-  Exp[0+offset]=(1,-5/x);
-  Exp[1+offset]=(1,-1/x);
-  Exp[2+offset]=(-1,-1/x);
+if(M == N4) {
+  HalfSec[3+offset]=0.5/x;
+
+  Exp[0+offset]=(1,-5*x);
+  Exp[1+offset]=(1,-x);
+  Exp[2+offset]=(-1,-x);
 }
 
 write(HalfSec);
@@ -48,9 +50,9 @@ for(int k=1; k < N; ++k)
 write();
 
 if(M == N4 && autorestore) {
-  Exp[0+offset]=(1,-5/x);
-  Exp[1+offset]=(1,-1/x);
-  Exp[2+offset]=(-1,-1/x);
+  Exp[0+offset]=(1,-5*x);
+  Exp[1+offset]=(1,-x);
+  Exp[2+offset]=(-1,-x);
  
   write(Exp);
   write();
