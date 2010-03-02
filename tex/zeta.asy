@@ -1,6 +1,6 @@
-int N=11;
+int N=4;
 
-bool autorestore=false; // Will autorestore most of table if N is a power of 2.
+bool autorestore=false; // Autorestore most of table if N is a power of 2?
 
 int N4;
 int offset;
@@ -21,6 +21,8 @@ real delta=pi*M/N;
 real[] HalfSec=0.5*sequence(new real(int i) {return 1/cos(delta/2^i);},L);
 pair[] Exp=sequence(new pair(int i) {return exp(I*delta/2^i);},L);
 
+write(L);
+
 pair zeta(int k)
 {
   int j=L-CTZ(k)-1;
@@ -30,14 +32,13 @@ pair zeta(int k)
   return zeta;
 }
   
-real x=0.5*realEpsilon;
+real x=-0.5*realEpsilon;
 
-if(M == N4) {
-  HalfSec[3+offset]=0.5/x;
-
-  Exp[0+offset]=(1,-5*x);
-  Exp[1+offset]=(1,-x);
-  Exp[2+offset]=(-1,-x);
+if(N > 3 && M == N4) {
+  HalfSec[3+offset]=-0.5/x;
+  Exp[0+offset]=(1,5*x);
+  Exp[1+offset]=(1,x);
+  Exp[2+offset]=(-1,x);
 }
 
 write(HalfSec);
@@ -49,10 +50,12 @@ for(int k=1; k < N; ++k)
   write(zeta(k),expi(2*pi*k/N));
 write();
 
-if(M == N4 && autorestore) {
-  Exp[0+offset]=(1,-5*x);
-  Exp[1+offset]=(1,-x);
-  Exp[2+offset]=(-1,-x);
+if(autorestore && M == N4) {
+  if(N > 3) {
+    Exp[0+offset]=(1,5*x);
+    Exp[1+offset]=(1,x);
+    Exp[2+offset]=(-1,x);
+  }
  
   write(Exp);
   write();
