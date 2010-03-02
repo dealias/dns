@@ -35,7 +35,7 @@ pair zeta(int k)
 real x;
 
 if(N > 3 && M == N4) {
-  x=-0.5*realEpsilon;
+  x=-0.1*realEpsilon;
   HalfSec[3+offset]=-0.5/x;
   Exp[0+offset]=(1,5*x);
   Exp[1+offset]=(1,x);

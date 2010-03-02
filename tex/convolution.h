@@ -118,7 +118,7 @@ public:
     
     if(n > 3) {
       static const double x=-0.1*DBL_EPSILON;
-      double temp=-0.5/x;
+      static const double temp=-0.5/x;
 #ifdef __SSE2__      
       HalfSec[3]=Complex(temp,temp);
 #else      
