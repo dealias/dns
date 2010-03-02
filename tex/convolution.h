@@ -1,4 +1,5 @@
 // TODO: auto-symmetrize 2D Hermitian data.
+// Add namespace to fftw++ and here and cmult-sse2.
 
 #include "fftw++.h"
 
@@ -15,6 +16,8 @@ extern const Complex mhsqrt3;
 extern const Complex mhalf;
 extern const Complex zeta3;
 extern const Complex one;
+
+static const unsigned int tableSize=1000;
 
 // In-place explicitly dealiased complex convolution.
 class ExplicitConvolution {
@@ -72,8 +75,8 @@ protected:
 #else
   double *HalfSec;
 #endif
-  Complex *Exp;
-  Complex *Exp0;
+  Complex *Zeta;
+  Complex *Zeta0;
   unsigned int L;
 public:  
   
@@ -99,8 +102,8 @@ public:
 #else    
     HalfSec=new double[L];
 #endif    
-    Exp=FFTWComplex(L);
-    Exp0=FFTWComplex(L);
+    Zeta=FFTWComplex(L);
+    Zeta0=FFTWComplex(L);
     double delta=M_PI*M/n;
     unsigned int K=1;
     for(unsigned int k=0; k < L; ++k) {
@@ -112,7 +115,7 @@ public:
 #else      
       HalfSec[k]=temp;
 #endif      
-      Exp0[k]=Complex(C,sin(arg));
+      Zeta0[k]=Complex(C,sin(arg));
       K *= 2;
     }
     
@@ -124,9 +127,9 @@ public:
 #else      
       HalfSec[3]=temp;
 #endif      
-      Exp0[0]=Complex(1.0,5.0*x);
-      Exp0[1]=Complex(1.0,x);
-      Exp0[2]=Complex(-1.0,x);
+      Zeta0[0]=Complex(1.0,5.0*x);
+      Zeta0[1]=Complex(1.0,x);
+      Zeta0[2]=Complex(-1.0,x);
     }
     
   }
@@ -146,34 +149,25 @@ public:
 #ifdef __SSE2__      
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
-#ifdef UNSTABLE    
-    Vec CC=LOAD(&cc);
-    Vec SS=LOAD(&ss);
-#endif    
     Vec Zetak=LOAD(&one);
 #else    
     double re=1.0;
     double im=0.0;
 #endif
-#define UNSTABLE 0
     for(unsigned int k=0; k < L; ++k) 
-      Exp[k]=Exp0[k];
+      Zeta[k]=Zeta0[k];
     for(unsigned int k=0; k < m;) {
 #ifdef __SSE2__      
       STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
       STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
       ++k;
-#if UNSTABLE      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else
       unsigned int j=L-__builtin_ctz(k)-1;
-      Complex *Expj=Exp+j;
-      Zetak=LOAD(Expj);
+      Complex *Zetaj=Zeta+j;
+      Zetak=LOAD(Zetaj);
       unsigned int I=k & -k;
       unsigned int I2=I+I;
-      STORE(Expj,LOAD(HalfSec+j)*(LOAD(Expj-1)+
-                                  LOAD(Exp+L-1-__builtin_ctz(I2+(I2|(k-I))))));
-#endif      
+      STORE(Zetaj,LOAD(HalfSec+j)*(LOAD(Zetaj-1)+
+                                  LOAD(Zeta+L-1-__builtin_ctz(I2+(I2|(k-I))))));
 #else      
       Complex *P=u+k;
       Complex *Q=v+k;
@@ -184,17 +178,11 @@ public:
       Q->re=re*gk.re-im*gk.im;
       Q->im=im*gk.re+re*gk.im;
       ++k;
-#if UNSTABLE      
-      double temp=re*Cos-im*Sin; 
-      im=re*Sin+im*Cos;
-      re=temp;
-#else      
       unsigned int j=L-__builtin_ctz(k)-1;
-      re=Exp[j].re;     
-      im=Exp[j].im;     
+      re=Zeta[j].re;     
+      im=Zeta[j].im;     
       unsigned int I=k & -k;
-      Exp[j]=HalfSec[j]*(Exp[j-1]+Exp[L-1-__builtin_ctz(2*I+((2*I) | (k-I)))]);
-#endif      
+      Zeta[j]=HalfSec[j]*(Zeta[j-1]+Zeta[L-1-__builtin_ctz(2*I+((2*I) | (k-I)))]);
 #endif      
     }  
     
@@ -240,22 +228,18 @@ public:
     im=0.0;
 #endif    
     for(unsigned int k=0; k < L; ++k) 
-      Exp[k]=Exp0[k];
+      Zeta[k]=Zeta0[k];
     for(unsigned int k=0; k < m;) {
 #ifdef __SSE2__
       STORE(f+k,Ninv*(ZMULTC(Zetak,LOAD(u+k))+LOAD(f+k)));
       ++k;
-#if UNSTABLE      
-      Zetak=ZMULT(CC,SS,Zetak);
-#else
       unsigned int j=L-__builtin_ctz(k)-1;
-      Complex *Expj=Exp+j;
-      Zetak=LOAD(Expj);
+      Complex *Zetaj=Zeta+j;
+      Zetak=LOAD(Zetaj);
       unsigned int I=k & -k;
       unsigned int I2=I+I;
-      STORE(Expj,LOAD(HalfSec+j)*(LOAD(Expj-1)+
-                                  LOAD(Exp+L-1-__builtin_ctz(I2+(I2|(k-I))))));
-#endif      
+      STORE(Zetaj,LOAD(HalfSec+j)*(LOAD(Zetaj-1)+
+                                  LOAD(Zeta+L-1-__builtin_ctz(I2+(I2|(k-I))))));
 #else      
       Complex *p=f+k;
       Complex fk=*p;
@@ -263,17 +247,11 @@ public:
       p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
       p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
       ++k;
-#if UNSTABLE
-      double temp=re*Cos+im*Sin;
-      im=-re*Sin+im*Cos;
-      re=temp;
-#else
       unsigned int j=L-__builtin_ctz(k)-1;
-      re=Exp[j].re;     
-      im=Exp[j].im;     
+      re=Zeta[j].re;     
+      im=Zeta[j].im;     
       unsigned int I=k & -k;
-      Exp[j]=HalfSec[j]*(Exp[j-1]+Exp[L-1-__builtin_ctz(2*I+((2*I) | (k-I)))]);
-#endif      
+      Zeta[j]=HalfSec[j]*(Zeta[j-1]+Zeta[L-1-__builtin_ctz(2*I+((2*I) | (k-I)))]);
 #endif      
     }
   }

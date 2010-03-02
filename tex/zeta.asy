@@ -19,16 +19,16 @@ if(M < N4) {++L; M *= 2;}
 real delta=pi*M/N;
 
 real[] HalfSec=0.5*sequence(new real(int i) {return 1/cos(delta/2^i);},L);
-pair[] Exp=sequence(new pair(int i) {return exp(I*delta/2^i);},L);
+pair[] Zeta=sequence(new pair(int i) {return exp(I*delta/2^i);},L);
 
 write(L);
 
 pair zeta(int k)
 {
   int j=L-CTZ(k)-1;
-  pair zeta=Exp[j];     
+  pair zeta=Zeta[j];     
   int i=AND(k,-k);
-  Exp[j]=HalfSec[j]*(Exp[j-1]+Exp[L-1-CTZ(2*i+OR(2*i,k-i))]);    
+  Zeta[j]=HalfSec[j]*(Zeta[j-1]+Zeta[L-1-CTZ(2*i+OR(2*i,k-i))]);    
   return zeta;
 }
   
@@ -37,14 +37,14 @@ real x;
 if(N > 3 && M == N4) {
   x=-0.1*realEpsilon;
   HalfSec[3+offset]=-0.5/x;
-  Exp[0+offset]=(1,5*x);
-  Exp[1+offset]=(1,x);
-  Exp[2+offset]=(-1,x);
+  Zeta[0+offset]=(1,5*x);
+  Zeta[1+offset]=(1,x);
+  Zeta[2+offset]=(-1,x);
 }
 
 write(HalfSec);
 write();
-write(Exp);
+write(Zeta);
 write();
 
 for(int k=1; k < N; ++k) 
@@ -53,12 +53,12 @@ write();
 
 if(autorestore && M == N4) {
   if(N > 3) {
-    Exp[0+offset]=(1,5*x);
-    Exp[1+offset]=(1,x);
-    Exp[2+offset]=(-1,x);
+    Zeta[0+offset]=(1,5*x);
+    Zeta[1+offset]=(1,x);
+    Zeta[2+offset]=(-1,x);
   }
  
-  write(Exp);
+  write(Zeta);
   write();
 
   for(int k=1; k < N; ++k) 
