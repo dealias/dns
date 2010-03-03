@@ -77,7 +77,10 @@ protected:
 #endif
   Complex *Zeta;
   Complex *Zeta0;
+  Complex *ZetaH;
+  Complex *ZetaL;
   unsigned int L;
+  unsigned int s;
 public:  
   
   // u and v are distinct temporary arrays each of size m.
@@ -92,46 +95,20 @@ public:
     Backwardso=new fft1d(m,1,u,v);
     Forwardso=new fft1d(m,-1,u,v);
     
-    unsigned int n4=4*n;
-    L=__builtin_clz(1)-__builtin_clz(n4);
-    // Add check HERE.
-    unsigned int M=1 << L;
-    if(M < n4) {++L; M *= 2;}
-#ifdef __SSE2__
-    HalfSec=FFTWComplex(L);
-#else    
-    HalfSec=new double[L];
-#endif    
-    Zeta=FFTWComplex(L);
-    Zeta0=FFTWComplex(L);
-    double delta=M_PI*M/n;
-    unsigned int K=1;
-    for(unsigned int k=0; k < L; ++k) {
-      double arg=delta/K;
-      double C=cos(arg);
-      double temp=C != 0.0 ? 0.5/C : 0.0;
-#ifdef __SSE2__      
-      HalfSec[k]=Complex(temp,temp);
-#else      
-      HalfSec[k]=temp;
-#endif      
-      Zeta0[k]=Complex(C,sin(arg));
-      K *= 2;
-    }
-    
-    if(n > 3) {
-      static const double x=-0.1*DBL_EPSILON;
-      static const double temp=-0.5/x;
-#ifdef __SSE2__      
-      HalfSec[3]=Complex(temp,temp);
-#else      
-      HalfSec[3]=temp;
-#endif      
-      Zeta0[0]=Complex(1.0,5.0*x);
-      Zeta0[1]=Complex(1.0,x);
-      Zeta0[2]=Complex(-1.0,x);
-    }
-    
+#define SHORTTABLE 0
+#if SHORTTABLE    
+    s=sqrt(m);
+    unsigned int t=(int) ceil(m/s)+1;
+    ZetaH=FFTWComplex(t);
+    ZetaL=FFTWComplex(s);
+    for(unsigned int a=0; a < t; ++a)
+      ZetaH[a]=Complex(cos(s*a*arg),sin(s*a*arg));
+    for(unsigned int b=0; b < s; ++b)
+      ZetaL[b]=Complex(cos(b*arg),sin(b*arg));
+#endif
+    Zeta=FFTWComplex(m);
+    for(unsigned int k=0; k < m; ++k)
+      Zeta[k]=Complex(cos(k*arg),sin(k*arg));
   }
   
   ~ImplicitConvolution() {
@@ -154,20 +131,25 @@ public:
     double re=1.0;
     double im=0.0;
 #endif
-    for(unsigned int k=0; k < L; ++k) 
-      Zeta[k]=Zeta0[k];
+#if SHORTTABLE    
+    for(unsigned int a=0, k=0; k < m; ++a) {
+      unsigned int stop=min(k+s,m);
+      Vec Zeta=LOAD(ZetaH+a);
+      Vec X=UNPACKL(Zeta,Zeta);
+      Vec Y=UNPACKH(CONJ(Zeta),Zeta);
+      Complex *ZetaL0=ZetaL-k;
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
+#else      
     for(unsigned int k=0; k < m;) {
+#endif      
 #ifdef __SSE2__      
       STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
       STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
+#if !SHORTTABLE
       ++k;
-      unsigned int j=L-__builtin_ctz(k)-1;
-      Complex *Zetaj=Zeta+j;
-      Zetak=LOAD(Zetaj);
-      unsigned int I=k & -k;
-      unsigned int I2=I+I;
-      STORE(Zetaj,LOAD(HalfSec+j)*(LOAD(Zetaj-1)+
-                                  LOAD(Zeta+L-1-__builtin_ctz(I2+(I2|(k-I))))));
+      Zetak=LOAD(Zeta+k);
+#endif      
 #else      
       Complex *P=u+k;
       Complex *Q=v+k;
@@ -178,13 +160,13 @@ public:
       Q->re=re*gk.re-im*gk.im;
       Q->im=im*gk.re+re*gk.im;
       ++k;
-      unsigned int j=L-__builtin_ctz(k)-1;
-      re=Zeta[j].re;     
-      im=Zeta[j].im;     
-      unsigned int I=k & -k;
-      Zeta[j]=HalfSec[j]*(Zeta[j-1]+Zeta[L-1-__builtin_ctz(2*I+((2*I) | (k-I)))]);
+      re=Zeta[k].re;     
+      im=Zeta[k].im;     
 #endif      
+#if SHORTTABLE      
     }  
+#endif      
+    }
     
     // four of six FFTs are out-of-place
     
@@ -227,33 +209,37 @@ public:
     re=1.0;
     im=0.0;
 #endif    
-    for(unsigned int k=0; k < L; ++k) 
-      Zeta[k]=Zeta0[k];
+#if SHORTTABLE      
+    for(unsigned int a=0, k=0; k < m; ++a) {
+      unsigned int stop=min(k+s,m);
+      Vec Zeta=LOAD(ZetaH+a);
+      Vec X=UNPACKL(Zeta,Zeta);
+      Vec Y=UNPACKH(CONJ(Zeta),Zeta);
+      Complex *ZetaL0=ZetaL-k;
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
+#else
     for(unsigned int k=0; k < m;) {
+#endif      
 #ifdef __SSE2__
       STORE(f+k,Ninv*(ZMULTC(Zetak,LOAD(u+k))+LOAD(f+k)));
+#if !SHORTTABLE      
       ++k;
-      unsigned int j=L-__builtin_ctz(k)-1;
-      Complex *Zetaj=Zeta+j;
-      Zetak=LOAD(Zetaj);
-      unsigned int I=k & -k;
-      unsigned int I2=I+I;
-      STORE(Zetaj,LOAD(HalfSec+j)*(LOAD(Zetaj-1)+
-                                  LOAD(Zeta+L-1-__builtin_ctz(I2+(I2|(k-I))))));
+      Zetak=LOAD(Zeta+k);
+#endif      
 #else      
       Complex *p=f+k;
       Complex fk=*p;
       Complex fkm=*(u+k);
       p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
       p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
-      ++k;
-      unsigned int j=L-__builtin_ctz(k)-1;
-      re=Zeta[j].re;     
-      im=Zeta[j].im;     
-      unsigned int I=k & -k;
-      Zeta[j]=HalfSec[j]*(Zeta[j-1]+Zeta[L-1-__builtin_ctz(2*I+((2*I) | (k-I)))]);
+      re=Zeta[k];
+      im=Zeta[k];
 #endif      
     }
+#if SHORTTABLE      
+    }  
+#endif      
   }
 };
 
