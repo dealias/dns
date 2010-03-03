@@ -81,12 +81,13 @@ memory usage is a critical limiting factor, and self-sorting in-place
 multidimensional Fourier transforms \cite{SIAM91} are typically used to
 reduce the memory footprint of the required spectral convolutions.
 
-Because the discrete convolution, which produces cyclic output from cyclic
+The discrete convolution, which produces cyclic output from cyclic
 input, is applied to nonperiodic (wavenumber-space) data, it is important
 to remove aliases from the convolution. Typically the data array is
 extended by padding it with enough zeros so that the wave beats of the
 the positive frequencies cannot wrap around and contaminate
-the negative frequencies. A cyclic convolution $\sum_{p=0}^{N-1} f_p g_{k-p}$ is then performed using a
+the negative frequencies. A cyclic convolution $\sum_{p=0}^{n-1} f_p g_{k-p}$ 
+is then performed using a
 correspondingly larger Fourier transform size $N$. If the cost of 
 computing a complex Fourier transform of size $N$ is asymptotic to 
 $K N\log_2 N$ as \hbox{$N\goesto\infty$} (the lowest bound currently 
@@ -100,13 +101,13 @@ Alternatively, phase shift dealiasing \cite{Patterson71,Canuto} can be used
 to cancel out the aliasing errors between two convolutions with two
 different phase shifts. However, this second technique is rarely used in
 practice, since in addition to doubling the memory requirements, it is
-computationally more expensive, requiring for a centered Hermitian convolution
-$6K m\log_2 m$ operations.
+computationally more expensive, requiring $6K m\log_2 m$ operations for a 
+centered Hermitian convolution.
 
 An explicit application of the zero-padding technique involves the rather
 obvious inefficiency of summing over a large number of data values that
 are known {\it a priori\/} to be zero.
-However, it is first worth understanding the following answer 
+However, it is first worth considering the following response
 provided by Steven G. Johnson to a frequently asked question in the
 community about avoiding this unnecessary
 expense \cite{http://www.fftw.org/pruned.html}:
@@ -131,7 +132,7 @@ elements of one-dimensional convolutions is indeed worth thinking about,
 primarily because it provides a more effective building block for constructing
 multidimensional convolutions.
 
-The key observation is that, although the memory usage of our implicitly
+The key observation is this: although the memory usage of our implicitly
 padded 1D convolution is identical to that for a conventional explicitly
 padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
@@ -179,10 +180,10 @@ explicitly padded convolution based on the same highly optimized
 library.
 
 %Add outline
-Implicit padding can also be used to efficiently dealias hyperconvolutions
-such as $\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
-For example, in section~\ref{hyperconv} we illustrate how the technique 
-can be applied to compute a centered Hermitian biconvolution.
+Implicit padding can also be used to efficiently dealias hyperconvolutions.
+%such as $\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
+For example, we illustrate how the technique can be applied to compute a 
+centered Hermitian biconvolution in section~\ref{hyperconv}.
 
 \section{Implicitly dealiased 1D convolutions}
 In this section we describe the highly optimized 1D building blocks
@@ -358,7 +359,7 @@ identical.}
 Referring to the computation times shown in Figure~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
 and~\hEq{cconv1forwards}
-can be implemented to be quite competitive with an explicitly padded
+can be quite competitive with an explicitly padded
 convolution. Both the FFTW-3.2.2 library and the convolution layer we built on
 top of it were compiled with the Intel C/C++ compiler, using
 the same optimization options, on a 64-bit 3GHz Intel E5450 Xenon processor
@@ -376,7 +377,8 @@ total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, this
 padding scheme is often referred to as the {\it $2/3$ padding rule}.
 
 For explicit padding, one usually chooses the padded vector length
-$N$ to be a power of $2$, with $m=\floor{(n+2)/3}$. However, for implicit
+$N$ to be a power of $2$, with $m=\floor{(n+2)/3}$. %FIXME: should this be ceil?
+However, for implicit
 padding, it is advantageous to choose $m$ itself to be a power of $2$
 since the algorithm reduces to computing FFTs of length $m$.
 Moreover, it is convenient to pad implicitly slightly beyond $3m-2$, to $N=3m$,
@@ -665,7 +667,7 @@ NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 \ee
 \end{comment}
 
-The computation times for a implicitly dealiased Hermitian
+The computation times for an implicitly dealiased Hermitian
 convolution are compared with those for an explicitly padded convolution in
 Figure~\ref{timing1r}. For the intended application to partial differential
 equations, there is flexibility in the choice of the exact convolution
@@ -704,6 +706,7 @@ arrays, which in turn requires that the $y$ convolutions be computed serially.
 As shown in Figure~\ref{timing2c}, the resulting implicit
 2D algorithm dramatically outperforms the explicit version. For example, a
 $1024\times 1024$ complex convolution runs $1.92$ times faster than
+% FIXME: this seems unclear now.
 an explicit convolution. The gains appear to increase with transform size: a
 $8192\times 8192$ implicit convolution runs in $48\%$ of the time for an
 explicit one. 
@@ -721,7 +724,7 @@ convolution. Our implicitly dealised convolution is also subject to
 these same losses, but the savings due to implicit padding, ignoring
 high-level bit reversal, in-place subtransforms, and computing the
 convolution of each column as it is transformed (and thereby perhaps
-still in cache) outweighs these losses.
+still in cache) outweigh these losses.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
 of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
