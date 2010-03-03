@@ -69,13 +69,6 @@ protected:
   unsigned int n,m;
   fft1d *Backwards,*Forwards;
   fft1d *Backwardso,*Forwardso;
-  double Cos,Sin;
-#ifdef __SSE2__
-  Complex *HalfSec;
-#else
-  double *HalfSec;
-#endif
-  Complex *Zeta;
   Complex *ZetaH;
   Complex *ZetaL;
   unsigned int s;
@@ -84,8 +77,6 @@ public:
   // u and v are distinct temporary arrays each of size m.
   ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : n(2*m), m(m) {
     double arg=M_PI/m;
-    Cos=cos(arg);
-    Sin=sin(arg);
 
     Backwards=new fft1d(m,1,u);
     Forwards=new fft1d(m,-1,u);
@@ -93,21 +84,18 @@ public:
     Backwardso=new fft1d(m,1,u,v);
     Forwardso=new fft1d(m,-1,u,v);
     
-#define SHORTTABLE 1
-#if SHORTTABLE    
     s=sqrt(m);
     unsigned int t=(int) ceil(m/s)+1;
     ZetaH=FFTWComplex(t);
     ZetaL=FFTWComplex(s);
-    for(unsigned int a=0; a < t; ++a)
-      ZetaH[a]=Complex(cos(s*a*arg),sin(s*a*arg));
-    for(unsigned int b=0; b < s; ++b)
-      ZetaL[b]=Complex(cos(b*arg),sin(b*arg));
-#else
-    Zeta=FFTWComplex(m);
-    for(unsigned int k=0; k < m; ++k)
-      Zeta[k]=Complex(cos(k*arg),sin(k*arg));
-#endif    
+    for(unsigned int a=0; a < t; ++a) {
+      double theta=s*a*arg;
+      ZetaH[a]=Complex(cos(theta),sin(theta));
+    }
+    for(unsigned int b=0; b < s; ++b) {
+      double theta=b*arg;
+      ZetaL[b]=Complex(cos(theta),sin(theta));
+    }
   }
   
   ~ImplicitConvolution() {
@@ -123,16 +111,10 @@ public:
   // u and v are temporary arrays each of size m.
   void convolve(Complex *f, Complex *g, Complex *u, Complex *v) {
 #ifdef __SSE2__      
-#if !SHORTTABLE    
-    const Complex cc(Cos,Cos);
-    const Complex ss(-Sin,Sin);
-    Vec Zetak=LOAD(&one);
-#endif    
 #else    
     double re=1.0;
     double im=0.0;
 #endif
-#if SHORTTABLE    
     for(unsigned int a=0, k=0; k < m; ++a) {
       unsigned int stop=min(k+s,m);
       Vec Zeta=LOAD(ZetaH+a);
@@ -141,32 +123,23 @@ public:
       Complex *ZetaL0=ZetaL-k;
       for(; k < stop; ++k) {
         Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-#else      
-    for(unsigned int k=0; k < m;) {
-#endif
 #ifdef __SSE2__      
-      STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
-      STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
-#if !SHORTTABLE
-      ++k;
-      Zetak=LOAD(Zeta+k);
-#endif      
+        STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
+        STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
 #else      
-      Complex *P=u+k;
-      Complex *Q=v+k;
-      Complex fk=*(f+k);
-      Complex gk=*(g+k);
-      P->re=re*fk.re-im*fk.im;
-      P->im=im*fk.re+re*fk.im;
-      Q->re=re*gk.re-im*gk.im;
-      Q->im=im*gk.re+re*gk.im;
-      ++k;
-      re=Zeta[k].re;     
-      im=Zeta[k].im;     
+        Complex *P=u+k;
+        Complex *Q=v+k;
+        Complex fk=*(f+k);
+        Complex gk=*(g+k);
+        P->re=re*fk.re-im*fk.im;
+        P->im=im*fk.re+re*fk.im;
+        Q->re=re*gk.re-im*gk.im;
+        Q->im=im*gk.re+re*gk.im;
+        ++k;
+        re=Zeta[k].re;     
+        im=Zeta[k].im;     
 #endif      
-#if SHORTTABLE      
-    }  
-#endif      
+      }  
     }
     
     // four of six FFTs are out-of-place
@@ -205,14 +178,10 @@ public:
 #ifdef __SSE2__      
     const Complex ninv2(ninv,ninv);
     Vec Ninv=LOAD(&ninv2);
-#if !SHORTTABLE    
-    Zetak=LOAD(&one);
-#endif    
 #else    
     re=1.0;
     im=0.0;
 #endif    
-#if SHORTTABLE      
     for(unsigned int a=0, k=0; k < m; ++a) {
       unsigned int stop=min(k+s,m);
       Vec Zeta=Ninv*LOAD(ZetaH+a);
@@ -221,31 +190,19 @@ public:
       Complex *ZetaL0=ZetaL-k;
       for(; k < stop; ++k) {
         Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-#else
-    for(unsigned int k=0; k < m;) {
-#endif      
 #ifdef __SSE2__
-#if SHORTTABLE      
-      STORE(f+k,ZMULTC(Zetak,LOAD(u+k))+Ninv*LOAD(f+k));
-#else
-      STORE(f+k,Ninv*(ZMULTC(Zetak,LOAD(u+k))+LOAD(f+k)));
-      ++k;
-      Zetak=LOAD(Zeta+k);
-      
-#endif      
+        STORE(f+k,ZMULTC(Zetak,LOAD(u+k))+Ninv*LOAD(f+k));
 #else      
-      Complex *p=f+k;
-      Complex fk=*p;
-      Complex fkm=*(u+k);
-      p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
-      p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
-      re=Zeta[k];
-      im=Zeta[k];
-#endif      
-    }
-#if SHORTTABLE      
+        Complex *p=f+k;
+        Complex fk=*p;
+        Complex fkm=*(u+k);
+        p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
+        p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
+        re=Zeta[k];
+        im=Zeta[k];
+#endif
+      }
     }  
-#endif      
   }
 };
 
