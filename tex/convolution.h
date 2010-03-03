@@ -84,7 +84,7 @@ public:
     Forwardso=new fft1d(m,-1,u,v);
     
     s=sqrt(m);
-    unsigned int t=(int) ceil(m/s)+1;
+    unsigned int t=1+(int) ceil(m/s);
     ZetaH=FFTWComplex(t);
     ZetaL=FFTWComplex(s);
     for(unsigned int a=0; a < t; ++a) {
