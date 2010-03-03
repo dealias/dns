@@ -76,10 +76,8 @@ protected:
   double *HalfSec;
 #endif
   Complex *Zeta;
-  Complex *Zeta0;
   Complex *ZetaH;
   Complex *ZetaL;
-  unsigned int L;
   unsigned int s;
 public:  
   
@@ -95,7 +93,7 @@ public:
     Backwardso=new fft1d(m,1,u,v);
     Forwardso=new fft1d(m,-1,u,v);
     
-#define SHORTTABLE 0
+#define SHORTTABLE 1
 #if SHORTTABLE    
     s=sqrt(m);
     unsigned int t=(int) ceil(m/s)+1;
@@ -105,10 +103,11 @@ public:
       ZetaH[a]=Complex(cos(s*a*arg),sin(s*a*arg));
     for(unsigned int b=0; b < s; ++b)
       ZetaL[b]=Complex(cos(b*arg),sin(b*arg));
-#endif
+#else
     Zeta=FFTWComplex(m);
     for(unsigned int k=0; k < m; ++k)
       Zeta[k]=Complex(cos(k*arg),sin(k*arg));
+#endif    
   }
   
   ~ImplicitConvolution() {
