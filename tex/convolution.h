@@ -69,8 +69,7 @@ protected:
   unsigned int n,m;
   fft1d *Backwards,*Forwards;
   fft1d *Backwardso,*Forwardso;
-  Complex *ZetaH;
-  Complex *ZetaL;
+  Complex *ZetaH, *ZetaL;
   unsigned int s;
 public:  
   
@@ -110,36 +109,36 @@ public:
   // The output is returned in f.
   // u and v are temporary arrays each of size m.
   void convolve(Complex *f, Complex *g, Complex *u, Complex *v) {
-#ifdef __SSE2__      
-#else    
-    double re=1.0;
-    double im=0.0;
-#endif
     for(unsigned int a=0, k=0; k < m; ++a) {
       unsigned int stop=min(k+s,m);
+      Complex *ZetaL0=ZetaL-k;
+#ifdef __SSE2__      
       Vec Zeta=LOAD(ZetaH+a);
       Vec X=UNPACKL(Zeta,Zeta);
       Vec Y=UNPACKH(CONJ(Zeta),Zeta);
-      Complex *ZetaL0=ZetaL-k;
       for(; k < stop; ++k) {
         Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-#ifdef __SSE2__      
         STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
         STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
-#else      
+      }
+#else
+      Complex *p=ZetaH+a;
+      double Hre=p->re;
+      double Him=p->im;
+      for(; k < stop; ++k) {
         Complex *P=u+k;
         Complex *Q=v+k;
         Complex fk=*(f+k);
         Complex gk=*(g+k);
+        Complex L=*(ZetaL0+k);
+        double re=Hre*L.re-Him*L.im;
+        double im=Hre*L.im+Him*L.re;
         P->re=re*fk.re-im*fk.im;
         P->im=im*fk.re+re*fk.im;
         Q->re=re*gk.re-im*gk.im;
         Q->im=im*gk.re+re*gk.im;
-        ++k;
-        re=Zeta[k].re;     
-        im=Zeta[k].im;     
+      }
 #endif      
-      }  
     }
     
     // four of six FFTs are out-of-place
@@ -178,30 +177,33 @@ public:
 #ifdef __SSE2__      
     const Complex ninv2(ninv,ninv);
     Vec Ninv=LOAD(&ninv2);
-#else    
-    re=1.0;
-    im=0.0;
 #endif    
     for(unsigned int a=0, k=0; k < m; ++a) {
       unsigned int stop=min(k+s,m);
+      Complex *ZetaL0=ZetaL-k;
+#ifdef __SSE2__
       Vec Zeta=Ninv*LOAD(ZetaH+a);
       Vec X=UNPACKL(Zeta,Zeta);
       Vec Y=UNPACKH(CONJ(Zeta),Zeta);
-      Complex *ZetaL0=ZetaL-k;
       for(; k < stop; ++k) {
         Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-#ifdef __SSE2__
         STORE(f+k,ZMULTC(Zetak,LOAD(u+k))+Ninv*LOAD(f+k));
+      }
 #else      
+      Complex *p=ZetaH+a;
+      double Hre=ninv*p->re;
+      double Him=-ninv*p->im;
+      for(; k < stop; ++k) {
         Complex *p=f+k;
         Complex fk=*p;
         Complex fkm=*(u+k);
+        Complex L=*(ZetaL0+k);
+        double re=Hre*L.re+Him*L.im;
+        double im=Him*L.re-Hre*L.im;
         p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
         p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
-        re=Zeta[k];
-        im=Zeta[k];
-#endif
       }
+#endif
     }  
   }
 };
