@@ -153,7 +153,7 @@ Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
 %platform-adaptive
 compete with an explicitly problem-dependent and architecture-adaptive
-FFT algorithm such as the award-winning \cite{FFTW} library, which
+FFT algorithm such as the award-winning FFTW \cite{FFTW} library, which
 empirically predetermines a near optimal butterfly graph
 %FIXME:REForDEFN
 %Standard term from graph theory/FFT literature 
@@ -359,7 +359,7 @@ Referring to the computation times shown in Figure~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
 and~\hEq{cconv1forwards}
 can be implemented to be quite competitive with an explicitly padded
-convolution. Both the FFTW library and the convolution layer we built on
+convolution. Both the FFTW-3.2.2 library and the convolution layer we built on
 top of it were compiled with the Intel C/C++ compiler, using
 the same optimization options, on a 64-bit 3GHz Intel E5450 Xenon processor
 with 6MB cache. Like the FFTW library, our algorithm was vectorized with

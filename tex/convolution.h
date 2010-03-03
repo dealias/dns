@@ -123,9 +123,11 @@ public:
   // u and v are temporary arrays each of size m.
   void convolve(Complex *f, Complex *g, Complex *u, Complex *v) {
 #ifdef __SSE2__      
+#if !SHORTTABLE    
     const Complex cc(Cos,Cos);
     const Complex ss(-Sin,Sin);
     Vec Zetak=LOAD(&one);
+#endif    
 #else    
     double re=1.0;
     double im=0.0;
@@ -141,7 +143,7 @@ public:
         Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
 #else      
     for(unsigned int k=0; k < m;) {
-#endif      
+#endif
 #ifdef __SSE2__      
       STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
       STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
@@ -203,7 +205,9 @@ public:
 #ifdef __SSE2__      
     const Complex ninv2(ninv,ninv);
     Vec Ninv=LOAD(&ninv2);
+#if !SHORTTABLE    
     Zetak=LOAD(&one);
+#endif    
 #else    
     re=1.0;
     im=0.0;
@@ -211,7 +215,7 @@ public:
 #if SHORTTABLE      
     for(unsigned int a=0, k=0; k < m; ++a) {
       unsigned int stop=min(k+s,m);
-      Vec Zeta=LOAD(ZetaH+a);
+      Vec Zeta=Ninv*LOAD(ZetaH+a);
       Vec X=UNPACKL(Zeta,Zeta);
       Vec Y=UNPACKH(CONJ(Zeta),Zeta);
       Complex *ZetaL0=ZetaL-k;
@@ -221,10 +225,13 @@ public:
     for(unsigned int k=0; k < m;) {
 #endif      
 #ifdef __SSE2__
+#if SHORTTABLE      
+      STORE(f+k,ZMULTC(Zetak,LOAD(u+k))+Ninv*LOAD(f+k));
+#else
       STORE(f+k,Ninv*(ZMULTC(Zetak,LOAD(u+k))+LOAD(f+k)));
-#if !SHORTTABLE      
       ++k;
       Zetak=LOAD(Zeta+k);
+      
 #endif      
 #else      
       Complex *p=f+k;
