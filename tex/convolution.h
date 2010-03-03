@@ -17,7 +17,27 @@ extern const Complex mhalf;
 extern const Complex zeta3;
 extern const Complex one;
 
-static const unsigned int tableSize=1000;
+inline unsigned int BuildZeta(unsigned int n, unsigned int m,
+                              Complex *&ZetaH, Complex *&ZetaL)
+{
+  unsigned int s=sqrt(m);
+  div_t d=div((int) m,(int) s);
+  unsigned int t=d.quot;
+  if(d.rem > 0) ++t;
+  static const double twopi=2.0*M_PI;
+  double arg=twopi/n;
+  ZetaH=FFTWComplex(t);
+  for(unsigned int a=0; a < t; ++a) {
+    double theta=s*a*arg;
+    ZetaH[a]=Complex(cos(theta),sin(theta));
+  }
+  ZetaL=FFTWComplex(s);
+  for(unsigned int b=0; b < s; ++b) {
+    double theta=b*arg;
+    ZetaL[b]=Complex(cos(theta),sin(theta));
+  }
+  return s;
+}
 
 // In-place explicitly dealiased complex convolution.
 class ExplicitConvolution {
@@ -75,31 +95,18 @@ public:
   
   // u and v are distinct temporary arrays each of size m.
   ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : n(2*m), m(m) {
-    double arg=M_PI/m;
-
     Backwards=new fft1d(m,1,u);
     Forwards=new fft1d(m,-1,u);
     
     Backwardso=new fft1d(m,1,u,v);
     Forwardso=new fft1d(m,-1,u,v);
     
-    s=sqrt(m);
-    div_t d=div((int) m,(int) s);
-    unsigned int t=d.quot;
-    if(d.rem > 0) ++t;
-    ZetaH=FFTWComplex(t);
-    ZetaL=FFTWComplex(s);
-    for(unsigned int a=0; a < t; ++a) {
-      double theta=s*a*arg;
-      ZetaH[a]=Complex(cos(theta),sin(theta));
-    }
-    for(unsigned int b=0; b < s; ++b) {
-      double theta=b*arg;
-      ZetaL[b]=Complex(cos(theta),sin(theta));
-    }
+    s=BuildZeta(n,m,ZetaH,ZetaL);
   }
   
   ~ImplicitConvolution() {
+    FFTWdelete(ZetaL);
+    FFTWdelete(ZetaH);
     delete Forwardso;
     delete Backwardso;
     delete Forwards;
