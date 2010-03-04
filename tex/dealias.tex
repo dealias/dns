@@ -1,3 +1,6 @@
+% Document error stuff 
+% Implement autosymmetrization.
+
 \documentclass[final]{siamltex}
 \usepackage[lined,algonl,boxed]{algorithm2e}
 
@@ -81,7 +84,7 @@ memory usage is a critical limiting factor, and self-sorting in-place
 multidimensional Fourier transforms \cite{SIAM91} are typically used to
 reduce the memory footprint of the required spectral convolutions.
 
-The discrete convolution, which produces cyclic output from cyclic
+Because the discrete convolution, which produces cyclic output from cyclic
 input, is applied to nonperiodic (wavenumber-space) data, it is important
 to remove aliases from the convolution. Typically the data array is
 extended by padding it with enough zeros so that the wave beats of the
@@ -180,8 +183,8 @@ explicitly padded convolution based on the same highly optimized
 library.
 
 %Add outline
-Implicit padding can also be used to efficiently dealias hyperconvolutions.
-%such as $\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
+Implicit padding can also be used to efficiently dealias hyperconvolutions,
+such as $\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
 For example, we illustrate how the technique can be applied to compute a 
 centered Hermitian biconvolution in section~\ref{hyperconv}.
 
@@ -359,7 +362,7 @@ identical.}
 Referring to the computation times shown in Figure~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
 and~\hEq{cconv1forwards}
-can be quite competitive with an explicitly padded
+can be implemented to be competitive with an explicitly padded
 convolution. Both the FFTW-3.2.2 library and the convolution layer we built on
 top of it were compiled with the Intel C/C++ compiler, using
 the same optimization options, on a 64-bit 3GHz Intel E5450 Xenon processor
@@ -377,7 +380,7 @@ total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, this
 padding scheme is often referred to as the {\it $2/3$ padding rule}.
 
 For explicit padding, one usually chooses the padded vector length
-$N$ to be a power of $2$, with $m=\floor{(n+2)/3}$. %FIXME: should this be ceil?
+$N$ to be a power of $2$, with $m=\floor{(n+2)/3}$.
 However, for implicit
 padding, it is advantageous to choose $m$ itself to be a power of $2$
 since the algorithm reduces to computing FFTs of length $m$.
@@ -704,12 +707,11 @@ memory savings in our method comes precisely from this reuse of work
 arrays, which in turn requires that the $y$ convolutions be computed serially.
 
 As shown in Figure~\ref{timing2c}, the resulting implicit
-2D algorithm dramatically outperforms the explicit version. For example, a
-$1024\times 1024$ complex convolution runs $1.92$ times faster than
-% FIXME: this seems unclear now.
-an explicit convolution. The gains appear to increase with transform size: a
-$8192\times 8192$ implicit convolution runs in $48\%$ of the time for an
-explicit one. 
+2D algorithm dramatically outperforms the explicit version:
+a $1024\times 1024$ implicit complex convolution is $1.92$ times faster.
+The gains appear to increase with transform size: a $8192\times 8192$
+%TODO: update timings...
+implicit convolution runs in $48\%$ of the time for an explicit one. 
 
 The third sentence of the quote from Steven G. Johnson on
 page~\ref{quote} suggests a very reasonable optimization for
