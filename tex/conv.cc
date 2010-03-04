@@ -12,6 +12,8 @@ using namespace std;
 // Number of iterations.
 unsigned int N0=10000000;
 unsigned int N=0;
+// Test stuff
+double Tfactor=1;
   
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
 
@@ -39,8 +41,9 @@ inline void init(Complex *f, Complex *g)
 //  for(unsigned int i=0; i < m; i++) f[i]=d[i];
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
   if(Test) {
-    for(unsigned int i=0; i < m; i++) f[i]=i;
-    for(unsigned int i=0; i < m; i++) g[i]=i;
+    Tfactor=1.0/m;;
+    for(unsigned int i=0; i < m; i++)
+      f[i]=g[i]=i*Tfactor;
   } else {
     f[0]=1.0;
     for(unsigned int i=1; i < m; i++) f[i]=Complex(3.0,2.0);
@@ -194,13 +197,16 @@ int main(int argc, char* argv[])
     double error=0.0;
     cout << endl;
     cout << "Exact:" << endl;
+    double norm=0.0;
     for(unsigned int k=0; k < m; k++) {
-      h[k]=(4*m*m*m-6*(k+1)*m*m+(6*k+2)*m+3*k*k*k-3*k)/6;
-      cout << h[k] << endl;
+      h[k]=Tfactor*Tfactor*(4.0*m*m*m-6.0*(k+1)*m*m+(6.0*k+2.0)*m+3.0*k*k*k-3.0*k)/(6.0);
+      norm += h[k].re*h[k].re +h[k].im*h[k].im;
     }
+    norm = sqrt(norm/m);
+    
     for(unsigned int k=0; k < m; k++) 
       error += abs2(h[k]-h0[k]);
-    cout << "error="<<error<<endl;
+    cout << "error="<<sqrt(error/norm)<<endl;
     if (error > 1e-12)
       cerr << "Caution! error="<<error<<endl;
     FFTWdelete(h);
