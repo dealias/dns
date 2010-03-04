@@ -16,6 +16,7 @@ if [ "$1" == "conv" ]; then
     offset=2;
     divisor=3;
     outdir=timings1r
+    workingcase=yes
 fi
 if [ "$1" == "conv2" ]; then
     shift=1;
@@ -73,7 +74,7 @@ if [ "$3" != "" ]; then
     stop=$3
 fi
 
-echo Calculating error::
+echo Calculating error:
 for (( i=$start; i<=$stop; i++ ))
 do
     echo $i

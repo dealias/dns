@@ -5,7 +5,7 @@ size(175,200,IgnoreAspect);
 scale(Log,Log(true,true));
 real[] mp,p,mu,u,mP,P;
 
-string pname="cconv";
+string pname=getstring("program name");
 string dir;
 if(pname == "conv") dir="timings1r/error.";
 if(pname == "conv2") dir="timings2r/error.";
