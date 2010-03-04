@@ -114,6 +114,12 @@ static inline Vec ZMULTI(const Vec& z, const Vec& w)
   return ZMULTI(w)*UNPACKL(z,z)-UNPACKH(z,z)*w;
 }
 
+// Return the complex product of CONJ(z) and I*w.
+static inline Vec ZMULTIC(const Vec& z, const Vec& w)
+{
+  return ZMULTI(w)*UNPACKL(z,z)+UNPACKH(z,z)*w;
+}
+
 static inline Vec ZMULT(const Vec& x, const Vec& y, const Vec& w)
 {
   return x*w+y*FLIP(w);
