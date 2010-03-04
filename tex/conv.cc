@@ -200,15 +200,13 @@ int main(int argc, char* argv[])
     double norm=0.0;
     for(unsigned int k=0; k < m; k++) {
       h[k]=Tfactor*Tfactor*(4.0*m*m*m-6.0*(k+1)*m*m+(6.0*k+2.0)*m+3.0*k*k*k-3.0*k)/(6.0);
-      norm += h[k].re*h[k].re +h[k].im*h[k].im;
-    }
-    norm = sqrt(norm/m);
-    
-    for(unsigned int k=0; k < m; k++) 
+      norm += abs2(h[k]);
       error += abs2(h[k]-h0[k]);
-    cout << "error="<<sqrt(error/norm)<<endl;
+    }
+    error=sqrt(error/norm);
+    cout << "error=" << error << endl;
     if (error > 1e-12)
-      cerr << "Caution! error="<<error<<endl;
+      cerr << "Caution! error=" << error << endl;
     FFTWdelete(h);
   }
   
