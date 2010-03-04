@@ -38,11 +38,18 @@ inline void init(Complex *f, Complex *g)
 {
 //  for(unsigned int i=0; i < m; i++) f[i]=d[i];
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  f[0]=1.0;
-  for(unsigned int i=1; i < m; i++) f[i]=Complex(3.0,2.0);
-  g[0]=2.0;
-  for(unsigned int i=1; i < m; i++) g[i]=Complex(5.0,3.0);
+  if(Test) {
+    for(unsigned int i=0; i < m; i++) f[i]=i;
+    for(unsigned int i=0; i < m; i++) g[i]=i;
+  } else {
+    f[0]=1.0;
+    for(unsigned int i=1; i < m; i++) f[i]=Complex(3.0,2.0);
+    g[0]=2.0;
+    for(unsigned int i=1; i < m; i++) g[i]=Complex(5.0,3.0);
+  }
+  
 }
+
 
 int main(int argc, char* argv[])
 {
@@ -158,7 +165,8 @@ int main(int argc, char* argv[])
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
     else cout << f[0] << endl;
-    if(Test) for(unsigned int i=0; i < m; i++) h0[i]=f[i];
+    if(Test) 
+      for(unsigned int i=0; i < m; i++) h0[i]=f[i];
   }
   
   if(Direct) {
@@ -177,7 +185,8 @@ int main(int argc, char* argv[])
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
     FFTWdelete(h);
-    if(Test) for(unsigned int i=0; i < m; i++) h0[i]=h[i];
+    if(Test) 
+      for(unsigned int i=0; i < m; i++) h0[i]=h[i];
   }
 
   if(Test) {
@@ -185,8 +194,12 @@ int main(int argc, char* argv[])
     double error=0.0;
     cout << endl;
     cout << "Exact:" << endl;
-    for(unsigned int i=0; i < m; i++) 
-      error += abs2(h[i]-h0[i]);
+    for(unsigned int k=0; k < m; k++) {
+      h[k]=(4*pow(m,3)-6*(k+1)*m*m+(6*k+2)*m+3*pow(k,3)-3*k)/6;
+      cout << h[k] << endl;
+    }
+    for(unsigned int k=0; k < m; k++) 
+      error += abs2(h[k]-h0[k]);
     cout << "error="<<error<<endl;
     if (error > 1e-12)
       cerr << "Caution! error="<<error<<endl;
