@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
     cout << endl;
     cout << "Exact:" << endl;
     for(unsigned int k=0; k < m; k++) {
-      h[k]=(4*pow(m,3)-6*(k+1)*m*m+(6*k+2)*m+3*pow(k,3)-3*k)/6;
+      h[k]=(4*m*m*m-6*(k+1)*m*m+(6*k+2)*m+3*k*k*k-3*k)/6;
       cout << h[k] << endl;
     }
     for(unsigned int k=0; k < m; k++) 
