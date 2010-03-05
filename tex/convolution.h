@@ -15,7 +15,11 @@ extern const Complex hSqrt3;
 extern const Complex mhsqrt3;
 extern const Complex mhalf;
 extern const Complex zeta3;
-extern const Complex one;
+
+inline unsigned int min(unsigned int a, unsigned int b)
+{
+  return (a < b) ? a : b;
+}
 
 inline unsigned int BuildZeta(unsigned int n, unsigned int m,
                               Complex *&ZetaH, Complex *&ZetaL)
@@ -293,7 +297,8 @@ public:
     n(3*m), m(m), c(m/2) {
 
     if(m % 2) {
-      cout << "Only even-sized Hermitian convolutions are implemented!" << endl;
+      std::cerr << "Only even-sized Hermitian convolutions are implemented!" 
+                << std::endl;
       _exit(1);
     }
     
