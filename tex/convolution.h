@@ -1,4 +1,3 @@
-// TODO: auto-symmetrize 2D Hermitian data.
 // Add namespace to fftw++ and here and cmult-sse2.
 
 #include "fftw++.h"
@@ -64,10 +63,10 @@ public:
   // The distinct) input arrays f and g are each of size n (contents not
   // preserved). The output is returned in f.
   void convolve(Complex *f, Complex *g) {
-    for(unsigned int k=m; k < n; k++) f[k]=0.0;
+    for(unsigned int k=m; k < n; ++k) f[k]=0.0;
     Backwards->fft(f);
   
-    for(unsigned int k=m; k < n; k++) g[k]=0.0;
+    for(unsigned int k=m; k < n; ++k) g[k]=0.0;
     Backwards->fft(g);
       
     double ninv=1.0/n;
@@ -227,9 +226,9 @@ public:
   DirectConvolution(unsigned int m) : m(m) {}
   
   void convolve(Complex *h, Complex *f, Complex *g) {
-    for(unsigned int i=0; i < m; i++) {
+    for(unsigned int i=0; i < m; ++i) {
       Complex sum=0.0;
-      for(unsigned int j=0; j <= i; j++) sum += f[j]*g[i-j];
+      for(unsigned int j=0; j <= i; ++j) sum += f[j]*g[i-j];
       h[i]=sum;
     }
   }	
@@ -256,7 +255,7 @@ public:
     
   void padBackwards(Complex *f) {
     unsigned int n2=n/2;
-    for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
+    for(unsigned int i=m; i <= n2; ++i) f[i]=0.0;
     cr->fft(f);
   }
   
@@ -569,11 +568,11 @@ public:
 // preserved). The output of m complex values is returned in the array h,
 // which must be distinct from f and g.
   void convolve(Complex *h, Complex *f, Complex *g) {
-    for(unsigned int i=0; i < m; i++) {
+    for(unsigned int i=0; i < m; ++i) {
       Complex sum=0.0;
-      for(unsigned int j=0; j <= i; j++) sum += f[j]*g[i-j];
-      for(unsigned int j=i+1; j < m; j++) sum += f[j]*conj(g[j-i]);
-      for(unsigned int j=1; j < m-i; j++) sum += conj(f[j])*g[i+j];
+      for(unsigned int j=0; j <= i; ++j) sum += f[j]*g[i-j];
+      for(unsigned int j=i+1; j < m; ++j) sum += f[j]*conj(g[j-i]);
+      for(unsigned int j=1; j < m-i; ++j) sum += conj(f[j])*g[i+j];
       h[i]=sum;
     }
   }	
@@ -1062,13 +1061,22 @@ public:
   }	
 };
 
+// Enforce Hermiticity by symmetrizing 2D data along y=0.
+inline void HermitianSymmetrize2(unsigned int mx, unsigned int my,
+                                 unsigned int xorigin, Complex *f)
+{
+  unsigned int offset=xorigin*my;
+  unsigned int stop=mx*my;
+  for(unsigned int i=my; i < stop; i += my)
+    f[offset-i]=conj(f[offset+i]);
+}
+
 // In-place explicitly dealiased 2D Hermitian convolution.
 class ExplicitHConvolution2 {
 protected:
   unsigned int nx,ny;
   unsigned int mx,my;
   bool prune; // Skip Fourier transforming rows containing all zeroes?
-  bool odd;   // Is nx odd?
   mfft1d *xBackwards;
   mfft1d *xForwards;
   mcrfft1d *yBackwards;
@@ -1083,8 +1091,7 @@ public:
     unsigned int nyp=ny/2+1;
     // Odd nx requires interleaving of shift with x and y transforms.
     unsigned int My=my;
-    odd=nx % 2 == 1;
-    if(odd) {
+    if(nx % 2) {
       if(!prune) My=nyp;
       prune=true;
     }
@@ -1138,13 +1145,19 @@ public:
     
     if(prune) {
       xBackwards->fft(f);
-      if(odd) fftw::Shift(f,nx,ny,-1);
+      if(nx % 2) fftw::Shift(f,nx,ny,-1);
       yBackwards->fft(f);
     } else
       Backwards->fft(f);
   }
   
   void convolve(Complex *f, Complex *g) {
+    unsigned int xorigin=nx/2;
+    unsigned int nyp=ny/2+1;
+    
+    HermitianSymmetrize2(mx,nyp,xorigin,f);
+    HermitianSymmetrize2(mx,nyp,xorigin,g);
+    
     padBackwards(f);
     padBackwards(g);
     
@@ -1152,7 +1165,6 @@ public:
     double *G=(double *) g;
     
     double ninv=1.0/(nx*ny);
-    unsigned int nyp=ny/2+1;
     unsigned int nyp2=2*nyp;
 
     for(unsigned int i=0; i < nx; ++i) {
@@ -1200,6 +1212,11 @@ public:
   // The output is returned in f.
   void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
                 Complex *u2, Complex *v2) {
+    unsigned int xorigin=mx-1;
+    
+    HermitianSymmetrize2(mx,my,xorigin,f);
+    HermitianSymmetrize2(mx,my,xorigin,g);
+    
     xfftpad->backwards(f,u2);
     xfftpad->backwards(g,v2);
 
@@ -1224,6 +1241,10 @@ public:
   
   void convolve(Complex *h, Complex *f, Complex *g) {
     unsigned int xorigin=mx-1;
+    
+    HermitianSymmetrize2(mx,my,xorigin,f);
+    HermitianSymmetrize2(mx,my,xorigin,g);
+    
     int xstart=-xorigin;
     int xstop=mx;
     int ystop=my;
@@ -1329,7 +1350,7 @@ public:
     }
 
     if(prune) {
-      for(unsigned int i=0; i < mx; i++)
+      for(unsigned int i=0; i < mx; ++i)
         yBackwards->fft(f+i*nyz);
       xBackwards->fft(f);
       zBackwards->fft(f);
@@ -1356,7 +1377,7 @@ public:
     if(prune) {
       zForwards->fft(f);
       xForwards->fft(f);
-      for(unsigned int i=0; i < mx; i++)
+      for(unsigned int i=0; i < mx; ++i)
         yForwards->fft(f+i*nyz);
     } else
       Forwards->fft(f);
@@ -1453,7 +1474,7 @@ public:
     
   void padBackwards(Complex *f) {
     unsigned int n2=n/2;
-    for(unsigned int i=m; i <= n2; i++) f[i]=0.0;
+    for(unsigned int i=m; i <= n2; ++i) f[i]=0.0;
     cr->fft(f);
   }
   
@@ -1464,20 +1485,20 @@ public:
 // The (distinct) input arrays e, f, and g must each be allocated to size n/2+1
 // (contents not preserved). The output is returned in the first m elements
 // of e.
-  void convolve(Complex *e, Complex *f, Complex *g) {
-    padBackwards(e);
+  void convolve(Complex *f, Complex *g, Complex *h) {
     padBackwards(f);
     padBackwards(g);
+    padBackwards(h);
 	
-    double *E=(double *) e;
     double *F=(double *) f;
     double *G=(double *) g;
+    double *H=(double *) h;
     
     double ninv=1.0/n;
     for(unsigned int k=0; k < n; ++k)
-      E[k] *= F[k]*G[k]*ninv;
+      F[k] *= G[k]*H[k]*ninv;
 
-    rc->fft(e);
+    rc->fft(f);
   }
 };
 
@@ -1792,7 +1813,6 @@ protected:
   unsigned int nx,ny;
   unsigned int mx,my;
   bool prune; // Skip Fourier transforming rows containing all zeroes?
-  bool odd;   // Is nx odd?
   mfft1d *xBackwards;
   mfft1d *xForwards;
   mcrfft1d *yBackwards;
@@ -1807,8 +1827,7 @@ public:
     unsigned int nyp=ny/2+1;
     // Odd nx requires interleaving of shift with x and y transforms.
     unsigned int My=my;
-    odd=nx % 2 == 1;
-    if(odd) {
+    if(nx % 2) {
       if(!prune) My=nyp;
       prune=true;
     }
@@ -1862,38 +1881,44 @@ public:
 
     if(prune) {
       xBackwards->fft(f);
-      if(odd) fftw::Shift(f,nx,ny,-1);
+      if(nx % 2) fftw::Shift(f,nx,ny,-1);
       yBackwards->fft(f);
     } else
       return Backwards->fft(f);
   }
   
-  void convolve(Complex *e, Complex *f, Complex *g) {
-    padBackwards(e);
+  void convolve(Complex *f, Complex *g, Complex *h) {
+    unsigned int xorigin=nx/2;
+    unsigned int nyp=ny/2+1;
+    
+    HermitianSymmetrize2(mx,nyp,xorigin,f);
+    HermitianSymmetrize2(mx,nyp,xorigin,g);
+    HermitianSymmetrize2(mx,nyp,xorigin,h);
+    
     padBackwards(f);
     padBackwards(g);
+    padBackwards(h);
     
-    double *E=(double *) e;
     double *F=(double *) f;
     double *G=(double *) g;
+    double *H=(double *) h;
     
     double ninv=1.0/(nx*ny);
-    unsigned int nyp=ny/2+1;
     unsigned int nyp2=2*nyp;
 
     for(unsigned int i=0; i < nx; ++i) {
       unsigned int nyp2i=nyp2*i;
       unsigned int stop=nyp2i+ny;
       for(unsigned int j=nyp2i; j < stop; ++j)
-        E[j] *= F[j]*G[j]*ninv;
+        F[j] *= G[j]*H[j]*ninv;
     }
 	
     if(prune) {
-      yForwards->fft(e);
-      if(odd) fftw::Shift(e,nx,ny,1);
-      xForwards->fft(e);
+      yForwards->fft(f);
+      if(nx % 2) fftw::Shift(f,nx,ny,1);
+      xForwards->fft(f);
     } else
-      Forwards->fft(e);
+      Forwards->fft(f);
   }
 };
 
@@ -1927,11 +1952,15 @@ public:
   void convolve(Complex *f, Complex *g, Complex *h,
                 Complex *u1, Complex *v1, Complex *w1,
                 Complex *u2, Complex *v2, Complex *w2) {
+    unsigned int my1=my+1;
+    HermitianSymmetrize2(mx,my1,mx,f);
+    HermitianSymmetrize2(mx,my1,mx,g);
+    HermitianSymmetrize2(mx,my1,mx,h);
+    
     xfftpad->backwards(f,u2);
     xfftpad->backwards(g,v2);
     xfftpad->backwards(h,w2);
 
-    unsigned int my1=my+1;
     unsigned int stop=2*mx*my1;
 
     for(unsigned int i=0; i < stop; i += my1)
@@ -1951,6 +1980,10 @@ public:
   DirectHBiConvolution2(unsigned int mx, unsigned int my) : mx(mx), my(my) {}
   
   void convolve(Complex *h, Complex *e, Complex *f, Complex *g) {
+    HermitianSymmetrize2(mx,my,mx-1,e);
+    HermitianSymmetrize2(mx,my,mx-1,f);
+    HermitianSymmetrize2(mx,my,mx-1,g);
+    
     unsigned int xorigin=mx-1;
     int xstart=-xorigin;
     int xstop=mx;

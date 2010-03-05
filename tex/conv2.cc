@@ -53,18 +53,11 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
     for(unsigned int j=0; j < my; j++) {
       f[i][j]=Complex(3.0,2.0);
       g[i][j]=Complex(5.0,3.0);
-//      f[i][j]=i+j;
-//      g[i][j]=i+j;
     }
   }
 
   f[origin][0]=f[origin][0].re;
   g[origin][0]=g[origin][0].re;
-
-  for(unsigned int i=1; i < mx; i++) {
-    f[origin-i][0]=conj(f[origin+i][0]);
-    g[origin-i][0]=conj(g[origin+i][0]);
-  }
 }
 
 unsigned int padding(unsigned int m)

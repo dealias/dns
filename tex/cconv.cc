@@ -17,9 +17,7 @@ unsigned int N=0;
 const double E=exp(1.0);
 const Complex I(0,1);
 
-Complex d[]={Complex(-5,3),Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
-
-unsigned int m=sizeof(d)/sizeof(Complex);
+unsigned int m=11;
 unsigned int n=2*m;
 
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
@@ -41,9 +39,6 @@ inline double seconds()
 
 inline void init(Complex *f, Complex *g) 
 {
-//  for(unsigned int i=0; i < m; i++) f[i]=d[i];
-//  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-
   if(Test)
 //    for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
     for(unsigned int i=0; i < m; i++) f[i]=g[i]=i*E;

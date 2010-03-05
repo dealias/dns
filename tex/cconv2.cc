@@ -45,12 +45,9 @@ inline void init(array2<Complex>& f, array2<Complex>& g)
     for(unsigned int j=0; j < my; j++) {
       f[i][j]=Complex(3.0,2.0);
       g[i][j]=Complex(5.0,3.0);
-//      f[i][j]=i+j;
-//      g[i][j]=i+j;
     }
   }
 }
-
   
 unsigned int outlimit=100;
 
