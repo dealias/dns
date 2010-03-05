@@ -292,6 +292,11 @@ public:
   ImplicitHConvolution(unsigned int m, Complex *u, Complex *v) : 
     n(3*m), m(m), c(m/2) {
 
+    if(m % 2) {
+      cout << "Only even-sized Hermitian convolutions are implemented!" << endl;
+      _exit(1);
+    }
+    
     rc=new rcfft1d(m,u);
     cr=new crfft1d(m,u);
 
@@ -318,9 +323,6 @@ public:
     double f0=f[0].re;
     double g0=g[0].re;
 
-    if(m % 2)
-      cout << "Only even-sized Hermitian convolutions are implemented!" << endl;
-    
     // Arrange input data
     u[0]=f0;
     v[0]=g0;
@@ -546,7 +548,6 @@ public:
     Complex f2k=Zetak0*u[cm1];
     f[cm1]=f0k+f1k+f2k;
     if(c > 1) f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
-
     f[c]=(overlap1-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
   }
 };
