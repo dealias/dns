@@ -597,15 +597,10 @@ class fftpad {
   unsigned int s;
   mfft1d *Backwards;
   mfft1d *Forwards;
-  double Cos,Sin;
   Complex *ZetaH, *ZetaL;
 public:  
   fftpad(unsigned int m, unsigned int M,
          unsigned int stride, Complex *f) : n(2*m), m(m), M(M), stride(stride) {
-    double arg=M_PI/m;
-    Cos=cos(arg);
-    Sin=sin(arg);
-    
     Backwards=new mfft1d(m,1,M,stride,1,f);
     Forwards=new mfft1d(m,-1,M,stride,1,f);
     
