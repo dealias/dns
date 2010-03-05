@@ -138,12 +138,12 @@ public:
         Complex fk=*(f+k);
         Complex gk=*(g+k);
         Complex L=*(ZetaL0+k);
-        double re=Hre*L.re-Him*L.im;
-        double im=Hre*L.im+Him*L.re;
-        P->re=re*fk.re-im*fk.im;
-        P->im=im*fk.re+re*fk.im;
-        Q->re=re*gk.re-im*gk.im;
-        Q->im=im*gk.re+re*gk.im;
+        double Re=Hre*L.re-Him*L.im;
+        double Im=Hre*L.im+Him*L.re;
+        P->re=Re*fk.re-Im*fk.im;
+        P->im=Im*fk.re+Re*fk.im;
+        Q->re=Re*gk.re-Im*gk.im;
+        Q->im=Im*gk.re+Re*gk.im;
       }
 #endif      
     }
@@ -205,10 +205,10 @@ public:
         Complex fk=*p;
         Complex fkm=*(u+k);
         Complex L=*(ZetaL0+k);
-        double re=Hre*L.re-Him*L.im;
-        double im=Him*L.re+Hre*L.im;
-        p->re=ninv*fk.re+re*fkm.re+im*fkm.im;
-        p->im=ninv*fk.im-im*fkm.re+re*fkm.im;
+        double Re=Hre*L.re-Him*L.im;
+        double Im=Him*L.re+Hre*L.im;
+        p->re=ninv*fk.re+Re*fkm.re+Im*fkm.im;
+        p->im=ninv*fk.im-Im*fkm.re+Re*fkm.im;
       }
 #endif
     }  
@@ -633,16 +633,16 @@ public:
       Complex H=ZetaH[a];
       for(; k < stop; ++k) {
         Complex L=ZetaL0[k];
-        double re=H.re*L.re-H.im*L.im;
-        double im=H.im*L.re+H.re*L.im;
+        double Re=H.re*L.re-H.im*L.im;
+        double Im=H.re*L.im+H.im*L.re;
         unsigned int kstride=k*stride;
         Complex *fk=f+kstride;
         Complex *uk=u+kstride;
         for(unsigned int i=0; i < M; ++i) {
           Complex *p=uk+i;
           Complex fki=*(fk+i);
-          p->re=re*fki.re-im*fki.im;
-          p->im=im*fki.re+re*fki.im;
+          p->re=Re*fki.re-Im*fki.im;
+          p->im=Im*fki.re+Re*fki.im;
         }
       }
 #endif      
@@ -682,8 +682,8 @@ public:
       Complex H=ninv*ZetaH[a];
       for(; k < stop; ++k) {
         Complex L=ZetaL0[k];
-        double re=H.re*L.re-H.im*L.im;
-        double im=H.im*L.re+H.re*L.im;
+        double Re=H.re*L.re-H.im*L.im;
+        double Im=H.re*L.im+H.im*L.re;
         unsigned int kstride=k*stride;
         Complex *uk=u+kstride;
         Complex *fk=f+kstride;
@@ -691,8 +691,8 @@ public:
           Complex *p=fk+i;
           Complex fki=*p;
           Complex fkm=*(uk+i);
-          p->re=ninv*fki.re+re*fkm.re+im*fkm.im;
-          p->im=ninv*fki.im-im*fkm.re+re*fkm.im;
+          p->re=ninv*fki.re+Re*fkm.re+Im*fkm.im;
+          p->im=ninv*fki.im-Im*fkm.re+Re*fkm.im;
         }
       }
 #endif     
@@ -714,25 +714,25 @@ public:
 //   stride is the spacing between the elements of each Complex vector.
 //
 class fft0pad {
-  unsigned int n;
-  unsigned int m;
+  unsigned int n,m;
   unsigned int M;
+  unsigned int s;
   unsigned int stride;
   mfft1d *Backwards;
   mfft1d *Forwards;
-  double Cos,Sin;
+  Complex *ZetaH, *ZetaL;
 public:  
   fft0pad(unsigned int m, unsigned int M, unsigned int stride, Complex *u)
     : n(3*m), m(m), M(M), stride(stride) {
-    double arg=2.0*M_PI/n;
-    Cos=cos(arg);
-    Sin=sin(arg);
-    
     Backwards=new mfft1d(m,1,M,stride,1,u);
     Forwards=new mfft1d(m,-1,M,stride,1,u);
+    
+    s=BuildZeta(n,m,ZetaH,ZetaL);
   }
   
   ~fft0pad() {
+    FFTWdelete(ZetaL);
+    FFTWdelete(ZetaH);
     delete Forwards;
     delete Backwards;
   }
@@ -744,78 +744,83 @@ public:
     for(unsigned int i=0; i < M; ++i)
       u[i]=fm1stride[i];
     
-    unsigned int mstride=m*stride;
 #ifdef __SSE2__      
-    const Complex cc(Cos,Cos);
-    const Complex ss(-Sin,Sin);
-    const Complex zeta(Cos,Sin);
-    Vec CC=LOAD(&cc);
-    Vec SS=LOAD(&ss);
-    Vec Zetak=LOAD(&zeta);
     Vec Mhalf=LOAD(&mhalf);
     Vec Mhsqrt3=LOAD(&mhsqrt3);
-#else
-    double Re=Cos;
-    double Im=Sin;
 #endif    
-    for(unsigned int k=stride; k < mstride; k += stride) {
-      Complex *uk=u+k;
-      Complex *fk=f+k;
-      Complex *fmk=f+m1stride+k;
+    unsigned int stop=s;
+    Complex *ZetaL0=ZetaL;
+    for(unsigned int a=0, k=1; k < m; ++a) {
 #ifdef __SSE2__
-      Vec X=UNPACKL(Zetak,Zetak);
-      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
-      for(unsigned int i=0; i < M; ++i) {
-        Complex *p=fmk+i;
-        Complex *q=f+i;
-        Complex *r=fk+i;
-        Vec A=LOAD(p);
-        Vec B=LOAD(q);
-        Vec Z=B*Mhalf+A;
-        STORE(q,LOAD(r));
-        STORE(r,B+A);
-        B *= Mhsqrt3;
-        A=ZMULT(X,Y,UNPACKL(Z,B));
-        B=ZMULTI(X,Y,UNPACKH(Z,B));
-        STORE(p,A+B);
-        STORE(uk+i,CONJ(A-B));
+      Vec H=LOAD(ZetaH+a);
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(H,LOAD(ZetaL0+k));
+        Vec X=UNPACKL(Zetak,Zetak);
+        Vec Y=UNPACKH(CONJ(Zetak),Zetak);
+        unsigned int kstride=k*stride;
+        Complex *uk=u+kstride;
+        Complex *fk=f+kstride;
+        Complex *fmk=fm1stride+kstride;
+        for(unsigned int i=0; i < M; ++i) {
+          Complex *p=fmk+i;
+          Complex *q=f+i;
+          Complex *r=fk+i;
+          Vec A=LOAD(p);
+          Vec B=LOAD(q);
+          Vec Z=B*Mhalf+A;
+          STORE(q,LOAD(r));
+          STORE(r,B+A);
+          B *= Mhsqrt3;
+          A=ZMULT(X,Y,UNPACKL(Z,B));
+          B=ZMULTI(X,Y,UNPACKH(Z,B));
+          STORE(p,A+B);
+          STORE(uk+i,CONJ(A-B));
+        }
       }
-      Zetak=ZMULT(CC,SS,Zetak);
 #else        
-      for(unsigned int i=0; i < M; ++i) {
-        Complex *p=fmk+i;
-        Complex *q=f+i;
-        double fkre=q->re;
-        double fkim=q->im;
-        double fmkre=p->re;
-        double fmkim=p->im;
-        double re=-0.5*fkre+fmkre;
-        double im=-hsqrt3*fkre;
-        double Are=Re*re-Im*im;
-        double Aim=Re*im+Im*re;
-        re=fmkim-0.5*fkim;
-        im=-hsqrt3*fkim;
-        double Bre=-Re*im-Im*re;
-        double Bim=Re*re-Im*im;
-        p->re=Are+Bre;
-        p->im=Aim+Bim;
-        p=uk+i;
-        p->re=Are-Bre;
-        p->im=Bim-Aim;
-        p=fk+i;
-        q->re=p->re;
-        q->im=p->im;
-        p->re=fkre+fmkre;
-        p->im=fkim+fmkim;
+      Complex H=ZetaH[a];
+      for(; k < stop; ++k) {
+        Complex L=ZetaL0[k];
+        double Re=H.re*L.re-H.im*L.im;
+        double Im=H.re*L.im+H.im*L.re;
+        unsigned int kstride=k*stride;
+        Complex *uk=u+kstride;
+        Complex *fk=f+kstride;
+        Complex *fmk=fm1stride+kstride;
+        for(unsigned int i=0; i < M; ++i) {
+          Complex *p=fmk+i;
+          Complex *q=f+i;
+          double fkre=q->re;
+          double fkim=q->im;
+          double fmkre=p->re;
+          double fmkim=p->im;
+          double re=-0.5*fkre+fmkre;
+          double im=-hsqrt3*fkre;
+          double Are=Re*re-Im*im;
+          double Aim=Re*im+Im*re;
+          re=fmkim-0.5*fkim;
+          im=-hsqrt3*fkim;
+          double Bre=-Re*im-Im*re;
+          double Bim=Re*re-Im*im;
+          p->re=Are+Bre;
+          p->im=Aim+Bim;
+          p=uk+i;
+          p->re=Are-Bre;
+          p->im=Bim-Aim;
+          p=fk+i;
+          q->re=p->re;
+          q->im=p->im;
+          p->re=fkre+fmkre;
+          p->im=fkim+fmkim;
+        }
       }
-      double temp=Re*Cos-Im*Sin;
-      Im=Re*Sin+Im*Cos;
-      Re=temp;
-#endif      
+#endif
+      stop=min(k+s,m);
+      ZetaL0=ZetaL-k;
     }
     
     Backwards->fft(f);
-    Complex *umstride=u+mstride;
+    Complex *umstride=u+m*stride;
     for(unsigned int i=0; i < M; ++i) {
       umstride[i]=fm1stride[i]; // Store extra value here.
       fm1stride[i]=u[i];
@@ -829,8 +834,7 @@ public:
     unsigned int m1stride=(m-1)*stride;
     Complex *fm1stride=f+m1stride;
     Forwards->fft(fm1stride);
-    unsigned int mstride=m1stride+stride;
-    Complex *umstride=u+mstride;
+    Complex *umstride=u+m*stride;
     for(unsigned int i=0; i < M; ++i) {
       Complex temp=umstride[i];
       umstride[i]=fm1stride[i];
@@ -844,62 +848,68 @@ public:
     for(unsigned int i=0; i < M; ++i)
       umstride[i]=(umstride[i]+f[i]+u[i])*ninv;
 #ifdef __SSE2__      
-    const Complex cc(Cos,Cos);
-    const Complex ss(-Sin,Sin);
-    const Complex zeta(Cos,Sin);
-    Vec CC=LOAD(&cc);
-    Vec SS=LOAD(&ss);
-    const Complex Ninv2(ninv,ninv);
-    Vec ninv2=LOAD(&Ninv2);
-    Vec Zetak=LOAD(&zeta)*ninv2;
+    const Complex ninv2(ninv,ninv);
+    Vec Ninv=LOAD(&ninv2);
     Vec Mhalf=LOAD(&mhalf);
     Vec HSqrt3=LOAD(&hSqrt3);
-#else
-    double Re=Cos*ninv;
-    double Im=Sin*ninv;
 #endif    
-    for(unsigned int k=stride; k < mstride; k += stride) {
-      Complex *fk=f+k;
-      Complex *fm1k=fm1stride+k;
-      Complex *uk=u+k;
+    unsigned int stop=s;
+    Complex *ZetaL0=ZetaL;
+    for(unsigned int a=0, k=1; k < m; ++a) {
 #ifdef __SSE2__      
-      Vec X=UNPACKL(Zetak,Zetak);
-      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
-      for(unsigned int i=0; i < M; ++i) {
-        Complex *p=fk+i;
-        Complex *q=fm1k+i;
-        Vec F0=LOAD(p)*ninv2;
-        Vec F1=ZMULT(X,-Y,LOAD(q));
-        Vec F2=ZMULT(X,Y,LOAD(uk+i));
-        Vec S=F1+F2;
-        STORE(p-stride,F0+Mhalf*S+HSqrt3*ZMULTI(F1-F2));
-        STORE(q,F0+S);
+      Vec H=LOAD(ZetaH+a)*Ninv;
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(H,LOAD(ZetaL0+k));
+        Vec X=UNPACKL(Zetak,Zetak);
+        Vec Y=UNPACKH(CONJ(Zetak),Zetak);
+        unsigned int kstride=k*stride;
+        Complex *fk=f+kstride;
+        Complex *fm1k=fm1stride+kstride;
+        Complex *uk=u+kstride;
+        for(unsigned int i=0; i < M; ++i) {
+          Complex *p=fk+i;
+          Complex *q=fm1k+i;
+          Vec F0=LOAD(p)*Ninv;
+          Vec F1=ZMULT(X,-Y,LOAD(q));
+          Vec F2=ZMULT(X,Y,LOAD(uk+i));
+          Vec S=F1+F2;
+          STORE(p-stride,F0+Mhalf*S+HSqrt3*ZMULTI(F1-F2));
+          STORE(q,F0+S);
+        }
       }
-      Zetak=ZMULT(CC,SS,Zetak);
 #else
-      for(unsigned int i=0; i < M; ++i) {
-        Complex *p=fk+i;
-        Complex *q=fm1k+i;
-        Complex z=*q;
-        Complex r=uk[i];
-        double f0re=p->re*ninv;
-        double f0im=p->im*ninv;
-        double f1re=Re*z.re+Im*z.im;
-        double f1im=Re*z.im-Im*z.re;
-        double f2re=Re*r.re-Im*r.im;
-        double f2im=Re*r.im+Im*r.re;
-        double sre=f1re+f2re;
-        double sim=f1im+f2im;
-        p -= stride;
-        p->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
-        p->im=f0im-0.5*sim+hsqrt3*(f1re-f2re);
-        q->re=f0re+sre;
-        q->im=f0im+sim;
+      Complex H=ninv*ZetaH[a];
+      for(; k < stop; ++k) {
+        Complex L=ZetaL0[k];
+        double Re=H.re*L.re-H.im*L.im;
+        double Im=H.re*L.im+H.im*L.re;
+        unsigned int kstride=k*stride;
+        Complex *fk=f+kstride;
+        Complex *fm1k=fm1stride+kstride;
+        Complex *uk=u+kstride;
+        for(unsigned int i=0; i < M; ++i) {
+          Complex *p=fk+i;
+          Complex *q=fm1k+i;
+          Complex z=*q;
+          Complex r=uk[i];
+          double f0re=p->re*ninv;
+          double f0im=p->im*ninv;
+          double f1re=Re*z.re+Im*z.im;
+          double f1im=Re*z.im-Im*z.re;
+          double f2re=Re*r.re-Im*r.im;
+          double f2im=Re*r.im+Im*r.re;
+          double sre=f1re+f2re;
+          double sim=f1im+f2im;
+          p -= stride;
+          p->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
+          p->im=f0im-0.5*sim+hsqrt3*(f1re-f2re);
+          q->re=f0re+sre;
+          q->im=f0im+sim;
+        }
       }
-      double temp=Re*Cos-Im*Sin;
-      Im=Re*Sin+Im*Cos;
-      Re=temp;
 #endif      
+      stop=min(k+s,m);
+      ZetaL0=ZetaL-k;
     }
     for(unsigned int i=0; i < M; ++i)
       fm1stride[i]=umstride[i];
@@ -1533,14 +1543,14 @@ public:
         Complex gk=*(g+k);
         Complex hk=*(h+k);
         Complex L=*(ZetaL0+k);
-        double re=Hre*L.re-Him*L.im;
-        double im=Hre*L.im+Him*L.re;
-        P->re=re*fk.re-im*fk.im;
-        P->im=im*fk.re+re*fk.im;
-        Q->re=re*gk.re-im*gk.im;
-        Q->im=im*gk.re+re*gk.im;
-        R->re=re*hk.re-im*hk.im;
-        R->im=im*hk.re+re*hk.im;
+        double Re=Hre*L.re-Him*L.im;
+        double Im=Hre*L.im+Him*L.re;
+        P->re=Re*fk.re-Im*fk.im;
+        P->im=Im*fk.re+Re*fk.im;
+        Q->re=Re*gk.re-Im*gk.im;
+        Q->im=Im*gk.re+Re*gk.im;
+        R->re=Re*hk.re-Im*hk.im;
+        R->im=Im*hk.re+Re*hk.im;
       }
 #endif      
     }  
@@ -1601,10 +1611,10 @@ public:
         Complex fk=*p;
         Complex fkm=*(u+k);
         Complex L=*(ZetaL0+k);
-        double re=Hre*L.re-Him*L.im;
-        double im=Him*L.re+Hre*L.im;
-        p->re=ninv*fk.re+re*fkm.re+im*fkm.im;
-        p->im=ninv*fk.im-im*fkm.re+re*fkm.im;
+        double Re=Hre*L.re-Him*L.im;
+        double Im=Him*L.re+Hre*L.im;
+        p->re=ninv*fk.re+Re*fkm.re+Im*fkm.im;
+        p->im=ninv*fk.im-Im*fkm.re+Re*fkm.im;
       }
 #endif      
     }
@@ -1701,16 +1711,16 @@ public:
       Complex H=ZetaH[a];
       for(; k < stop; ++k) {
         Complex L=ZetaL0[k];
-        double re=H.im*L.re+H.re*L.im;
-        double im=H.im*L.im-H.re*L.re;
+        double Re=H.im*L.re+H.re*L.im;
+        double Im=H.im*L.im-H.re*L.re;
         unsigned int kstride=k*stride;
         Complex *fk=f+kstride;
         Complex *uk=u+kstride;
         for(unsigned int i=0; i < M; ++i) {
           Complex *p=uk+i;
           Complex fki=*(fk+i);
-          p->re=re*fki.re-im*fki.im;
-          p->im=im*fki.re+re*fki.im;
+          p->re=Re*fki.re-Im*fki.im;
+          p->im=Im*fki.re+Re*fki.im;
         }
       }
 #endif      
@@ -1753,8 +1763,8 @@ public:
       Complex H=ninv*ZetaH[a];
       for(; k < stop; ++k) {
         Complex L=ZetaL0[k];
-        double re=H.im*L.re+H.re*L.im;
-        double im=H.re*L.re-H.im*L.im;
+        double Re=H.im*L.re+H.re*L.im;
+        double Im=H.re*L.re-H.im*L.im;
         unsigned int kstride=k*stride;
         Complex *uk=u+kstride;
         Complex *fk=f+kstride;
@@ -1762,8 +1772,8 @@ public:
           Complex *p=fk+i;
           Complex fki=*p;
           Complex fkm=*(uk+i);
-          p->re=ninv*fki.re+re*fkm.re-im*fkm.im;
-          p->im=ninv*fki.im+im*fkm.re+re*fkm.im;
+          p->re=ninv*fki.re+Re*fkm.re-Im*fkm.im;
+          p->im=ninv*fki.im+Im*fkm.re+Re*fkm.im;
         }
       }
 #endif     
