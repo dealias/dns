@@ -527,7 +527,7 @@ Hermitian Fourier transforms of size $m$, for an overall computational
 scaling of $\fr{9}{2}K m \log m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
 For simplicity, in this work we only document the case of practical
-importance, where $m=2c \ge 4$ (for maximal efficiency one would typically pad
+importance, where $m=2c$ (for maximal efficiency one would typically pad
 odd-length input arrays with an extra zero word anyway). We see in
 Function~\ref{conv} that seven out of these nine Fourier transforms can be
 performed out of place using the same amount of memory,
@@ -595,7 +595,9 @@ of the two transformed input vectors.
 
   $\xf[c-1]=S+\zeta_{6c}^{1-c}\xv[c-1]+\zeta_{6c}^{c-1}\xu[c-1]$\;
   $\xf[c]=T-\(-\half,\fr{\sqrt{3}}{2}\)\xv[c]-\(-\half,-\fr{\sqrt{3}}{2}\)\xu[c]$\;
-  $\xf[c+1]=\conj{S}+\(-\half,-\fr{\sqrt{3}}{2}\)\zeta_{6c}^{c-1}\conj{\xv[c-1]}+\(-\half,\fr{\sqrt{3}}{2}\)\zeta_{6c}^{1-c}\conj{\xu[c-1]}$\;
+  \If{$c > 1$}{
+    $\xf[c+1]=\conj{S}+\(-\half,-\fr{\sqrt{3}}{2}\)\zeta_{6c}^{c-1}\conj{\xv[c-1]}+\(-\half,\fr{\sqrt{3}}{2}\)\zeta_{6c}^{1-c}\conj{\xu[c-1]}$\;
+  }
 
   \Return f/(6c)\;
 \caption{conv(vector {\sf f}, vector {\sf g}) 

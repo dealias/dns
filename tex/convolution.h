@@ -318,11 +318,8 @@ public:
     double f0=f[0].re;
     double g0=g[0].re;
 
-    bool even=m % 2 == 0;
-    if(m <= 2 || !even) {
-      cout << "Not yet implemented!" << endl;
-      _exit(1);
-    }
+    if(m % 2)
+      cout << "Only even-sized Hermitian convolutions are implemented!" << endl;
     
     // Arrange input data
     u[0]=f0;
@@ -548,9 +545,9 @@ public:
     Complex f1k=conj(Zetak0)*v[cm1];
     Complex f2k=Zetak0*u[cm1];
     f[cm1]=f0k+f1k+f2k;
-    f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
+    if(c > 1) f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
 
-    if(even) f[c]=(overlap1-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
+    f[c]=(overlap1-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
   }
 };
   
