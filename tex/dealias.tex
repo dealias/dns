@@ -86,8 +86,8 @@ reduce the memory footprint of the required spectral convolutions.
 
 Because the discrete convolution, which produces cyclic output from cyclic
 input, is applied to nonperiodic (wavenumber-space) data, it is important
-to remove aliases from the convolution. Typically the data array is
-extended by padding it with enough zeros so that the wave beats of the
+to remove aliases from the convolution. Typically the input data arrays are
+extended by padding them with enough zeros so that the wave beats of
 the positive frequencies cannot wrap around and contaminate
 the negative frequencies. A cyclic convolution $\sum_{p=0}^{n-1} f_p g_{k-p}$ 
 is then performed using a
@@ -120,7 +120,7 @@ The most common case where people seem to want a pruned FFT is for
 zero-padded convolutions, where roughly 50\% of your inputs are zero (to
 get a linear convolution from an FFT-based cyclic convolution). Here, a
 pruned FFT is hardly worth thinking about, at least in one dimension. In
-higher dimensions, matters change (e.g. for a 3d zero-padded array about
+higher dimensions, matters change (e.g.\ for a 3d zero-padded array about
 1/8 of your inputs are non-zero, and one can fairly easily save a factor of
 two or so simply by skipping 1d sub-transforms that are zero).
 }
@@ -130,10 +130,12 @@ The reasoning behind the assertion that such one-dimensional pruned FFTs
 are not worth thinking about is that if $m$ of the $N$ inputs are nonzero,
 the computational cost is reduced only from $N\log N$ to $N\log m$.
 For example, if $m=N/2$, the savings is a minuscule $1/\log_2 N$.
-Nevertheless, in this work we demonstrate that pruning the zero-padded
-elements of one-dimensional convolutions is indeed worth thinking about,
-primarily because it provides a more effective building block for constructing
-multidimensional convolutions.
+Moreover, since a zero-padded Fourier transform of size~$N$ yields~$N$
+(typically nonzero) output values, no savings in memory appear to be
+possible in one dimension. Nevertheless, in this work we demonstrate that
+pruning the zero-padded elements of one-dimensional convolutions is still
+worth thinking about, primarily because this provides building blocks
+for constructing more efficient multidimensional convolutions.
 
 The key observation is this: although the memory usage of our implicitly
 padded 1D convolution is identical to that for a conventional explicitly
