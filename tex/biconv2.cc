@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
     if(nxp*my < outlimit)
       for(unsigned int i=1; i < nxp; i++) {
         for(unsigned int j=0; j < my; j++)
-          cout << e[i][j] << " ";
+          cout << e[i][j] << "\t";
         cout << endl;
       } else cout << e[1][0] << endl;
     cout << endl;

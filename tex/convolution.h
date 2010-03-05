@@ -719,7 +719,6 @@ class fft0pad {
   unsigned int m;
   unsigned int M;
   unsigned int stride;
-  unsigned int dist;
   mfft1d *Backwards;
   mfft1d *Forwards;
   double Cos,Sin;
@@ -1644,69 +1643,71 @@ public:
 //   stride is the spacing between the elements of each Complex vector.
 //
 class fft0bipad {
-  unsigned int n;
-  unsigned int m;
+  unsigned int n,m;
   unsigned int M;
   unsigned int stride;
-  unsigned int dist;
+  unsigned int s;
   mfft1d *Backwards;
   mfft1d *Forwards;
-  double Cos,Sin;
+  Complex *ZetaH, *ZetaL;
 public:  
   fft0bipad(unsigned int m, unsigned int M, unsigned int stride,
             Complex *f) : n(4*m), m(m), M(M), stride(stride) {
-    double arg=2.0*M_PI/n;
-    Cos=cos(arg);
-    Sin=sin(arg);
-    
     unsigned int twom=2*m;
     Backwards=new mfft1d(twom,1,M,stride,1,f);
     Forwards=new mfft1d(twom,-1,M,stride,1,f);
+    
+    s=BuildZeta(n,twom,ZetaH,ZetaL);
   }
   
   ~fft0bipad() {
+    FFTWdelete(ZetaL);
+    FFTWdelete(ZetaH);
     delete Forwards;
     delete Backwards;
   }
   
   void backwards(Complex *f, Complex *u) {
-#ifdef __SSE2__
-    const Complex cc(Cos,Cos);
-    const Complex ss(-Sin,Sin);
-    Vec CC=LOAD(&cc);
-    Vec SS=LOAD(&ss);
-    Complex mizeta(Sin,-Cos);
-    Vec Zetak=LOAD(&mizeta);
-#else
-    double re=Sin;
-    double im=-Cos;
-#endif    
     for(unsigned int i=0; i < M; ++i)
       f[i]=0.0;
     for(unsigned int i=0; i < M; ++i)
       u[i]=0.0;
     
-    unsigned int stop=2*m*stride;
-    for(unsigned int k=stride; k < stop; k += stride) {
-      Complex *fk=f+k;
-      Complex *uk=u+k;
+    unsigned int twom=2*m;
+    unsigned int stop=s;
+    Complex *ZetaL0=ZetaL;
+    for(unsigned int a=0, k=1; k < twom; ++a) {
 #ifdef __SSE2__      
-      Vec X=UNPACKL(Zetak,Zetak);
-      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
-      for(unsigned int i=0; i < M; ++i)
-        STORE(uk+i,ZMULT(X,Y,LOAD(fk+i)));
-      Zetak=ZMULT(CC,SS,Zetak);
-#else
-      for(unsigned int i=0; i < M; ++i) {
-        Complex *p=uk+i;
-        Complex fki=*(fk+i);
-        p->re=re*fki.re-im*fki.im;
-        p->im=im*fki.re+re*fki.im;
+      Vec H=-LOAD(ZetaH+a);
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(H,LOAD(ZetaL0+k));
+        Vec X=UNPACKL(Zetak,Zetak);
+        Vec Y=UNPACKH(CONJ(Zetak),Zetak);
+        unsigned int kstride=k*stride;
+        Complex *fk=f+kstride;
+        Complex *uk=u+kstride;
+        for(unsigned int i=0; i < M; ++i)
+          STORE(uk+i,ZMULTI(X,Y,LOAD(fk+i)));
       }
-      double temp=re*Cos-im*Sin; 
-      im=re*Sin+im*Cos;
-      re=temp;
+#else
+      Complex H=ZetaH[a];
+      for(; k < stop; ++k) {
+        Complex L=ZetaL0[k];
+        double re=H.im*L.re+H.re*L.im;
+        double im=H.im*L.im-H.re*L.re;
+        unsigned int kstride=k*stride;
+        Complex *fk=f+kstride;
+        Complex *uk=u+kstride;
+        for(unsigned int i=0; i < M; ++i) {
+          Complex *p=uk+i;
+          Complex fki=*(fk+i);
+          p->re=re*fki.re-im*fki.im;
+          p->im=im*fki.re+re*fki.im;
+        }
+      }
 #endif      
+      stop=min(k+s,twom);
+      ZetaL0=ZetaL-k;
     }
     
     Backwards->fft(f);
@@ -1719,42 +1720,47 @@ public:
 
     double ninv=1.0/n;
 #ifdef __SSE2__
-    const Complex cc(Cos,Cos);
-    const Complex ss(-Sin,Sin);
-    const Complex ninv1(Sin*ninv,Cos*ninv);
     const Complex ninv2(ninv,ninv);
-    Vec CC=LOAD(&cc);
-    Vec SS=-LOAD(&ss);
-    Vec Zetak=LOAD(&ninv1);
     Vec Ninv2=LOAD(&ninv2);
-#else
-    double re=Sin*ninv;
-    double im=Cos*ninv;
 #endif    
-    unsigned int stop=2*m*stride;
-    for(unsigned int k=stride; k < stop; k += stride) {
-      Complex *uk=u+k;
-      Complex *fk=f+k;
+    unsigned int twom=2*m;
+    unsigned int stop=s;
+    Complex *ZetaL0=ZetaL;
+    for(unsigned int a=0, k=1; k < twom; ++a) {
 #ifdef __SSE2__      
-      Vec X=UNPACKL(Zetak,Zetak);
-      Vec Y=UNPACKH(CONJ(Zetak),Zetak);
-      for(unsigned int i=0; i < M; ++i) {
-        Complex *p=fk+i;
-        STORE(p,LOAD(p)*Ninv2+ZMULT(X,Y,LOAD(uk+i)));
+      Vec H=Ninv2*LOAD(ZetaH+a);
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(H,LOAD(ZetaL0+k));
+        Vec X=UNPACKL(Zetak,Zetak);
+        Vec Y=UNPACKH(Zetak,CONJ(Zetak));
+        unsigned int kstride=k*stride;
+        Complex *uk=u+kstride;
+        Complex *fk=f+kstride;
+        for(unsigned int i=0; i < M; ++i) {
+          Complex *p=fk+i;
+          STORE(p,LOAD(p)*Ninv2+ZMULTI(X,Y,LOAD(uk+i)));
+        }
       }
-      Zetak=ZMULT(CC,SS,Zetak);
 #else        
-      for(unsigned int i=0; i < M; ++i) {
-        Complex *p=fk+i;
-        Complex fki=*p;
-        Complex fkm=*(uk+i);
-        p->re=ninv*fki.re+re*fkm.re-im*fkm.im;
-        p->im=ninv*fki.im+im*fkm.re+re*fkm.im;
+      Complex H=ninv*ZetaH[a];
+      for(; k < stop; ++k) {
+        Complex L=ZetaL0[k];
+        double re=H.im*L.re+H.re*L.im;
+        double im=H.re*L.re-H.im*L.im;
+        unsigned int kstride=k*stride;
+        Complex *uk=u+kstride;
+        Complex *fk=f+kstride;
+        for(unsigned int i=0; i < M; ++i) {
+          Complex *p=fk+i;
+          Complex fki=*p;
+          Complex fkm=*(uk+i);
+          p->re=ninv*fki.re+re*fkm.re-im*fkm.im;
+          p->im=ninv*fki.im+im*fkm.re+re*fkm.im;
+        }
       }
-      double temp=re*Cos+im*Sin;
-      im=im*Cos-re*Sin;
-      re=temp;
 #endif     
+      stop=min(k+s,twom);
+      ZetaL0=ZetaL-k;
     }
   }
 };
