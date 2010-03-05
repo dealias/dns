@@ -12,9 +12,9 @@ using namespace std;
 // Number of iterations.
 unsigned int N0=10000000;
 unsigned int N=0;
-// Test stuff
-double Tfactor=1;
   
+const double E=exp(1.0);
+
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
 
 using namespace std;
@@ -41,9 +41,7 @@ inline void init(Complex *f, Complex *g)
 //  for(unsigned int i=0; i < m; i++) f[i]=d[i];
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
   if(Test) {
-    Tfactor=1.0/m;;
-    for(unsigned int i=0; i < m; i++)
-      f[i]=g[i]=i*Tfactor;
+    for(unsigned int i=0; i < m; i++) f[i]=g[i]=i*E;
   } else {
     f[0]=1.0;
     for(unsigned int i=1; i < m; i++) f[i]=Complex(3.0,2.0);
@@ -199,7 +197,7 @@ int main(int argc, char* argv[])
     cout << "Exact:" << endl;
     double norm=0.0;
     for(unsigned int k=0; k < m; k++) {
-      h[k]=Tfactor*Tfactor*(4.0*m*m*m-6.0*(k+1)*m*m+(6.0*k+2.0)*m+3.0*k*k*k-3.0*k)/(6.0);
+       h[k]=E*E*(4.0*m*m*m-6.0*(k+1)*m*m+(6.0*k+2.0)*m+3.0*k*k*k-3.0*k)/6.0;
       norm += abs2(h[k]);
       error += abs2(h[k]-h0[k]);
     }

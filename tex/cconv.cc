@@ -11,13 +11,12 @@ using namespace std;
 
 // Number of iterations.
 
-// TEST stuff
-const double E=exp(1.0);
-const Complex I(0,1);
-
 unsigned int N0=10000000;
 unsigned int N=0;
   
+const double E=exp(1.0);
+const Complex I(0,1);
+
 Complex d[]={Complex(-5,3),Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,0),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1)};
 
 unsigned int m=sizeof(d)/sizeof(Complex);
@@ -46,8 +45,8 @@ inline void init(Complex *f, Complex *g)
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
 
   if(Test)
-    for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
-//    for(unsigned int i=0; i < m; i++) f[i]=g[i]=i;
+//    for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
+    for(unsigned int i=0; i < m; i++) f[i]=g[i]=i*E;
   else {
     for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
     for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
@@ -197,8 +196,8 @@ int main(int argc, char* argv[])
     double norm=0.0;
     for(unsigned int k=0; k < m; k++) {
       // exact solution for test case.
-      h[k]=(k+1)*pow(E,k*I);
-//      h[k]=k*(k+1)/2.0*(k-(2*k+1)/3.0);
+//      h[k]=(k+1)*pow(E,k*I);
+      h[k]=E*E*(k*(k+1)/2.0*(k-(2*k+1)/3.0));
       norm += abs2(h[k]);
       error += abs2(h[k]-h0[k]);
     }
