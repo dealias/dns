@@ -527,11 +527,12 @@ Hermitian Fourier transforms of size $m$, for an overall computational
 scaling of $\fr{9}{2}K m \log m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
 For simplicity, in this work we only document the case of practical
-importance, where $m=2c$.
-We see in Function~\ref{conv} that seven out of these nine Fourier
-transforms can be performed out of place using the same amount of memory,
+importance, where $m=2c \ge 4$ (for maximal efficiency one would typically pad
+odd-length input arrays with an extra zero word anyway). We see in
+Function~\ref{conv} that seven out of these nine Fourier transforms can be
+performed out of place using the same amount of memory,
 $2(\floor{N/2}+1)=6c+2$, as would be used to compute a centered Hermitian
-convolution with explicit padding.
+convolution with explicit padding. 
 
 To facilitate an in-place implementation of the
 backwards transform, we store the conjugate of the transformed values for
@@ -701,8 +702,8 @@ serially.
 
 As shown in Figure~\ref{timing2c}, the resulting implicit
 2D algorithm dramatically outperforms the explicit version:
-a $1024\times 1024$ implicit complex convolution is $1.92$ times faster.
-The gains appear to increase with transform size: a $8192\times 8192$
+a $1024^2$ implicit complex convolution is $1.92$ times faster.
+The gains appear to increase with transform size: a $8192^2$
 %TODO: update timings...
 implicit convolution runs in $48\%$ of the time for an explicit one. 
 
@@ -714,7 +715,7 @@ However there are other optimization possibilities lost in directly
 expressing a 2D convolution in terms of 1D transforms: as illustrated
 in Figure~\ref{cconv2}, while the $y$-pruned explicit convolution
 takes 73\% the time of a conventional 2D explicit convolution for size
-$1024\times 1024$ but takes $171\%$ the time of a $8192\times 8192$
+$1024^2$ but takes $171\%$ the time of a $8192^2$
 convolution. Our implicitly dealised convolution is also subject to
 these same losses, but the savings due to implicit padding,
 in-place subtransforms, neglect of high-level bit reversal, and
@@ -732,12 +733,12 @@ In two dimensions, the Fourier-centered Hermiticity condition appears as
 $U_{-k,-\ell}=\conj{U_{k,\ell}}$. 
 This symmetry is exploited in the centered Hermitian convolution
 algorithm described in Function~\ref{conv2}. As shown in
-Figure~\ref{timing2c}, implicit padding again yields a dramatic improvement
+Figure~\ref{timings2c}, implicit padding again yields a dramatic improvement
 in speed.
 
-When $m$ is even, the memory usage for a $(2m-1)\times (2m-1)$ Hermitian
-convolution is $2(2m-1)m+2(m+1)m+2(m/2+1)=6m^2+m+2$ complex words,
-compared with a minimum of $2(3m-2)(3m/2)=9m^2-6m$ complex words for an explicit
+When $m_y$ is even, the memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian
+convolution is $2(2m_x-1)m_y+2(m_x+1)m_y+2(m_y/2+1)=6m_xm_y+m_y+2$ complex words,
+compared with a minimum of $2(3m_x-2)(3m_y/2)=9m_xm_y-6m_y$ complex words for an explicit
 transform.
 
 \begin{figure}[htbp]
@@ -828,10 +829,12 @@ dealiased centered Hermitian in-place 2D convolutions of two matrices of
 
 The decoupling of the 2D work arrays in Procedure~\ref{cconv2}
 also allows us to construct the efficient 3D implicit complex convolution
-in Procedure~\ref{cconv3}. The memory usage is
-$4m_xm_ym_z+2m_y m_z+2m_z$ complex words, asymptotically (as $m_x\goesto\infty$)
-one-quarter of the $16m_xm_ym_z$ complex words required for by an explicit
-convolution.
+in Procedure~\ref{cconv3}. As shown in Figure~\ref{timing3c}, an implicit
+$256^3$ convolution ran $**$ times faster than the explicit version, with
+an $xz$-pruned version running $**$ times faster. The memory usage of an
+implicitly padded 3D $m_x\times m_y\times m_Z$ convolution is
+$4m_xm_ym_z+2m_y m_z+2m_z$ complex words, in comparison to the
+$16m_xm_ym_z$ complex words required by an explicit convolution.
 
 Implicit Hermitian 3D convolutions can be implemented in an analogous
 manner, yielding a memory usage asymptotic to $4/9$ of the explicit
@@ -878,10 +881,12 @@ dealiased complex in-place 3D convolutions of two matrices of
 In this section, we show that implicit padding is well suited to
 dealiasing the centered biconvolution
 $$
-\sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1} f_p g_q h_r\d_{p+q+r,k}.
+\sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1} f_p g_q h_r\d_{p+q+r,k}
 $$
-The basic building blocks for this problem are the centered $x$ transform
-and the Hermitian $y$ convolution.
+which, for example, is required to compute the time evolution of high-order
+Casimir invariants of the nonlinearity for a two dimensional incompressible
+fluid \cite{Bowman10}. The basic building blocks for this problem are the
+centered $x$ transform and the Hermitian $y$ convolution.
 \subsection{Implicit double dealiased centered Fourier transform}
 \label{fft0bi}
 Here the input data length is $2m-1$, with the Fourier origin at index
@@ -986,14 +991,15 @@ inverse of fft0bipadBackwards(\hbox{vector~{\sf f}, vector~{\sf u}}).}
 Just as for convolutions, the performance and memory benefits of
 evaluating implicitly padded hyperconvolutions manifest themselves only in
 higher dimensions. For example, in Figure~\ref{timing2b}, we observe 
-that an implicit $4096\times 4096$ Hermitian biconvolution requires $43\%$
+that an implicit $4096^2$ Hermitian biconvolution requires $43\%$
 of the computation time required for an explicit biconvolution.
-The memory usage for a $(2m-1)\times (2m-1)$ Hermitian biconvolution,
-is $6\cdot 2m(m+1)+3(m+1)=12m^2+15m+1$ complex words, compared with
-$3\cdot 4m(2m+1)=24m^2+12m$ complex words (when $m$ is a power of $2$) 
-for an explicit biconvolution. An $4096\times 4096$ $y$-pruned
-biconvolution requires $68\%$ of the computation time but the same amount
-of storage as an explicitly padded biconvolution.
+The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian biconvolution,
+is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
+compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
+(using power-of-two transforms) for an explicit biconvolution. In contrast, a
+$4096^2$ $y$-pruned biconvolution requires $68\%$ of the
+computation time but the same amount of storage as an explicitly padded
+biconvolution.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.445\linewidth}
@@ -1095,7 +1101,6 @@ u_{q\ell+r}=\sum_{k=0}^{pm-1}\z_N^{(q\ell+r)k} U_k
 U_{t m+s}
 =\sum_{s=0}^{m-1}\z_m^{\ell s}\sum_{t=0}^{p-1}\z_N^{r(t m+s)} U_{t m+s}.
 $$
-The computation thus reduces to $m$
 
 Since there are $q$ choices of $r$, the problem reduces
 to computing $q$ Fouier transforms of length~$m$, which requires
@@ -1120,8 +1125,10 @@ In this work we have developed an efficient method for avoiding explicit zero
 padding in multidimensional convolutions, saving both memory and
 computation time.
 
-Asymptotically, as $m_x\goesto\infty$, a 2D implicit complex convolution
-requires half the memory required by zero padding.
+Asymptotically, as $m_x\goesto\infty$, we have seen that a 2D implicit
+complex convolution requires half the memory required by zero padding,
+whereas a 3D implicit convolution requires one quarter of the memory
+required by an explicit version.
 
 For the intended application to partial differential
 equations, there is flexibility in the choice of the exact convolution
