@@ -43,7 +43,6 @@ class ExplicitConvolution {
 protected:
   unsigned int n,m;
   fft1d *Backwards,*Forwards;
-  double Cos,Sin;
 public:  
   
   // u is a temporary array of size n.
@@ -491,18 +490,18 @@ public:
     ZetaL0=ZetaL;
 #ifdef __SSE2__      
     const Complex ninv2(ninv,ninv);
-    Vec Ninv2=LOAD(&ninv2);
+    Vec Ninv=LOAD(&ninv2);
     Fmk=LOAD(&fmk);
     Gmk=LOAD(&gmk);
     for(unsigned int a=0, k=1; k < cm1; ++a) {
-      Vec Zeta=Ninv2*LOAD(ZetaH+a);
+      Vec Zeta=Ninv*LOAD(ZetaH+a);
       Vec X=UNPACKL(Zeta,Zeta);
       Vec Y=UNPACKH(CONJ(Zeta),Zeta);
       for(; k < stop; ++k) {
         Complex *p=f+k;
         Complex *s=fm-k;
         Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-        Vec F0=LOAD(p)*Ninv2;
+        Vec F0=LOAD(p)*Ninv;
         Vec F1=ZMULTC(Zetak,LOAD(v+k));
         Vec F2=ZMULT(Zetak,LOAD(u+k));
         Vec S=F1+F2;
@@ -660,13 +659,13 @@ public:
     double ninv=1.0/n;
 #ifdef __SSE2__
     const Complex ninv2(ninv,ninv);
-    Vec Ninv2=LOAD(&ninv2);
+    Vec Ninv=LOAD(&ninv2);
 #endif    
     for(unsigned int a=0, k=0; k < m; ++a) {
       unsigned int stop=min(k+s,m);
       Complex *ZetaL0=ZetaL-k;
 #ifdef __SSE2__      
-      Vec H=Ninv2*LOAD(ZetaH+a);
+      Vec H=Ninv*LOAD(ZetaH+a);
       for(; k < stop; ++k) {
         Vec Zetak=ZMULT(H,LOAD(ZetaL0+k));
         Vec X=UNPACKL(Zetak,Zetak);
@@ -676,7 +675,7 @@ public:
         Complex *fk=f+kstride;
         for(unsigned int i=0; i < M; ++i) {
           Complex *p=fk+i;
-          STORE(p,LOAD(p)*Ninv2+ZMULT(X,Y,LOAD(uk+i)));
+          STORE(p,LOAD(p)*Ninv+ZMULT(X,Y,LOAD(uk+i)));
         }
       }
 #else
@@ -1473,18 +1472,15 @@ public:
 class ImplicitHBiConvolution {
 protected:
   unsigned int n,m;
+  unsigned int s;
   rcfft1d *rc, *rco;
   crfft1d *cr, *cro;
-  double Cos,Sin;
+  Complex *ZetaH, *ZetaL;
 public:  
   
   // u and v are distinct temporary arrays each of size m+1.
   ImplicitHBiConvolution(unsigned int m, Complex *u, Complex *v) : 
     n(4*m), m(m) {
-    double arg=2.0*M_PI/n;
-    Cos=cos(arg);
-    Sin=sin(arg);
-
     unsigned int twom=2*m;
     
     rc=new rcfft1d(twom,u);
@@ -1493,9 +1489,13 @@ public:
     double *U=(double *) u;
     rco=new rcfft1d(twom,U,v);
     cro=new crfft1d(twom,v,U);
+    
+    s=BuildZeta(n,m,ZetaH,ZetaL);
   }
   
   ~ImplicitHBiConvolution() {
+    FFTWdelete(ZetaL);
+    FFTWdelete(ZetaH);
     delete cro;
     delete rco;
     delete cr;
@@ -1508,38 +1508,40 @@ public:
   // u, v, and w are temporary arrays each of size m+1.
   void convolve(Complex *f, Complex *g, Complex *h,
                 Complex *u, Complex *v, Complex *w) {
+    for(unsigned int a=0, k=0; k < m; ++a) {
+      unsigned int stop=min(k+s,m);
+      Complex *ZetaL0=ZetaL-k;
 #ifdef __SSE2__      
-    const Complex cc(Cos,Cos);
-    const Complex ss(-Sin,Sin);
-    Vec CC=LOAD(&cc);
-    Vec SS=LOAD(&ss);
-    Vec Zetak=LOAD(&one);
-#else    
-    double re=1.0;
-    double im=0.0;
-#endif
-    for(unsigned int k=0; k < m; ++k) {
-#ifdef __SSE2__      
-      STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
-      STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
-      STORE(w+k,ZMULT(Zetak,LOAD(h+k)));
-      Zetak=ZMULT(CC,SS,Zetak);
+      Vec Zeta=LOAD(ZetaH+a);
+      Vec X=UNPACKL(Zeta,Zeta);
+      Vec Y=UNPACKH(CONJ(Zeta),Zeta);
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
+        STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
+        STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
+        STORE(w+k,ZMULT(Zetak,LOAD(h+k)));
+      }
 #else
-      Complex *P=u+k;
-      Complex *Q=v+k;
-      Complex *R=w+k;
-      Complex fk=*(f+k);
-      Complex gk=*(g+k);
-      Complex hk=*(h+k);
-      P->re=re*fk.re-im*fk.im;
-      P->im=im*fk.re+re*fk.im;
-      Q->re=re*gk.re-im*gk.im;
-      Q->im=im*gk.re+re*gk.im;
-      R->re=re*hk.re-im*hk.im;
-      R->im=im*hk.re+re*hk.im;
-      double temp=re*Cos-im*Sin; 
-      im=re*Sin+im*Cos;
-      re=temp;
+      Complex *p=ZetaH+a;
+      double Hre=p->re;
+      double Him=p->im;
+      for(; k < stop; ++k) {
+        Complex *P=u+k;
+        Complex *Q=v+k;
+        Complex *R=w+k;
+        Complex fk=*(f+k);
+        Complex gk=*(g+k);
+        Complex hk=*(h+k);
+        Complex L=*(ZetaL0+k);
+        double re=Hre*L.re-Him*L.im;
+        double im=Hre*L.im+Him*L.re;
+        P->re=re*fk.re-im*fk.im;
+        P->im=im*fk.re+re*fk.im;
+        Q->re=re*gk.re-im*gk.im;
+        Q->im=im*gk.re+re*gk.im;
+        R->re=re*hk.re-im*hk.im;
+        R->im=im*hk.re+re*hk.im;
+      }
 #endif      
     }  
     
@@ -1576,28 +1578,34 @@ public:
     
     double ninv=1.0/n;
 #ifdef __SSE2__      
-    SS=-LOAD(&ss);
-    const Complex Ninv(ninv,0.0);
-    const Complex Ninv2(ninv,ninv);
-    Zetak=LOAD(&Ninv);
-    Vec ninv2=LOAD(&Ninv2);
-#else    
-    re=ninv;
-    im=0.0;
+    const Complex ninv2(ninv,ninv);
+    Vec Ninv=LOAD(&ninv2);
 #endif    
-    for(unsigned int k=0; k < m; ++k) {
+    for(unsigned int a=0, k=0; k < m; ++a) {
+      unsigned int stop=min(k+s,m);
+      Complex *ZetaL0=ZetaL-k;
 #ifdef __SSE2__
-      STORE(f+k,ZMULT(Zetak,LOAD(u+k))+ninv2*LOAD(f+k));
-      Zetak=ZMULT(CC,SS,Zetak);
+      Vec Zeta=Ninv*LOAD(ZetaH+a);
+      Vec X=UNPACKL(Zeta,Zeta);
+      Vec Y=UNPACKH(CONJ(Zeta),Zeta);
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
+        STORE(f+k,ZMULTC(Zetak,LOAD(u+k))+Ninv*LOAD(f+k));
+      }
 #else      
-      Complex *p=f+k;
-      Complex fk=*p;
-      Complex fkm=*(u+k);
-      p->re=ninv*fk.re+re*fkm.re-im*fkm.im;
-      p->im=ninv*fk.im+im*fkm.re+re*fkm.im;
-      double temp=re*Cos+im*Sin;
-      im=im*Cos-re*Sin;
-      re=temp;
+      Complex *p=ZetaH+a;
+      double Hre=ninv*p->re;
+      double Him=ninv*p->im;
+      for(; k < stop; ++k) {
+        Complex *p=f+k;
+        Complex fk=*p;
+        Complex fkm=*(u+k);
+        Complex L=*(ZetaL0+k);
+        double re=Hre*L.re-Him*L.im;
+        double im=Him*L.re+Hre*L.im;
+        p->re=ninv*fk.re+re*fkm.re+im*fkm.im;
+        p->im=ninv*fk.im-im*fkm.re+re*fkm.im;
+      }
 #endif      
     }
   }
@@ -1721,14 +1729,14 @@ public:
     double ninv=1.0/n;
 #ifdef __SSE2__
     const Complex ninv2(ninv,ninv);
-    Vec Ninv2=LOAD(&ninv2);
+    Vec Ninv=LOAD(&ninv2);
 #endif    
     unsigned int twom=2*m;
     unsigned int stop=s;
     Complex *ZetaL0=ZetaL;
     for(unsigned int a=0, k=1; k < twom; ++a) {
 #ifdef __SSE2__      
-      Vec H=Ninv2*LOAD(ZetaH+a);
+      Vec H=Ninv*LOAD(ZetaH+a);
       for(; k < stop; ++k) {
         Vec Zetak=ZMULT(H,LOAD(ZetaL0+k));
         Vec X=UNPACKL(Zetak,Zetak);
@@ -1738,7 +1746,7 @@ public:
         Complex *fk=f+kstride;
         for(unsigned int i=0; i < M; ++i) {
           Complex *p=fk+i;
-          STORE(p,LOAD(p)*Ninv2+ZMULTI(X,Y,LOAD(uk+i)));
+          STORE(p,LOAD(p)*Ninv+ZMULTI(X,Y,LOAD(uk+i)));
         }
       }
 #else        
