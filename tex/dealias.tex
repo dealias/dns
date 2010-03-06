@@ -1126,7 +1126,7 @@ U_{t m+s}
 $$
 
 Since there are $q$ choices of $r$, the problem reduces
-to computing $q$ Fouier transforms of length~$m$, which requires
+to computing $q$ Fourier transforms of length~$m$, which requires
 $K q m\log_2 m=K N\log_2 (N/q)$ operations.
 While the computational savings for a one-dimensional transform is again only
 marginal, in higher dimensions this formulation
@@ -1149,8 +1149,8 @@ padding in multidimensional convolutions, thereby saving both memory and
 computation time. The key idea that was exploited was the decoupling
 of temporary storage and user data, which in higher dimensions allowed
 the reuse of storage space. The resulting increased data locality
-signficantly enhanced performance by as much as a factor of $2$.
-The memory savings were equally signficiant: asymptotically, as
+significantly enhanced performance by as much as a factor of $2$.
+The memory savings were equally significant: asymptotically, as
 $m_x\goesto\infty$, an implicit complex convolution requires one-half of
 the memory needed for a zero padded convolution in two dimensions and
 one-quarter in three dimensions. In the centered Hermitian case, the memory
@@ -1177,7 +1177,7 @@ of implicitly dealiased convolutions makes that argument now moot.
 Another advantage of implicit padding is the ability of the algorithm to
 work directly on raw unpadded user data without the inconvenience or extra
 storage requirements of a separate padding buffer. 
-Having a prewritten, well-tested dealiased convolution that internally
+Having a rewritten, well-tested dealiased convolution that internally
 takes care of dealiasing is a major convenience for the average user.
 For 2D and 3D Hermitian convolutions, a prepackaged routine should also
 automatically enforce Hermitian symmetry of the data along the $x$ axis or
@@ -1200,7 +1200,7 @@ straightforward exercise.
 % LocalWords:  unpadded dealised biconvolution th unnormalized jk kU kj cconv
 % LocalWords:  textit fft crfft rcfft padBackwards padForwards bipadBackwards
 % LocalWords:  bipadForwards xf xFk xA xB xg xw xC xD xF xG xS xT xU xV SIMD rk
-% LocalWords:  fftpadBackwards fftpadForwards backwardsB strided conv
+% LocalWords:  fftpadBackwards fftpadForwards backwardsB strided conv Buneman
 % LocalWords:  multivector Hermiticity unsymmetrized backwardsA forwardsB DFT
-% LocalWords:  Canuto xm biconvolutions bibackwards biforwards biconv qm mq
-% LocalWords:  parallelizability
+% LocalWords:  Canuto xm biconvolutions bibackwards biforwards biconv qm mq fp
+% LocalWords:  parallelizability pseudocode Bunemans ansi ik xW ip xz ym xy
