@@ -50,9 +50,9 @@ marker mark2=marker(g2,Draw(Pen(1)));
 pen lp=fontsize(8pt);
 
 draw(graph(me,e,e > 0),Pen(0),Label("explicit",Pen(0)+lp),mark0);
-draw(graph(mi,i,i > 0),Pen(1),Label("implicit",Pen(1)+lp),mark2);
 if(pruned)
   draw(graph(mp,p,p > 0),Pen(2),Label(prunelabel,Pen(2)+lp),mark1);
+draw(graph(mi,i,i > 0),Pen(1),Label("implicit",Pen(1)+lp),mark2);
 
 // fitting information; requires running rfit under R.
 real[] f;
