@@ -113,7 +113,7 @@ However, it is first worth considering the following response
 provided by Steven G. Johnson to a frequently asked question in the
 community about avoiding this unnecessary
 expense \cite{fftwprune}:
-\begin{quotation}\label{Johnsnon}
+\begin{quotation}\label{Johnson}
 {\it
 The most common case where people seem to want a pruned FFT is for
 zero-padded convolutions, where roughly 50\% of your inputs are zero (to
@@ -127,7 +127,7 @@ two or so simply by skipping 1d sub-transforms that are zero).
 
 The reasoning behind the assertion that such one-dimensional pruned FFTs
 are not worth thinking about is that if $m$ of the $N$ inputs are nonzero,
-the computational cost is reduced only from $N\log N$ to $N\log m$.
+the computational cost is reduced only from $N\log_2 N$ to $N\log_2 m$.
 For example, if $m=N/2$, the savings is a minuscule $1/\log_2 N$.
 Moreover, since a zero-padded Fourier transform of size~$N$ yields~$N$
 (typically nonzero) output values, no savings in memory appear to be
@@ -224,7 +224,7 @@ u_{2\ell+1}
 \eelc
 
 This requires computing two subtransforms, each of size $m$,
-for an overall computational scaling of order $2m\log m=N\log m$.
+for an overall computational scaling of order $2m\log_2 m=N\log_2 m$.
 
 The odd and even terms of the convolution can then be computed separately
 (without the need for a bit reversal stage), multiplied term-by-term, and
@@ -251,24 +251,31 @@ out of the six complex Fourier transforms of size $m$ to be done out of place.
 In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 (vector) multiply.
 
-The factors $\zeta_N^k$ in \Eqs{cconv1backwards} and~\hEq{cconv1forwards}
-can be calculated accurately with a single complex multiply, using two short
-precomputed tables $H_a=\zeta_N^{as}$ and $L_b=\zeta_N^b$, where
-$k=as+b$ with $s=\floor{\sqrt m}$, $a=0,1,\ldots,\ceil{m/s}-1$ and
-$b=0,1,\ldots,s-1$. Since these tables require only $\O(2\sqrt{m})$ complex
-words of storage, we did not include them in our estimates of memory use.
-We also investigated the stable recursion described by
-Buneman \cite{Buneman87}. Here, the singularity at angle $\pi/2$ was removed by
-replacing $\sec{\pi/2}$ with $x=1/(10\e)$ and $\sin 4\pi$ with $5x$,
-$\sin{2\pi}$ and $\sin{\pi}$ with $x$. While the resulting scheme has the 
-same average accuracy as the FFT itself \cite{}, 
-we found that the two-table method could be implemented more efficiently
-\cite{Johnson09}.
+In principle, the stable recursion described by Buneman \cite{Buneman87},
+which requires two small precomputed tables, each of size~$\log_2 N$, could be
+used to compute the required roots of unity $\zeta_N^k$
+in \Eqs{cconv1backwards} and~\hEq{cconv1forwards}. For the record we note,
+in terms of the smallest positive number $\e$ of a given machine
+representation satisfying $1+\e > 1$, that the singularity in this scheme can be
+removed by replacing $\sec{\pi/2}$ with  $5/\e$, $\sin 4\pi$ with $-\e/2$, and
+$\sin{2\pi}$ and $\sin{\pi}$ each with $-\e/10$.
+
+While Bunemans' recursion has the same average accuracy as an FFT
+itself \cite{Tasche02}, on modern hardware a factorization method that does
+not rely on successive table updates turns out to be more
+efficient \cite{Johnson09}, at the expense of somewhat higher memory usage.
+We calculate the $\zeta_N^k$ factors accurately with a single complex
+multiply, using two short precomputed tables $H_a=\zeta_N^{as}$ and
+$L_b=\zeta_N^b$, where $k=as+b$ with $s=\floor{\sqrt m}$,
+$a=0,1,\ldots,\ceil{m/s}-1$, and $b=0,1,\ldots,s-1$. Since these
+one-dimensional tables require only $\O(2\sqrt{m})$ complex words of
+storage and our focus is on higher dimensional convolutions anyway, we did
+not account for them in our estimates of memory use. 
 
 Referring to the computation times shown in Figure~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
 and~\hEq{cconv1forwards}
-can be implemented to be competitive with explicitly padded
+can thus be implemented to be competitive with explicitly padded
 convolutions. Both the FFTW-3.2.2 library and the convolution layer we built on
 top of it were compiled with the Intel C/C++ 11.0 20081105 compiler, using
 the optimization options {\tt -ansi-alias -malign-double -fp-model fast=2}
@@ -457,7 +464,7 @@ where $\zeta_3^{-1}=\(-\half,-\fr{\sqrt{3}}{2}\)$, so that for $k > 0$,
 $w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
 The resulting transforms,
 Procedures \ref{fft0padBackwards} and \ref{fft0padForwards},
-each have an operation count asymptotic to $3Km\log m$. As they
+each have an operation count asymptotic to $3Km\log_2 m$. As they
 operate fully in place on their arguments, with no additional storage
 requirements, it is straightforward to implement strided multivector
 versions of these routines.
@@ -552,7 +559,7 @@ frequencies needed in \Eq{fft0forwardsB} are then computed using Hermitian
 symmetry. Since there are two input vectors and
 one output vector, the complete convolution requires a total of nine
 Hermitian Fourier transforms of size $m$, for an overall computational
-scaling of $\fr{9}{2}K m \log m$ operations, in agreement with the
+scaling of $\fr{9}{2}K m \log_2 m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
 For simplicity, in this work we only document the case of practical
 importance, where $m=2c$ (for maximal efficiency one would typically pad
@@ -938,7 +945,7 @@ For a biconvolution, the product of the three factors $(-1)^\ell$
 (one for each input vector) arising from \Eq{fft0bibackwards}
 and the factor $(-1)^\ell$ in \Eq{fft0biforwards} cancel.
 Procedures \ref{fft0bipadBackwards} and \ref{fft0bipadForwards},
-each have an operation count asymptotic to $4Km\log m$. As they
+each have an operation count asymptotic to $4Km\log_2 m$. As they
 operate fully in place on their arguments, with no additional storage
 requirements, it is straightforward to implement strided multivector
 versions of these routines.
@@ -966,7 +973,7 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}
 \ee
 
 The resulting implicitly padded Hermitian biconvolution,
-Procedure \ref{biconv}, has an operation count of $8Km\log m$. 
+Procedure \ref{biconv}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out-of-place.
 Fig.~\ref{timing1b} we show that this algorithm is competitive with
 explicit padding. Explicit padding requires $3(2m+1)=6m+3$ complex words,
