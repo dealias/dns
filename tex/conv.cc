@@ -15,6 +15,7 @@ unsigned int N=0;
 unsigned int m=12;
   
 const double E=exp(1.0);
+const Complex I(0.0,1.0);
 
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
 
@@ -36,12 +37,13 @@ inline double seconds()
 inline void init(Complex *f, Complex *g) 
 {
   if(Test) {
-    for(unsigned int i=0; i < m; i++) f[i]=g[i]=i*E;
+    for(unsigned int k=0; k < m; k++) f[k]=g[k]=pow(E,k*I);
+//    for(unsigned int k=0; k < m; k++) f[k]=g[k]=k;
   } else {
     f[0]=1.0;
-    for(unsigned int i=1; i < m; i++) f[i]=Complex(3.0,2.0);
+    for(unsigned int k=1; k < m; k++) f[k]=Complex(3.0,2.0);
     g[0]=2.0;
-    for(unsigned int i=1; i < m; i++) g[i]=Complex(5.0,3.0);
+    for(unsigned int k=1; k < m; k++) g[k]=Complex(5.0,3.0);
   }
 }
 
@@ -178,21 +180,22 @@ int main(int argc, char* argv[])
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
-    FFTWdelete(h);
     if(Test) 
       for(unsigned int i=0; i < m; i++) h0[i]=h[i];
+    FFTWdelete(h);
   }
 
   if(Test) {
     Complex *h=FFTWComplex(m);
     double error=0.0;
     cout << endl;
-    cout << "Exact:" << endl;
     double norm=0.0;
-    for(unsigned int k=0; k < m; k++) {
-       h[k]=E*E*(4.0*m*m*m-6.0*(k+1)*m*m+(6.0*k+2.0)*m+3.0*k*k*k-3.0*k)/6.0;
+    long long M=m;
+    for(long long k=0; k < M; k++) {
+      h[k]=(2*M-1-k)*pow(E,k*I);
+//      h[k]=(4*m*m*m-6*(k+1)*m*m+(6*k+2)*m+3*k*k*k-3*k)/6.0;
+      error += abs2(h0[k]-h[k]);
       norm += abs2(h[k]);
-      error += abs2(h[k]-h0[k]);
     }
     error=sqrt(error/norm);
     cout << "error=" << error << endl;

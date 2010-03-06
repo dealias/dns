@@ -14,8 +14,9 @@ using namespace std;
 unsigned int N0=10000000;
 unsigned int N=0;
   
+const Complex A(cos(2.0),sin(1.0));
 const double E=exp(1.0);
-const Complex I(0,1);
+const Complex I(0.0,1.0);
 
 unsigned int m=11;
 unsigned int n=2*m;
@@ -40,11 +41,11 @@ inline double seconds()
 inline void init(Complex *f, Complex *g) 
 {
   if(Test)
-//    for(unsigned int i=0; i < m; i++) f[i]=g[i]=pow(E,i*I);
-    for(unsigned int i=0; i < m; i++) f[i]=g[i]=i*E;
+    for(unsigned int k=0; k < m; k++) f[k]=g[k]=A*pow(E,k*I);
+//    for(unsigned int k=0; k < m; k++) f[k]=g[k]=k*A;
   else {
-    for(unsigned int i=0; i < m; i++) f[i]=Complex(3.0,2.0);
-    for(unsigned int i=0; i < m; i++) g[i]=Complex(5.0,3.0);
+    for(unsigned int k=0; k < m; k++) f[k]=Complex(3.0,2.0);
+    for(unsigned int k=0; k < m; k++) g[k]=Complex(5.0,3.0);
   }
 }
 
@@ -187,14 +188,13 @@ int main(int argc, char* argv[])
     // test accuracy of convolution methods:
     double error=0.0;
     cout << endl;
-    cout << "Exact:" << endl;
     double norm=0.0;
-    for(unsigned int k=0; k < m; k++) {
+    for(unsigned long long k=0; k < m; k++) {
       // exact solution for test case.
-//      h[k]=(k+1)*pow(E,k*I);
-      h[k]=E*E*(k*(k+1)/2.0*(k-(2*k+1)/3.0));
+      h[k]=A*A*(k+1)*pow(E,k*I);
+//      h[k]=A*A*(k*(k+1)/2.0*(k-(2*k+1)/3.0));
+      error += abs2(h0[k]-h[k]);
       norm += abs2(h[k]);
-      error += abs2(h[k]-h0[k]);
     }
     error=sqrt(error/norm);
     cout << "error=" << error << endl;
