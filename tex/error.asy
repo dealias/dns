@@ -35,4 +35,5 @@ xaxis("$m$",BottomTop,LeftTicks);
 yaxis("normalized error",LeftRight,RightTicks);
 
 legendlinelength=0.5cm;
+legendmargin=8;
 attach(legend(),point(NW),10SE);

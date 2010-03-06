@@ -88,7 +88,7 @@ input, is applied to nonperiodic (wavenumber-space) data, it is important
 to remove aliases from the convolution. Typically the input data arrays are
 extended by padding them with enough zeros so that the wave beats of
 the positive frequencies cannot wrap around and contaminate
-the negative frequencies. A cyclic convolution $\sum_{p=0}^{n-1} f_p g_{k-p}$ 
+the negative frequencies. A cyclic convolution $\sum_{p=0}^{N-1} f_p g_{k-p}$ 
 is then performed using a
 correspondingly larger Fourier transform size $N$. If the cost of 
 computing a complex Fourier transform of size $N$ is asymptotic to 
@@ -251,6 +251,33 @@ out of the six complex Fourier transforms of size $m$ to be done out of place.
 In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 (vector) multiply.
 
+The factors $\zeta_N^k$ in \Eqs{cconv1backwards} and~\hEq{cconv1forwards}
+were calculated accurately with a single complex multiply, using two short
+precomputed tables $H_a=\zeta_N^{as}$ and $L_b=\zeta_N^b$, where
+$s=\floor{\sqrt m}$ and $n=as+b$, $a=0,1,\ldots,\ceil{m/s}-1$ and
+$b=0,1,\ldots,s-1$. Since these tables require only $\O(2\sqrt{m})$ complex
+words of storage, we did not include them in our estimates of memory use.
+
+Referring to the computation times shown in Figure~\ref{timing1c},
+we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
+and~\hEq{cconv1forwards}
+can be implemented to be competitive with explicitly padded
+convolutions. Both the FFTW-3.2.2 library and the convolution layer we built on
+top of it were compiled with the Intel C/C++ 11.0 20081105 compiler, using
+the optimization options {\tt -ansi-alias -malign-double -fp-model fast=2}
+on a 64-bit 3GHz Intel E5450 Xenon processor with 6MB cache. Like the FFTW
+library, our algorithm was vectorized for this architecture with
+specialized single-instruction multiple-data (SIMD) code.
+
+To compare the normalized error for the two methods, we considered the test
+case $f_k=g_k=A e^{ik}$ for $k=0,\ldots,m-1$, which is nontrivial (due to
+zero padding) for a dealiased linear convolution. For the complex case the
+exact solution is $H_k=\sum_{p=0}^k f_p g_{k-p}=A^2 (k+1) e^{ik}$; we
+arbitrarily chose $A=\root3\of3+ i\root3\of 5$.
+In Fig.~\ref{error1c} we compare the normalized $L^2$ error 
+$\sqrt{\sum_{k=0}^{m-1}\Abs{h_k-H_k}^2}/\sqrt{\sum_{k=0}^{m-1} \Abs{H_k}^2}$
+for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
+
 \setlength{\algomargin}{0.6em}
 \SetAlCapSkip{3pt}
 \SetAlgoCaptionLayout{textit}
@@ -364,17 +391,6 @@ unpadded length $m$.}
 \end{center}
 \end{minipage}
 \end{figure}
-
-Referring to the computation times shown in Figure~\ref{timing1c},
-we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
-and~\hEq{cconv1forwards}
-can be implemented to be competitive with explicitly padded
-convolutions. Both the FFTW-3.2.2 library and the convolution layer we built on
-top of it were compiled with the Intel C/C++ 11.0 20081105 compiler, using
-the optimization options {\tt -ansi-alias -malign-double -fp-model fast=2}
-on a 64-bit 3GHz Intel E5450 Xenon processor with 6MB cache. Like the FFTW
-library, our algorithm was vectorized for this architecture with
-specialized single-instruction multiple-data (SIMD) code.
 
 \subsection{Implicitly dealiased centered Fourier transform}\label{fft0}
 A basic building block for constructing multidimensional pseudospectral
@@ -552,6 +568,18 @@ obtained with the substitution $k'=c-k$. One can omit the factors of
 $(-1)^j$ since they will cancel during the real term-by-term multiplication
 of the two transformed input vectors.
 
+The computation times for an implicitly dealiased Hermitian
+convolution are compared with those for an explicitly padded convolution in
+Figure~\ref{timing1r}. For each algorithm, we benchmark only those vector
+lengths that yield maximum performance.
+
+To check the accuracy of our implementation, we used the test case
+$f_k=g_k=A e^{ik}$ with $A=\root3\of 3$, noting that Hermitian symmetry
+requires $A$ be real. The exact solution is 
+$H_k=A^2\sum_{p=k-m+1}^{m-1} e^{ip}e^{i(k-p)}=A^2(2m-1-k)e^{ik}$.
+The normalized $L^2$ errors for the implicit and explicit padding are compared
+in Fig.~\ref{error1r}.
+
 \begin{function}[htbp]
   \SetKwFunction{build}{build}
   \KwIn{vector \xf, vector \xg}
@@ -670,42 +698,6 @@ unpadded size $m\times m$.}
 \end{center}
 \end{minipage}
 \end{figure}
-
-\begin{comment}
-$$
-u_j=\sum_{k=0}^{N-1}\zeta_N^{jk} U_k
-=\sum_{k=0}^{2m-1}\zeta_N^{jk} U_k
-$$
-Then 
-\bel
-u_{3\ell}= \sum_{k=0}^{2m-1}\z_{3m}^{3\ell k} U_k
-=\sum_{k=0}^{m-1}\z_m^{\ell k} U_k
-+\sum_{k=m}^{2m-1}\z_m^{\ell k} U_k
-=\sum_{k=0}^{m-1}\z_m^{\ell k} U_k
-+\sum_{k=0}^{m-1}\z_m^{\ell (k+m)} U_{k+m}
-=\sum_{k=0}^{m-1}\z_m^{\ell k} \(U_k+U_{k+m}\).\label{DFTm}
-\eel
-Equation~\ref{DFTm} is a DFT of length $m$,
-each requiring $m\log m$ operations. Following a similar procedure,
-with $r=1$ or $r=2$,
-\bel
-\label{dfft23g}
-u_{3\ell +r}\no=
- \sum_{k=0}^{m-1}\z_m^{\ell k} \(\z_N^{rk} U_k + \z_N^{r(k+m)}U_{k+m}\)
-\eel
-The forward Fourier transform appears as
-\be
-NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
-=\sum_{r=0}^{2}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_N^{-3\ell k} u_{3\ell+r}
-=\sum_{r=0}^{2}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
-\qquad k\no =0,\ldots,pm-1.
-\ee
-\end{comment}
-
-The computation times for an implicitly dealiased Hermitian
-convolution are compared with those for an explicitly padded convolution in
-Figure~\ref{timing1r}. For each algorithm, we benchmark only those vector
-lengths that yield maximum performance.
 
 \section{Implicitly dealiased 2D convolutions}\label{2d}
 The algorithms developed in the previous sections can be used as building
@@ -864,8 +856,9 @@ implicitly padded 3D $m_x\times m_y\times m_Z$ convolution is
 $4m_xm_ym_z+2m_y m_z+2m_z$ complex words, in comparison to the
 $16m_xm_ym_z$ complex words required by an explicit convolution.
 
-Implicit Hermitian 3D convolutions can be implemented in an analogous
-manner, yielding a memory usage asymptotic to $4/9$ of the explicit
+An implicit Hermitian 3D convolution was implemented in an analogous
+manner, yielding a memory usage 
+asymptotic to $4/9$ of the explicit
 requirement.
 
 \begin{function}[htbp]
