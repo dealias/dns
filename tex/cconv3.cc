@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
     cout << sum-offset/N << endl;
     cout << endl;
 
-    if(mx*my < outlimit) {
+    if(mx*my*mz < outlimit) {
       for(unsigned int i=0; i < mx; i++) {
         for(unsigned int j=0; j < my; j++) {
           for(unsigned int k=0; k < mz; k++)

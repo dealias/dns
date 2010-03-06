@@ -3,7 +3,7 @@ include graph;
 size(175,200,IgnoreAspect);
 
 scale(Log,Log);
-real[] mp,p,mu,u,mP,P;
+real[] me,e,mi,i,mp,p;
 
 string pname=getstring("program name");
 string dir;
@@ -19,24 +19,25 @@ if(pname == "cconv3") {
   dir="timings3c"; prunelabel="$xz$-pruned"; legendmargin=8;
 }
   
-  
 file fin=input(dir+"/explicit").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);
-mp=a[0]; p=a[1];
+me=a[0]; e=a[1];
 
 file fin=input(dir+"/pruned",check=false).line();
 bool pruned=!error(fin);
 if(pruned) {
   real[][] a=fin.dimension(0,0);
   a=transpose(a);
-  mP=a[0]; P=a[1];
+  mp=a[0]; p=a[1];
 }
 
 file fin=input(dir+"/implicit").line();
 real[][] a=fin.dimension(0,0);
 a=transpose(a);
-mu=a[0]; u=a[1];
+mi=a[0]; i=a[1];
+
+colorPen[2]=heavygreen;
 
 guide g0=scale(0.5mm)*unitcircle;
 guide g1=scale(0.6mm)*polygon(3);
@@ -48,28 +49,27 @@ marker mark2=marker(g2,Draw(Pen(1)));
 
 pen lp=fontsize(8pt);
 
-// fitting information
+draw(graph(me,e,e > 0),Pen(0),Label("explicit",Pen(0)+lp),mark0);
+draw(graph(mi,i,i > 0),Pen(1),Label("implicit",Pen(1)+lp),mark2);
+if(pruned)
+  draw(graph(mp,p,p > 0),Pen(2),Label(prunelabel,Pen(2)+lp),mark1);
 
-file fin=input(dir+"/implicit.p").line();
-real[][] A=fin.dimension(0,0);
-real fcurve(real m) {
-  real val=A[0][0]*m*log(m) +A[1][0]*m + A[2][0]*log(m) + A[3][0];
-  return val;
-}
-
-
-draw(graph(mp,p,p>0),Pen(0),Label("explicit",Pen(0)+lp),mark0);
-
-draw(graph(mu,u,u>0),Pen(1),Label("implicit",Pen(1)+lp),mark2);
+// fitting information; requires running rfit under R.
 real[] f;
-for(int i=0; i < mu.length; ++i)
-  f[i]=fcurve(mu[i]);
+file fin=input(dir+"/implicit.p",check=false).line();
+if(!error(fin)) {
+  real[][] A=fin.dimension(0,0);
+  real fcurve(real m) {
+    real val=A[0][0]*m*log(m) +A[1][0]*m + A[2][0]*log(m) + A[3][0];
+    return val;
+  }
 
-draw(graph(mu,f,f>0),Pen(1)+dashed);
-//real a=min(mp), b = max(mp);
-//draw(graph(fcurve,a,b),Pen(1)+dashed);
-
-if(pruned) draw(graph(mP,P,P>0),Pen(2),Label(prunelabel,Pen(2)+lp),mark1);
+  for(int i=0; i < mi.length; ++i)
+    f[i]=fcurve(mi[i]);
+  // real a=min(me), b = max(me);
+  // draw(graph(fcurve,a,b),Pen(1)+dashed);
+  draw(graph(mi,f,f > 0),Pen(1)+dashed);
+}
 
 xaxis("$m$",BottomTop,LeftTicks);
 yaxis("time (sec)",LeftRight,RightTicks);
