@@ -280,11 +280,11 @@ on a 64-bit 3GHz Intel E5450 Xenon processor with 6MB cache. Like the FFTW
 library, our algorithm was vectorized for this architecture with
 specialized single-instruction multiple-data (SIMD) code.
 
-To compare the normalized error for the two methods, we considered the test
-case $f_k=g_k=A e^{ik}$ for $k=0,\ldots,m-1$, which is nontrivial (due to
-zero padding) for a dealiased linear convolution. For the complex case the
-exact solution is $H_k=\sum_{p=0}^k f_p g_{k-p}=A^2 (k+1) e^{ik}$; we
-arbitrarily chose $A=\root3\of3+ i\root3\of 5$.
+To compare the normalized error for the two methods, we considered the
+input vectors $f_k=g_k=A e^{ik}$ for $k=0,\ldots,m-1$, which, since $\pi$ is
+irrational, have nonzero Fourier components for all transform sizes.
+For the complex case the exact solution is $H_k=\sum_{p=0}^k f_p
+g_{k-p}=A^2 (k+1) e^{ik}$; we arbitrarily chose $A=\root3\of3+ i\root3\of 5$.
 In Fig.~\ref{error1c} we compare the normalized $L^2$ error 
 $\sqrt{\sum_{k=0}^{m-1}\Abs{h_k-H_k}^2}/\sqrt{\sum_{k=0}^{m-1} \Abs{H_k}^2}$
 for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
