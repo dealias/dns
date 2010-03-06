@@ -1451,6 +1451,52 @@ public:
   }	
 };
 
+// In-place implicitly dealiased 3D Hermitian convolution.
+class ImplicitHConvolution3 {
+protected:
+  unsigned int mx,my,mz;
+  fft0pad *xfftpad;
+  ImplicitHConvolution2 *yzconvolve;
+public:  
+  // u1 and v1 are temporary arrays of size mz/2+1.
+  // u2 is a temporary array of size (2my-1)*mz.
+  // u3 is a temporary array of size (mx+1)*(2*my-1)*mz.
+  ImplicitHConvolution3(unsigned int mx, unsigned int my, unsigned int mz,
+                       Complex *u1, Complex *v1, Complex *u2, Complex *u3) : 
+    mx(mx), my(my), mz(mz) {
+    unsigned int ny=2*my-1;
+    xfftpad=new fft0pad(mx,ny*mz,my*mz,u3);
+    yzconvolve=new ImplicitHConvolution2(my,mz,u1,v1,u2);
+  }
+  
+  ~ImplicitHConvolution3() {
+    delete yzconvolve;
+    delete xfftpad;
+  }
+  
+  // The distinct input arrays f and g must be allocated as 
+  // Complex[(2mx-1)*(2my-1)*mz] (not preserved). 
+  // u1 and v1 are temporary arrays allocated as Complex[mz/2+1].
+  // u2 and v2 are temporary arrays allocated as Complex[(my+1)*mz].
+  // u3 and v3 are temporary arrays allocated as Complex[(mx+1)*my*mz].
+  // The output is returned in f.
+  void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
+                Complex *u2, Complex *v2, Complex *u3, Complex *v3) {
+    xfftpad->backwards(f,u3);
+    xfftpad->backwards(g,v3);
+
+    unsigned int incr=(2*my-1)*mz;
+    unsigned int fstop=(2*mx-1)*incr;
+    for(unsigned int i=0; i < fstop; i += incr)
+      yzconvolve->convolve(f+i,g+i,u1,v1,u2,v2);
+    unsigned int ustop=(mx+1)*incr;
+    for(unsigned int i=0; i < ustop; i += incr)
+      yzconvolve->convolve(u3+i,v3+i,u1,v1,u2,v2);
+    
+    xfftpad->forwards(f,u3);
+  }
+};
+
 // In-place explicitly dealiased Hermitian biconvolution.
 class ExplicitHBiConvolution {
 protected:
