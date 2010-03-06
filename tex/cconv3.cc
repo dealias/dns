@@ -211,9 +211,9 @@ int main(int argc, char* argv[])
   }
 
   if(Direct) {
+    array3<Complex> h(mx,my,mz,align);
     array3<Complex> f(mx,my,mz,align);
     array3<Complex> g(mx,my,mz,align);
-    array3<Complex> h(mx,my,mz,align);
     DirectConvolution3 C(mx,my,mz);
     init(f,g);
     seconds();

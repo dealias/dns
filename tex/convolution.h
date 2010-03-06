@@ -1071,6 +1071,21 @@ inline void HermitianSymmetrize2(unsigned int mx, unsigned int my,
     f[offset-i]=conj(f[offset+i]);
 }
 
+// Enforce Hermiticity by symmetrizing D data along y=0.
+inline void HermitianSymmetrize3(unsigned int mx, unsigned int my,
+                                 unsigned int mz,
+                                 unsigned int xorigin, unsigned int yorigin, 
+                                 Complex *f)
+{
+  for(unsigned int i=1; i < mx; ++i)
+    f[((xorigin-i)*my+yorigin)*mz]=conj(f[((xorigin+i)*my+yorigin)*mz]);
+  
+  for(unsigned int i=0; i < mx; ++i)
+    for(unsigned int j=1; j < my; ++j) {
+      f[((xorigin-i)*my+yorigin-j)*mz]=conj(f[((xorigin+i)*my+(yorigin+j))*mz]);
+    }
+}
+
 // In-place explicitly dealiased 2D Hermitian convolution.
 class ExplicitHConvolution2 {
 protected:
@@ -1459,13 +1474,13 @@ protected:
   ImplicitHConvolution2 *yzconvolve;
 public:  
   // u1 and v1 are temporary arrays of size mz/2+1.
-  // u2 is a temporary array of size (2my-1)*mz.
-  // u3 is a temporary array of size (mx+1)*(2*my-1)*mz.
+  // u2 is a temporary array of size (my+1)*mz.
+  // u3 is a temporary array of size (mx+1)*(2my-1)*mz.
   ImplicitHConvolution3(unsigned int mx, unsigned int my, unsigned int mz,
                        Complex *u1, Complex *v1, Complex *u2, Complex *u3) : 
     mx(mx), my(my), mz(mz) {
-    unsigned int ny=2*my-1;
-    xfftpad=new fft0pad(mx,ny*mz,my*mz,u3);
+    unsigned int nymz=(2*my-1)*mz;
+    xfftpad=new fft0pad(mx,nymz,nymz,u3);
     yzconvolve=new ImplicitHConvolution2(my,mz,u1,v1,u2);
   }
   
@@ -1478,10 +1493,16 @@ public:
   // Complex[(2mx-1)*(2my-1)*mz] (not preserved). 
   // u1 and v1 are temporary arrays allocated as Complex[mz/2+1].
   // u2 and v2 are temporary arrays allocated as Complex[(my+1)*mz].
-  // u3 and v3 are temporary arrays allocated as Complex[(mx+1)*my*mz].
+  // u3 and v3 are temporary arrays allocated as Complex[(mx+1)*(2my-1)*mz].
   // The output is returned in f.
   void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
                 Complex *u2, Complex *v2, Complex *u3, Complex *v3) {
+    unsigned int xorigin=mx-1;
+    unsigned int yorigin=my-1;
+    
+    HermitianSymmetrize3(mx,my,mz,xorigin,yorigin,f);
+    HermitianSymmetrize3(mx,my,mz,xorigin,yorigin,g);
+    
     xfftpad->backwards(f,u3);
     xfftpad->backwards(g,v3);
 

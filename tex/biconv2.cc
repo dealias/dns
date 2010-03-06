@@ -210,10 +210,10 @@ int main(int argc, char* argv[])
   if(Direct) {
     Explicit=0;
     unsigned int nxp=2*mx-1;
+    array2<Complex> h(nxp,my,align);
     array2<Complex> e(nxp,my,align);
     array2<Complex> f(nxp,my,align);
     array2<Complex> g(nxp,my,align);
-    array2<Complex> h(nxp,my,align);
     DirectHBiConvolution2 C(mx,my);
     init(e,f,g);
     seconds();

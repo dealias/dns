@@ -10,7 +10,7 @@ endif
 MAKEDEPEND=$(CFLAGS) -O0 -M -DDEPEND
 LDFLAGS=-lfftw3
 
-FILES=conv cconv conv2 cconv2 cconv3 biconv biconv2
+FILES=conv cconv conv2 cconv2 cconv3 cconv3 biconv biconv2
 EXTRA=fftw++ convolution
 ALL=$(FILES) $(EXTRA)
 
@@ -30,6 +30,9 @@ conv2: conv2.o $(EXTRA:=.o)
 
 cconv2: cconv2.o $(EXTRA:=.o)
 	$(CC) $(CFLAGS) cconv2.o $(EXTRA:=.o) $(LDFLAGS) -o cconv2
+
+conv3: conv3.o $(EXTRA:=.o)
+	$(CC) $(CFLAGS) conv3.o $(EXTRA:=.o) $(LDFLAGS) -o conv3
 
 cconv3: cconv3.o $(EXTRA:=.o)
 	$(CC) $(CFLAGS) cconv3.o $(EXTRA:=.o) $(LDFLAGS) -o cconv3
