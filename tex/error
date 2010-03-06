@@ -79,9 +79,9 @@ for (( i=$start; i<=$stop; i++ ))
 do
     echo $i
     m=$(asy -c "2^$i")
-    echo -e "$m \t $(./$1 -i -N1 -t -m $m | grep error | sed s/error=//)"| cat >> $outdir/error.implicit
+    echo -e "$m \t $(nice -n 19 ./$1 -i -N1 -t -m $m | grep error | sed s/error=//)"| cat >> $outdir/error.implicit
     if [ "$divisor" != "0" ]; then
 	m=$(asy -c "quotient(2^($i+$shift)+$offset,$divisor)")
     fi
-    echo -e "$m \t $(./$1 -e -N1 -t -m $m | grep error | sed s/error=//)" | cat >> $outdir/error.explicit
+    echo -e "$m \t $(nice -n 19 ./$1 -e -N1 -t -m $m | grep error | sed s/error=//)" | cat >> $outdir/error.explicit
 done
