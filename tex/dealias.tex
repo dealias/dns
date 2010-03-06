@@ -81,7 +81,7 @@ nonlinear partial differential equations, such as the Navier--Stokes
 equations, in periodic domains. In some of these applications, notably
 direct numerical pseudospectral simulations of fluid turbulence,
 memory usage is a critical limiting factor, and self-sorting in-place
-multidimensional Fourier transforms \cite{SIAM91} are typically used to
+multidimensional Fourier transforms \cite{Temperton91} are typically used to
 reduce the memory footprint of the required spectral convolutions.
 
 Because the discrete convolution, which produces cyclic output from cyclic
@@ -100,7 +100,7 @@ $6Km\log_2 m$ (using $N=2m$ and three Fourier transforms).
 Another important case in practice is the centered Hermitian~1D convolution,
 $\sum_{p=-m+1}^{m-1} f_p g_{k-p}$, which requires $\fr{9}{2}Km\log_2 m$
 operations.
-Alternatively, phase shift dealiasing \cite{Patterson71,Canuto} can be used
+Alternatively, phase shift dealiasing \cite{Patterson71,Canuto06} can be used
 to cancel out the aliasing errors between two convolutions with two
 different phase shifts. However, this second technique is rarely used in
 practice, since in addition to doubling the memory requirements, it is
@@ -113,7 +113,7 @@ are known {\it a priori\/} to be zero.
 However, it is first worth considering the following response
 provided by Steven G. Johnson to a frequently asked question in the
 community about avoiding this unnecessary
-expense \cite{http://www.fftw.org/pruned.html}:
+expense \cite{fftwprune}:
 \begin{quotation}\label{quote}
 {\it
 The most common case where people seem to want a pruned FFT is for
@@ -158,7 +158,7 @@ usage and speed.
 Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
 compete with an explicitly problem-dependent and architecture-adaptive
-FFT algorithm such as the award-winning FFTW \cite{FFTW} library, which
+FFT algorithm such as the award-winning FFTW \cite{Frigo2005} library, which
 empirically predetermines a near optimal butterfly graph
 %FIXME:REForDEFN
 %Standard term from graph theory/FFT literature 
