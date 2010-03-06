@@ -736,9 +736,9 @@ serially.
 
 As shown in Figure~\ref{timing2c}, the resulting implicit
 2D algorithm dramatically outperforms the explicit version:
-a $1024^2$ implicit complex convolution is $1.83$ times faster.
+a $1024^2$ implicit complex convolution is $1.84$ times faster.
 As one would expect, the gains appear to increase with transform size: a
-$8192^2$ implicit convolution runs $2.04$ times faster than an explicit one. 
+$8192^2$ implicit convolution runs $2.03$ times faster than an explicit one. 
 
 The third sentence of the quote from Steven G. Johnson on
 page~\ref{Johnson} suggests a sensible optimization for
@@ -747,8 +747,8 @@ the backwards and forwards Fourier transforms in the $x$ direction.
 However potential data locality optimizations may be lost
 when a 2D convolution is expressed directly in terms of 1D transforms: as
 illustrated in Figure~\ref{cconv2}, while the $y$-pruned explicit convolution
-runs $1.38$ times faster than a conventional 2D explicit $1024^2$ convolution
-but runs $1.72$ times {\it slower} than a $8192^2$ explicitly dealiased
+runs $1.37$ times faster than a conventional 2D explicit $1024^2$ convolution
+but runs $1.73$ times {\it slower} than a $8192^2$ explicitly dealiased
 convolution. Our implicitly dealised convolution is also subject to these
 same optimization losses, but the savings due to implicit padding, in-place
 subtransforms, the neglect of high-level bit reversal, and the immediate
