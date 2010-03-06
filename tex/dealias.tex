@@ -735,7 +735,7 @@ In two dimensions, the Fourier-centered Hermiticity condition appears as
 $U_{-k,-\ell}=\conj{U_{k,\ell}}$. 
 This symmetry is exploited in the centered Hermitian convolution
 algorithm described in Function~\ref{conv2}. As shown in
-Figure~\ref{timings2c}, implicit padding again yields a dramatic improvement
+Figure~\ref{timing2c}, implicit padding again yields a dramatic improvement
 in speed.
 
 When $m_y$ is even, the memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian
@@ -1165,16 +1165,8 @@ this work.
 %Use out-of-place Fourier transforms where possible.
 %padding to smooth data vs. chirp-z algorithm
 
-
 \bibliography{refs}
 \end{document}
-
-%Self-sorting in-place fast fourier transforms
-%Source 	SIAM Journal on Scientific and Statistical Computing archive
-%Volume 12 ,  Issue 4  (July 1991) table of contents
-%Pages: 808 - 823  
-%Year of Publication: 1991
-%ISSN:0196-5204 
 
 % LocalWords:  dealiasing dealias hyperconvolutions Hermitian fftw FFT priori
 % LocalWords:  hyperconvolution nonperiodic FFTs noncentered subtransforms pre
