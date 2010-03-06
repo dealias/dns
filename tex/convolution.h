@@ -87,7 +87,7 @@ public:
 // In-place implicitly dealiased complex convolution.
 class ImplicitConvolution {
 protected:
-  unsigned int n,m;
+  unsigned int m;
   unsigned int s;
   fft1d *Backwards,*Forwards;
   fft1d *Backwardso,*Forwardso;
@@ -95,14 +95,14 @@ protected:
 public:  
   
   // u and v are distinct temporary arrays each of size m.
-  ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : n(2*m), m(m) {
+  ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : m(m) {
     Backwards=new fft1d(m,1,u);
     Forwards=new fft1d(m,-1,u);
     
     Backwardso=new fft1d(m,1,u,v);
     Forwardso=new fft1d(m,-1,u,v);
     
-    s=BuildZeta(n,m,ZetaH,ZetaL);
+    s=BuildZeta(2*m,m,ZetaH,ZetaL);
   }
   
   ~ImplicitConvolution() {
@@ -183,7 +183,7 @@ public:
     }
     Forwardso->fft(v,f);
     
-    double ninv=1.0/n;
+    double ninv=0.5/m;
 #ifdef __SSE2__      
     const Complex ninv2(ninv,ninv);
     Vec Ninv=LOAD(&ninv2);
@@ -283,7 +283,7 @@ public:
 // In-place implicitly dealiased Hermitian convolution.
 class ImplicitHConvolution {
 protected:
-  unsigned int n,m;
+  unsigned int m;
   unsigned int c;
   unsigned int s;
   rcfft1d *rc, *rco;
@@ -293,7 +293,7 @@ public:
   
   // u and v must be each allocated as m/2+1 Complex values.
   ImplicitHConvolution(unsigned int m, Complex *u, Complex *v) : 
-    n(3*m), m(m), c(m/2) {
+    m(m), c(m/2) {
 
     if(m % 2) {
       std::cerr << "Only even-sized Hermitian convolutions are implemented!" 
@@ -308,7 +308,7 @@ public:
     rco=new rcfft1d(m,U,v);
     cro=new crfft1d(m,v,U);
     
-    s=BuildZeta(n,c,ZetaH,ZetaL);
+    s=BuildZeta(3*m,c,ZetaH,ZetaL);
   }
   
   ~ImplicitHConvolution() {
@@ -486,7 +486,7 @@ public:
       G[i] *= V[i];
     rco->fft(G,v);
 
-    double ninv=1.0/n;
+    double ninv=1.0/(3.0*m);
     f[0]=(f[0].re+v[0].re+u[0].re)*ninv;
     Complex *fm=f+m;
     stop=s;
@@ -591,7 +591,7 @@ public:
 //   stride is the spacing between the elements of each Complex vector.
 //
 class fftpad {
-  unsigned int n,m;
+  unsigned int m;
   unsigned int M;
   unsigned int stride;
   unsigned int dist;
@@ -601,11 +601,11 @@ class fftpad {
   Complex *ZetaH, *ZetaL;
 public:  
   fftpad(unsigned int m, unsigned int M,
-         unsigned int stride, Complex *f) : n(2*m), m(m), M(M), stride(stride) {
+         unsigned int stride, Complex *f) : m(m), M(M), stride(stride) {
     Backwards=new mfft1d(m,1,M,stride,1,f);
     Forwards=new mfft1d(m,-1,M,stride,1,f);
     
-    s=BuildZeta(n,m,ZetaH,ZetaL);
+    s=BuildZeta(2*m,m,ZetaH,ZetaL);
   }
   
   ~fftpad() {
@@ -658,7 +658,7 @@ public:
     Forwards->fft(f);
     Forwards->fft(u);
 
-    double ninv=1.0/n;
+    double ninv=0.5/m;
 #ifdef __SSE2__
     const Complex ninv2(ninv,ninv);
     Vec Ninv=LOAD(&ninv2);
@@ -716,7 +716,7 @@ public:
 //   stride is the spacing between the elements of each Complex vector.
 //
 class fft0pad {
-  unsigned int n,m;
+  unsigned int m;
   unsigned int M;
   unsigned int s;
   unsigned int stride;
@@ -725,11 +725,11 @@ class fft0pad {
   Complex *ZetaH, *ZetaL;
 public:  
   fft0pad(unsigned int m, unsigned int M, unsigned int stride, Complex *u)
-    : n(3*m), m(m), M(M), stride(stride) {
+    : m(m), M(M), stride(stride) {
     Backwards=new mfft1d(m,1,M,stride,1,u);
     Forwards=new mfft1d(m,-1,M,stride,1,u);
     
-    s=BuildZeta(n,m,ZetaH,ZetaL);
+    s=BuildZeta(3*m,m,ZetaH,ZetaL);
   }
   
   ~fft0pad() {
@@ -846,7 +846,7 @@ public:
     Forwards->fft(f);
     Forwards->fft(u);
 
-    double ninv=1.0/n;
+    double ninv=1.0/(3.0*m);
     for(unsigned int i=0; i < M; ++i)
       umstride[i]=(umstride[i]+f[i]+u[i])*ninv;
 #ifdef __SSE2__      
@@ -1186,7 +1186,6 @@ public:
 // In-place implicitly dealiased 2D Hermitian convolution.
 class ImplicitHConvolution2 {
 protected:
-  unsigned int nx,ny;
   unsigned int mx,my;
   fft0pad *xfftpad;
   ImplicitHConvolution *yconvolve;
@@ -1384,7 +1383,7 @@ public:
   }
 };
 
-// In-place implicitly dealiased 2D complex convolution.
+// In-place implicitly dealiased 3D complex convolution.
 class ImplicitConvolution3 {
 protected:
   unsigned int mx,my,mz;
@@ -1505,7 +1504,7 @@ public:
 // In-place implicitly dealiased Hermitian biconvolution.
 class ImplicitHBiConvolution {
 protected:
-  unsigned int n,m;
+  unsigned int m;
   unsigned int s;
   rcfft1d *rc, *rco;
   crfft1d *cr, *cro;
@@ -1514,7 +1513,7 @@ public:
   
   // u and v are distinct temporary arrays each of size m+1.
   ImplicitHBiConvolution(unsigned int m, Complex *u, Complex *v) : 
-    n(4*m), m(m) {
+    m(m) {
     unsigned int twom=2*m;
     
     rc=new rcfft1d(twom,u);
@@ -1524,7 +1523,7 @@ public:
     rco=new rcfft1d(twom,U,v);
     cro=new crfft1d(twom,v,U);
     
-    s=BuildZeta(n,m,ZetaH,ZetaL);
+    s=BuildZeta(4*m,m,ZetaH,ZetaL);
   }
   
   ~ImplicitHBiConvolution() {
@@ -1610,7 +1609,7 @@ public:
       V[i] *= F[i]*G[i];
     rco->fft(V,f);
     
-    double ninv=1.0/n;
+    double ninv=0.25/m;
 #ifdef __SSE2__      
     const Complex ninv2(ninv,ninv);
     Vec Ninv=LOAD(&ninv2);
@@ -1685,7 +1684,7 @@ public:
 //   stride is the spacing between the elements of each Complex vector.
 //
 class fft0bipad {
-  unsigned int n,m;
+  unsigned int m;
   unsigned int M;
   unsigned int stride;
   unsigned int s;
@@ -1694,12 +1693,12 @@ class fft0bipad {
   Complex *ZetaH, *ZetaL;
 public:  
   fft0bipad(unsigned int m, unsigned int M, unsigned int stride,
-            Complex *f) : n(4*m), m(m), M(M), stride(stride) {
+            Complex *f) : m(m), M(M), stride(stride) {
     unsigned int twom=2*m;
     Backwards=new mfft1d(twom,1,M,stride,1,f);
     Forwards=new mfft1d(twom,-1,M,stride,1,f);
     
-    s=BuildZeta(n,twom,ZetaH,ZetaL);
+    s=BuildZeta(4*m,twom,ZetaH,ZetaL);
   }
   
   ~fft0bipad() {
@@ -1760,7 +1759,7 @@ public:
     Forwards->fft(f);
     Forwards->fft(u);
 
-    double ninv=1.0/n;
+    double ninv=0.25/m;
 #ifdef __SSE2__
     const Complex ninv2(ninv,ninv);
     Vec Ninv=LOAD(&ninv2);
@@ -1925,7 +1924,6 @@ public:
 // In-place implicitly dealiased 2D Hermitian biconvolution.
 class ImplicitHBiConvolution2 {
 protected:
-  unsigned int nx,ny;
   unsigned int mx,my;
   fft0bipad *xfftpad;
   ImplicitHBiConvolution *yconvolve;
