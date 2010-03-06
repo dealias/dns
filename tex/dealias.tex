@@ -283,7 +283,7 @@ In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 \SetKwData{xW}{W}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.52\linewidth}
+\begin{minipage}{0.49\linewidth}
 \begin{procedure}[H]
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
@@ -296,9 +296,6 @@ In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 $2m$-padded backwards Fourier transform values of a vector
 {\sf f} of length $m$ in {\sf f} and an auxiliary vector~{\sf u} of length $m$.}\label{fftpadBackwards}
 \end{procedure}
-%
-\end{minipage}
-\begin{minipage}{0.48\linewidth}
 \begin{function}[H]
   \KwIn{vector \xf, vector \xu}
   \KwOut{vector \xf}
@@ -308,14 +305,14 @@ $2m$-padded backwards Fourier transform values of a vector
     $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k}\xu[k]$\;
   }
   \Return f/(2m)\;
-  \caption{fftpadForwards(vector {\sf f}, vector {\sf u}) returns the
-inverse of fftpadBackwards(vector {\sf f}, vector {\sf
+  \caption{fftpadForwards(vector~{\sf f}, vector~{\sf u}) returns the
+inverse of fftpadBackwards(vector~{\sf f}, vector~{\sf
 u}).}\label{fftpadForwards} 
 \end{function}
+%
 \end{minipage}
-\end{figure}
-
-\begin{function}[htbp]
+\begin{minipage}{0.49\linewidth}
+\begin{function}[H]
   \KwIn{vector \xf, vector \xg}
   \KwOut{vector \xf}
   \For{$k=0$ \KwTo $m-1$}{
@@ -342,9 +339,11 @@ an in-place implicitly dealiased convolution of two complex vectors {\sf f}
 and {\sf g} using two temporary vectors {\sf u} and {\sf v}, each of
 length~$m$.}\label{cconv}
 \end{function}
+\end{minipage}
+\end{figure}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 %On orcinus, using N=100000000.
 \includegraphics{timing1c}
@@ -355,7 +354,7 @@ identical.}
 \label{timing1c}
 \end{center}
 \end{minipage}
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{error1c}
 \caption{Normalized $L^2$ error for explicitly and implicitly
@@ -650,6 +649,27 @@ unpadded length $(2m-1)$.}
 \end{minipage}
 \end{figure}
 
+\begin{figure}[htbp]
+\begin{minipage}{0.5\linewidth}
+\begin{center}
+\includegraphics{error1r}
+\caption{Normalized $L^2$ error for explicitly and implicitly
+dealiased complex in-place 1D convolutions of two vectors of
+unpadded length $m$.}
+\label{error1r}
+\end{center}
+\end{minipage}
+%
+\begin{minipage}{0.5\linewidth}
+\begin{center}
+\includegraphics{timing2c}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased complex in-place 2D convolutions of two matrices of
+unpadded size $m\times m$.}
+\label{timing2c}
+\end{center}
+\end{minipage}
+\end{figure}
 
 \begin{comment}
 $$
@@ -804,16 +824,6 @@ m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices
 \begin{figure}[htbp]
 \begin{minipage}{0.5\linewidth}
 \begin{center}
-\includegraphics{timing2c}
-\caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 2D convolutions of two matrices of
-unpadded size $m\times m$.}
-\label{timing2c}
-\end{center}
-\end{minipage}
-%
-\begin{minipage}{0.5\linewidth}
-\begin{center}
 \includegraphics{timing2r}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased centered Hermitian in-place 2D convolutions of two matrices of
@@ -821,6 +831,16 @@ unpadded size $(2m-1)\times m$.}
 \label{timing2r}
 \end{center}
 \end{minipage}
+\begin{minipage}{0.5\linewidth}
+\begin{center}
+\includegraphics{timing3c}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased complex in-place 3D convolutions of two matrices of
+unpadded size $m\times m\times m$.}
+\label{timing3c}
+\end{center}
+\end{minipage}
+%
 \end{figure}
 
 %TODO: Improve, show column convolutions, strides, dimensions, padding,
@@ -874,16 +894,6 @@ $m_x\times m_y\times m_z$ matrices ${\sf U}$ and ${\sf V}$,
 $m_y\times m_z$ matrices ${\sf u}_2$ and ${\sf v}_2$,
 and vectors ${\sf u}_1$ and ${\sf v}_1$ of length~$m_z$.}\label{cconv3}
 \end{function}
-
-\begin{figure}[htbp]
-\begin{center}
-\includegraphics{timing3c}
-\caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 3D convolutions of two matrices of
-unpadded size $m\times m\times m$.}
-\label{timing3c}
-\end{center}
-\end{figure}
 
 \section{Implicitly dealiased biconvolutions}\label{hyperconv}
 In this section, we show that implicit padding is well suited to
