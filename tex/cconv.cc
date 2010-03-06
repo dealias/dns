@@ -14,7 +14,7 @@ using namespace std;
 unsigned int N0=10000000;
 unsigned int N=0;
   
-const Complex A(cos(1.0),sin(2.0));
+const Complex A(cbrt(3.0),cbrt(5.0));
 const double E=exp(1.0);
 const Complex I(0.0,1.0);
 
@@ -41,8 +41,8 @@ inline double seconds()
 inline void init(Complex *f, Complex *g) 
 {
   if(Test)
-    for(unsigned int k=0; k < m; k++) f[k]=g[k]=pow(E,k*I);
-//    for(unsigned int k=0; k < m; k++) f[k]=g[k]=k*A;
+    for(unsigned int k=0; k < m; k++) f[k]=g[k]=A*pow(E,k*I);
+//    for(unsigned int k=0; k < m; k++) f[k]=g[k]=A*k;
   else {
     for(unsigned int k=0; k < m; k++) f[k]=Complex(3.0,2.0);
     for(unsigned int k=0; k < m; k++) g[k]=Complex(5.0,3.0);
@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
     double norm=0.0;
     for(unsigned long long k=0; k < m; k++) {
       // exact solution for test case.
-      h[k]=(k+1)*pow(E,k*I);
+      h[k]=A*A*(k+1)*pow(E,k*I);
 //      h[k]=A*A*(k*(k+1)/2.0*(k-(2*k+1)/3.0));
       error += abs2(h0[k]-h[k]);
       norm += abs2(h[k]);
@@ -206,4 +206,3 @@ int main(int argc, char* argv[])
   FFTWdelete(g);
   FFTWdelete(f);
 }
-

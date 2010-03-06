@@ -22,7 +22,7 @@ const Complex zeta3(-0.5,hsqrt3);
 unsigned int BuildZeta(unsigned int n, unsigned int m,
                        Complex *&ZetaH, Complex *&ZetaL)
 {
-  unsigned int s=sqrt(m);
+  unsigned int s=(int) sqrt(m);
   unsigned int t=m/s;
   if(s*t < m) ++t;
   static const double twopi=2.0*M_PI;
