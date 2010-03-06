@@ -113,7 +113,7 @@ However, it is first worth considering the following response
 provided by Steven G. Johnson to a frequently asked question in the
 community about avoiding this unnecessary
 expense \cite{fftwprune}:
-\begin{quotation}\label{quote}
+\begin{quotation}\label{Johnsnon}
 {\it
 The most common case where people seem to want a pruned FFT is for
 zero-padded convolutions, where roughly 50\% of your inputs are zero (to
@@ -568,10 +568,10 @@ obtained with the substitution $k'=c-k$. One can omit the factors of
 $(-1)^j$ since they will cancel during the real term-by-term multiplication
 of the two transformed input vectors.
 
-The computation times for an implicitly dealiased Hermitian
-convolution are compared with those for an explicitly padded convolution in
-Figure~\ref{timing1r}. For each algorithm, we benchmark only those vector
-lengths that yield maximum performance.
+As seen in Figure~\ref{timing1r}, the efficiency of the resulting implicitly
+dealiased Hermitian convolution is comparable to an explicit implementation.
+For each algorithm, we benchmark only those vector lengths that yield
+maximum performance.
 
 To check the accuracy of our implementation, we used the test case
 $f_k=g_k=A e^{ik}$ with $A=\root3\of 3$, noting that Hermitian symmetry
@@ -722,25 +722,24 @@ serially.
 
 As shown in Figure~\ref{timing2c}, the resulting implicit
 2D algorithm dramatically outperforms the explicit version:
-a $1024^2$ implicit complex convolution is $1.92$ times faster.
-The gains appear to increase with transform size: a $8192^2$
-%TODO: update timings...
-implicit convolution runs in $48\%$ of the time for an explicit one. 
+a $1024^2$ implicit complex convolution is $1.83$ times faster.
+As one would expect, the gains appear to increase with transform size: a
+$8192^2$ implicit convolution runs $2.04$ times faster than an explicit one. 
 
 The third sentence of the quote from Steven G. Johnson on
-page~\ref{quote} suggests a very reasonable optimization for
+page~\ref{Johnson} suggests a sensible optimization for
 explicitly padded 2D convolutions: one can omit for $m \le y < 2m$
 the backwards and forwards Fourier transforms in the $x$ direction.
-However there are other optimization possibilities lost in directly
-expressing a 2D convolution in terms of 1D transforms: as illustrated
-in Figure~\ref{cconv2}, while the $y$-pruned explicit convolution
-takes 73\% the time of a conventional 2D explicit $1024^2$ convolution
-but takes $171\%$ the time of a $8192^2$
-convolution. Our implicitly dealised convolution is also subject to
-these same losses, but the savings due to implicit padding,
-in-place subtransforms, neglect of high-level bit reversal, and
-immediate convolution of constant $x$ columns (while perhaps still in
-cache) outweigh these losses.
+However potential data locality optimizations may be lost
+when a 2D convolution is expressed directly in terms of 1D transforms: as
+illustrated in Figure~\ref{cconv2}, while the $y$-pruned explicit convolution
+runs $1.38$ times faster than a conventional 2D explicit $1024^2$ convolution
+but runs $1.72$ times {\it slower} than a $8192^2$ explicitly dealiased
+convolution. Our implicitly dealised convolution is also subject to these
+same optimization losses, but the savings due to implicit padding, in-place
+subtransforms, the neglect of high-level bit reversal, and the immediate
+convolution of constant $x$ columns (while perhaps still in cache) outweigh
+these losses.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
 of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
@@ -753,13 +752,14 @@ In two dimensions, the Fourier-centered Hermiticity condition appears as
 $U_{-k,-\ell}=\conj{U_{k,\ell}}$. 
 This symmetry is exploited in the centered Hermitian convolution
 algorithm described in Function~\ref{conv2}. As shown in
-Figure~\ref{timing2c}, implicit padding again yields a dramatic improvement
+Figure~\ref{timing2r}, implicit padding again yields a dramatic improvement
 in speed.
 
-When $m_y$ is even, the memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian
-convolution is $2(2m_x-1)m_y+2(m_x+1)m_y+2(m_y/2+1)=6m_xm_y+m_y+2$ complex words,
-compared with a minimum of $2(3m_x-2)(3m_y/2)=9m_xm_y-6m_y$ complex words for an explicit
-transform.
+When $m_y$ is even, the memory usage for an implicitly dealiased
+$(2m_x-1)\times (2m_y-1)$ Hermitian convolution is
+$2(2m_x-1)m_y+2(m_x+1)m_y+2(m_y/2+1)=6m_xm_y+m_y+2$ complex words, compared
+with a minimum of $2(3m_x-2)(3m_y/2)=9m_xm_y-6m_y$ complex words required
+for an explicitly dealiased convolution.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.5\linewidth}
@@ -850,16 +850,18 @@ unpadded size $m\times m\times m$.}
 The decoupling of the 2D work arrays in Procedure~\ref{cconv2}
 also allows us to construct the efficient 3D implicit complex convolution
 in Procedure~\ref{cconv3}. As shown in Figure~\ref{timing3c}, an implicit
-$256^3$ convolution ran $**$ times faster than the explicit version, with
-an $xz$-pruned version running $**$ times faster. The memory usage of an
+$256^3$ convolution ran $1.90$ times faster than the explicit version, with
+an $xz$-pruned version running $1.18$ times faster. The memory usage of an
 implicitly padded 3D $m_x\times m_y\times m_Z$ convolution is
-$4m_xm_ym_z+2m_y m_z+2m_z$ complex words, in comparison to the
-$16m_xm_ym_z$ complex words required by an explicit convolution.
+$4m_xm_ym_z+2m_y m_z+2m_z$ complex words, much less than the
+$16m_xm_ym_z$ complex words required by an explicit 
+convolution based on power-of-two transforms.
 
-An implicit Hermitian 3D convolution was implemented in an analogous
-manner, yielding a memory usage 
-asymptotic to $4/9$ of the explicit
-requirement.
+A $(2m_x-1)\times (2m_y-1)\times (2m_1-1)$ implicit Hermitian 3D
+convolution was also implemented in an analogous manner. It required
+$6m_x(2m_y-1)m_z+2(m_y+1)*mz+2(mz/2+1)=12m_xm_ym_z-6m_xm_z+2m_ym_z+2mz+2$
+complex words, in comparison with the usual $27m_xm_ym_z$ complex words
+needed for explicit padding with power-of-two transforms.
 
 \begin{function}[htbp]
   \KwIn{matrix \xf, matrix \xg}
@@ -1002,15 +1004,14 @@ inverse of fft0bipadBackwards(\hbox{vector~{\sf f}, vector~{\sf u}}).}
 Just as for convolutions, the performance and memory benefits of
 evaluating implicitly padded hyperconvolutions manifest themselves only in
 higher dimensions. For example, in Figure~\ref{timing2b}, we observe 
-that an implicit $4096^2$ Hermitian biconvolution requires $43\%$
-of the computation time required for an explicit biconvolution.
+that an implicit $4096^2$ Hermitian biconvolution runs $2.30$ times
+faster than an explicit biconvolution.
 The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian biconvolution,
 is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
 compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
 (using power-of-two transforms) for an explicit biconvolution. In contrast, a
-$4096^2$ $y$-pruned biconvolution requires $68\%$ of the
-computation time but the same amount of storage as an explicitly padded
-biconvolution.
+$4096^2$ $y$-pruned biconvolution requires the same amount of storage as, but
+runs $1.48$ times faster than, an explicitly padded biconvolution.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.445\linewidth}
@@ -1150,12 +1151,14 @@ that maximize performance.
 
 On the other hand, for those applications where the size of the convolution
 is dictated by external criteria, implicit padding effectively expands the
-available set of efficient convolutions sizes to include integral powers of
-$2$, a case of practical significance. The existence of implicit convolutions in
-fact nullifies the argument of Canuto...
-% Address slightly misleading implication of Canuto page 136
-% (dealiased.pdf: p.20) regarding power of 2 transforms (depends on
-% application).
+available set of efficient convolution sizes to include integral powers of
+$2$, a case of practical significance.
+For example, Canuto \etal\ \cite[p.136]{Canuto06} argues that if only a
+power-of-two transform is available for a centered convolution, zero
+padding a vector of length $m=2^k$  would require a transform size of $2m$,
+yielding a slightly higher operation count of $6Km\log_2(2m)$ than the $6K
+m\log_2m$ operations required by phase-shift dealiasing. The availability
+of implicit convolutions now makes this argument moot.
 
 Even in one dimension, since implicit padding can be implemented
 competitively, there are in practice other benefits, such as the 
@@ -1165,8 +1168,8 @@ Having a prepackaged dealiased convolution that internally takes care of
 dealiasing is also a major convenience for the user. For example,
 writing a pseudospectral code for nonlinear partial differential
 equations a relatively straightforward exercise using the 
-open source {\tt fftw++} package that contains the algorithms developed in
-this work.
+open source {\tt fftw++} package that contains highly optimized
+implementations of the algorithms developed in this work.
 
 % decoupling & reuse helps keep data within cache
 
