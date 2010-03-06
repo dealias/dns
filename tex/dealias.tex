@@ -43,7 +43,7 @@
 \maketitle
 
 \begin{abstract}
-An algorithm is described for calculating dealiased linear convolution sums
+Algorithms are developed for calculating dealiased linear convolution sums
 without the expense of conventional zero-padding or phase-shift
 techniques. For one-dimensional in-place convolutions, the memory
 requirements are identical with the zero-padding technique, with the important
@@ -64,8 +64,7 @@ pseudospectral method, in-place transform, bit reversal
 \end{keywords}
 
 \begin{AMS}
-65R99,65T50
-%15A15, 15A09, 15A23
+65R99, 65T50
 \end{AMS}
 
 \pagestyle{myheadings}
@@ -242,7 +241,7 @@ The transforms described by~\Eqs{cconv1backwards} and~\hEq{cconv1forwards}
 are implemented as Procedure~\ref{fftpadBackwards} and
 Function~\ref{fftpadForwards}.
 These algorithms are combined in Function~\ref{cconv} to 
-compute a dealiased convolution of (unpadded) length $m$ using
+compute a dealiased convolution of unpadded length $m$ using
 two arrays of size~$m$ as input vectors instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
@@ -316,9 +315,7 @@ u}).}\label{fftpadForwards}
 \end{minipage}
 \end{figure}
 
-\begin{figure}[htbp]
-\begin{minipage}{0.5\linewidth}
-\begin{function}[H]
+\begin{function}[htbp]
   \KwIn{vector \xf, vector \xg}
   \KwOut{vector \xf}
   \For{$k=0$ \KwTo $m-1$}{
@@ -345,17 +342,26 @@ an in-place implicitly dealiased convolution of two complex vectors {\sf f}
 and {\sf g} using two temporary vectors {\sf u} and {\sf v}, each of
 length~$m$.}\label{cconv}
 \end{function}
-\end{minipage}
-%
+
+\begin{figure}[htbp]
 \begin{minipage}{0.5\linewidth}
 \begin{center}
 %On orcinus, using N=100000000.
 \includegraphics{timing1c}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 1D convolutions of two vectors of
-(unpadded) length $m$. The storage requirements of the two algorithms are
+unpadded length $m$. The storage requirements of the two algorithms are
 identical.}
 \label{timing1c}
+\end{center}
+\end{minipage}
+\begin{minipage}{0.5\linewidth}
+\begin{center}
+\includegraphics{error1c}
+\caption{Normalized $L^2$ error for explicitly and implicitly
+dealiased complex in-place 1D convolutions of two vectors of
+unpadded length $m$.}
+\label{error1c}
 \end{center}
 \end{minipage}
 \end{figure}
@@ -370,6 +376,8 @@ the optimization options {\tt -ansi-alias -malign-double -fp-model fast=2}
 on a 64-bit 3GHz Intel E5450 Xenon processor with 6MB cache. Like the FFTW
 library, our algorithm was vectorized for this architecture with
 specialized single-instruction multiple-data (SIMD) code.
+
+In figure~\ref{error1}
 
 \subsection{Implicitly dealiased centered Fourier transform}\label{fft0}
 A basic building block for constructing multidimensional pseudospectral
@@ -638,7 +646,7 @@ $c+1$.}\label{build}
 \includegraphics{timing1r}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased centered Hermitian in-place 1D convolutions of two vectors of
-(unpadded) length $(2m-1)$.}
+unpadded length $(2m-1)$.}
 \label{timing1r}
 \end{center}
 \end{minipage}
@@ -801,7 +809,7 @@ m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices
 \includegraphics{timing2c}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 2D convolutions of two matrices of
-(unpadded) size $m\times m$.}
+unpadded size $m\times m$.}
 \label{timing2c}
 \end{center}
 \end{minipage}
@@ -811,7 +819,7 @@ dealiased complex in-place 2D convolutions of two matrices of
 \includegraphics{timing2r}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased centered Hermitian in-place 2D convolutions of two matrices of
-(unpadded) size $(2m-1)\times m$.}
+unpadded size $(2m-1)\times m$.}
 \label{timing2r}
 \end{center}
 \end{minipage}
@@ -874,7 +882,7 @@ and vectors ${\sf u}_1$ and ${\sf v}_1$ of length~$m_z$.}\label{cconv3}
 \includegraphics{timing3c}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 3D convolutions of two matrices of
-(unpadded) size $m\times m\times m$.}
+unpadded size $m\times m\times m$.}
 \label{timing3c}
 \end{center}
 \end{figure}
@@ -1073,7 +1081,7 @@ vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 \includegraphics{timing1b}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 1D biconvolutions of two vectors of
-(unpadded) length $m$.}
+unpadded length $m$.}
 \label{timing1b}
 \end{center}
 \end{minipage}
@@ -1083,7 +1091,7 @@ dealiased complex in-place 1D biconvolutions of two vectors of
 \includegraphics{timing2b}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased centered Hermitian in-place 2D biconvolutions of two matrices of
-(unpadded) size $(2m-1)\times m$.}
+unpadded size $(2m-1)\times m$.}
 \label{timing2b}
 \end{center}
 \end{minipage}
@@ -1127,10 +1135,12 @@ In this work we have developed an efficient method for avoiding explicit zero
 padding in multidimensional convolutions, saving both memory and
 computation time.
 
-Asymptotically, as $m_x\goesto\infty$, we have seen that a 2D implicit
-complex convolution requires half the memory required by zero padding,
-whereas a 3D implicit convolution requires one quarter of the memory
-required by an explicit version.
+Asymptotically, as $m_x\goesto\infty$, we have seen that an implicit
+complex convolution requires one-half of the memory required for zero
+padding in two dimensions and one-quarter in three dimensions.
+required by an explicit version. In the centered Hermitian case, the memory
+use is $2/3$ of the amount used for an explicit convolution in two dimensions
+and $4/9$ in three dimensions.
 
 For the intended application to partial differential
 equations, there is flexibility in the choice of the exact convolution
