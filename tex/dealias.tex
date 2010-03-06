@@ -258,8 +258,8 @@ $k=as+b$ with $s=\floor{\sqrt m}$, $a=0,1,\ldots,\ceil{m/s}-1$ and
 $b=0,1,\ldots,s-1$. Since these tables require only $\O(2\sqrt{m})$ complex
 words of storage, we did not include them in our estimates of memory use.
 We also investigated the stable recursion described by
-Buneman \cite{Buneman87}. Here, the singularity at angle $pi/2$ was removed by
-replacing $\sec{\pi/2}$ with $x=1/10\e$ and $\sin 4\pi$ with $5x$,
+Buneman \cite{Buneman87}. Here, the singularity at angle $\pi/2$ was removed by
+replacing $\sec{\pi/2}$ with $x=1/(10\e)$ and $\sin 4\pi$ with $5x$,
 $\sin{2\pi}$ and $\sin{\pi}$ with $x$. While the resulting scheme has the 
 same average accuracy as the FFT itself \cite{}, 
 we found that the two-table method could be implemented more efficiently
