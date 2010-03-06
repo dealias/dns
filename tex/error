@@ -1,7 +1,7 @@
 #!/bin/bash
 
 start=6
-stop=13
+stop=20
 
 if [ "$1" == "" ]; then
     echo Usage: $0 "["conv\|cconv\|conv2\|cconv2\|biconv\|biconv2\|cconv3"]" "["start"]" "["stop"]"
