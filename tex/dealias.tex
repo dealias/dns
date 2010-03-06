@@ -252,11 +252,18 @@ In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 (vector) multiply.
 
 The factors $\zeta_N^k$ in \Eqs{cconv1backwards} and~\hEq{cconv1forwards}
-were calculated accurately with a single complex multiply, using two short
+can be calculated accurately with a single complex multiply, using two short
 precomputed tables $H_a=\zeta_N^{as}$ and $L_b=\zeta_N^b$, where
-$s=\floor{\sqrt m}$ and $n=as+b$, $a=0,1,\ldots,\ceil{m/s}-1$ and
+$k=as+b$ with $s=\floor{\sqrt m}$, $a=0,1,\ldots,\ceil{m/s}-1$ and
 $b=0,1,\ldots,s-1$. Since these tables require only $\O(2\sqrt{m})$ complex
 words of storage, we did not include them in our estimates of memory use.
+We also investigated the stable recursion described by
+Buneman \cite{Buneman87}. Here, the singularity at angle $pi/2$ was removed by
+replacing $\sec{\pi/2}$ with $x=1/10\e$ and $\sin 4\pi$ with $5x$,
+$\sin{2\pi}$ and $\sin{\pi}$ with $x$. While the resulting scheme has the 
+same average accuracy as the FFT itself \cite{}, 
+we found that the two-table method could be implemented more efficiently
+\cite{Johnson09}.
 
 Referring to the computation times shown in Figure~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
