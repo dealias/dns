@@ -8,9 +8,8 @@ real[] mp,p,mu,u,mP,P;
 string pname=getstring("program name");
 string dir;
 if(pname == "conv") dir="timings1r/error.";
-if(pname == "conv2") dir="timings2r/error.";
-if(pname == "cconv") dir="timings1c/error.";
-if(pname == "cconv2") dir="timings2c/error.";
+else if(pname == "cconv") dir="timings1c/error.";
+else abort("error test not implemented for "+pname);
 
 file fin=input(dir+"explicit").line();
 real[][] a=fin.dimension(0,0);
