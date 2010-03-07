@@ -32,6 +32,8 @@
 \def\Re{\mathop{\rm Re}\nolimits}
 \def\Im{\mathop{\rm Im}\nolimits}
 
+\setlength{\algomargin}{1em}
+
 \begin{document}
 
 \title{Efficient Dealiased Convolutions without Padding}
@@ -294,7 +296,6 @@ In Fig.~\ref{error1c} we compare the normalized $L^2$ error
 $\sqrt{\sum_{k=0}^{m-1}\Abs{h_k-H_k}^2}/\sqrt{\sum_{k=0}^{m-1} \Abs{H_k}^2}$
 for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
 
-\setlength{\algomargin}{0.6em}
 \SetAlCapSkip{3pt}
 \SetAlgoCaptionLayout{textit}
 \def\fft{{\tt fft}}
@@ -656,9 +657,7 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
 {\sf v} of length $c+1$.}\label{conv}
 \end{function}
 
-\begin{figure}[htbp]
-\begin{minipage}{0.51\linewidth}
-\begin{procedure}[H]
+\begin{procedure}[htbp]
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
   $\xu[0] \leftarrow \xf[0]$\;
@@ -679,35 +678,25 @@ required for Procedure~\ref{conv} from an unpadded vector {\sf f} of length
 $2c$ into {\sf f} and an auxiliary vector~{\sf u} of length
 $c+1$.}\label{build}
 \end{procedure}
-\end{minipage}
-%
+
+
+\begin{figure}[htbp]
 \begin{minipage}{0.49\linewidth}
 \begin{center}
 %On orcinus, using N=100000000.
 \includegraphics{timing1r}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 1D convolutions of length $(2m-1)$.}
+dealiased centered Hermitian in-place 1D convolutions of length $2m-1$.}
 \label{timing1r}
 \end{center}
 \end{minipage}
-\end{figure}
-
-\begin{figure}[htbp]
+%
 \begin{minipage}{0.5\linewidth}
 \begin{center}
 \includegraphics{error1r}
 \caption{Normalized $L^2$ error for explicitly and implicitly
 dealiased centered Hermitian in-place 1D convolutions of length $m$.}
 \label{error1r}
-\end{center}
-\end{minipage}
-%
-\begin{minipage}{0.5\linewidth}
-\begin{center}
-\includegraphics{timing2c}
-\caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 2D convolutions of size $m^2$.}
-\label{timing2c}
 \end{center}
 \end{minipage}
 \end{figure}
@@ -771,7 +760,7 @@ explicitly padded 2D convolutions: one can omit for $m \le y < 2m$
 the backwards and forwards Fourier transforms in the $x$ direction.
 However potential data locality optimizations may be lost
 when a 2D convolution is expressed directly in terms of 1D transforms: as
-illustrated in Fig.~\ref{cconv2}, while a $1024^2$ $y$-pruned explicit
+observed in Fig.~\ref{timing2c}, while a $1024^2$ $y$-pruned explicit
 convolution is $1.37$ times faster than a conventional explicit
 implementation, the pruned method becomes $1.73$ times {\it slower} for the
 $8192^2$ case. Our implicitly dealised convolution is also subject
@@ -853,6 +842,14 @@ m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices
 \end{figure}
 
 \begin{figure}[htbp]
+\begin{minipage}{0.5\linewidth}
+\begin{center}
+\includegraphics{timing2c}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased complex in-place 2D convolutions of size $m^2$.}
+\label{timing2c}
+\end{center}
+\end{minipage}
 \begin{minipage}{0.48\linewidth}
 \begin{center}
 \includegraphics{timing2r}
@@ -861,15 +858,6 @@ dealiased centered Hermitian in-place 2D convolutions of size \hbox{$(2m-1)\time
 \label{timing2r}
 \end{center}
 \end{minipage}
-\begin{minipage}{0.48\linewidth}
-\begin{center}
-\includegraphics{timing3c}
-\caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 3D convolutions of size $m^3$.}
-\label{timing3c}
-\end{center}
-\end{minipage}
-%
 \end{figure}
 
 %TODO: Improve, show column convolutions, strides, dimensions, padding,
@@ -928,6 +916,15 @@ $m_x\times m_y\times m_z$ matrices ${\sf U}$ and ${\sf V}$,
 $m_y\times m_z$ matrices ${\sf u}_2$ and ${\sf v}_2$,
 and vectors ${\sf u}_1$ and ${\sf v}_1$ of length~$m_z$.}\label{cconv3}
 \end{function}
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics{timing3c}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased complex in-place 3D convolutions of size $m^3$.}
+\label{timing3c}
+\end{center}
+\end{figure}
 
 \section{Implicitly dealiased biconvolutions}\label{hyperconv}
 In this section, we show that implicit padding is well suited to
@@ -1089,6 +1086,7 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 \end{minipage}
 %
 \begin{minipage}{0.5\linewidth}
+\setlength{\algomargin}{0.8em}
 \begin{function}[H]
   \KwIn{matrix \xf, matrix \xg, matrix \xh}
   \KwOut{matrix \xf}
