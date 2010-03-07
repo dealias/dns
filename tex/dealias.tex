@@ -161,7 +161,7 @@ the outer FFT subdivision manually, dropping the zero terms and
 deferring the computation of the inner transforms to a standard library
 routine. But this also restricts the set of available platform-dependent
 algorithms that can be used at the highest level. Fortunately, several 
-additional features of our algorithm help to offset this disadvantage. First, if
+noteable features of our algorithm help to offset this disadvantage. First, if
 the goal is to  produce a convolution, bit-reversal for the hand-optimized
 outermost subdivision is unnecessary: the scrambled Fourier subtransforms of the
 two input vectors can be multiplied together as they are produced
@@ -395,6 +395,7 @@ requirements of the two algorithms are identical.}
 \phantomsection{}\label{timing1c}
 \end{center}
 \end{minipage}
+\,
 \begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{error1c}
@@ -520,7 +521,8 @@ In this frequently encountered case (relevant to the pseudospectral
 method), each input vector is the Fourier transform of real-valued data;
 that is, it satisfies the {\it Hermiticity condition} $U_{-k}=\conj{U_k}$.
 While the physical data represented is of length $2m-1$, centered
-about the Fourier origin, the redundant negative wavenumbers are not
+about the Fourier origin, the redundant modes (corresponding to
+negative wavenumbers) are not
 included in the input vectors. The input vectors are thus of length $m$,
 with the Fourier origin at index $0$. Just as in Section~\ref{fft0},
 the unsymmetrized physical data needs to be padded with at least $m-1$ zeros.
@@ -562,7 +564,7 @@ Hermitian Fourier transforms of size $m$, for an overall computational
 scaling of $\fr{9}{2}K m \log_2 m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
 For simplicity, in this work we only document the case of practical
-importance, where $m=2c$ (for maximal efficiency one would typically pad
+importance, where $m=2c$ (for efficiency reasons one might pad
 odd-length input arrays with an extra zero word anyway). We see in
 Function~\ref{conv} that seven out of the nine Fourier transforms can be
 performed out of place using the same amount of memory,
@@ -691,7 +693,7 @@ dealiased centered Hermitian in-place 1D convolutions of length $2m-1$.}
 \end{figure}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{error1r}
 \caption{Normalized $L^2$ error for explicitly and implicitly
@@ -699,8 +701,8 @@ dealiased centered Hermitian in-place 1D convolutions of length $m$.}
 \phantomsection{}\label{error1r}
 \end{center}
 \end{minipage}
-%
-\begin{minipage}{0.5\linewidth}
+\,
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{timing2c}
 \caption{Comparison of computation times for explicitly and implicitly
@@ -752,7 +754,7 @@ multivector version of Procedure~\ref{cconv} to perform simultaneous
 convolutions in the $y$ direction, but our timing tests indicate that this
 would only slightly enhance the overall performance (since the data for constant
 $y$ is not stored consecutively in memory) and would prevent the 1D convolution
-work arrays from being reused for the $y$-convolution at each fixed $x$. The
+work arrays from being reused for the $y$ convolution at each fixed $x$. The
 memory savings in our method comes precisely from this reuse of temporary
 storage, which in turn requires that the $y$ convolutions be computed
 serially.
@@ -780,7 +782,7 @@ cache) outweighs these losses.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
 of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
-words, much less than the $8m_xm_y$ complex words required for an
+words, much less than the $8m_xm_y$ complex words needed for an
 explicitly padded convolution.
 
 \subsection{Centered 2D Hermitian convolution}
@@ -851,7 +853,7 @@ m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices
 \end{figure}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.48\linewidth}
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{timing2r}
 \caption{Comparison of computation times for explicitly and implicitly
@@ -859,7 +861,8 @@ dealiased centered Hermitian in-place 2D convolutions of size \hbox{$(2m-1)\time
 \phantomsection{}\label{timing2r}
 \end{center}
 \end{minipage}
-\begin{minipage}{0.48\linewidth}
+\,
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{timing3c}
 \caption{Comparison of computation times for explicitly and implicitly
@@ -875,8 +878,8 @@ dealiased complex in-place 3D convolutions of size $m^3$.}
 The decoupling of the 2D work arrays in Procedure~\ref{cconv2}
 also allows us to construct the efficient 3D implicit complex convolution
 listed in Procedure~\ref{cconv3}. As shown in Fig.~\ref{timing3c}, an implicit
-$256^3$ convolution ran $1.90$ times faster than the explicit version, with
-an $xz$-pruned version running only $1.18$ times faster. The memory usage of an
+$256^3$ convolution is $1.90$ times faster than the explicit version, while
+an $xz$-pruned version is only $1.18$ times faster. The memory usage of an
 implicitly padded 3D $m_x\times m_y\times m_z$ convolution is
 $4m_xm_ym_z+2m_y m_z+2m_z$ complex words, much less than the
 $16m_xm_ym_z$ complex words required by an explicit 
@@ -885,7 +888,7 @@ convolution based on power-of-two transforms.
 A $(2m_x-1)\times (2m_y-1)\times (2m_1-1)$ implicit Hermitian 3D
 convolution was also implemented in an analogous manner. It required
 $$
-6m_x(2m_y-1)m_z+2(m_y+1)m_z+2(m_z/2+1)=12m_xm_ym_z-6m_xm_z+2m_ym_z+2m_z+2
+6m_x(2m_y-1)m_z+2(m_y+1)m_z+2(m_z/2+1)=12m_xm_ym_z-6m_xm_z+2m_ym_z+m_z+2
 $$
 complex words, in comparison with the usual requirement of $27m_xm_ym_z$
 complex words for explicit padding with power-of-two transforms.
@@ -992,7 +995,7 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\el
 For a biconvolution, the product of the three factors $(-1)^\ell$
 (one for each input vector) arising from \Eq{fft0bibackwards}
 and the factor $(-1)^\ell$ in \Eq{fft0biforwards} cancel.
-Procedures \ref{fft0bipadBackwards} and \ref{fft0bipadForwards},
+Procedures \ref{fft0bipadBackwards} and \ref{fft0bipadForwards}
 each have an operation count asymptotic to $4Km\log_2 m$. As they
 operate fully in place on their arguments, with no additional storage
 requirements, it is straightforward to implement strided multivector
@@ -1024,15 +1027,16 @@ The resulting implicitly padded Hermitian biconvolution,
 Procedure \ref{biconv}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out of place.
 Fig.~\ref{timing1b} we show that this algorithm is competitive with
-explicit padding. Explicit padding requires $3(2m+1)=6m+3$ complex words,
-whereas implicit padding requires $6(m+1)$ complex words of storage.
+explicit padding. Procedure \ref{biconv} requires $6(m+1)$ complex words of
+storage, slightly more than the $3(2m+1)=6m+3$ complex words needed for explicit
+padding.
 
 Just as for convolutions, the performance and memory benefits of
-evaluating implicitly padded hyperconvolutions manifest themselves only in
+dealiasing hyperconvolutions {\it via\/} implicit padding manifest themselves only in
 higher dimensions. For example, in Fig.~\ref{timing2b}, we observe 
 that an implicit $4096^2$ Hermitian biconvolution is $2.30$ times
 faster than an explicit biconvolution.
-The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian biconvolution,
+The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian biconvolution
 is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
 compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
 (using power-of-two transforms) for an explicit biconvolution. In contrast, a
@@ -1103,7 +1107,7 @@ vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 \end{figure}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.48\linewidth}
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{timing1b}
 \caption{Comparison of computation times for explicitly and implicitly
@@ -1111,8 +1115,8 @@ dealiased complex in-place 1D biconvolutions of length $m$.}
 \phantomsection{}\label{timing1b}
 \end{center}
 \end{minipage}
-%
-\begin{minipage}{0.48\linewidth}
+\,
+\begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{timing2b}
 \caption{Comparison of computation times for explicitly and implicitly
@@ -1158,7 +1162,7 @@ of implicitly dealiased convolutions makes that argument now moot.
 Another advantage of implicit padding is the ability of the algorithm to
 work directly on raw unpadded user data without the inconvenience or extra
 storage requirements of a separate padding buffer. 
-Having a rewritten, well-tested dealiased convolution that internally
+Having a prewritten, well-tested dealiased convolution that internally
 takes care of dealiasing is a major convenience for the average user.
 For 2D and 3D Hermitian convolutions, a prepackaged routine should also
 automatically enforce Hermitian symmetry of the data along the $x$ axis or
