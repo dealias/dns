@@ -391,9 +391,8 @@ length~$m$.}\label{cconv}
 %On orcinus, using N=100000000.
 \includegraphics{timing1c}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 1D convolutions of two vectors of
-unpadded length $m$. The storage requirements of the two algorithms are
-identical.}
+dealiased complex in-place 1D convolutions of length $m$. The storage
+requirements of the two algorithms are identical.}
 \label{timing1c}
 \end{center}
 \end{minipage}
@@ -401,8 +400,7 @@ identical.}
 \begin{center}
 \includegraphics{error1c}
 \caption{Normalized $L^2$ error for explicitly and implicitly
-dealiased complex in-place 1D convolutions of two vectors of
-unpadded length $m$.}
+dealiased complex in-place 1D convolutions of length $m$.}
 \label{error1c}
 \end{center}
 \end{minipage}
@@ -688,8 +686,7 @@ $c+1$.}\label{build}
 %On orcinus, using N=100000000.
 \includegraphics{timing1r}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 1D convolutions of two vectors of
-unpadded length $(2m-1)$.}
+dealiased centered Hermitian in-place 1D convolutions of length $(2m-1)$.}
 \label{timing1r}
 \end{center}
 \end{minipage}
@@ -700,8 +697,7 @@ unpadded length $(2m-1)$.}
 \begin{center}
 \includegraphics{error1r}
 \caption{Normalized $L^2$ error for explicitly and implicitly
-dealiased centered Hermitian in-place 1D convolutions of two vectors of
-unpadded length $m$.}
+dealiased centered Hermitian in-place 1D convolutions of length $m$.}
 \label{error1r}
 \end{center}
 \end{minipage}
@@ -710,8 +706,7 @@ unpadded length $m$.}
 \begin{center}
 \includegraphics{timing2c}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 2D convolutions of two matrices of
-unpadded size $m\times m$.}
+dealiased complex in-place 2D convolutions of size $m^2$.}
 \label{timing2c}
 \end{center}
 \end{minipage}
@@ -858,21 +853,19 @@ m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices
 \end{figure}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.48\linewidth}
 \begin{center}
 \includegraphics{timing2r}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 2D convolutions of two matrices of
-unpadded size $(2m-1)\times m$.}
+dealiased centered Hermitian in-place 2D convolutions of size \hbox{$(2m-1)\times m$}.}
 \label{timing2r}
 \end{center}
 \end{minipage}
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.48\linewidth}
 \begin{center}
 \includegraphics{timing3c}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 3D convolutions of two matrices of
-unpadded size $m\times m\times m$.}
+dealiased complex in-place 3D convolutions of size $m^3$.}
 \label{timing3c}
 \end{center}
 \end{minipage}
@@ -1124,22 +1117,20 @@ vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 
 \begin{figure}[htbp]
 \begin{center}
-\begin{minipage}{0.5\linewidth}
+\begin{minipage}{0.48\linewidth}
 \begin{center}
 \includegraphics{timing1b}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 1D biconvolutions of two vectors of
-unpadded length $m$.}
+dealiased complex in-place 1D biconvolutions of length $m$.}
 \label{timing1b}
 \end{center}
 \end{minipage}
 %
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.48\linewidth}
 \begin{center}
 \includegraphics{timing2b}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 2D biconvolutions of two matrices of
-unpadded size $(2m-1)\times m$.}
+dealiased centered Hermitian in-place 2D biconvolutions of size $(2m-1)\times m$.}
 \label{timing2b}
 \end{center}
 \end{minipage}
@@ -1208,4 +1199,4 @@ straightforward exercise.
 % LocalWords:  fftpadBackwards fftpadForwards backwardsB strided conv Buneman
 % LocalWords:  multivector Hermiticity unsymmetrized backwardsA forwardsB DFT
 % LocalWords:  Canuto xm biconvolutions bibackwards biforwards biconv qm mq fp
-% LocalWords:  parallelizability pseudocode ansi ik xW ip xz ym xy Buneman's
+% LocalWords:  parallelizability pseudocode ansi ik xW ip xz ym xy Buneman's FG
