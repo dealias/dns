@@ -178,13 +178,30 @@ one-dimensional in-place implicit convolution competitive with an
 explicitly padded convolution based on the same highly optimized
 library.
 
-%Add outline
 Implicit padding can also be used to efficiently dealias hyperconvolutions,
 such as $\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
 For example, we illustrate how the technique can be applied to compute a 
 centered Hermitian biconvolution in section~\ref{hyperconv}.
 
-\section{Implicitly dealiased 1D convolutions}
+%Add outline
+The outline of this paper is as follow: in section \ref{1d}, we
+develop routines for taking the discrete Fourier transform of a
+zero-padded vector without having to pad explicitly. We use this
+routine to calculate an implicitly padded convolution for both general
+and Hermitian inputs.  We use these routines to calculate the
+implicitly-padded convolutions of two-dimensional vectors (both
+Hermitian and not) in section \ref{2d}, and Hermitian
+three-dimensional vectors in section \ref{3d}.  In section
+\ref{hyperconv}, we show how implicit padding may be used to
+efficiently calculate convolutions of higher order, with algorithms
+given for Hermitian and general data. Finally, we show how FFTs may be
+taken of data in which a general fraction $p/q$ is non-zero.
+
+
+% FIXME: add biconvolutions, general p/q case.
+
+
+\section{Implicitly dealiased 1D convolutions}\label{1d}
 In this section we describe the highly optimized 1D building blocks
 that are used in subsequent sections to construct higher-dimensional
 implicitly dealiased convolutions.
