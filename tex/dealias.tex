@@ -45,7 +45,7 @@ without the expense of conventional zero-padding or phase-shift
 techniques. For one-dimensional in-place convolutions, the memory
 requirements are identical with the zero-padding technique, with the important
 distinction that the additional work memory need not be contiguous with the
-data. This decoupling of the data and work arrays dramatically reduces
+input data. This decoupling of data and work arrays dramatically reduces
 the memory and computation time required to evaluate higher-dimensional
 in-place convolutions. The technique also allows one to dealias the
 hyperconvolutions that arise on Fourier transforming cubic and higher powers.
@@ -56,8 +56,8 @@ been implemented in the open-source software {\tt fftw++}.
 \end{abstract} 
 
 \begin{keywords} 
-dealiasing, zero padding, convolution, hyperconvolution, fast Fourier transform,
-pseudospectral method, in-place transform, bit reversal
+dealiasing, zero padding, implicit padding, convolution, hyperconvolution,
+fast Fourier transform, pseudospectral method, in-place transform, bit reversal
 \end{keywords}
 
 \begin{AMS}
@@ -74,14 +74,15 @@ Discrete linear convolution sums based on the fast Fourier transform
 for image filtering, digital signal processing, and correlation
 analysis. They are also widely used in computational physics to solve
 nonlinear partial differential equations, such as the Navier--Stokes
-equations, in periodic domains. In some of these applications, notably
-direct numerical pseudospectral simulations of fluid turbulence,
+equations, in periodic domains. In some of these applications, such as
+direct numerical pseudospectral simulations of turbulent fluids,
 memory usage is a critical limiting factor, and self-sorting in-place
 multidimensional Fourier transforms \cite{Temperton91} are typically used to
 reduce the memory footprint of the required spectral convolutions.
 
 Because the discrete convolution, which produces cyclic output from cyclic
-input, is applied to nonperiodic (wavenumber-space) data, it is important
+input, is applied in these problems to nonperiodic (wavenumber-space) data,
+it is important
 to remove aliases from the convolution. Typically the input data arrays are
 extended by padding them with enough zeros so that the wave beats of
 the positive frequencies cannot wrap around and contaminate
@@ -107,7 +108,7 @@ centered Hermitian convolution.
 An explicit application of the zero-padding technique involves the rather
 obvious inefficiency of summing over a large number of data values that
 are known {\it a priori\/} to be zero.
-However, it is worthwhile to first consider the response
+However, it is worthwhile to consider the response
 provided by Steven G. Johnson to a frequently asked question about the
 possibility of avoiding this expense~\cite{fftwprune}:
 \begin{quotation}\label{Johnson}
@@ -134,15 +135,15 @@ worth thinking about, primarily because this provides useful building blocks
 for constructing more efficient multidimensional convolutions.
 
 The key observation is this: although the memory usage of our implicitly
-padded 1D convolution is identical to that for a conventional explicitly
+padded 1D convolution is identical to that of a conventional explicitly
 padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
 buffer can be reused for other one-dimensional convolutions.
-As a result, in $d$ dimensions the implicitly dealised standard convolution
-$\sum_{p=0}^{m-1} f_p g_{k-p}$ asymptotically uses $1/2^{d-1}$ of the
-memory required by explicit padding. When the Fourier origin is
+As a result, in $d$ dimensions an implicitly dealised convolution
+asymptotically uses $1/2^{d-1}$ of the
+memory required for an explicitly padded convolution. When the Fourier origin is
 centered in the domain, memory usage is reduced to $(2/3)^{d-1}$ of the
-conventional requirement.
+conventional amount.
 If memory savings alone were the goal, these savings could
 also be achieved with explicit zero padding by copying the data for the
 innermost convolution to an external padded buffer, but such extra data
@@ -178,11 +179,6 @@ one-dimensional in-place implicit convolution competitive with an
 explicitly padded convolution based on the same highly optimized
 library.
 
-Implicit padding can also be used to dealias hyperconvolutions,
-such as $\sum_{p=0}^{m-1}\sum_{q=0}^{k-p} f_p g_q h_{k-p-q}$. 
-For example, we illustrate how the technique can be applied to compute a 
-centered Hermitian biconvolution in section~\ref{hyperconv}.
-
 In Section~\ref{1d}, we develop an algorithm for Fourier transforming a
 zero-padded vector without the need for explicit padding. We show how this
 algorithm can be used to calculate implicitly padded convolutions for both
@@ -194,17 +190,17 @@ Building on these one-dimensional algorithms, implicitly-padded
 convolutions are implemented for two- and three-dimensional input 
 in Sections~\ref{2d} and~\ref{3d}. Finally, in section \ref{hyperconv}, we
 show for both general and Hermitian data how implicit padding may be used to
-calculate higher-order convolutions efficiently.
+dealias higher-order convolutions efficiently.
 
 \section{Implicitly dealiased 1D convolutions}\label{1d}
-In this section we describe the highly optimized 1D building blocks
+In this section we describe the optimized 1D building blocks
 that are used in subsequent sections to construct higher-dimensional
 implicitly dealiased convolutions.
 
 \subsection{Complex convolution}
 The Fourier origin for standard convolutions is located at the first
 (zero) index of the array.
-Therefore, input data vectors of length $m$ must be padded with zeros to
+Therefore, input data vectors of length~$m$ must be padded with zeros to
 length $N\ge 2m-1$ to prevent mode $m-1$ from beating with itself to
 contaminate mode~$N=0\mod N$. However, since FFT sizes with small prime
 factors in practice yield the most efficient implementations, it is normally
@@ -263,7 +259,8 @@ In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 In principle, the stable trigonometric recursion described by
 Buneman \cite{Buneman87}, which requires two small precomputed tables, each
 of size~$\log_2 N$, could be used to compute the required roots of unity
-$\zeta_N^k$ in \Eqs{cconv1backwards} and~\hEq{cconv1forwards}. For the
+$\zeta_N^k$ that appear in \Eqs{cconv1backwards}
+and~\hEq{cconv1forwards}. For the
 record we note that, in terms of the smallest positive number $\e$ 
 satisfying $1+\e > 1$ in a given machine representation, the singularity in
 Buneman's scheme can be removed by replacing $\sec{\pi/2}$ with  $5/\e$,
@@ -273,15 +270,15 @@ While Buneman's recursion has the same average accuracy as an FFT
 itself \cite{Tasche02}, on modern hardware a factorization method that does
 not rely on successive table updates turns out to be more
 efficient \cite{Johnson09}, at the expense of somewhat higher memory usage.
-We calculate the $\zeta_N^k$ factors accurately with a single complex
+We instead calculate the $\zeta_N^k$ factors with a single complex
 multiply, using two short precomputed tables $H_a=\zeta_N^{as}$ and
 $L_b=\zeta_N^b$, where $k=as+b$ with $s=\floor{\sqrt m}$,
 $a=0,1,\ldots,\ceil{m/s}-1$, and $b=0,1,\ldots,s-1$. Since these
 one-dimensional tables require only $\O(2\sqrt{m})$ complex words of
-storage and our focus is on higher dimensional convolutions anyway, we did
+storage and our focus is on higher dimensional convolutions anyway, we do
 not account for them in our estimates of memory use. 
 
-Referring to the computation times shown in Figure~\ref{timing1c},
+Referring to the computation times shown in Fig.~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
 and~\hEq{cconv1forwards}
 can thus be implemented to be competitive with explicitly padded
@@ -574,7 +571,7 @@ leading-order scaling of an explicitly padded centered Hermitian convolution.
 For simplicity, in this work we only document the case of practical
 importance, where $m=2c$ (for maximal efficiency one would typically pad
 odd-length input arrays with an extra zero word anyway). We see in
-Function~\ref{conv} that seven out of these nine Fourier transforms can be
+Function~\ref{conv} that seven out of the nine Fourier transforms can be
 performed out of place using the same amount of memory,
 $2(\floor{N/2}+1)=6c+2$, as would be used to compute a centered Hermitian
 convolution with explicit padding. 
@@ -589,17 +586,17 @@ u_j=\conj{u_j}=\sum_{k=-c+1}^{c}\zeta_m^{-jk} \conj{U_k}
 =(-1)^j\sum_{k=0}^{m-1}\zeta_m^{jk} \conj{U_{c-k}}
 $$
 obtained with the substitution $k'=c-k$. One can omit the factors of
-$(-1)^j$ since they will cancel during the real term-by-term multiplication
+$(-1)^j$ here since they will cancel during the real term-by-term multiplication
 of the two transformed input vectors.
 
-As seen in Figure~\ref{timing1r}, the efficiency of the resulting implicitly
+As seen in Fig.~\ref{timing1r}, the efficiency of the resulting implicitly
 dealiased Hermitian convolution is comparable to an explicit implementation.
 For each algorithm, we benchmark only those vector lengths that yield
 maximum performance.
 
 To check the accuracy of our implementation, we used the test case
 $f_k=g_k=A e^{ik}$ with $A=\root3\of 3$, noting that Hermitian symmetry
-requires $A$ be real. The exact solution is 
+requires that $A$ be real. The exact solution is 
 $H_k=A^2\sum_{p=k-m+1}^{m-1} e^{ip}e^{i(k-p)}=A^2(2m-1-k)e^{ik}$.
 The normalized $L^2$ errors for the implicit and explicit padding are compared
 in Fig.~\ref{error1r}.
@@ -723,12 +720,12 @@ unpadded size $m\times m$.}
 \end{minipage}
 \end{figure}
 
-\section{Arbitrary $p/q$ Padding}\label{pq}
-Implicit padding corresponding to an arbitrary $p/q$ rule is also
-possible. Suppose that $N=qm$, where only $pm$ modes are non-zero, with $p$
-and $q$ relatively prime. We decompose $j=q\ell+r$, where
+\section{General Padding}\label{pq}
+Implicit padding corresponding to an arbitrary~$p/q$ rule is also
+possible. Suppose that $pm$ data modes are zero-padded to $N=qm$, where $p$
+and $q$ are relatively prime. One decomposes $j=q\ell+r$, where
 $\ell=0,\dots,m-1$ and $r=0,\dots,q-1$.
-Similarly, we express $k=t m+s$, where $t=0,\dots,p-1$ and $s=0,\dots, m-1$:
+Similarly, one expresses $k=t m+s$, where $t=0,\dots,p-1$ and $s=0,\dots, m-1$:
 $$
 u_{q\ell+r}=\sum_{k=0}^{pm-1}\z_N^{(q\ell+r)k} U_k
 =\sum_{s=0}^{m-1}\sum_{t=0}^{p-1} \z_m^{\ell (t m+s)}\z_{N}^{r(t m+s)}
@@ -770,11 +767,11 @@ memory savings in our method comes precisely from this reuse of temporary
 storage, which in turn requires that the $y$ convolutions be computed
 serially.
 
-As shown in Figure~\ref{timing2c}, the resulting implicit
+As shown in Fig.~\ref{timing2c}, the resulting implicit
 2D algorithm dramatically outperforms the explicit version:
 a $1024^2$ implicit complex convolution is $1.84$ times faster.
 As one would expect, the gains appear to increase with transform size: a
-$8192^2$ implicit convolution runs $2.03$ times faster than an explicit one. 
+$8192^2$ implicit convolution is $2.03$ times faster than an explicit one. 
 
 The third sentence of the quote from Steven G. Johnson on
 page~\ref{Johnson} suggests a sensible optimization for
@@ -782,14 +779,14 @@ explicitly padded 2D convolutions: one can omit for $m \le y < 2m$
 the backwards and forwards Fourier transforms in the $x$ direction.
 However potential data locality optimizations may be lost
 when a 2D convolution is expressed directly in terms of 1D transforms: as
-illustrated in Figure~\ref{cconv2}, while a $1024^2$ $y$-pruned explicit
-convolution runs $1.37$ times faster than a conventional explicit
+illustrated in Fig.~\ref{cconv2}, while a $1024^2$ $y$-pruned explicit
+convolution is $1.37$ times faster than a conventional explicit
 implementation, the pruned method becomes $1.73$ times {\it slower} for the
 $8192^2$ case. Our implicitly dealised convolution is also subject
 to these same optimization losses, but the savings due to implicit padding,
 in-place subtransforms, the neglect of high-level bit reversal, and the
 immediate convolution of constant $x$ columns (while perhaps still in
-cache) outweigh these losses.
+cache) outweighs these losses.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
 of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
@@ -802,7 +799,7 @@ In two dimensions, the Fourier-centered Hermiticity condition appears as
 $U_{-k,-\ell}=\conj{U_{k,\ell}}$. 
 This symmetry is exploited in the centered Hermitian convolution
 algorithm described in Function~\ref{conv2}. As shown in
-Figure~\ref{timing2r}, implicit padding again yields a dramatic improvement
+Fig.~\ref{timing2r}, implicit padding again yields a dramatic improvement
 in speed.
 
 When $m_y$ is even, the memory usage for an implicitly dealiased
@@ -899,10 +896,10 @@ unpadded size $m\times m\times m$.}
 
 The decoupling of the 2D work arrays in Procedure~\ref{cconv2}
 also allows us to construct the efficient 3D implicit complex convolution
-listed in Procedure~\ref{cconv3}. As shown in Figure~\ref{timing3c}, an implicit
+listed in Procedure~\ref{cconv3}. As shown in Fig.~\ref{timing3c}, an implicit
 $256^3$ convolution ran $1.90$ times faster than the explicit version, with
 an $xz$-pruned version running only $1.18$ times faster. The memory usage of an
-implicitly padded 3D $m_x\times m_y\times m_Z$ convolution is
+implicitly padded 3D $m_x\times m_y\times m_z$ convolution is
 $4m_xm_ym_z+2m_y m_z+2m_z$ complex words, much less than the
 $16m_xm_ym_z$ complex words required by an explicit 
 convolution based on power-of-two transforms.
@@ -949,9 +946,9 @@ $$
 \sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1} f_p g_q h_r\d_{p+q+r,k},
 $$
 which, for example, is required to compute the time evolution of high-order
-Casimir invariants of the nonlinearity for a two dimensional incompressible
-fluid \cite{Bowman10}. The basic building blocks for this problem are the
-centered $x$ transform and the Hermitian $y$ convolution.
+Casimir invariants of the nonlinearity for a two-dimensional incompressible
+fluid \cite{Bowman10}. The basic building blocks for this problem are again
+the centered Fourier transform and the Hermitian convolution.
 \subsection{Implicit double dealiased centered Fourier transform}
 \label{fft0bi}
 Here the input data length is $2m-1$, with the Fourier origin at index
@@ -1012,7 +1009,7 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}
 
 The resulting implicitly padded Hermitian biconvolution,
 Procedure \ref{biconv}, has an operation count of $8Km\log_2 m$. 
-Five of the eight required Fourier transforms can be done out-of-place.
+Five of the eight required Fourier transforms can be done out of place.
 Fig.~\ref{timing1b} we show that this algorithm is competitive with
 explicit padding. Explicit padding requires $3(2m+1)=6m+3$ complex words,
 whereas implicit padding requires $6(m+1)$ complex words of storage.
@@ -1055,15 +1052,15 @@ inverse of fft0bipadBackwards(\hbox{vector~{\sf f}, vector~{\sf u}}).}
 
 Just as for convolutions, the performance and memory benefits of
 evaluating implicitly padded hyperconvolutions manifest themselves only in
-higher dimensions. For example, in Figure~\ref{timing2b}, we observe 
-that an implicit $4096^2$ Hermitian biconvolution runs $2.30$ times
+higher dimensions. For example, in Fig.~\ref{timing2b}, we observe 
+that an implicit $4096^2$ Hermitian biconvolution is $2.30$ times
 faster than an explicit biconvolution.
 The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian biconvolution,
 is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
 compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
 (using power-of-two transforms) for an explicit biconvolution. In contrast, a
 $4096^2$ $y$-pruned biconvolution requires the same amount of storage as, but
-runs $1.48$ times faster than, an explicitly padded biconvolution.
+is $1.48$ times faster than, an explicitly padded biconvolution.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.445\linewidth}
@@ -1165,11 +1162,11 @@ The memory savings were equally significant: asymptotically, as
 $m_x\goesto\infty$, an implicit complex convolution requires one-half of
 the memory needed for a zero padded convolution in two dimensions and
 one-quarter in three dimensions. In the centered Hermitian case, the memory
-use is $2/3$ of the amount used for an explicit convolution in two
-dimensions and $4/9$ in three dimensions. 
+use in two dimensions is $2/3$ of the amount used for an explicit
+convolution and $4/9$ in three dimensions. 
 
 Even in one dimension, where implicit padding can be implemented
-competitively with conventional methods, it has notable advantages.
+competitively with conventional methods, the method has notable advantages.
 For the intended application to partial differential
 equations, there is flexibility in the choice of the exact convolution
 size. This is why we consider for each algorithm only those vector lengths
@@ -1195,7 +1192,7 @@ automatically enforce Hermitian symmetry of the data along the $x$ axis or
 the~$xy$ plane, respectively. With the highly optimized implementations of
 the algorithms developed in this work made available in the open source
 package {\tt fftw++} \cite{fftwpp}, writing a pseudospectral code for
-nonlinear partial differential equations should now be a relatively
+solving nonlinear partial differential equations should now be a relatively
 straightforward exercise.
 
 % Mention parallelization issues (another advantage of removing zeros).
