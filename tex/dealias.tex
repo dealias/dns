@@ -93,8 +93,9 @@ $K N\log_2 N$ as \hbox{$N\goesto\infty$} (the lowest bound currently
 achievable is $K=34/9$ \cite{Johnson07,Lundy07}), the asymptotic cost of
 computing the convolution of two vectors of unpadded length $m$ is
 $6Km\log_2 m$ (using $N=2m$ and three Fourier transforms).
+
 Another important case in practice is the centered Hermitian~1D convolution,
-$\sum_{p=-m+1}^{m-1} f_p g_{k-p}$, which requires $\fr{9}{2}Km\log_2 m$
+$\sum_{p=k-m+1}^{m-1} f_p g_{k-p}$, which requires $\fr{9}{2}Km\log_2 m$
 operations.
 Alternatively, phase shift dealiasing \cite{Patterson71,Canuto06} can be used
 to cancel out the aliasing errors between two convolutions with two
@@ -106,10 +107,9 @@ centered Hermitian convolution.
 An explicit application of the zero-padding technique involves the rather
 obvious inefficiency of summing over a large number of data values that
 are known {\it a priori\/} to be zero.
-However, it is first worth considering the following response
-provided by Steven G. Johnson to a frequently asked question in the
-community about avoiding this unnecessary
-expense \cite{fftwprune}:
+However, it is worthwhile to first consider the response
+provided by Steven G. Johnson to a frequently asked question about the
+possibility of avoiding this expense~\cite{fftwprune}:
 \begin{quotation}\label{Johnson}
 {\it
 The most common case where people seem to want a pruned FFT is for
@@ -130,7 +130,7 @@ Moreover, since a zero-padded Fourier transform of size~$N$ yields~$N$
 (typically nonzero) output values, no savings in memory appear to be
 possible in one dimension. Nevertheless, in this work we demonstrate that
 pruning the zero-padded elements of one-dimensional convolutions is still
-worth thinking about, primarily because this provides building blocks
+worth thinking about, primarily because this provides useful building blocks
 for constructing more efficient multidimensional convolutions.
 
 The key observation is this: although the memory usage of our implicitly
@@ -138,22 +138,22 @@ padded 1D convolution is identical to that for a conventional explicitly
 padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
 buffer can be reused for other one-dimensional convolutions.
-As a result, for dimensions greater than one,
-an implicitly dealised standard convolution $\sum_{p=0}^{m-1} f_p g_{k-p}$
-asymptotically uses half of the
-memory required by explicit padding. For the case where the Fourier origin is
-centered in the domain, memory usage is reduced by one third.
-Of course, if memory savings alone were the goal, these savings could
+As a result, in $d$ dimensions the implicitly dealised standard convolution
+$\sum_{p=0}^{m-1} f_p g_{k-p}$ asymptotically uses $1/2^{d-1}$ of the
+memory required by explicit padding. When the Fourier origin is
+centered in the domain, memory usage is reduced to $(2/3)^{d-1}$ of the
+conventional requirement.
+If memory savings alone were the goal, these savings could
 also be achieved with explicit zero padding by copying the data for the
 innermost convolution to an external padded buffer, but such extra data
 communication would degrade overall performance. The fact that our
-one-dimensional convolution does not require this extra copying is the key
-feature that was exploited to obtain simultaneous improvements in memory
-usage and speed.
+one-dimensional convolution does not require this extra copying is the
+main feature that was exploited to obtain simultaneous improvements in
+memory usage and speed.
 
 Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
-compete with an explicitly problem-dependent and architecture-adaptive
+compete with problem-dependent and architecture-adaptive
 FFT algorithm such as the award-winning FFTW \cite{Frigo05} library, which
 empirically predetermines a near optimal butterfly graph
 %FIXME:REForDEFN
@@ -173,7 +173,7 @@ two input vectors can be multiplied together as they are produced
 method allows most of the subtransforms for an in-place convolution to
 be computed as out-of-place transforms, which execute faster than
 in-place transforms since they require no extra (pre-, post-, or
-interlaced) bit-reversal stage.  These savings helped keep our
+interlaced) bit-reversal stage.  These savings help keep our
 one-dimensional in-place implicit convolution competitive with an
 explicitly padded convolution based on the same highly optimized
 library.
@@ -250,7 +250,7 @@ The transforms described by~\Eqs{cconv1backwards} and~\hEq{cconv1forwards}
 are implemented as Procedure~\ref{fftpadBackwards} and
 Function~\ref{fftpadForwards}.
 These algorithms are combined in Function~\ref{cconv} to 
-compute a dealiased convolution of unpadded length $m$ using
+compute a dealiased convolution of unpadded length~$m$ using
 two arrays of size~$m$ as input vectors instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
@@ -260,14 +260,14 @@ out of the six complex Fourier transforms of size $m$ to be done out of place.
 In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 (vector) multiply.
 
-In principle, the stable recursion described by Buneman \cite{Buneman87},
-which requires two small precomputed tables, each of size~$\log_2 N$, could be
-used to compute the required roots of unity $\zeta_N^k$
-in \Eqs{cconv1backwards} and~\hEq{cconv1forwards}. For the record we note,
-in terms of the smallest positive number $\e$ of a given machine
-representation satisfying $1+\e > 1$, that the singularity in this scheme can be
-removed by replacing $\sec{\pi/2}$ with  $5/\e$, $\sin 4\pi$ with $-\e/2$, and
-$\sin{2\pi}$ and $\sin{\pi}$ each with $-\e/10$.
+In principle, the stable trigonometric recursion described by
+Buneman \cite{Buneman87}, which requires two small precomputed tables, each
+of size~$\log_2 N$, could be used to compute the required roots of unity
+$\zeta_N^k$ in \Eqs{cconv1backwards} and~\hEq{cconv1forwards}. For the
+record we note that, in terms of the smallest positive number $\e$ 
+satisfying $1+\e > 1$ in a given machine representation, the singularity in
+Buneman's scheme can be removed by replacing $\sec{\pi/2}$ with  $5/\e$,
+$\sin 4\pi$ with $-\e/2$, and $\sin{2\pi}$ and $\sin{\pi}$ each with $-\e/10$.
 
 While Buneman's recursion has the same average accuracy as an FFT
 itself \cite{Tasche02}, on modern hardware a factorization method that does
@@ -421,9 +421,10 @@ convolutions is an implicitly dealiased centered Fourier transform, where the
 input data length is odd, say $2m-1$, with the Fourier origin at index $m-1$. 
 Here, one needs to pad to $N\ge 3m-2$ to prevent 
 mode $m-1$ from beating with itself to contaminate the most negative
-(first) mode, at wavenumber $-m+1$. Since the ratio of the number of physical to
-total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$ for large $m$, this
-padding scheme is often referred to as the {\it $2/3$ padding rule}.
+(first) mode, corresponding to wavenumber $-m+1$. Since the ratio of the
+number of physical to total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$
+for large $m$, this padding scheme is often referred to as the {\it 2/3
+padding rule}.
 
 For explicit padding, one usually chooses the padded vector length
 $N$ to be a power of $2$, with $m=\floor{(n+2)/3}$.
@@ -763,7 +764,7 @@ column of data at constant $x$. In principle, one could also develop a
 multivector version of Procedure~\ref{cconv} to perform simultaneous
 convolutions in the $y$ direction, but our timing tests indicate that this
 would only slightly enhance the overall performance (since the data for constant
-$y$ is not consecutive) and would prevent the 1D convolution
+$y$ is not stored consecutively in memory) and would prevent the 1D convolution
 work arrays from being reused for the $y$-convolution at each fixed $x$. The
 memory savings in our method comes precisely from this reuse of temporary
 storage, which in turn requires that the $y$ convolutions be computed
@@ -898,7 +899,7 @@ unpadded size $m\times m\times m$.}
 
 The decoupling of the 2D work arrays in Procedure~\ref{cconv2}
 also allows us to construct the efficient 3D implicit complex convolution
-in Procedure~\ref{cconv3}. As shown in Figure~\ref{timing3c}, an implicit
+listed in Procedure~\ref{cconv3}. As shown in Figure~\ref{timing3c}, an implicit
 $256^3$ convolution ran $1.90$ times faster than the explicit version, with
 an $xz$-pruned version running only $1.18$ times faster. The memory usage of an
 implicitly padded 3D $m_x\times m_y\times m_Z$ convolution is
@@ -908,9 +909,11 @@ convolution based on power-of-two transforms.
 
 A $(2m_x-1)\times (2m_y-1)\times (2m_1-1)$ implicit Hermitian 3D
 convolution was also implemented in an analogous manner. It required
-$6m_x(2m_y-1)m_z+2(m_y+1)m_z+2(m_z/2+1)=12m_xm_ym_z-6m_xm_z+2m_ym_z+2m_z+2$
-complex words, in comparison with the usual $27m_xm_ym_z$ complex words
-needed for explicit padding with power-of-two transforms.
+$$
+6m_x(2m_y-1)m_z+2(m_y+1)m_z+2(m_z/2+1)=12m_xm_ym_z-6m_xm_z+2m_ym_z+2m_z+2
+$$
+complex words, in comparison with the usual requirement of $27m_xm_ym_z$
+complex words for explicit padding with power-of-two transforms.
 
 \begin{function}[htbp]
   \KwIn{matrix \xf, matrix \xg}
@@ -958,7 +961,7 @@ wave beating.
 Implicit padding is most efficiently implemented by padding the input
 vector with a single zero complex word at the beginning, to yield a vector
 of length $2m$, with the Fourier origin at index $m$. We choose $m$ to be
-a power of $2$ and $N=4m$. Here, $U_k=0$ for $k=0$ and $k\ge m$. 
+a power of $2$ and $N=4m$, with $U_k=0$ for $k=-m$ and $k\ge m$. 
 
 On decomposing $j=2\ell+r$, where $\ell=0,\ldots, 2m-1$ and $r\in\{0,1\}$,
 we find on substituting $k'=k+m$ that
@@ -1178,7 +1181,7 @@ of~$2$, a case of practical significance.
 Canuto \etal\ \cite[p.136]{Canuto06} point out that if only a
 power-of-two transform is available for a centered convolution, zero
 padding a vector of length $m=2^k$  would require a transform size of $2m$,
-yielding a slightly higher operation count, $6Km\log_2(2m)$, than the $6K
+yielding an even slightly higher operation count, $6Km\log_2(2m)$, than the $6K
 m\log_2m$ operations required for phase-shift dealiasing. The availability
 of implicitly dealiased convolutions makes that argument now moot.
 
@@ -1192,7 +1195,7 @@ automatically enforce Hermitian symmetry of the data along the $x$ axis or
 the~$xy$ plane, respectively. With the highly optimized implementations of
 the algorithms developed in this work made available in the open source
 package {\tt fftw++} \cite{fftwpp}, writing a pseudospectral code for
-nonlinear partial differential equations is now a relatively
+nonlinear partial differential equations should now be a relatively
 straightforward exercise.
 
 % Mention parallelization issues (another advantage of removing zeros).
