@@ -727,6 +727,33 @@ unpadded size $m\times m$.}
 \end{minipage}
 \end{figure}
 
+\section{Arbitrary $p/q$ Padding}
+
+Implicit padding corresponding to an arbitrary $p/q$ rule is also
+possible. Suppose that $N=qm$, where only $pm$ modes are non-zero, with $p$
+and $q$ relatively prime. We decompose $j=q\ell+r$, where
+$\ell=0,\dots,m-1$ and $r=0,\dots,q-1$.
+Similarly, we express $k=t m+s$, where $t=0,\dots,p-1$ and $s=0,\dots, m-1$:
+$$
+u_{q\ell+r}=\sum_{k=0}^{pm-1}\z_N^{(q\ell+r)k} U_k
+=\sum_{s=0}^{m-1}\sum_{t=0}^{p-1} \z_m^{\ell (t m+s)}\z_{N}^{r(t m+s)}
+U_{t m+s}
+=\sum_{s=0}^{m-1}\z_m^{\ell s}\sum_{t=0}^{p-1}\z_N^{r(t m+s)} U_{t m+s}.
+$$
+
+Since there are $q$ choices of $r$, the problem reduces
+to computing $q$ Fourier transforms of length~$m$, which requires
+$K q m\log_2 m=K N\log_2 (N/q)$ operations. 
+Likewise, the forward implicit transform
+$$
+NU_k
+=\sum_{\ell=0}^{m-1}\sum_{r=0}^{q-1} \zeta_N^{-(q\ell+r)k} u_{q\ell+r}
+=\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{q\ell+r}
+\qquad k\no =0,\ldots,pm-1
+$$
+also requires $q$ Fourier transforms of length $m$. Again, the computational
+savings for a one-dimensional transform is only marginal.
+
 \section{Implicitly dealiased 2D convolutions}\label{2d}
 The algorithms developed in the previous sections can be used as building
 blocks to construct efficient implicitly padded 2D convolutions.
@@ -1127,36 +1154,6 @@ unpadded size $(2m-1)\times m$.}
 \end{minipage}
 \end{center}
 \end{figure}
-
-\section{Arbitrary $p/q$ Padding}
-
-Implicit padding corresponding to an arbitrary $p/q$ rule is also
-possible. Suppose that $N=qm$, where only $pm$ modes are non-zero, with $p$
-and $q$ relatively prime. We decompose $j=q\ell+r$, where
-$\ell=0,\dots,m-1$ and $r=0,\dots,q-1$.
-Similarly, we express $k=t m+s$, where $t=0,\dots,p-1$ and $s=0,\dots, m-1$:
-$$
-u_{q\ell+r}=\sum_{k=0}^{pm-1}\z_N^{(q\ell+r)k} U_k
-=\sum_{s=0}^{m-1}\sum_{t=0}^{p-1} \z_m^{\ell (t m+s)}\z_{N}^{r(t m+s)}
-U_{t m+s}
-=\sum_{s=0}^{m-1}\z_m^{\ell s}\sum_{t=0}^{p-1}\z_N^{r(t m+s)} U_{t m+s}.
-$$
-
-Since there are $q$ choices of $r$, the problem reduces
-to computing $q$ Fourier transforms of length~$m$, which requires
-$K q m\log_2 m=K N\log_2 (N/q)$ operations.
-While the computational savings for a one-dimensional transform is again only
-marginal, in higher dimensions this formulation
-yields significant improvements in memory usage and performance.
-
-As we have seen, the forward implicit transform
-$$
-NU_k
-=\sum_{\ell=0}^{m-1}\sum_{r=0}^{q-1} \zeta_N^{-(q\ell+r)k} u_{q\ell+r}
-=\sum_{r=0}^{q-1}\zeta_N^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{q\ell+r}
-\qquad k\no =0,\ldots,pm-1
-$$
-also requires $q$ Fourier transforms of length $m$.
 
 \section{Concluding remarks}
 Explicitly padded Fourier transforms are frequently used to dealias
