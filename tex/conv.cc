@@ -106,11 +106,11 @@ int main(int argc, char* argv[])
   
   unsigned int np=Explicit ? n/2+1 : m;
     
-  Complex *f=FFTWComplex(np);
-  Complex *g=FFTWComplex(np);
+  Complex *f=ComplexAlign(np);
+  Complex *g=ComplexAlign(np);
 
   Complex *h0=NULL;
-  if(Test) h0=FFTWComplex(m);
+  if(Test) h0=ComplexAlign(m);
 
   double offset=0.0;
   seconds();
@@ -122,8 +122,8 @@ int main(int argc, char* argv[])
   double sum=0.0;
   if(Implicit) {
     unsigned int c=m/2;
-    Complex *u=FFTWComplex(c+1);
-    Complex *v=FFTWComplex(c+1);
+    Complex *u=ComplexAlign(c+1);
+    Complex *v=ComplexAlign(c+1);
     ImplicitHConvolution C(m,u,v);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
@@ -131,8 +131,8 @@ int main(int argc, char* argv[])
       C.convolve(f,g,u,v);
       sum += seconds();
     }
-    FFTWdelete(v);
-    FFTWdelete(u);
+    deleteAlign(v);
+    deleteAlign(u);
     
     cout << endl;
     cout << "Implicit:" << endl;
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
   if(Direct) {
     DirectHConvolution C(m);
     init(f,g);
-    Complex *h=FFTWComplex(m);
+    Complex *h=ComplexAlign(m);
     seconds();
     C.convolve(h,f,g);
     sum=seconds();
@@ -183,11 +183,11 @@ int main(int argc, char* argv[])
     else cout << h[0] << endl;
     if(Test) 
       for(unsigned int i=0; i < m; i++) h0[i]=h[i];
-    FFTWdelete(h);
+    deleteAlign(h);
   }
 
   if(Test) {
-    Complex *h=FFTWComplex(m);
+    Complex *h=ComplexAlign(m);
     double error=0.0;
     cout << endl;
     double norm=0.0;
@@ -202,9 +202,9 @@ int main(int argc, char* argv[])
     cout << "error=" << error << endl;
     if (error > 1e-12)
       cerr << "Caution! error=" << error << endl;
-    FFTWdelete(h);
+    deleteAlign(h);
   }
   
-  FFTWdelete(f);
-  FFTWdelete(g);
+  deleteAlign(f);
+  deleteAlign(g);
 }

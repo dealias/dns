@@ -27,12 +27,12 @@ unsigned int BuildZeta(unsigned int n, unsigned int m,
   if(s*t < m) ++t;
   static const double twopi=2.0*M_PI;
   double arg=twopi/n;
-  ZetaH=FFTWComplex(t);
+  ZetaH=ComplexAlign(t);
   for(unsigned int a=0; a < t; ++a) {
     double theta=s*a*arg;
     ZetaH[a]=Complex(cos(theta),sin(theta));
   }
-  ZetaL=FFTWComplex(s);
+  ZetaL=ComplexAlign(s);
   for(unsigned int b=0; b < s; ++b) {
     double theta=b*arg;
     ZetaL[b]=Complex(cos(theta),sin(theta));

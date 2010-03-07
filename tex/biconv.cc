@@ -104,12 +104,12 @@ int main(int argc, char* argv[])
   
   unsigned int np=Explicit ? n/2+1 : m+1;
     
-  Complex *e=FFTWComplex(np);
-  Complex *f=FFTWComplex(np);
-  Complex *g=FFTWComplex(np);
+  Complex *e=ComplexAlign(np);
+  Complex *f=ComplexAlign(np);
+  Complex *g=ComplexAlign(np);
 
   Complex *h0=NULL;
-  if(Test) h0=FFTWComplex(m);
+  if(Test) h0=ComplexAlign(m);
 
   double offset=0.0;
   seconds();
@@ -120,9 +120,9 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    Complex *u=FFTWComplex(np);
-    Complex *v=FFTWComplex(np);
-    Complex *w=FFTWComplex(np);
+    Complex *u=ComplexAlign(np);
+    Complex *v=ComplexAlign(np);
+    Complex *w=ComplexAlign(np);
     ImplicitHBiConvolution C(m,u,v);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);
@@ -130,9 +130,9 @@ int main(int argc, char* argv[])
       C.convolve(e,f,g,u,v,w);
       sum += seconds();
     }
-    FFTWdelete(w);
-    FFTWdelete(v);
-    FFTWdelete(u);
+    deleteAlign(w);
+    deleteAlign(v);
+    deleteAlign(u);
     
     cout << endl;
     cout << "Implicit:" << endl;
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
   if(Direct) {
     DirectHBiConvolution C(m);
     init(e,f,g);
-    Complex *h=FFTWComplex(m);
+    Complex *h=ComplexAlign(m);
     seconds();
     C.convolve(h,e,f,g);
     sum=seconds();
@@ -180,12 +180,12 @@ int main(int argc, char* argv[])
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
     else cout << h[0] << endl;
-    FFTWdelete(h);
+    deleteAlign(h);
     if(Test) for(unsigned int i=0; i < m; i++) h0[i]=h[i];
   }
 
   if(Test) {
-    Complex *h=FFTWComplex(m);
+    Complex *h=ComplexAlign(m);
     double error=0.0;
     cout << endl;
     cout << "Exact:" << endl;
@@ -194,10 +194,10 @@ int main(int argc, char* argv[])
     cout << "error="<<error<<endl;
     if (error > 1e-12)
       cerr << "Caution! error="<<error<<endl;
-    FFTWdelete(h);
+    deleteAlign(h);
   }
   
-  FFTWdelete(g);
-  FFTWdelete(f);
-  FFTWdelete(e);
+  deleteAlign(g);
+  deleteAlign(f);
+  deleteAlign(e);
 }

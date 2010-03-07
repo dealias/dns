@@ -151,12 +151,12 @@ int main(int argc, char* argv[])
   double sum=0.0;
   if(Implicit) {
     unsigned int nxpnyp=nxp*nyp;
-    Complex *u1=FFTWComplex(nyp);
-    Complex *v1=FFTWComplex(nyp);
-    Complex *w1=FFTWComplex(nyp);
-    Complex *u2=FFTWComplex(nxpnyp);
-    Complex *v2=FFTWComplex(nxpnyp);
-    Complex *w2=FFTWComplex(nxpnyp);
+    Complex *u1=ComplexAlign(nyp);
+    Complex *v1=ComplexAlign(nyp);
+    Complex *w1=ComplexAlign(nyp);
+    Complex *u2=ComplexAlign(nxpnyp);
+    Complex *v2=ComplexAlign(nxpnyp);
+    Complex *w2=ComplexAlign(nxpnyp);
     ImplicitHBiConvolution2 C(mx,my,u1,v1,u2);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);
@@ -165,12 +165,12 @@ int main(int argc, char* argv[])
       sum += seconds();
     }
     
-    FFTWdelete(w2);
-    FFTWdelete(v2);
-    FFTWdelete(u2);
-    FFTWdelete(w1);
-    FFTWdelete(v1);
-    FFTWdelete(u1);
+    deleteAlign(w2);
+    deleteAlign(v2);
+    deleteAlign(u2);
+    deleteAlign(w1);
+    deleteAlign(v1);
+    deleteAlign(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;

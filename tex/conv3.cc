@@ -154,12 +154,12 @@ int main(int argc, char* argv[])
     unsigned int c=mz/2;
     unsigned int mypmz=(my+1)*mz;
     unsigned int mxpnypmz=(mx+1)*nyp*nz;
-    Complex *u1=FFTWComplex(c+1);
-    Complex *v1=FFTWComplex(c+1);
-    Complex *u2=FFTWComplex(mypmz);
-    Complex *v2=FFTWComplex(mypmz);
-    Complex *u3=FFTWComplex(mxpnypmz);
-    Complex *v3=FFTWComplex(mxpnypmz);
+    Complex *u1=ComplexAlign(c+1);
+    Complex *v1=ComplexAlign(c+1);
+    Complex *u2=ComplexAlign(mypmz);
+    Complex *v2=ComplexAlign(mypmz);
+    Complex *u3=ComplexAlign(mxpnypmz);
+    Complex *v3=ComplexAlign(mxpnypmz);
     ImplicitHConvolution3 C(mx,my,mz,u1,v1,u2,u3);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
@@ -168,12 +168,12 @@ int main(int argc, char* argv[])
       sum += seconds();
     }
     
-    FFTWdelete(v3);
-    FFTWdelete(u3);
-    FFTWdelete(v2);
-    FFTWdelete(u2);
-    FFTWdelete(v1);
-    FFTWdelete(u1);
+    deleteAlign(v3);
+    deleteAlign(u3);
+    deleteAlign(v2);
+    deleteAlign(u2);
+    deleteAlign(v1);
+    deleteAlign(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;

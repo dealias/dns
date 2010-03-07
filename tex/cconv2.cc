@@ -138,10 +138,10 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    Complex *u1=FFTWComplex(my);
-    Complex *v1=FFTWComplex(my);
-    Complex *u2=FFTWComplex(mx*my);
-    Complex *v2=FFTWComplex(mx*my);
+    Complex *u1=ComplexAlign(my);
+    Complex *v1=ComplexAlign(my);
+    Complex *u2=ComplexAlign(mx*my);
+    Complex *v2=ComplexAlign(mx*my);
     ImplicitConvolution2 C(mx,my,u1,v1,u2);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
@@ -150,10 +150,10 @@ int main(int argc, char* argv[])
       sum += seconds();
     }
     
-    FFTWdelete(v2);
-    FFTWdelete(u2);
-    FFTWdelete(v1);
-    FFTWdelete(u1);
+    deleteAlign(v2);
+    deleteAlign(u2);
+    deleteAlign(v1);
+    deleteAlign(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;

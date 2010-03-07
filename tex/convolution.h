@@ -72,8 +72,8 @@ public:
   }
   
   ~ImplicitConvolution() {
-    FFTWdelete(ZetaL);
-    FFTWdelete(ZetaH);
+    deleteAlign(ZetaL);
+    deleteAlign(ZetaH);
     delete Forwardso;
     delete Backwardso;
     delete Forwards;
@@ -162,8 +162,8 @@ public:
   }
   
   ~ImplicitHConvolution() {
-    FFTWdelete(ZetaL);
-    FFTWdelete(ZetaH);
+    deleteAlign(ZetaL);
+    deleteAlign(ZetaH);
     delete cro;
     delete rco;
     delete cr;
@@ -221,8 +221,8 @@ public:
   }
   
   ~fftpad() {
-    FFTWdelete(ZetaL);
-    FFTWdelete(ZetaH);
+    deleteAlign(ZetaL);
+    deleteAlign(ZetaH);
     delete Forwards;
     delete Backwards;
   }
@@ -262,8 +262,8 @@ public:
   }
   
   ~fft0pad() {
-    FFTWdelete(ZetaL);
-    FFTWdelete(ZetaH);
+    deleteAlign(ZetaL);
+    deleteAlign(ZetaH);
     delete Forwards;
     delete Backwards;
   }
@@ -731,8 +731,8 @@ public:
   }
   
   ~ImplicitHBiConvolution() {
-    FFTWdelete(ZetaL);
-    FFTWdelete(ZetaH);
+    deleteAlign(ZetaL);
+    deleteAlign(ZetaH);
     delete cro;
     delete rco;
     delete cr;
@@ -788,8 +788,8 @@ public:
   }
   
   ~fft0bipad() {
-    FFTWdelete(ZetaL);
-    FFTWdelete(ZetaH);
+    deleteAlign(ZetaL);
+    deleteAlign(ZetaH);
     delete Forwards;
     delete Backwards;
   }
