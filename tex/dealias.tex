@@ -175,15 +175,15 @@ explicitly padded convolution based on the same highly optimized
 library.
 
 In Section~\ref{1d}, we develop an algorithm for Fourier transforming a
-zero-padded vector without the need for explicit padding. We show how this
-algorithm can be used to calculate implicitly padded convolutions for both
-general and Hermitian inputs. 
-In section~\ref{pq}, we describe how implicit padding may be
-applied more generally to compute the discrete Fourier transform of an input
+one-dimensional zero-padded vector without the need for explicit
+padding. We show how this algorithm can be used to calculate implicitly
+padded convolutions for both general and Hermitian inputs. 
+We describe how implicit padding may be
+applied to compute the discrete Fourier transform of an input
 vector padded beyond an arbitrary fraction~$p/q$ of its length. 
 Building on these one-dimensional algorithms, implicitly-padded
 convolutions are implemented for two- and three-dimensional input 
-in Sections~\ref{2d} and~\ref{3d}. Finally, in section \ref{hyperconv}, we
+in Sections~\ref{2d} and~\ref{3d}. Finally, in Section \ref{hyperconv}, we
 show for both general and Hermitian data how implicit padding may be used to
 dealias higher-order convolutions efficiently.
 
@@ -717,7 +717,7 @@ unpadded size $m\times m$.}
 \end{minipage}
 \end{figure}
 
-\section{General Padding}\label{pq}
+\subsection{General Padding}\label{pq}
 Implicit padding corresponding to an arbitrary~$p/q$ rule is also
 possible. Suppose that $pm$ data modes are zero-padded to $N=qm$, where $p$
 and $q$ are relatively prime. One decomposes $j=q\ell+r$, where
@@ -744,7 +744,7 @@ also requires $q$ Fourier transforms of length $m$. Again, the computational
 savings for a one-dimensional transform is only marginal.
 
 \section{Implicitly dealiased 2D convolutions}\label{2d}
-The algorithms developed in the previous sections can be used as building
+The algorithms developed in Section~\ref{1d} can be used as building
 blocks to construct efficient implicitly padded 2D convolutions.
 In this section, we consider both the standard 2D complex convolution and the
 centered 2D Hermitian convolution.
