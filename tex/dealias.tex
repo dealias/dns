@@ -157,10 +157,6 @@ one-dimensional convolution is onerous, particularly if one tries to
 compete with problem-dependent and architecture-adaptive
 FFT algorithm such as the award-winning FFTW \cite{Frigo05} library, which
 empirically predetermines a near optimal butterfly graph
-%FIXME:REForDEFN
-%Standard term from graph theory/FFT literature 
-%(e.g. see butterfly diagram in Wikipedia). Maybe add
-%Alan V. Oppenheim, Ronald W. Schafer, and John R. Buck, Discrete-Time Signal Processing, 2nd edition (Upper Saddle River, NJ: Prentice Hall, 1989)
 at each subdivision. Effectively one wants to perform
 the outer FFT subdivision manually, dropping the zero terms and
 deferring the computation of the inner transforms to a standard library
@@ -290,10 +286,11 @@ library, our algorithm was vectorized for this architecture with
 specialized single-instruction multiple-data (SIMD) code.
 
 To compare the normalized error for the two methods, we considered the
-input vectors $f_k=g_k=A e^{ik}$ for $k=0,\ldots,m-1$, which, since $\pi$ is
-irrational, have nonzero Fourier components for all transform sizes.
-For the complex case the exact solution is $H_k=\sum_{p=0}^k f_p
-g_{k-p}=A^2 (k+1) e^{ik}$; we arbitrarily chose $A=\root3\of3+ i\root3\of 5$.
+input vectors $f_k=F e^{ik}$ and $g_k=G e^{ik}$ for $k=0,\ldots,m-1$,
+with $F=\sqrt3+ i\sqrt 7$ and $G=\sqrt5+ i\sqrt {11}$.
+Since $\pi$ is irrational, the Fourier transforms of these vectors have
+nonzero components for all transform sizes.
+The exact solution is $H_k=\sum_{p=0}^k f_p g_{k-p}=FG (k+1) e^{ik}$.
 In Fig.~\ref{error1c} we compare the normalized $L^2$ error 
 $\sqrt{\sum_{k=0}^{m-1}\Abs{h_k-H_k}^2}/\sqrt{\sum_{k=0}^{m-1} \Abs{H_k}^2}$
 for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
@@ -595,10 +592,11 @@ For each algorithm, we benchmark only those vector lengths that yield
 maximum performance.
 
 To check the accuracy of our implementation, we used the test case
-$f_k=g_k=A e^{ik}$ with $A=\root3\of 3$, noting that Hermitian symmetry
-requires that $A$ be real. The exact solution is 
-$H_k=A^2\sum_{p=k-m+1}^{m-1} e^{ip}e^{i(k-p)}=A^2(2m-1-k)e^{ik}$.
-The normalized $L^2$ errors for the implicit and explicit padding are compared
+$f_k=F e^{ik}$ and $g_k=G e^{ik}$ for $k=0,\ldots,m-1$,
+with $F=\sqrt 3$ and $G=\sqrt 5$, noting that Hermitian symmetry
+requires that $F$ and $G$ be real. The exact solution is 
+$H_k=FG\sum_{p=k-m+1}^{m-1} e^{ip}e^{i(k-p)}=FG(2m-1-k)e^{ik}$.
+The normalized $L^2$ errors for implicit and explicit padding are compared
 in Fig.~\ref{error1r}.
 
 \begin{function}[htbp]
@@ -703,7 +701,7 @@ unpadded length $(2m-1)$.}
 \begin{center}
 \includegraphics{error1r}
 \caption{Normalized $L^2$ error for explicitly and implicitly
-dealiased complex in-place 1D convolutions of two vectors of
+dealiased centered Hermitian in-place 1D convolutions of two vectors of
 unpadded length $m$.}
 \label{error1r}
 \end{center}

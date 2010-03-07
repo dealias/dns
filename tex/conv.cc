@@ -14,9 +14,10 @@ unsigned int N0=10000000;
 unsigned int N=0;
 unsigned int m=12;
   
-const double A=cbrt(3.0);
-const double E=exp(1.0);
 const Complex I(0.0,1.0);
+const double E=exp(1.0);
+const double F=sqrt(3.0);
+const double G=sqrt(5.0);
 
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
 
@@ -38,8 +39,10 @@ inline double seconds()
 inline void init(Complex *f, Complex *g) 
 {
   if(Test) {
-    for(unsigned int k=0; k < m; k++) f[k]=g[k]=A*pow(E,k*I);
-//    for(unsigned int k=0; k < m; k++) f[k]=g[k]=A*k;
+    for(unsigned int k=0; k < m; k++) f[k]=F*pow(E,k*I);
+    for(unsigned int k=0; k < m; k++) g[k]=G*pow(E,k*I);
+//    for(unsigned int k=0; k < m; k++) f[k]=F*k;
+//    for(unsigned int k=0; k < m; k++) g[k]=G*k;
   } else {
     f[0]=1.0;
     for(unsigned int k=1; k < m; k++) f[k]=Complex(3.0,2.0);
@@ -193,8 +196,8 @@ int main(int argc, char* argv[])
     double norm=0.0;
     long long M=m;
     for(long long k=0; k < M; k++) {
-      h[k]=A*A*(2*M-1-k)*pow(E,k*I);
-//      h[k]=A*A*(4*m*m*m-6*(k+1)*m*m+(6*k+2)*m+3*k*k*k-3*k)/6.0;
+      h[k]=F*G*(2*M-1-k)*pow(E,k*I);
+//      h[k]=F*G*(4*m*m*m-6*(k+1)*m*m+(6*k+2)*m+3*k*k*k-3*k)/6.0;
       error += abs2(h0[k]-h[k]);
       norm += abs2(h[k]);
     }
