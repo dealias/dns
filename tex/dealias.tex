@@ -326,7 +326,7 @@ for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
 \SetKwData{xW}{W}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.49\linewidth}
+\begin{minipage}{0.5\linewidth}
 \begin{procedure}[H]
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
@@ -335,7 +335,7 @@ for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
   }
   $\xf \leftarrow \fft\inv(\xf)$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
-  \caption{fftpadBackwards(vector~{\sf f}, vector {\sf u}) stores the scrambled
+  \caption{fftpadBackwards({\sf f},{\sf u}) stores the scrambled
 $2m$-padded backwards Fourier transform values of a vector
 {\sf f} of length $m$ in {\sf f} and an auxiliary vector~{\sf u} of length $m$.}\label{fftpadBackwards}
 \end{procedure}
@@ -348,9 +348,8 @@ $2m$-padded backwards Fourier transform values of a vector
     $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k}\xu[k]$\;
   }
   \Return f/(2m)\;
-  \caption{fftpadForwards(vector~{\sf f}, vector~{\sf u}) returns the
-inverse of fftpadBackwards(vector~{\sf f}, vector~{\sf
-u}).}\label{fftpadForwards} 
+  \caption{fftpadForwards({\sf f},{\sf u}) returns the
+inverse of fftpadBackwards({\sf f},{\sf u}).}\label{fftpadForwards} 
 \end{function}
 %
 \end{minipage}
@@ -377,7 +376,7 @@ u}).}\label{fftpadForwards}
     $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k}\xu[k]$\;
   }
   \Return f/(2m)\;
-\caption{cconv(vector {\sf f}, vector~{\sf g}) computes
+\caption{cconv({\sf f}, {\sf g}) computes
 an in-place implicitly dealiased convolution of two complex vectors {\sf f}
 and {\sf g} using two temporary vectors {\sf u} and {\sf v}, each of
 length~$m$.}\label{cconv}
@@ -488,7 +487,7 @@ storage requirements.
   $\xf[m-1] \leftarrow \xu[0]$\;
   $\xf[m-1,\ldots,2m-2] \leftarrow {\tt fft}\inv(\xf[m-1,\ldots,2m-2])$\;
   $\xu[0,\ldots,m-1] \leftarrow {\tt fft}\inv(\xu[0,\ldots,m-1])$\;
-  \caption{fft0padBackwards(vector {\sf f}, vector {\sf u}) stores the scrambled
+  \caption{fft0padBackwards({\sf f},{\sf u}) stores the scrambled
 $3m$-padded centered backwards Fourier transform values of a vector {\sf f} of length
 $2m-1$ in {\sf f} and an auxiliary vector~{\sf u} of length $m+1$.}\label{fft0padBackwards}
 \end{procedure}
@@ -510,8 +509,8 @@ $2m-1$ in {\sf f} and an auxiliary vector~{\sf u} of length $m+1$.}\label{fft0pa
   }
   $\xf[m-1] \leftarrow \xu[m]$\;
   \Return \xf/(3m)\;
-  \caption{fft0padForwards(vector {\sf f}, vector {\sf u}) returns the
-inverse of fft0padBackwards(vector {\sf f}, vector {\sf u}).}
+  \caption{fft0padForwards({\sf f},{\sf u}) returns the
+inverse of fft0padBackwards({\sf f},{\sf u}).}
 \label{fft0padForwards}
 \end{function}
 
@@ -649,8 +648,7 @@ in Fig.~\ref{error1r}.
   }
 
   \Return f/(6c)\;
-\caption{conv(vector {\sf f}, vector {\sf g}) 
-uses Procedure~\ref{build} to compute
+\caption{conv({\sf f},{\sf g}) uses Procedure~\ref{build} to compute
 an in-place implicitly dealiased convolution of centered Hermitian vectors
 {\sf f} and {\sf g} of length~$2c$ using temporary vectors {\sf u} and
 {\sf v} of length $c+1$.}\label{conv}
@@ -674,7 +672,7 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
     $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
     $\xf[m-1-k] \leftarrow \xA+\xB$\;
   }
-  \caption{build(vector~{\sf f}, vector~{\sf u}) builds the FFT arrays
+  \caption{build({\sf f},{\sf u}) builds the FFT arrays
 required for Procedure~\ref{conv} from an unpadded vector {\sf f} of length
 $2c$ into {\sf f} and an auxiliary vector~{\sf u} of length
 $c+1$.}\label{build}
@@ -817,7 +815,7 @@ for an explicitly dealiased convolution.
     $\fftpadForwards(\xf^T[j],\xU^T[j])$\;
   }
   \Return \xf\;
-\caption{cconv2(matrix~{\sf f}, matrix~{\sf g}) 
+\caption{cconv2({\sf f},{\sf g}) 
 returns an in-place implicitly dealiased convolution of
 $m_x\times m_y$ matrices {\sf f} and {\sf g} using temporary $m_x\times m_y$
 matrices {\sf U} and {\sf V} and temporary vectors {\sf u} and {\sf v} of
@@ -843,10 +841,10 @@ length $m_y$.}\label{cconv2}
     $\fftOpadForwards(\xf^T[j],\xU^T[j])$\;
   }
   \Return \xf\;
-\caption{conv2(matrix~{\sf f}, matrix~{\sf g}) 
+\caption{conv2({\sf f},{\sf g}) 
 returns an in-place implicitly dealiased convolution of $(2m_x-1)\times
 m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices 
-{\sf U} and {\sf V} and vectors {\sf u} and {\sf v} of length $m_y$.
+{\sf U} and~{\sf V} and vectors {\sf u} and {\sf v} of length~$m_y$.
 }\label{conv2}
 \end{function}
 \end{minipage}
@@ -893,7 +891,7 @@ complex words, in comparison with the usual requirement of $27m_xm_ym_z$
 complex words for explicit padding with power-of-two transforms.
 
 \begin{figure}[htbp]
-\begin{minipage}{0.55\linewidth}
+\begin{minipage}{0.54\linewidth}
 \begin{function}[H]
   \KwIn{matrix \xf, matrix \xg}
   \KwOut{matrix \xf}
@@ -913,16 +911,16 @@ complex words for explicit padding with power-of-two transforms.
     }
   }
   \Return \xf\;
-\caption{cconv3(matrix~{\sf f}, matrix~{\sf g}) 
+\caption{cconv3({\sf f},{\sf g}) 
 returns an in-place implicitly dealiased convolution of
-$m_x\times m_y\times m_z$ matrices {\sf f} and {\sf g} using temporary
-$m_x\times m_y\times m_z$ matrices ${\sf U}$ and ${\sf V}$, 
+\hbox{$m_x\times m_y\times m_z$} matrices {\sf f} and {\sf g} using temporary
+\hbox{$m_x\times m_y\times m_z$} matrices ${\sf U}$ and ${\sf V}$, 
 $m_y\times m_z$ matrices ${\sf u}_2$ and ${\sf v}_2$,
 and vectors ${\sf u}_1$ and ${\sf v}_1$ of length~$m_z$.}\label{cconv3}
 \end{function}
 \end{minipage}
 %
-\begin{minipage}{0.45\linewidth}
+\begin{minipage}{0.46\linewidth}
 \begin{procedure}[H]
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
@@ -933,7 +931,7 @@ and vectors ${\sf u}_1$ and ${\sf v}_1$ of length~$m_z$.}\label{cconv3}
   $\xf \leftarrow \fft\inv(\xf)$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
   \Return f;
-  \caption{fft0bipadBackwards(vec\-tor~{\sf f}, vector~{\sf u}) stores the 
+  \caption{fft0bipadBackwards({\sf f},{\sf u}) stores the 
 scrambled signed~$4m$-padded centered backwards Fourier transform values of a
 vector {\sf f} of length~$2m$ in {\sf f} and an auxiliary vector~{\sf u} of
 length $2m$.}\label{fft0bipadBackwards}
@@ -947,8 +945,8 @@ length $2m$.}\label{fft0bipadBackwards}
     $\xf[k] \leftarrow \xf[k] +i \z_{4m}^{-k}\xu[k]$\;
   }
   \Return \xf/(4m)\;
-  \caption{fft0bipadForwards(vector~{\sf f}, vector~{\sf u}) returns the
-inverse of fft0bipadBackwards(\hbox{vector~{\sf f}, vector~{\sf u}}).}
+  \caption{fft0bipadForwards({\sf f},{\sf u}) returns the
+inverse of Procedure fft0bipadBackwards({\sf f},{\sf u}).}
 \label{fft0bipadForwards}
 \end{function}
 \end{minipage}
@@ -1070,7 +1068,7 @@ is $1.48$ times faster than, an explicitly padded biconvolution.
     $\xf[k] \leftarrow \xf[k] + \z_{4m}^{-k}\xu[k]$\;
   }
   \Return f/(4m)\;
-\caption{biconv(vector {\sf f}, vector~{\sf g}, vector~{\sf h}) computes
+\caption{biconv({\sf f},{\sf g},{\sf h}) computes
 an in-place implicitly dealiased biconvolution of three centered
 Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 {\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}
@@ -1094,7 +1092,7 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
     $\fftObipadForwards(\xf^T[j],\xU^T[j])$\;
   }
   \Return \xf\;
-\caption{biconv2(matrix~{\sf f}, matrix~{\sf g}, matrix~{\sf h}) 
+\caption{biconv2({\sf f},{\sf g},{\sf h}) 
 returns an in-place implicitly dealiased convolution of \hbox{$2m_x\times
 (m_y+1)$} matrices~{\sf f},~{\sf g}, and~{\sf h} using
 temporary \hbox{$2m_x\times (m_y+1)$} matrices~{\sf U}, {\sf V}, and~{\sf W} and
