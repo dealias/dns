@@ -69,35 +69,35 @@ fast Fourier transform, pseudospectral method, in-place transform, bit reversal
 
 \section{Introduction}
 Discrete linear convolution sums based on the fast Fourier transform
-(FFT) algorithm \cite{Gauss1866,Cooley65} have become important tools
+(FFT) algorithm~\cite{Gauss1866,Cooley65} have become important tools
 for image filtering, digital signal processing, and correlation
-analysis. They are also widely used in computational physics to solve
+analysis. They are also widely used in in periodic domains to solve
 nonlinear partial differential equations, such as the Navier--Stokes
-equations, in periodic domains. In some of these applications, such as
+equations. In some of these applications, such as
 direct numerical pseudospectral simulations of turbulent fluids,
 memory usage is a critical limiting factor, and self-sorting in-place
-multidimensional Fourier transforms \cite{Temperton91} are typically used to
+multidimensional Fourier transforms~\cite{Temperton91} are typically used to
 reduce the memory footprint of the required spectral convolutions.
 
 Because the discrete convolution, which produces cyclic output from cyclic
 input, is applied in these problems to nonperiodic (wavenumber-space) data,
 it is important
 to remove aliases from the convolution. Typically the input data arrays are
-extended by padding them with enough zeros so that the wave beats of
+extended by padding them with enough zeros so that wave beats of
 the positive frequencies cannot wrap around and contaminate
 the negative frequencies. A cyclic convolution $\sum_{p=0}^{N-1} f_p g_{k-p}$ 
 is then performed using a
-correspondingly larger Fourier transform size $N$. If the cost of 
-computing a complex Fourier transform of size $N$ is asymptotic to 
+correspondingly larger Fourier transform size~$N$. If the cost of 
+computing a complex Fourier transform of size~$N$ is asymptotic to 
 $K N\log_2 N$ as \hbox{$N\goesto\infty$} (the lowest bound currently 
-achievable is $K=34/9$ \cite{Johnson07,Lundy07}), the asymptotic cost of
+achievable is $K=34/9$~\cite{Johnson07,Lundy07}), the asymptotic cost of
 computing the convolution of two vectors of unpadded length $m$ is
 $6Km\log_2 m$ (using $N=2m$ and three Fourier transforms).
 
 Another important case in practice is the centered Hermitian~1D convolution,
 $\sum_{p=k-m+1}^{m-1} f_p g_{k-p}$, which requires $\fr{9}{2}Km\log_2 m$
 operations.
-Alternatively, phase shift dealiasing \cite{Patterson71,Canuto06} can be used
+Alternatively, phase shift dealiasing~\cite{Patterson71,Canuto06} can be used
 to cancel out the aliasing errors between two convolutions with two
 different phase shifts. However, this second technique is rarely used in
 practice since in addition to doubling the memory requirements, it is
@@ -137,10 +137,10 @@ The key observation is this: although the memory usage of our implicitly
 padded 1D convolution is identical to that of a conventional explicitly
 padded convolution, the additional temporary memory need not be contiguous
 with the user data.  In a multidimensional context, this external work
-buffer can be reused for other one-dimensional convolutions.
+buffer can be reused for other low dimensional convolutions.
 As a result, in $d$ dimensions an implicitly dealised convolution
 asymptotically uses $1/2^{d-1}$ of the
-memory required for an explicitly padded convolution. When the Fourier origin is
+storage space needed for an explicitly padded convolution. When the Fourier origin is
 centered in the domain, memory usage is reduced to $(2/3)^{d-1}$ of the
 conventional amount.
 If memory savings alone were the goal, these savings could
@@ -153,10 +153,10 @@ memory usage and speed.
 
 Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
-compete with problem-dependent and architecture-adaptive
-FFT algorithm such as the award-winning FFTW \cite{Frigo05} library, which
-empirically predetermines a near optimal butterfly graph
-at each subdivision. Effectively one wants to perform
+compete with a problem-dependent, architecture-adaptive
+FFT algorithm such as is provided by the award-winning FFTW \cite{Frigo05}
+library (which empirically predetermines a near optimal butterfly graph
+at each subdivision). Effectively one wants to perform
 the outer FFT subdivision manually, dropping the zero terms and
 deferring the computation of the inner transforms to a standard library
 routine. But this also restricts the set of available platform-dependent
@@ -252,7 +252,7 @@ In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 (vector) multiply.
 
 In principle, the stable trigonometric recursion described by
-Buneman \cite{Buneman87}, which requires two small precomputed tables, each
+Buneman~\cite{Buneman87}, which requires two small precomputed tables, each
 of size~$\log_2 N$, could be used to compute the required roots of unity
 $\zeta_N^k$ that appear in \Eqs{cconv1backwards}
 and~\hEq{cconv1forwards}. For the
@@ -262,9 +262,9 @@ Buneman's scheme can be removed by replacing $\sec{\pi/2}$ with  $5/\e$,
 $\sin 4\pi$ with $-\e/2$, and $\sin{2\pi}$ and $\sin{\pi}$ each with $-\e/10$.
 
 While Buneman's recursion has the same average accuracy as an FFT
-itself \cite{Tasche02}, on modern hardware a factorization method that does
+itself~\cite{Tasche02}, on modern hardware a factorization method that does
 not rely on successive table updates turns out to be more
-efficient \cite{Johnson09}, at the expense of somewhat higher memory usage.
+efficient~\cite{Johnson09}, at the expense of somewhat higher memory usage.
 We instead calculate the $\zeta_N^k$ factors with a single complex
 multiply, using two short precomputed tables $H_a=\zeta_N^{as}$ and
 $L_b=\zeta_N^b$, where $k=as+b$ with $s=\floor{\sqrt m}$,
@@ -960,7 +960,7 @@ $$
 $$
 which, for example, is required to compute the time evolution of high-order
 Casimir invariants of the nonlinearity for a two-dimensional incompressible
-fluid \cite{Bowman10}. The basic building blocks for this problem are again
+fluid~\cite{Bowman10}. The basic building blocks for this problem are again
 the centered Fourier transform and the Hermitian convolution.
 \subsection{Implicit double dealiased centered Fourier transform}
 \label{fft0bi}
@@ -1148,7 +1148,7 @@ On the other hand, for those applications where the size of the convolution
 is dictated by external criteria, implicit padding effectively expands the
 available set of efficient convolution sizes to include integral powers
 of~$2$, a case of practical significance.
-Canuto \etal\ \cite[p.136]{Canuto06} point out that if only a
+Canuto \etal~\cite[p.136]{Canuto06} point out that if only a
 power-of-two transform is available for a centered convolution, zero
 padding a vector of length $m=2^k$  would require a transform size of $2m$,
 yielding an even slightly higher operation count, $6Km\log_2(2m)$, than the $6K
@@ -1164,7 +1164,7 @@ For 2D and 3D Hermitian convolutions, a prepackaged routine should also
 automatically enforce Hermitian symmetry of the data along the $x$ axis or
 the~$xy$ plane, respectively. With the highly optimized implementations of
 the algorithms developed in this work made available in the open source
-package {\tt fftw++} \cite{fftwpp}, writing a pseudospectral code for
+package {\tt fftw++}~\cite{fftwpp}, writing a pseudospectral code for
 solving nonlinear partial differential equations should now be a relatively
 straightforward exercise.
 
