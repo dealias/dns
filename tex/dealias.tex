@@ -143,7 +143,7 @@ asymptotically uses $1/2^{d-1}$ of the
 storage space needed for an explicitly padded convolution. When the Fourier origin is
 centered in the domain, memory usage is reduced to $(2/3)^{d-1}$ of the
 conventional amount.
-If memory savings alone were the goal, these savings could
+If saving memory alone were the goal, this reduction could
 also be achieved with explicit zero padding by copying the data for the
 innermost convolution to an external padded buffer, but such extra data
 communication would degrade overall performance. The fact that our
@@ -1145,7 +1145,7 @@ computation time. The key idea that was exploited was the decoupling
 of temporary storage and user data, which in higher dimensions allowed
 the reuse of storage space. The resulting increased data locality
 significantly enhanced performance by as much as a factor of $2$.
-The memory savings were equally significant: asymptotically, as
+The savings in memory use was equally significant: asymptotically, as
 $m_x\goesto\infty$, an implicit complex convolution requires one-half of
 the memory needed for a zero padded convolution in two dimensions and
 one-quarter in three dimensions. In the centered Hermitian case, the memory
