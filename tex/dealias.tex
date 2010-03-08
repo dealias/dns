@@ -91,14 +91,14 @@ correspondingly larger Fourier transform size~$N$. If the cost of
 computing a complex Fourier transform of size~$N$ is asymptotic to 
 $K N\log_2 N$ as \hbox{$N\goesto\infty$} (the lowest bound currently 
 achievable is $K=34/9$~\cite{Johnson07,Lundy07}), the asymptotic cost of
-computing the convolution of two vectors of unpadded length $m$ is
+computing the convolution of two vectors of unpadded length~$m$ is
 $6Km\log_2 m$ (using $N=2m$ and three Fourier transforms).
 
 Another important case in practice is the centered Hermitian~1D convolution,
 $\sum_{p=k-m+1}^{m-1} f_p g_{k-p}$, which requires $\fr{9}{2}Km\log_2 m$
 operations.
 Alternatively, phase shift dealiasing~\cite{Patterson71,Canuto06} can be used
-to cancel out the aliasing errors between two convolutions with two
+to cancel out the aliasing errors between two convolutions with
 different phase shifts. However, this second technique is rarely used in
 practice since in addition to doubling the memory requirements, it is
 computationally more expensive, requiring $6K m\log_2 m$ operations for a 
@@ -154,7 +154,7 @@ memory usage and speed.
 Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
 compete with a problem-dependent, architecture-adaptive
-FFT algorithm such as is provided by the award-winning FFTW \cite{Frigo05}
+FFT algorithm like that provided by the award-winning FFTW \cite{Frigo05}
 library (which empirically predetermines a near optimal butterfly graph
 at each subdivision). Effectively one wants to perform
 the outer FFT subdivision manually, dropping the zero terms and
@@ -227,7 +227,7 @@ for an overall computational scaling of order $2m\log_2 m=N\log_2 m$.
 
 The odd and even terms of the convolution can then be computed separately
 (without the need for a bit reversal stage), multiplied term-by-term, and
-finally transformed back to Fourier space using the forward transform
+finally transformed again to Fourier space using the forward transform
 \bel
 NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 =\sum_{\ell=0}^{m-1}\zeta_N^{-k2\ell} u_{2\ell}
@@ -288,10 +288,10 @@ input vectors $f_k=F e^{ik}$ and $g_k=G e^{ik}$ for $k=0,\ldots,m-1$,
 with $F=\sqrt3+ i\sqrt 7$ and $G=\sqrt5+ i\sqrt {11}$.
 Since $\pi$ is irrational, the Fourier transforms of these vectors have
 nonzero components for all transform sizes.
-The exact solution is $H_k=\sum_{p=0}^k f_p g_{k-p}=FG (k+1) e^{ik}$.
-In Fig.~\ref{error1c} we compare the normalized $L^2$ error 
+In Fig.~\ref{error1c} we compare the normalized~$L^2$ error 
 $\sqrt{\sum_{k=0}^{m-1}\Abs{h_k-H_k}^2}/\sqrt{\sum_{k=0}^{m-1} \Abs{H_k}^2}$
-for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
+for each of the computed solutions $h_k$ relative to the exact solution 
+$H_k=\sum_{p=0}^k f_p g_{k-p}=FG (k+1) e^{ik}$.
 
 \SetProcFnt{\textnormal}
 \setlength{\algomargin}{0.6em}
@@ -764,9 +764,9 @@ multivector version of Procedure~{\tt\ref{cconv}} to perform simultaneous
 convolutions in the $y$ direction, but our timing tests indicate that this
 would only slightly enhance the overall performance (since the data for constant
 $y$ is not stored consecutively in memory) and would prevent the 1D convolution
-work arrays from being reused for the $y$ convolution at each fixed $x$. The
+work arrays from being reused for the~$y$ convolution at each fixed $x$. The
 memory savings in our method comes precisely from this reuse of temporary
-storage, which in turn requires that the $y$ convolutions be computed
+storage, which in turn requires that the~$y$ convolutions be computed
 serially.
 
 As shown in Fig.~\ref{timing2c}, the resulting implicit
@@ -928,7 +928,7 @@ complex words for explicit padding with power-of-two transforms.
 \caption{cconv3({\sf f},{\sf g}) 
 returns an in-place implicitly dealiased convolution of
 \hbox{$m_x\times m_y\times m_z$} matrices {\sf f} and {\sf g} using temporary
-\hbox{$m_x\times m_y\times m_z$} matrices ${\sf U}$ and ${\sf V}$, 
+\hbox{$m_x\times m_y\times m_z$} matrices ${\sf U}$ and~${\sf V}$, 
 $m_y\times m_z$ matrices ${\sf u}_2$ and ${\sf v}_2$,
 and vectors ${\sf u}_1$ and ${\sf v}_1$ of length~$m_z$.}\label{cconv3}
 \end{function}
@@ -972,10 +972,12 @@ dealiasing the centered biconvolution
 $$
 \sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1} f_p g_q h_r\d_{p+q+r,k},
 $$
-which, for example, is required to compute the time evolution of high-order
-Casimir invariants of the nonlinearity for a two-dimensional incompressible
-fluid~\cite{Bowman10}. The basic building blocks for this problem are again
-the centered Fourier transform and the Hermitian convolution.
+which, for example, is required to compute the time evolution of the
+nonlinear Casimir invariant $\int \v\w^4\,d\vx$ in the vorticity formulation
+of two-dimensional incompressible flow~\cite{Bowman10}. The basic
+building blocks for this problem are again the centered Fourier transform
+and the Hermitian convolution.
+
 \subsection{Implicit double dealiased centered Fourier transform}
 \label{fft0bi}
 Here the input data length is $2m-1$, with the Fourier origin at index

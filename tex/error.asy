@@ -22,7 +22,7 @@ a=transpose(a);
 mu=a[0]; u=a[1];
 
 guide g0=scale(0.5mm)*unitcircle;
-guide g1=scale(0.6mm)*polygon(3);
+guide g1=scale(0.6mm)*polygon(4);
 
 marker mark0=marker(g0,Draw(Pen(0)));
 marker mark1=marker(g1,Draw(Pen(1)));
