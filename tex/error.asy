@@ -28,8 +28,8 @@ marker mark0=marker(g0,Draw(Pen(0)));
 marker mark1=marker(g1,Draw(Pen(1)));
 
 pen lp=fontsize(8pt);
-draw(graph(mp,p,p>0),Pen(0),Label("Explicit",Pen(0)+lp),mark0);
-draw(graph(mu,u,u>0),Pen(1),Label("Implicit",Pen(1)+lp),mark1);
+draw(graph(mp,p,p>0),Pen(0),Label("explicit",Pen(0)+lp),mark0);
+draw(graph(mu,u,u>0),Pen(1),Label("implicit",Pen(1)+lp),mark1);
 
 xaxis("$m$",BottomTop,LeftTicks);
 yaxis("normalized error",LeftRight,RightTicks);
