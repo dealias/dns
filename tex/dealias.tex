@@ -238,15 +238,15 @@ NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 \qquad k\no=0,\ldots,\fr{N}{2}-1.\label{cconv1forwards}
 \eel
 The transforms described by~\Eqs{cconv1backwards} and~\hEq{cconv1forwards}
-are implemented as Procedure~\ref{fftpadBackwards} and
-Function~\ref{fftpadForwards}.
-These algorithms are combined in Function~\ref{cconv} to 
+are implemented as Procedure~{\tt\ref{fftpadBackwards}} and
+Function~{\tt\ref{fftpadForwards}}.
+These algorithms are combined in Function~{\tt\ref{cconv}} to 
 compute a dealiased convolution of unpadded length~$m$ using
 two arrays of size~$m$ as input vectors instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
 convolutions described in Sections~\ref{2d} and~\ref{3d}.
-Moreover, in Function~\ref{cconv} we see that implicit padding allows four
+Moreover, in Function~{\tt\ref{cconv}} we see that implicit padding allows four
 out of the six complex Fourier transforms of size $m$ to be done out of place.
 In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 (vector) multiply.
@@ -464,7 +464,7 @@ B_k\doteq i\zeta_N^k\(\Im U_k+\zeta_3^{-1} \Im U_{k-m}\),
 where $\zeta_3^{-1}=\(-\half,-\fr{\sqrt{3}}{2}\)$, so that for $k > 0$,
 $w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
 The resulting transforms,
-Procedures \ref{fft0padBackwards} and \ref{fft0padForwards},
+Procedures {\tt\ref{fft0padBackwards}} and {\tt\ref{fft0padForwards}},
 each have an operation count asymptotic to $3Km\log_2 m$.
 We were able to implement strided multivector versions of these algorithms
 since they operate fully in place on their arguments, with no additional
@@ -566,7 +566,7 @@ leading-order scaling of an explicitly padded centered Hermitian convolution.
 For simplicity, in this work we only document the case of practical
 importance, where $m=2c$ (for efficiency reasons one might pad
 odd-length input arrays with an extra zero word anyway). We see in
-Function~\ref{conv} that seven out of the nine Fourier transforms can be
+Function~{\tt\ref{conv}} that seven out of the nine Fourier transforms can be
 performed out of place using the same amount of memory,
 $2(\floor{N/2}+1)=6c+2$, as would be used to compute a centered Hermitian
 convolution with explicit padding. 
@@ -650,7 +650,7 @@ in Fig.~\ref{error1r}.
   }
 
   \Return f/(6c)\;
-\caption{conv({\sf f},{\sf g}) uses Procedure~\ref{build} to compute
+\caption{conv({\sf f},{\sf g}) uses Procedure~{\tt \ref{build}} to compute
 an in-place implicitly dealiased convolution of centered Hermitian vectors
 {\sf f} and {\sf g} of length~$2c$ using temporary vectors {\sf u} and
 {\sf v} of length $c+1$.}\label{conv}
@@ -675,7 +675,7 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
     $\xf[m-1-k] \leftarrow \xA+\xB$\;
   }
   \caption{build({\sf f},{\sf u}) builds the FFT arrays
-required for Procedure~\ref{conv} from an unpadded vector {\sf f} of length
+required for Procedure~{\tt\ref{conv}} from an unpadded vector {\sf f} of length
 $2c$ into {\sf f} and an auxiliary vector~{\sf u} of length
 $c+1$.}\label{build}
 \end{procedure}
@@ -744,13 +744,13 @@ blocks to construct efficient implicitly padded 2D convolutions.
 In this section, we consider both the standard 2D complex convolution and the
 centered 2D Hermitian convolution.
 \subsection{Complex 2D convolution}
-The implicitly padded 2D convolution shown in Algorithm~\ref{cconv2} 
+The implicitly padded 2D convolution shown in Algorithm {\tt\ref{cconv2}} 
 is designed for data stored with a stride of one in the $y$
-direction. Efficient multivector versions of Procedures \ref{fft0padBackwards}
-and \ref{fft0padForwards} are used for the transform in the $x$ direction;
+direction. Efficient multivector versions of Procedures {\tt\ref{fft0padBackwards}}
+and {\tt\ref{fft0padForwards}} are used for the transform in the $x$ direction;
 this allows a single $\zeta_{3m}^k$ factor to be applied to a consecutive
 column of data at constant $x$. In principle, one could also develop a
-multivector version of Procedure~\ref{cconv} to perform simultaneous
+multivector version of Procedure~{\tt\ref{cconv}} to perform simultaneous
 convolutions in the $y$ direction, but our timing tests indicate that this
 would only slightly enhance the overall performance (since the data for constant
 $y$ is not stored consecutively in memory) and would prevent the 1D convolution
@@ -790,7 +790,7 @@ explicitly padded convolution.
 In two dimensions, the Fourier-centered Hermiticity condition appears as
 $U_{-k,-\ell}=\conj{U_{k,\ell}}$. 
 This symmetry is exploited in the centered Hermitian convolution
-algorithm described in Function~\ref{conv2}. As shown in
+algorithm described in Function~{\tt\ref{conv2}}. As shown in
 Fig.~\ref{timing2r}, implicit padding again yields a dramatic improvement
 in speed.
 
@@ -875,9 +875,9 @@ dealiased complex in-place 3D convolutions of size $m^3$.}
 
 \section{Implicitly dealiased 3D convolutions}\label{3d}
 
-The decoupling of the 2D work arrays in Procedure~\ref{cconv2}
+The decoupling of the 2D work arrays in Procedure~{\tt\ref{cconv2}}
 also allows us to construct the efficient 3D implicit complex convolution
-listed in Procedure~\ref{cconv3}. As shown in Fig.~\ref{timing3c}, an implicit
+listed in Procedure~{\tt\ref{cconv3}}. As shown in Fig.~\ref{timing3c}, an implicit
 $256^3$ convolution is $1.90$ times faster than the explicit version, while
 an $xz$-pruned version is only $1.18$ times faster. The memory usage of an
 implicitly padded 3D $m_x\times m_y\times m_z$ convolution is
@@ -995,7 +995,7 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\el
 For a biconvolution, the product of the three factors $(-1)^\ell$
 (one for each input vector) arising from \Eq{fft0bibackwards}
 and the factor $(-1)^\ell$ in \Eq{fft0biforwards} cancel.
-Procedures \ref{fft0bipadBackwards} and \ref{fft0bipadForwards}
+Procedures {\tt\ref{fft0bipadBackwards}} and {\tt\ref{fft0bipadForwards}}
 each have an operation count asymptotic to $4Km\log_2 m$. As they
 operate fully in place on their arguments, with no additional storage
 requirements, it is straightforward to implement strided multivector
@@ -1024,10 +1024,10 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}
 \ee
 
 The resulting implicitly padded Hermitian biconvolution,
-Procedure \ref{biconv}, has an operation count of $8Km\log_2 m$. 
+Procedure {\tt\ref{biconv}}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out of place.
 Fig.~\ref{timing1b} we show that this algorithm is competitive with
-explicit padding. Procedure \ref{biconv} requires $6(m+1)$ complex words of
+explicit padding. Procedure {\tt\ref{biconv}} requires $6(m+1)$ complex words of
 storage, slightly more than the $3(2m+1)=6m+3$ complex words needed for explicit
 padding.
 
