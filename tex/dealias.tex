@@ -236,9 +236,9 @@ NU_k=\sum_{j=0}^{N-1}\zeta_N^{-kj} u_j
 +\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell+1}
 \qquad k\no=0,\ldots,\fr{N}{2}-1.\label{cconv1forwards}
 \eel
-The transforms described by~\Eqs{cconv1backwards} and~\hEq{cconv1forwards}
-are implemented as Procedure~{\tt\ref{fftpadBackwards}} and
-Function~{\tt\ref{fftpadForwards}}.
+The implicitly padded transforms described by~\Eqs{cconv1backwards}
+and~\hEq{cconv1forwards} are implemented as
+Procedure~{\tt\ref{fftpadBackwards}} and Function~{\tt\ref{fftpadForwards}}.
 These algorithms are combined in Function~{\tt\ref{cconv}} to 
 compute a dealiased convolution of unpadded length~$m$ using
 two arrays of size~$m$ as input vectors instead of one array of size $2m$.
@@ -294,14 +294,25 @@ In Fig.~\ref{error1c} we compare the normalized $L^2$ error
 $\sqrt{\sum_{k=0}^{m-1}\Abs{h_k-H_k}^2}/\sqrt{\sum_{k=0}^{m-1} \Abs{H_k}^2}$
 for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
 
+\SetProcFnt{\textnormal}
 \setlength{\algomargin}{0.6em}
 \SetAlCapSkip{3pt}
 \SetAlgoCaptionLayout{textit}
+\def\ProcNameFnt{\tt}
+
 \def\fft{{\tt fft}}
 \def\crfft{{\tt crfft}}
 \def\rcfft{{\tt rcfft}}
+\def\cconv{{\tt cconv}}
+\def\conv{{\tt conv}}
+\def\biconv{{\tt biconv}}
+\def\build{{\tt build}}
+\def\fftpadBackwards{{\tt fftpadBackwards}}
+\def\fftpadForwards{{\tt fftpadForwards}}
 \def\fftOpadBackwards{{\tt fft0padBackwards}}
 \def\fftOpadForwards{{\tt fft0padForwards}}
+\def\fftbipadBackwards{{\tt fftbipadBackwards}}
+\def\fftbipadForwards{{\tt fftbipadForwards}}
 \def\fftObipadBackwards{{\tt fft0bipadBackwards}}
 \def\fftObipadForwards{{\tt fft0bipadForwards}}
 \SetKwData{xf}{f}
@@ -339,6 +350,7 @@ for each of the computed solutions $h_k$ relative to the exact solution $H_k$.
 $2m$-padded backwards Fourier transform values of a vector
 {\sf f} of length $m$ in {\sf f} and an auxiliary vector~{\sf u} of length $m$.}\label{fftpadBackwards}
 \end{procedure}
+\def\fftpadBackwards{{\tt fftpadBackwards}}
 \begin{function}[H]
   \KwIn{vector \xf, vector \xu}
   \KwOut{vector \xf}
@@ -349,7 +361,7 @@ $2m$-padded backwards Fourier transform values of a vector
   }
   \Return f/(2m)\;
   \caption{fftpadForwards({\sf f},{\sf u}) returns the
-inverse of fftpadBackwards({\sf f},{\sf u}).}\label{fftpadForwards} 
+inverse of \fftpadBackwards({\sf f},{\sf u}).}\label{fftpadForwards} 
 \end{function}
 %
 \end{minipage}
@@ -511,7 +523,7 @@ $2m-1$ in {\sf f} and an auxiliary vector~{\sf u} of length $m+1$.}\label{fft0pa
   $\xf[m-1] \leftarrow \xu[m]$\;
   \Return \xf/(3m)\;
   \caption{fft0padForwards({\sf f},{\sf u}) returns the
-inverse of fft0padBackwards({\sf f},{\sf u}).}
+inverse of \fftOpadBackwards({\sf f},{\sf u}).}
 \label{fft0padForwards}
 \end{function}
 
@@ -598,7 +610,6 @@ The normalized $L^2$ errors for implicit and explicit padding are compared
 in Fig.~\ref{error1r}.
 
 \begin{function}[htbp]
-  \SetKwFunction{build}{build}
   \KwIn{vector \xf, vector \xg}
   \KwOut{vector \xf}
   $\xF \leftarrow \xf[c]$\;
@@ -650,7 +661,7 @@ in Fig.~\ref{error1r}.
   }
 
   \Return f/(6c)\;
-\caption{conv({\sf f},{\sf g}) uses Procedure~{\tt \ref{build}} to compute
+\caption{conv({\sf f},{\sf g}) uses Procedure~\build\ to compute
 an in-place implicitly dealiased convolution of centered Hermitian vectors
 {\sf f} and {\sf g} of length~$2c$ using temporary vectors {\sf u} and
 {\sf v} of length $c+1$.}\label{conv}
@@ -949,7 +960,7 @@ length $2m$.}\label{fft0bipadBackwards}
   }
   \Return \xf/(4m)\;
   \caption{fft0bipadForwards({\sf f},{\sf u}) returns the
-inverse of Procedure fft0bipadBackwards({\sf f},{\sf u}).}
+inverse of Procedure \fftObipadBackwards({\sf f},{\sf u}).}
 \label{fft0bipadForwards}
 \end{function}
 \end{minipage}
