@@ -282,7 +282,6 @@ the optimization options {\tt -ansi-alias -malign-double -fp-model fast=2}
 on a 64-bit 3GHz Intel E5450 Xenon processor with 6MB cache. Like the FFTW
 library, our algorithm was vectorized for this architecture with
 specialized single-instruction multiple-data (SIMD) code.
-% SIMD
 
 To compare the normalized error for the two methods, we considered the
 input vectors $f_k=F e^{ik}$ and $g_k=G e^{ik}$ for $k=0,\ldots,m-1$,
@@ -788,7 +787,7 @@ implementation, the pruned method becomes $1.73$ times {\it slower} for the
 $8192^2$ case. Our implicitly dealised convolution is also subject
 to these same optimization losses, but the savings due to implicit padding,
 in-place subtransforms, the neglect of high-level bit reversal, and the
-immediate convolution of constant $x$ columns (i.e.\ while still possibly in
+immediate convolution of constant $x$ columns (while still possibly in
 cache) outweigh these losses.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
@@ -1024,7 +1023,7 @@ by
 u_{2\ell +r}=\sum_{k=-m}^{m-1} \z_{2m}^{\ell k} \z_N^{rk} U_k.
 \eec
 If we set $U_m=0$, the real components $u_{2\ell +r}$ can thus be computed
-by taking a complex-to-real $2m$ transform of % this 2m is confusing. ??
+by taking a complex-to-real transform of
 $\{\z_N^{rk} U_k : k=0,\ldots m\}$.
 
 The forwards transform is
@@ -1052,7 +1051,7 @@ is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
 compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
 (using power-of-two transforms) for an explicit biconvolution. In contrast, a
 $4096^2$ $y$-pruned biconvolution requires the same amount of storage as, but
-is $1.48$ times faster than an explicitly padded biconvolution.
+is $1.48$ times faster than, an explicitly padded biconvolution.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.445\linewidth}
@@ -1168,7 +1167,7 @@ power-of-two transform is available for a centered convolution, zero
 padding a vector of length $m=2^k$  would require a transform size of $2m$,
 yielding an even slightly higher operation count, $6Km\log_2(2m)$, than the $6K
 m\log_2m$ operations required for phase-shift dealiasing. The availability
-of implicitly dealiased convolutions makes this argument moot.
+of implicitly dealiased convolutions now makes this argument moot.
 
 Another advantage of implicit padding is the ability of the algorithm to
 work directly on raw unpadded user data without the inconvenience or extra
