@@ -106,7 +106,7 @@ centered Hermitian convolution.
 
 An explicit application of the zero-padding technique involves the rather
 obvious inefficiency of summing over a large number of data values that
-are known {\it a priori\/} to be zero.
+are known {\it a~priori\/} to be zero.
 However, it is worthwhile to consider the response
 provided by Steven G. Johnson to a frequently asked question about the
 possibility of avoiding this expense~\cite{fftwprune}:
@@ -222,7 +222,6 @@ u_{2\ell+1}
 \qquad
 \ell=0,1,\ldots m-1.\label{cconv1backwards} 
 \eelc
-
 This requires computing two subtransforms, each of size $m$,
 for an overall computational scaling of order $2m\log_2 m=N\log_2 m$.
 
@@ -283,6 +282,7 @@ the optimization options {\tt -ansi-alias -malign-double -fp-model fast=2}
 on a 64-bit 3GHz Intel E5450 Xenon processor with 6MB cache. Like the FFTW
 library, our algorithm was vectorized for this architecture with
 specialized single-instruction multiple-data (SIMD) code.
+% SIMD
 
 To compare the normalized error for the two methods, we considered the
 input vectors $f_k=F e^{ik}$ and $g_k=G e^{ik}$ for $k=0,\ldots,m-1$,
@@ -762,7 +762,7 @@ serially.
 As shown in Fig.~\ref{timing2c}, the resulting implicit
 2D algorithm dramatically outperforms the explicit version:
 a $1024^2$ implicit complex convolution is $1.84$ times faster.
-As one would expect, the gains appear to increase with transform size: a
+As one would expect, the gains appear to increase with transform size: an
 $8192^2$ implicit convolution is $2.03$ times faster than an explicit one. 
 
 The third sentence of the quote from Steven G. Johnson on
@@ -777,8 +777,8 @@ implementation, the pruned method becomes $1.73$ times {\it slower} for the
 $8192^2$ case. Our implicitly dealised convolution is also subject
 to these same optimization losses, but the savings due to implicit padding,
 in-place subtransforms, the neglect of high-level bit reversal, and the
-immediate convolution of constant $x$ columns (while perhaps still in
-cache) outweighs these losses.
+immediate convolution of constant $x$ columns (i.e.\ while still possibly in
+cache) outweigh these losses.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
 of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
@@ -1013,7 +1013,7 @@ by
 u_{2\ell +r}=\sum_{k=-m}^{m-1} \z_{2m}^{\ell k} \z_N^{rk} U_k.
 \eec
 If we set $U_m=0$, the real components $u_{2\ell +r}$ can thus be computed
-by taking a complex-to-real $2m$ transform of
+by taking a complex-to-real $2m$ transform of % this 2m is confusing. ??
 $\{\z_N^{rk} U_k : k=0,\ldots m\}$.
 
 The forwards transform is
@@ -1041,7 +1041,7 @@ is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
 compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
 (using power-of-two transforms) for an explicit biconvolution. In contrast, a
 $4096^2$ $y$-pruned biconvolution requires the same amount of storage as, but
-is $1.48$ times faster than, an explicitly padded biconvolution.
+is $1.48$ times faster than an explicitly padded biconvolution.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.445\linewidth}
@@ -1157,13 +1157,13 @@ power-of-two transform is available for a centered convolution, zero
 padding a vector of length $m=2^k$  would require a transform size of $2m$,
 yielding an even slightly higher operation count, $6Km\log_2(2m)$, than the $6K
 m\log_2m$ operations required for phase-shift dealiasing. The availability
-of implicitly dealiased convolutions makes that argument now moot.
+of implicitly dealiased convolutions makes this argument moot.
 
 Another advantage of implicit padding is the ability of the algorithm to
 work directly on raw unpadded user data without the inconvenience or extra
 storage requirements of a separate padding buffer. 
-Having a prewritten, well-tested dealiased convolution that internally
-takes care of dealiasing is a major convenience for the average user.
+Having a prewritten, well-tested dealiased convolution that
+takes care of dealiasing internally is a major convenience for the average user.
 For 2D and 3D Hermitian convolutions, a prepackaged routine should also
 automatically enforce Hermitian symmetry of the data along the $x$ axis or
 the~$xy$ plane, respectively. With the highly optimized implementations of
