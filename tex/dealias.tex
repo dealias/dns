@@ -66,7 +66,7 @@ been implemented in the open-source software {\tt fftw++}.
 \begin{keywords} 
 dealiasing, zero padding, convolution, hyperconvolution,
 fast Fourier transform, bit reversal, implicit padding, pseudospectral method,
-in-place transform
+in-place transform, 2/3 padding rule
 \end{keywords}
 
 \begin{AMS}
@@ -385,12 +385,13 @@ inverse of \fftpadBackwards({\sf f},{\sf u}).}\label{fftpadForwards}
   $\xu \leftarrow \fft\inv(\xu)$\;
   $\xv \leftarrow \fft\inv(\xv)$\;
   $\xv \leftarrow \xu * \xv$\;
-  $\xu \leftarrow \fft(\xv)$\;
   \medskip
-  $\xv \leftarrow \fft\inv(\xf)$\;
-  $\xf \leftarrow \fft\inv(\xg)$\;
-  $\xv \leftarrow \xv * \xf$\;
-  $\xf \leftarrow \fft(\xv)$\;
+  $\xu \leftarrow \fft\inv(\xg)$\;
+  $\xg \leftarrow \fft\inv(\xf)$\;
+  $\xg \leftarrow \xu * \xg$\;
+  \medskip
+  $\xf \leftarrow \fft(\xg)$\;
+  $\xu \leftarrow \fft(\xv)$\;
   \medskip
   \For{$k=0$ \KwTo $m-1$}{
     $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k}\xu[k]$\;

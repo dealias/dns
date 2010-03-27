@@ -65,8 +65,8 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
   Forwards->fft(f);
 }
 
-void ImplicitConvolution::convolve(Complex *f, Complex *g, Complex *u,
-                                   Complex *v) 
+void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
+                                      Complex *v)
 {
   for(unsigned int a=0, k=0; k < m; ++a) {
     unsigned int stop=min(k+s,m);
@@ -115,22 +115,27 @@ void ImplicitConvolution::convolve(Complex *f, Complex *g, Complex *u,
     p->im=uk.re*vk.im+uk.im*vk.re;
 #endif      
   }
-  Forwardso->fft(v,u);
 
-  Backwardso->fft(f,v);
-  Backwardso->fft(g,f);
+  Backwardso->fft(g,u);
+  Backwardso->fft(f,g);
   for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
-    STORE(v+k,ZMULT(LOAD(v+k),LOAD(f+k)));
+    STORE(g+k,ZMULT(LOAD(u+k),LOAD(g+k)));
 #else      
-    Complex *p=v+k;
-    Complex vk=*p;
-    Complex fk=*(f+k);
-    p->re=vk.re*fk.re-vk.im*fk.im;
-    p->im=vk.re*fk.im+vk.im*fk.re;
+    Complex *p=g+k;
+    Complex gk=*p;
+    Complex uk=*(u+k);
+    p->re=uk.re*gk.re-uk.im*gk.im;
+    p->im=uk.re*gk.im+uk.im*gk.re;
 #endif      
   }
-  Forwardso->fft(v,f);
+}
+
+void ImplicitConvolution::postconvolve(Complex *f, Complex *g, Complex *u,
+                                       Complex *v) 
+{
+  Forwardso->fft(g,f);
+  Forwardso->fft(v,u);
     
   double ninv=0.5/m;
 #ifdef __SSE2__      
@@ -164,6 +169,13 @@ void ImplicitConvolution::convolve(Complex *f, Complex *g, Complex *u,
     }
 #endif
   }  
+}
+
+void ImplicitConvolution::convolve(Complex *f, Complex *g, Complex *u,
+                                   Complex *v) 
+{
+  preconvolve(f,g,u,v);
+  postconvolve(f,g,u,v);
 }
 
 void DirectConvolution::convolve(Complex *h, Complex *f, Complex *g)
