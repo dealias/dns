@@ -70,8 +70,8 @@ void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
 {
   // all six FFTs are out-of-place
     
-  Backwardso->fft(f,u);
-  Backwardso->fft(g,v);
+  Backwards->fft(f,u);
+  Backwards->fft(g,v);
   
   for(unsigned int k=0; k < m; ++k) {
     Complex *p=u+k;
@@ -119,8 +119,8 @@ void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
 #endif      
   }
     
-  Backwardso->fft(f,v);
-  Backwardso->fft(g,f);
+  Backwards->fft(f,v);
+  Backwards->fft(g,f);
   
   for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
@@ -139,8 +139,8 @@ void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
 void ImplicitConvolution::postconvolve(Complex *f, Complex *g, Complex *u,
                                        Complex *v) 
 {
-  Forwardso->fft(u,f);
-  Forwardso->fft(v,u);
+  Forwards->fft(u,f);
+  Forwards->fft(v,u);
     
   double ninv=0.5/m;
 #ifdef __SSE2__      

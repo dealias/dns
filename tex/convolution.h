@@ -56,17 +56,13 @@ protected:
   unsigned int m;
   unsigned int s;
   fft1d *Backwards,*Forwards;
-  fft1d *Backwardso,*Forwardso;
   Complex *ZetaH, *ZetaL;
 public:  
   
   // u and v are distinct temporary arrays each of size m.
   ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : m(m) {
-    Backwards=new fft1d(m,1,u);
-    Forwards=new fft1d(m,-1,u);
-    
-    Backwardso=new fft1d(m,1,u,v);
-    Forwardso=new fft1d(m,-1,u,v);
+    Backwards=new fft1d(m,1,u,v);
+    Forwards=new fft1d(m,-1,u,v);
     
     s=BuildZeta(2*m,m,ZetaH,ZetaL);
   }
@@ -74,8 +70,6 @@ public:
   ~ImplicitConvolution() {
     deleteAlign(ZetaL);
     deleteAlign(ZetaH);
-    delete Forwardso;
-    delete Backwardso;
     delete Forwards;
     delete Backwards;
   }
@@ -88,11 +82,11 @@ public:
   
   // Implicitly padded backwards transform and multiply.
   // Input: f,g
-  // Ouput: g,v
+  // Ouput: u,v
   void preconvolve(Complex *f, Complex *g, Complex *u, Complex *v);
   
   // Implicitly padded forwards transform.
-  // Input: g,v
+  // Input: u,v
   // Ouput: f
   void postconvolve(Complex *f, Complex *g, Complex *u, Complex *v);
 };
