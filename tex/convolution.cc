@@ -68,6 +68,23 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
 void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
                                       Complex *v)
 {
+  // all six FFTs are out-of-place
+    
+  Backwardso->fft(f,u);
+  Backwardso->fft(g,v);
+  
+  for(unsigned int k=0; k < m; ++k) {
+    Complex *p=u+k;
+#ifdef __SSE2__      
+    STORE(p,ZMULT(LOAD(p),LOAD(v+k)));
+#else      
+    Complex uk=*p;
+    Complex vk=*(v+k);
+    p->re=uk.re*vk.re-uk.im*vk.im;
+    p->im=uk.re*vk.im+uk.im*vk.re;
+#endif      
+  }
+
   for(unsigned int a=0, k=0; k < m; ++a) {
     unsigned int stop=min(k+s,m);
     Complex *ZetaL0=ZetaL-k;
@@ -77,18 +94,20 @@ void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
     Vec Y=UNPACKH(CONJ(Zeta),Zeta);
     for(; k < stop; ++k) {
       Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-      STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
-      STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
+      Complex *fk=f+k;
+      Complex *gk=g+k;
+      STORE(fk,ZMULT(Zetak,LOAD(fk)));
+      STORE(gk,ZMULT(Zetak,LOAD(gk)));
     }
 #else
     Complex *p=ZetaH+a;
     double Hre=p->re;
     double Him=p->im;
     for(; k < stop; ++k) {
-      Complex *P=u+k;
-      Complex *Q=v+k;
-      Complex fk=*(f+k);
-      Complex gk=*(g+k);
+      Complex *P=f+k;
+      Complex *Q=g+k;
+      Complex fk=*P;
+      Complex gk=*Q;
       Complex L=*(ZetaL0+k);
       double Re=Hre*L.re-Him*L.im;
       double Im=Hre*L.im+Him*L.re;
@@ -100,33 +119,19 @@ void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
 #endif      
   }
     
-  // four of six FFTs are out-of-place
-    
-  Backwards->fft(u);
-  Backwards->fft(v);
+  Backwardso->fft(f,v);
+  Backwardso->fft(g,f);
+  
   for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
-    STORE(v+k,ZMULT(LOAD(u+k),LOAD(v+k)));
+    Complex *vk=v+k;
+    STORE(vk,ZMULT(LOAD(vk),LOAD(f+k)));
 #else      
     Complex *p=v+k;
     Complex vk=*p;
-    Complex uk=*(u+k);
-    p->re=uk.re*vk.re-uk.im*vk.im;
-    p->im=uk.re*vk.im+uk.im*vk.re;
-#endif      
-  }
-
-  Backwardso->fft(g,u);
-  Backwardso->fft(f,g);
-  for(unsigned int k=0; k < m; ++k) {
-#ifdef __SSE2__      
-    STORE(g+k,ZMULT(LOAD(u+k),LOAD(g+k)));
-#else      
-    Complex *p=g+k;
-    Complex gk=*p;
-    Complex uk=*(u+k);
-    p->re=uk.re*gk.re-uk.im*gk.im;
-    p->im=uk.re*gk.im+uk.im*gk.re;
+    Complex fk=*(f+k);
+    p->re=vk.re*fk.re-vk.im*fk.im;
+    p->im=vk.re*fk.im+vk.im*fk.re;
 #endif      
   }
 }
@@ -134,7 +139,7 @@ void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
 void ImplicitConvolution::postconvolve(Complex *f, Complex *g, Complex *u,
                                        Complex *v) 
 {
-  Forwardso->fft(g,f);
+  Forwardso->fft(u,f);
   Forwardso->fft(v,u);
     
   double ninv=0.5/m;
@@ -151,7 +156,8 @@ void ImplicitConvolution::postconvolve(Complex *f, Complex *g, Complex *u,
     Vec Y=UNPACKH(CONJ(Zeta),Zeta);
     for(; k < stop; ++k) {
       Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-      STORE(f+k,ZMULTC(Zetak,LOAD(u+k))+Ninv*LOAD(f+k));
+      Complex *fk=f+k;
+      STORE(fk,ZMULTC(Zetak,LOAD(u+k))+Ninv*LOAD(fk));
     }
 #else      
     Complex *p=ZetaH+a;

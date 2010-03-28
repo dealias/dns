@@ -255,8 +255,8 @@ two arrays of size~$m$ as input vectors instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
 convolutions described in Sections~\ref{2d} and~\ref{3d}.
-Moreover, in Function~{\tt\ref{cconv}} we see that implicit padding allows four
-out of the six complex Fourier transforms of size $m$ to be done out of place.
+Moreover, in Function~{\tt\ref{cconv}} we see that implicit padding allows
+each of the six complex Fourier transforms of size $m$ to be done out of place.
 In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
 (vector) multiply.
 
@@ -377,20 +377,19 @@ inverse of \fftpadBackwards({\sf f},{\sf u}).}\label{fftpadForwards}
 \begin{function}[H]
   \KwIn{vector \xf, vector \xg}
   \KwOut{vector \xf}
+  $\xu \leftarrow \fft\inv(\xf)$\;
+  $\xv \leftarrow \fft\inv(\xg)$\;
+  $\xu \leftarrow \xu * \xv$\;
   \For{$k=0$ \KwTo $m-1$}{
-    $\xu[k] \leftarrow \z_{2m}^k\xf[k]$\;
-    $\xv[k] \leftarrow \z_{2m}^k\xg[k]$\;
+    $\xf[k] \leftarrow \z_{2m}^k\xf[k]$\;
+    $\xg[k] \leftarrow \z_{2m}^k\xg[k]$\;
   }
   \medskip
-  $\xu \leftarrow \fft\inv(\xu)$\;
-  $\xv \leftarrow \fft\inv(\xv)$\;
-  $\xv \leftarrow \xu * \xv$\;
+  $\xv \leftarrow \fft\inv(\xf)$\;
+  $\xf \leftarrow \fft\inv(\xg)$\;
+  $\xv \leftarrow \xv * \xf$\;
   \medskip
-  $\xu \leftarrow \fft\inv(\xg)$\;
-  $\xg \leftarrow \fft\inv(\xf)$\;
-  $\xg \leftarrow \xu * \xg$\;
-  \medskip
-  $\xf \leftarrow \fft(\xg)$\;
+  $\xf \leftarrow \fft(\xu)$\;
   $\xu \leftarrow \fft(\xv)$\;
   \medskip
   \For{$k=0$ \KwTo $m-1$}{
