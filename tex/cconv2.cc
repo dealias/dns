@@ -22,7 +22,7 @@ unsigned int ny=0;
 unsigned int mx=4;
 unsigned int my=4;
 
-bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
+bool Direct=false, Implicit=true, Explicit=false, Pruned=false, Multiple=false;
 
 using namespace std;
 
@@ -39,12 +39,12 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(array2<Complex>& f, array2<Complex>& g) 
+inline void init(array2<Complex>& f, array2<Complex>& g, double alpha=1.0) 
 {
   for(unsigned int i=0; i < mx; i++) {
     for(unsigned int j=0; j < my; j++) {
-      f[i][j]=Complex(3.0,2.0);
-      g[i][j]=Complex(5.0,3.0);
+      f[i][j]=alpha*Complex(3.0,2.0);
+      g[i][j]=alpha*Complex(5.0,3.0);
     }
   }
 }
@@ -61,6 +61,18 @@ unsigned int padding(unsigned int m)
   return 1 << log2n;
 }
 
+void add(Complex *f, Complex *F) 
+{
+  for(unsigned int i=0; i < mx; ++i) {
+    unsigned int imy=i*my;
+    Complex *fi=f+imy;
+    Complex *Fi=F+imy;
+    for(unsigned int j=0; j < my; ++j) {
+      fi[j] += Fi[j];
+    }
+  }
+}
+
 int main(int argc, char* argv[])
 {
 #ifndef __SSE2__
@@ -71,7 +83,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:x:y:");
+    int c = getopt(argc,argv,"MdeiptN:m:x:y:");
     if (c == -1) break;
 		
     switch (c) {
@@ -96,6 +108,9 @@ int main(int argc, char* argv[])
         break;
       case 'N':
         N=atoi(optarg);
+        break;
+      case 'M':
+        Multiple=true;
         break;
       case 'm':
         mx=my=atoi(optarg);
@@ -142,12 +157,36 @@ int main(int argc, char* argv[])
     Complex *v1=ComplexAlign(my);
     Complex *u2=ComplexAlign(mx*my);
     Complex *v2=ComplexAlign(mx*my);
+    Complex *U2=NULL,*V2=NULL;
+    array2<Complex> F,G;
+    if(Multiple) {
+      F.Allocate(nxp,nyp,align);
+      G.Allocate(nxp,nyp,align);
+      U2=ComplexAlign(mx*my);
+      V2=ComplexAlign(mx*my);
+    }
     ImplicitConvolution2 C(mx,my,u1,v1,u2);
-    for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
-      seconds();
-      C.convolve(f,g,u1,v1,u2,v2);
-      sum += seconds();
+    if(Multiple) {
+      for(unsigned int i=0; i < N; ++i) {
+        init(F,G,sqrt(0.9));
+        init(f,g,sqrt(0.1));
+        seconds();
+        C.preconvolve(f,g,u1,v1,u2,v2);
+        C.preconvolve(F,G,u1,v1,U2,V2);
+        add(f,F);
+        add(g,G);
+        add(u2,U2);
+        add(v2,V2);
+        C.postconvolve(f,g,u1,v1,u2,v2);
+        sum += seconds();
+      }
+    } else {
+      for(unsigned int i=0; i < N; ++i) {
+        init(f,g);
+        seconds();
+        C.convolve(f,g,u1,v1,u2,v2);
+        sum += seconds();
+      }
     }
     
     deleteAlign(v2);
