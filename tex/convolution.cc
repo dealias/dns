@@ -65,8 +65,8 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
   Forwards->fft(f);
 }
 
-void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
-                                      Complex *v)
+void ImplicitConvolution::preconvolve0(Complex *f, Complex *g, Complex *u,
+                                       Complex *v)
 {
   // all six FFTs are out-of-place
     
@@ -121,7 +121,12 @@ void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
     
   Backwards->fft(f,v);
   Backwards->fft(g,f);
-  
+}
+
+void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
+                                      Complex *v)
+{
+  preconvolve0(f,g,u,v);
   for(unsigned int k=0; k < m; ++k) {
 #ifdef __SSE2__      
     Complex *vk=v+k;
@@ -136,12 +141,29 @@ void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
   }
 }
 
-void ImplicitConvolution::postconvolve(Complex *f, Complex *g, Complex *u,
-                                       Complex *v) 
+void ImplicitConvolution::preconvolvefg(Complex *f, Complex *g, Complex *u,
+                                        Complex *v)
 {
-  Forwards->fft(u,f);
-  Forwards->fft(v,u);
-    
+  preconvolve0(f,g,u,v);
+  for(unsigned int k=0; k < m; ++k) {
+#ifdef __SSE2__      
+    Complex *fk=f+k;
+    STORE(fk,ZMULT(LOAD(v+k),LOAD(fk)));
+#else      
+    Complex *p=f+k;
+    Complex fk=*p;
+    Complex vk=*(v+k);
+    p->re=vk.re*fk.re-vk.im*fk.im;
+    p->im=vk.re*fk.im+vk.im*fk.re;
+#endif      
+  }
+  for(unsigned int k=0; k < m; ++k)
+    g[k]=u[k];
+}
+
+void ImplicitConvolution::postconvolve0(Complex *f, Complex *g, Complex *u,
+                                        Complex *v) 
+{
   double ninv=0.5/m;
 #ifdef __SSE2__      
   const Complex ninv2(ninv,ninv);
@@ -175,6 +197,24 @@ void ImplicitConvolution::postconvolve(Complex *f, Complex *g, Complex *u,
     }
 #endif
   }  
+}
+
+void ImplicitConvolution::postconvolve(Complex *f, Complex *g, Complex *u,
+                                       Complex *v) 
+{
+  Forwards->fft(u,f);
+  Forwards->fft(v,u);
+  
+  postconvolve0(f,g,u,v);
+}
+
+void ImplicitConvolution::postconvolvefg(Complex *f, Complex *g, Complex *u,
+                                         Complex *v) 
+{
+  Forwards->fft(f,u);
+  Forwards->fft(g,f);
+  
+  postconvolve0(f,g,u,v);
 }
 
 void ImplicitConvolution::convolve(Complex *f, Complex *g, Complex *u,

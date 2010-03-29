@@ -80,15 +80,24 @@ public:
   // u and v are temporary arrays each of size m.
   void convolve(Complex *f, Complex *g, Complex *u, Complex *v);
   
+  void preconvolve0(Complex *f, Complex *g, Complex *u, Complex *v);
+  void postconvolve0(Complex *f, Complex *g, Complex *u, Complex *v);
+  
   // Implicitly padded backwards transform and multiply.
   // Input: f,g
   // Ouput: u,v
   void preconvolve(Complex *f, Complex *g, Complex *u, Complex *v);
+  // Input: f,g
+  // Ouput: f,g
+  void preconvolvefg(Complex *f, Complex *g, Complex *u, Complex *v);
   
   // Implicitly padded forwards transform.
   // Input: u,v
   // Ouput: f
   void postconvolve(Complex *f, Complex *g, Complex *u, Complex *v);
+  // Input: f,g
+  // Ouput: f
+  void postconvolvefg(Complex *f, Complex *g, Complex *u, Complex *v);
 };
 
 // Out-of-place direct complex convolution.
