@@ -96,8 +96,10 @@ void ImplicitConvolution::preconvolve0(Complex *f, Complex *g, Complex *u,
       Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
       Complex *fk=f+k;
       Complex *gk=g+k;
-      STORE(fk,ZMULT(Zetak,LOAD(fk)));
-      STORE(gk,ZMULT(Zetak,LOAD(gk)));
+      Vec Fk=LOAD(fk);
+      Vec Gk=LOAD(gk);
+      STORE(fk,ZMULT(Zetak,Fk));
+      STORE(gk,ZMULT(Zetak,Gk));
     }
 #else
     Complex *p=ZetaH+a;
@@ -1092,9 +1094,12 @@ void ImplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h,
     Vec Y=UNPACKH(CONJ(Zeta),Zeta);
     for(; k < stop; ++k) {
       Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-      STORE(u+k,ZMULT(Zetak,LOAD(f+k)));
-      STORE(v+k,ZMULT(Zetak,LOAD(g+k)));
-      STORE(w+k,ZMULT(Zetak,LOAD(h+k)));
+      Vec Fk=LOAD(f+k);
+      Vec Gk=LOAD(g+k);
+      Vec Hk=LOAD(h+k);
+      STORE(u+k,ZMULT(Zetak,Fk));
+      STORE(v+k,ZMULT(Zetak,Gk));
+      STORE(w+k,ZMULT(Zetak,Hk));
     }
 #else
     Complex *p=ZetaH+a;
