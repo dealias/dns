@@ -78,26 +78,8 @@ public:
   // The input arrays f and g are each of size m (contents not preserved).
   // The output is returned in f.
   // u and v are temporary arrays each of size m.
-  void convolve(Complex *f, Complex *g, Complex *u, Complex *v);
-  
-  void preconvolve0(Complex *f, Complex *g, Complex *u, Complex *v);
-  void postconvolve0(Complex *f, Complex *g, Complex *u, Complex *v);
-  
-  // Implicitly padded backwards transform and multiply.
-  // Input: f,g
-  // Ouput: u,v
-  void preconvolve(Complex *f, Complex *g, Complex *u, Complex *v);
-  // Input: f,g
-  // Ouput: f,g
-  void preconvolvefg(Complex *f, Complex *g, Complex *u, Complex *v);
-  
-  // Implicitly padded forwards transform.
-  // Input: u,v
-  // Ouput: f
-  void postconvolve(Complex *f, Complex *g, Complex *u, Complex *v);
-  // Input: f,g
-  // Ouput: f
-  void postconvolvefg(Complex *f, Complex *g, Complex *u, Complex *v);
+  void convolve(Complex *f, Complex *g, Complex *u, Complex *v,
+                unsigned int M=1);
 };
 
 // Out-of-place direct complex convolution.
@@ -361,35 +343,6 @@ public:
     for(unsigned int i=0; i < mxy; i += my)
       yconvolve->convolve(u2+i,v2+i,u1,v1);
     
-    xfftpad->forwards(f,u2);
-  }
-  
-  // Implicitly padded backwards transform and multiply.
-  // Input: f,g
-  // Ouput: f,g,u2,v2
-  void preconvolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
-                   Complex *u2, Complex *v2) {
-    xfftpad->backwards(f,u2);
-    xfftpad->backwards(g,v2);
-
-    unsigned int mxy=mx*my;
-    for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->preconvolvefg(f+i,g+i,u1,v1);
-    for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->preconvolvefg(u2+i,v2+i,u1,v1);
-  }
-  
-  // Implicitly padded forwards transform.
-  // Input: f,g,u2,v2
-  // Ouput: f
-  void postconvolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
-                    Complex *u2, Complex *v2) {
-    unsigned int mxy=mx*my;
-    for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->postconvolvefg(f+i,g+i,u1,v1);
-    for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->postconvolvefg(u2+i,v2+i,u1,v1);
-  
     xfftpad->forwards(f,u2);
   }
 };

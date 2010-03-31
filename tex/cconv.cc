@@ -21,6 +21,7 @@ const Complex G(sqrt(5.0),sqrt(11.0));
 
 unsigned int m=11;
 unsigned int n=2*m;
+unsigned int M=1;
 
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
 
@@ -39,7 +40,7 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(Complex *f, Complex *g) 
+inline void init(Complex *f, Complex *g, int M=1) 
 {
   if(Test) {
     for(unsigned int k=0; k < m; k++) f[k]=F*pow(E,k*I);
@@ -47,9 +48,21 @@ inline void init(Complex *f, Complex *g)
 //    for(unsigned int k=0; k < m; k++) f[k]=F*k;
 //    for(unsigned int k=0; k < m; k++) g[k]=G*k;
   } else {
-    for(unsigned int k=0; k < m; k++) f[k]=Complex(3.0,2.0);
-    for(unsigned int k=0; k < m; k++) g[k]=Complex(5.0,3.0);
+    unsigned int Mm=M*m;
+    double factor=1.0/sqrt(M);
+    for(unsigned int i=0; i < Mm; i += m) {
+      Complex *fi=f+i;
+      Complex *gi=g+i;
+      for(unsigned int k=0; k < m; k++) fi[k]=factor*Complex(3.0,2.0);
+      for(unsigned int k=0; k < m; k++) gi[k]=factor*Complex(5.0,3.0);
+    }
   }
+}
+
+void add(Complex *f, Complex *F) 
+{
+  for(unsigned int i=0; i < m; ++i)
+      f[i] += F[i];
 }
 
 int main(int argc, char* argv[])
@@ -62,7 +75,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:");
+    int c = getopt(argc,argv,"deiptN:M:m:");
     if (c == -1) break;
 		
     switch (c) {
@@ -83,6 +96,9 @@ int main(int argc, char* argv[])
       break;
     case 'N':
       N=atoi(optarg);
+      break;
+     case 'M':
+      M=atoi(optarg);
       break;
     case 't':
       Test=true;
@@ -108,7 +124,7 @@ int main(int argc, char* argv[])
   }
   cout << "N=" << N << endl;
   
-  int np=Explicit ? n : m;
+  unsigned int np=Explicit ? n : m*M;
   Complex *f=ComplexAlign(np);
   Complex *g=ComplexAlign(np);
 
@@ -124,13 +140,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    Complex *u=ComplexAlign(m);
-    Complex *v=ComplexAlign(m);
+    Complex *u=ComplexAlign(m*M);
+    Complex *v=ComplexAlign(m*M);
     ImplicitConvolution C(m,u,v);
     for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
+      init(f,g,M);
       seconds();
-      C.convolve(f,g,u,v);
+      C.convolve(f,g,u,v,M);
       sum += seconds();
     }
     deleteAlign(u);

@@ -21,8 +21,9 @@ unsigned int nx=0;
 unsigned int ny=0;
 unsigned int mx=4;
 unsigned int my=4;
+unsigned int M=1;
 
-bool Direct=false, Implicit=true, Explicit=false, Pruned=false, Multiple=false;
+bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 
 using namespace std;
 
@@ -83,7 +84,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"MdeiptN:m:x:y:");
+    int c = getopt(argc,argv,"deiptN:M:m:x:y:");
     if (c == -1) break;
 		
     switch (c) {
@@ -110,7 +111,7 @@ int main(int argc, char* argv[])
         N=atoi(optarg);
         break;
       case 'M':
-        Multiple=true;
+        M=atoi(optarg);
         break;
       case 'm':
         mx=my=atoi(optarg);
@@ -157,36 +158,12 @@ int main(int argc, char* argv[])
     Complex *v1=ComplexAlign(my);
     Complex *u2=ComplexAlign(mx*my);
     Complex *v2=ComplexAlign(mx*my);
-    Complex *U2=NULL,*V2=NULL;
-    array2<Complex> F,G;
-    if(Multiple) {
-      F.Allocate(nxp,nyp,align);
-      G.Allocate(nxp,nyp,align);
-      U2=ComplexAlign(mx*my);
-      V2=ComplexAlign(mx*my);
-    }
     ImplicitConvolution2 C(mx,my,u1,v1,u2);
-    if(Multiple) {
-      for(unsigned int i=0; i < N; ++i) {
-        init(F,G,sqrt(0.9));
-        init(f,g,sqrt(0.1));
-        seconds();
-        C.preconvolve(f,g,u1,v1,u2,v2);
-        C.preconvolve(F,G,u1,v1,U2,V2);
-        add(f,F);
-        add(g,G);
-        add(u2,U2);
-        add(v2,V2);
-        C.postconvolve(f,g,u1,v1,u2,v2);
-        sum += seconds();
-      }
-    } else {
-      for(unsigned int i=0; i < N; ++i) {
-        init(f,g);
-        seconds();
-        C.convolve(f,g,u1,v1,u2,v2);
-        sum += seconds();
-      }
+    for(unsigned int i=0; i < N; ++i) {
+      init(f,g);
+      seconds();
+      C.convolve(f,g,u1,v1,u2,v2);
+      sum += seconds();
     }
     
     deleteAlign(v2);

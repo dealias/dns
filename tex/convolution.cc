@@ -65,107 +65,116 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
   Forwards->fft(f);
 }
 
-void ImplicitConvolution::preconvolve0(Complex *f, Complex *g, Complex *u,
-                                       Complex *v)
+// a[k]=a[k]*b[k]
+void mult(Complex *a, Complex *b, unsigned int m) 
+{
+  for(unsigned int k=0; k < m; ++k) {
+    Complex *p=a+k;
+#ifdef __SSE2__      
+    STORE(p,ZMULT(LOAD(p),LOAD(b+k)));
+#else
+    Complex ak=*p;
+    Complex bk=*(b+k);
+    p->re=ak.re*bk.re-ak.im*bk.im;
+    p->im=ak.re*bk.im+ak.im*bk.re;
+#endif      
+  }
+}
+
+// a[0][k]=sum_i a[i][k]*b[i][k]
+void mult(Complex *a, Complex *b, unsigned int m, unsigned int M) 
+{
+  if(M == 1)
+    mult(a,b,m);
+  else {
+    unsigned int Mm=M*m;
+    for(unsigned int k=0; k < m; ++k) {
+      Complex *p=a+k;
+#ifdef __SSE2__      
+      Complex *bk=b+k;
+      Vec sum=ZMULT(LOAD(p),LOAD(bk));
+      for(unsigned int i=m; i < Mm; i += m)
+        sum += ZMULT(LOAD(p+i),LOAD(bk+i));
+      STORE(p,sum);
+#else
+      Complex ak=*p;
+      Complex *q=b+k;
+      Complex bk=*q;
+      double re=ak.re*bk.re-ak.im*bk.im;
+      double im=ak.re*bk.im+ak.im*bk.re;
+      for(unsigned int i=m; i < Mm; i += m) {
+        ak=p[i];
+        bk=q[i];
+        re += ak.re*bk.re-ak.im*bk.im;
+        im += ak.re*bk.im+ak.im*bk.re; 
+      }
+      p->re=re;
+      p->im=im;
+#endif      
+    }
+  }
+}
+
+void ImplicitConvolution::convolve(Complex *f, Complex *g,
+                                   Complex *u, Complex *v, unsigned int M)
 {
   // all six FFTs are out-of-place
     
-  Backwards->fft(f,u);
-  Backwards->fft(g,v);
-  
-  for(unsigned int k=0; k < m; ++k) {
-    Complex *p=u+k;
-#ifdef __SSE2__      
-    STORE(p,ZMULT(LOAD(p),LOAD(v+k)));
-#else      
-    Complex uk=*p;
-    Complex vk=*(v+k);
-    p->re=uk.re*vk.re-uk.im*vk.im;
-    p->im=uk.re*vk.im+uk.im*vk.re;
-#endif      
+  unsigned int Mm=M*m;
+  for(unsigned int i=0; i < Mm; i += m) {
+    Backwards->fft(f+i,u+i);
+    Backwards->fft(g+i,v+i);
   }
+  
+  mult(u,v,m,M);
 
-  for(unsigned int a=0, k=0; k < m; ++a) {
-    unsigned int stop=min(k+s,m);
-    Complex *ZetaL0=ZetaL-k;
+  for(unsigned int i=0; i < Mm; i += m) {
+    Complex *fi=f+i;
+    Complex *gi=g+i;
+    for(unsigned int a=0, k=0; k < m; ++a) {
+      unsigned int stop=min(k+s,m);
+      Complex *ZetaL0=ZetaL-k;
 #ifdef __SSE2__      
-    Vec Zeta=LOAD(ZetaH+a);
-    Vec X=UNPACKL(Zeta,Zeta);
-    Vec Y=UNPACKH(CONJ(Zeta),Zeta);
-    for(; k < stop; ++k) {
-      Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-      Complex *fk=f+k;
-      Complex *gk=g+k;
-      Vec Fk=LOAD(fk);
-      Vec Gk=LOAD(gk);
-      STORE(fk,ZMULT(Zetak,Fk));
-      STORE(gk,ZMULT(Zetak,Gk));
-    }
+      Vec Zeta=LOAD(ZetaH+a);
+      Vec X=UNPACKL(Zeta,Zeta);
+      Vec Y=UNPACKH(CONJ(Zeta),Zeta);
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
+        Complex *fki=fi+k;
+        Complex *gki=gi+k;
+        Vec Fki=LOAD(fki);
+        Vec Gki=LOAD(gki);
+        STORE(fki,ZMULT(Zetak,Fki));
+        STORE(gki,ZMULT(Zetak,Gki));
+      }
 #else
-    Complex *p=ZetaH+a;
-    double Hre=p->re;
-    double Him=p->im;
-    for(; k < stop; ++k) {
-      Complex *P=f+k;
-      Complex *Q=g+k;
-      Complex fk=*P;
-      Complex gk=*Q;
-      Complex L=*(ZetaL0+k);
-      double Re=Hre*L.re-Him*L.im;
-      double Im=Hre*L.im+Him*L.re;
-      P->re=Re*fk.re-Im*fk.im;
-      P->im=Im*fk.re+Re*fk.im;
-      Q->re=Re*gk.re-Im*gk.im;
-      Q->im=Im*gk.re+Re*gk.im;
-    }
+      Complex *p=ZetaH+a;
+      double Hre=p->re;
+      double Him=p->im;
+      for(; k < stop; ++k) {
+        Complex *P=fi+k;
+        Complex *Q=gi+k;
+        Complex fk=*P;
+        Complex gk=*Q;
+        Complex L=*(ZetaL0+k);
+        double Re=Hre*L.re-Him*L.im;
+        double Im=Hre*L.im+Him*L.re;
+        P->re=Re*fk.re-Im*fk.im;
+        P->im=Im*fk.re+Re*fk.im;
+        Q->re=Re*gk.re-Im*gk.im;
+        Q->im=Im*gk.re+Re*gk.im;
+      }
 #endif      
+    }
+    Backwards->fft(f+i,v+i);
+    Backwards->fft(g+i,f+i);
   }
     
-  Backwards->fft(f,v);
-  Backwards->fft(g,f);
-}
+  mult(v,f,m,M);
 
-void ImplicitConvolution::preconvolve(Complex *f, Complex *g, Complex *u,
-                                      Complex *v)
-{
-  preconvolve0(f,g,u,v);
-  for(unsigned int k=0; k < m; ++k) {
-#ifdef __SSE2__      
-    Complex *vk=v+k;
-    STORE(vk,ZMULT(LOAD(vk),LOAD(f+k)));
-#else      
-    Complex *p=v+k;
-    Complex vk=*p;
-    Complex fk=*(f+k);
-    p->re=vk.re*fk.re-vk.im*fk.im;
-    p->im=vk.re*fk.im+vk.im*fk.re;
-#endif      
-  }
-}
+  Forwards->fft(u,f);
+  Forwards->fft(v,u);
 
-void ImplicitConvolution::preconvolvefg(Complex *f, Complex *g, Complex *u,
-                                        Complex *v)
-{
-  preconvolve0(f,g,u,v);
-  for(unsigned int k=0; k < m; ++k) {
-#ifdef __SSE2__      
-    Complex *fk=f+k;
-    STORE(fk,ZMULT(LOAD(v+k),LOAD(fk)));
-#else      
-    Complex *p=f+k;
-    Complex fk=*p;
-    Complex vk=*(v+k);
-    p->re=vk.re*fk.re-vk.im*fk.im;
-    p->im=vk.re*fk.im+vk.im*fk.re;
-#endif      
-  }
-  for(unsigned int k=0; k < m; ++k)
-    g[k]=u[k];
-}
-
-void ImplicitConvolution::postconvolve0(Complex *f, Complex *g, Complex *u,
-                                        Complex *v) 
-{
   double ninv=0.5/m;
 #ifdef __SSE2__      
   const Complex ninv2(ninv,ninv);
@@ -199,31 +208,6 @@ void ImplicitConvolution::postconvolve0(Complex *f, Complex *g, Complex *u,
     }
 #endif
   }  
-}
-
-void ImplicitConvolution::postconvolve(Complex *f, Complex *g, Complex *u,
-                                       Complex *v) 
-{
-  Forwards->fft(u,f);
-  Forwards->fft(v,u);
-  
-  postconvolve0(f,g,u,v);
-}
-
-void ImplicitConvolution::postconvolvefg(Complex *f, Complex *g, Complex *u,
-                                         Complex *v) 
-{
-  Forwards->fft(f,u);
-  Forwards->fft(g,f);
-  
-  postconvolve0(f,g,u,v);
-}
-
-void ImplicitConvolution::convolve(Complex *f, Complex *g, Complex *u,
-                                   Complex *v) 
-{
-  preconvolve(f,g,u,v);
-  postconvolve(f,g,u,v);
 }
 
 void DirectConvolution::convolve(Complex *h, Complex *f, Complex *g)
