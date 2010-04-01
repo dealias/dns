@@ -40,12 +40,14 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(array2<Complex>& f, array2<Complex>& g, double alpha=1.0) 
+inline void init(array2<Complex>& f, array2<Complex>& g, int M=1) 
 {
-  for(unsigned int i=0; i < mx; i++) {
+  unsigned int Mmx=M*mx;
+  double factor=1.0/sqrt(M);
+  for(unsigned int i=0; i < Mmx; ++i) {
     for(unsigned int j=0; j < my; j++) {
-      f[i][j]=alpha*Complex(3.0,2.0);
-      g[i][j]=alpha*Complex(5.0,3.0);
+      f[i][j]=factor*Complex(3.0,2.0);
+      g[i][j]=factor*Complex(5.0,3.0);
     }
   }
 }
@@ -142,6 +144,7 @@ int main(int argc, char* argv[])
   size_t align=sizeof(Complex);
   int nxp=Explicit ? nx : mx;
   int nyp=Explicit ? ny : my;
+  if(Implicit) nxp *= M;
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
 
@@ -154,13 +157,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    Complex *u1=ComplexAlign(my);
-    Complex *v1=ComplexAlign(my);
-    Complex *u2=ComplexAlign(mx*my);
-    Complex *v2=ComplexAlign(mx*my);
-    ImplicitConvolution2 C(mx,my,u1,v1,u2);
+    Complex *u1=ComplexAlign(my*M);
+    Complex *v1=ComplexAlign(my*M);
+    Complex *u2=ComplexAlign(nxp*my);
+    Complex *v2=ComplexAlign(nxp*my);
+    ImplicitConvolution2 C(mx,my,u1,v1,u2,M);
     for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
+      init(f,g,M);
       seconds();
       C.convolve(f,g,u1,v1,u2,v2);
       sum += seconds();

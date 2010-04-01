@@ -124,7 +124,8 @@ int main(int argc, char* argv[])
   }
   cout << "N=" << N << endl;
   
-  unsigned int np=Explicit ? n : m*M;
+  unsigned int np=Explicit ? n : m;
+  if(Implicit) np *= M;
   Complex *f=ComplexAlign(np);
   Complex *g=ComplexAlign(np);
 
@@ -140,13 +141,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    Complex *u=ComplexAlign(m*M);
-    Complex *v=ComplexAlign(m*M);
-    ImplicitConvolution C(m,u,v);
+    Complex *u=ComplexAlign(np);
+    Complex *v=ComplexAlign(np);
+    ImplicitConvolution C(m,u,v,M);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
-      C.convolve(f,g,u,v,M);
+      C.convolve(f,g,u,v);
       sum += seconds();
     }
     deleteAlign(u);

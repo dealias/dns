@@ -50,17 +50,79 @@ public:
   void convolve(Complex *f, Complex *g);
 };
 
-// In-place implicitly dealiased complex convolution.
-class ImplicitConvolution {
+class Dot {
 protected:
   unsigned int m;
+  unsigned int M;
+  
+public:
+  Dot(unsigned int m, unsigned int M) : 
+    m(m), M(M) {}
+  
+  // a[0][k]=sum_i a[i][k]*b[i][k]
+  void mult(Complex *a, Complex *b, unsigned int bstride=1) {
+    if(M == 1) { // a[k]=a[k]*b[k]
+      for(unsigned int k=0; k < m; ++k) {
+        Complex *p=a+k;
+#ifdef __SSE2__      
+        STORE(p,ZMULT(LOAD(p),LOAD(b+k)));
+#else
+        Complex ak=*p;
+        Complex bk=*(b+k);
+        p->re=ak.re*bk.re-ak.im*bk.im;
+        p->im=ak.re*bk.im+ak.im*bk.re;
+#endif      
+      }
+    } else {
+      unsigned int Mm=M*m;
+      for(unsigned int k=0; k < m; ++k) {
+        Complex *p=a+k;
+#ifdef __SSE2__      
+        Complex *bk=b+k;
+        Vec sum=ZMULT(LOAD(p),LOAD(bk));
+        for(unsigned int i=m; i < Mm; i += m)
+          sum += ZMULT(LOAD(p+i),LOAD(bk+i*bstride));
+        STORE(p,sum);
+#else
+        Complex ak=*p;
+        Complex *q=b+k;
+        Complex bk=*q;
+        double re=ak.re*bk.re-ak.im*bk.im;
+        double im=ak.re*bk.im+ak.im*bk.re;
+        for(unsigned int i=m; i < Mm; i += m) {
+          ak=p[i];
+          bk=q[i*bstride];
+          re += ak.re*bk.re-ak.im*bk.im;
+          im += ak.re*bk.im+ak.im*bk.re; 
+        }
+        p->re=re;
+        p->im=im;
+#endif      
+      }
+    }
+  }
+};
+
+  
+// In-place implicitly dealiased complex convolution.
+class ImplicitConvolution : public Dot {
+protected:
+  unsigned int m;
+  unsigned int M;
+  unsigned int stride;
   unsigned int s;
   fft1d *Backwards,*Forwards;
   Complex *ZetaH, *ZetaL;
 public:  
   
+  
   // u and v are distinct temporary arrays each of size m.
-  ImplicitConvolution(unsigned int m, Complex *u, Complex *v) : m(m) {
+  // M is the number of data blocks (each corresponding to a term in the
+  // dot product).
+  // stride is the spacing between successive data blocks in units of m.
+  ImplicitConvolution(unsigned int m, Complex *u, Complex *v,
+                      unsigned int M=1, unsigned int stride=1)
+    : Dot(m,M), m(m), M(M), stride(stride) {
     Backwards=new fft1d(m,1,u,v);
     Forwards=new fft1d(m,-1,u,v);
     
@@ -78,8 +140,7 @@ public:
   // The input arrays f and g are each of size m (contents not preserved).
   // The output is returned in f.
   // u and v are temporary arrays each of size m.
-  void convolve(Complex *f, Complex *g, Complex *u, Complex *v,
-                unsigned int M=1);
+  void convolve(Complex *f, Complex *g, Complex *u, Complex *v);
 };
 
 // Out-of-place direct complex convolution.
@@ -312,15 +373,22 @@ public:
 class ImplicitConvolution2 {
 protected:
   unsigned int mx,my;
+  unsigned int M;
+  unsigned int stride;
   fftpad *xfftpad;
   ImplicitConvolution *yconvolve;
 public:  
   // u1 and v1 are temporary arrays of size my.
   // u2 is a temporary array of size mx*my.
+  // M is the number of data blocks (each corresponding to a term in the
+  // dot product).
+  // stride is the spacing between successive data blocks in units of mx*my.
   ImplicitConvolution2(unsigned int mx, unsigned int my,
-                       Complex *u1, Complex *v1, Complex *u2) : mx(mx), my(my) {
+                       Complex *u1, Complex *v1, Complex *u2,
+                       unsigned int M=1,  unsigned int stride=1) :
+    mx(mx), my(my), M(M), stride(stride) {
     xfftpad=new fftpad(mx,my,my,u2);
-    yconvolve=new ImplicitConvolution(my,u1,v1);
+    yconvolve=new ImplicitConvolution(my,u1,v1,M,mx*stride);
   }
   
   ~ImplicitConvolution2() {
@@ -334,10 +402,14 @@ public:
   // The output is returned in f.
   void convolve(Complex *f, Complex *g, Complex *u1, Complex *v1,
                 Complex *u2, Complex *v2) {
-    xfftpad->backwards(f,u2);
-    xfftpad->backwards(g,v2);
-
     unsigned int mxy=mx*my;
+    unsigned int Mmxy=M*mxy;
+    unsigned int mxystride=mxy*stride;
+    for(unsigned int i=0; i < Mmxy; i += mxystride) {
+      xfftpad->backwards(f+i,u2+i);
+      xfftpad->backwards(g+i,v2+i);
+    }
+    
     for(unsigned int i=0; i < mxy; i += my)
       yconvolve->convolve(f+i,g+i,u1,v1);
     for(unsigned int i=0; i < mxy; i += my)
