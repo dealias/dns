@@ -338,13 +338,13 @@ void ImplicitHConvolution::convolve(Complex *f, Complex *g, Complex *u,
   for(unsigned int i=0; i < m; ++i)
     V[i] *= F[i];
   rco->fft(V,f);
-  unsigned int cm1=c-1;
-  Complex overlap0=f[cm1];
-  double overlap1=f[c].re;
 
   // r=1:
+  unsigned int cm1=c-1;
   Complex *f1=f+cm1;
+  Complex S=f1[0];
   f1[0]=A;
+  double T=f1[1].re;
   f1[1]=fc;
   Complex *g1=g+cm1;
   g1[0]=C;
@@ -418,12 +418,12 @@ void ImplicitHConvolution::convolve(Complex *f, Complex *g, Complex *u,
     
   unsigned int a=(c-1)/s;
   Complex Zetak0=ninv*ZetaH[a]*ZetaL[c-1-s*a];
-  Complex f0k=overlap0*ninv;
+  S *= ninv;
   Complex f1k=conj(Zetak0)*v[cm1];
   Complex f2k=Zetak0*u[cm1];
-  f[cm1]=f0k+f1k+f2k;
-  if(c > 1) f[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
-  f[c]=(overlap1-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
+  f[cm1]=S+f1k+f2k;
+  if(c > 1) f[c+1]=conj(S+zeta3*f1k)+zeta3*conj(f2k);
+  f[c]=(T-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
 }
 
 void DirectHConvolution::convolve(Complex *h, Complex *f, Complex *g)
