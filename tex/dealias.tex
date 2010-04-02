@@ -621,15 +621,13 @@ in Fig.~\ref{error1r}.
   \KwIn{vector \xf, vector \xg}
   \KwOut{vector \xf}
   $\xF \leftarrow \xf[c]$\;
-  $\xG \leftarrow \xg[c]$\;
-  \medskip
   \build(\xf,\xu)\;
-  \build(\xg,\xv)\;
-  \medskip
   $\xC \leftarrow \xf[c]$\;
   $\xf[c] \leftarrow 2\Re \xF$\;
   $\xu[c] \leftarrow \Re \xF+\sqrt{3}\Im \xF$\;
   \medskip
+  $\xG \leftarrow \xg[c]$\;
+  \build(\xg,\xv)\;
   $\xD \leftarrow \xg[c]$\;
   $\xg[c] \leftarrow 2\Re \xG$\;
   $\xv[c] \leftarrow \Re \xG+\sqrt{3}\Im \xG$\;
