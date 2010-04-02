@@ -679,8 +679,8 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
   \KwIn{vector \xf}
   \KwOut{vector \xf, vector \xu}
   $\xu[0] \leftarrow \xf[0]$\;
-  $\xFk \leftarrow \conj{f[m-1]}$\;
-  $\xf[m-1] \leftarrow \xf[0]$\;
+  $\xFk \leftarrow \conj{f[2c-1]}$\;
+  $\xf[2c-1] \leftarrow \xf[0]$\;
   \For{$k=1$ \KwTo $c-1$}{
     $\xA \leftarrow \zeta_{6c}^k 
 \[\Re \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)\Re \xFk\]$\;
@@ -688,8 +688,8 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
 \[\Im \xf[k]+\(-\half,\fr{\sqrt{3}}{2}\)\Im \xFk\]$\;
     $\xf[k] \leftarrow \xf[k]+\xFk$\;
     $\xu[k] \leftarrow \xA-\xB$\;
-    $\xFk \leftarrow \conj{\xf[m-1-k]}$\;
-    $\xf[m-1-k] \leftarrow \xA+\xB$\;
+    $\xFk \leftarrow \conj{\xf[2c-1-k]}$\;
+    $\xf[2c-1-k] \leftarrow \xA+\xB$\;
   }
   \caption{build({\sf f},{\sf u}) builds the FFT arrays
 required for Procedure~{\tt\ref{conv}} from an unpadded vector {\sf f} of length
