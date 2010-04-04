@@ -1,6 +1,5 @@
 CC=g++
-#CFLAGS=-g -Wall -ansi -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse -march=native
-CFLAGS=-g -Wall -ansi -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -msse2 -mfpmath=sse -march=native
+CFLAGS=-g -Wall -ansi -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse -march=native
 
 a:=$(shell which icpc 2>&1 | tail -c5)
 ifeq ($(a),icpc)
