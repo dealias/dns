@@ -149,9 +149,10 @@ int main(int argc, char* argv[])
     unsigned int mxpmy=(mx+1)*my;
     Complex *u1=ComplexAlign(c+1);
     Complex *v1=ComplexAlign(c+1);
+    Complex *w1=ComplexAlign(3);
     Complex *u2=ComplexAlign(mxpmy);
     Complex *v2=ComplexAlign(mxpmy);
-    ImplicitHConvolution2 C(mx,my,u1,v1,u2);
+    ImplicitHConvolution2 C(mx,my,u1,v1,w1,u2);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
@@ -161,6 +162,7 @@ int main(int argc, char* argv[])
     
     deleteAlign(v2);
     deleteAlign(u2);
+    deleteAlign(w1);
     deleteAlign(v1);
     deleteAlign(u1);
     

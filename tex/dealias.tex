@@ -396,7 +396,7 @@ inverse of \fftpadBackwards({\sf f},{\sf u}).}\label{fftpadForwards}
     $\xf[k] \leftarrow \xf[k] + \z_{2m}^{-k}\xu[k]$\;
   }
   \Return f/(2m)\;
-\caption{cconv({\sf f},{\sf g}) computes
+\caption{cconv({\sf f},{\sf g},{\sf u},{\sf v}) computes
 an in-place implicitly dealiased convolution of two complex vectors {\sf f}
 and {\sf g} using two temporary vectors {\sf u} and {\sf v}, each of
 length~$m$.}\label{cconv}
@@ -667,7 +667,7 @@ in Fig.~\ref{error1r}.
   }
 
   \Return f/(6c)\;
-\caption{conv({\sf f},{\sf g}) uses Procedure~\build\ to compute
+\caption{conv({\sf f},{\sf g},{\sf u},{\sf v}) uses Procedure~\build\ to compute
 an in-place implicitly dealiased convolution of centered Hermitian vectors
 {\sf f} and {\sf g} of length~$2c$ using temporary vectors {\sf u} and
 {\sf v} of length $c+1$.}\label{conv}
@@ -834,7 +834,7 @@ for an explicitly dealiased convolution.
     $\fftpadForwards(\xf^T[j],\xU^T[j])$\;
   }
   \Return \xf\;
-\caption{cconv2({\sf f},{\sf g}) 
+\caption{cconv2({\sf f},{\sf g},{\sf u},{\sf v},{\sf U},{\sf V}) 
 returns an in-place implicitly dealiased convolution of
 \hbox{$m_x\times m_y$} matrices {\sf f} and {\sf g} using temporary 
 \hbox{$m_x\times m_y$}
@@ -861,7 +861,7 @@ length $m_y$.}\label{cconv2}
     $\fftOpadForwards(\xf^T[j],\xU^T[j])$\;
   }
   \Return \xf\;
-\caption{conv2({\sf f},{\sf g}) 
+\caption{conv2({\sf f},{\sf g},{\sf u},{\sf v},{\sf U},{\sf V}) 
 returns an in-place implicitly dealiased convolution of $(2m_x-1)\times
 m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices 
 {\sf U} and~{\sf V} and vectors {\sf u} and {\sf v} of length~$m_y$.
@@ -1064,7 +1064,7 @@ $4096^2$ $y$-pruned biconvolution requires the same amount of storage as, but
 is $1.48$ times faster than, an explicitly padded biconvolution.
 
 \begin{figure}[htbp]
-\begin{minipage}{0.445\linewidth}
+\begin{minipage}{0.48\linewidth}
 \begin{function}[H]
   \KwIn{vector \xf, vector \xg, vector \xh}
   \KwOut{vector \xf}
@@ -1092,7 +1092,7 @@ is $1.48$ times faster than, an explicitly padded biconvolution.
     $\xf[k] \leftarrow \xf[k] + \z_{4m}^{-k}\xu[k]$\;
   }
   \Return f/(4m)\;
-\caption{biconv({\sf f},{\sf g},{\sf h}) computes
+\caption{biconv({\sf f},{\sf g},{\sf h},{\sf u},{\sf v},{\sf w}) computes
 an in-place implicitly dealiased biconvolution of three centered
 Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
 {\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}

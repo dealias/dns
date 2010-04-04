@@ -13,6 +13,7 @@ using namespace std;
 unsigned int N0=10000000;
 unsigned int N=0;
 unsigned int m=12;
+unsigned int M=1;
   
 const Complex I(0.0,1.0);
 const double E=exp(1.0);
@@ -36,18 +37,24 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(Complex *f, Complex *g) 
+inline void init(Complex *f, Complex *g, int M=1) 
 {
-  if(Test) {
-    for(unsigned int k=0; k < m; k++) f[k]=F*pow(E,k*I);
-    for(unsigned int k=0; k < m; k++) g[k]=G*pow(E,k*I);
-//    for(unsigned int k=0; k < m; k++) f[k]=F*k;
-//    for(unsigned int k=0; k < m; k++) g[k]=G*k;
-  } else {
-    f[0]=1.0;
-    for(unsigned int k=1; k < m; k++) f[k]=Complex(3.0,2.0);
-    g[0]=2.0;
-    for(unsigned int k=1; k < m; k++) g[k]=Complex(5.0,3.0);
+  unsigned int Mm=M*m;
+  double factor=1.0/sqrt(M);
+  for(unsigned int i=0; i < Mm; i += m) {
+    Complex *fi=f+i;
+    Complex *gi=g+i;
+    if(Test) {
+      for(unsigned int k=0; k < m; k++) fi[k]=factor*F*pow(E,k*I);
+      for(unsigned int k=0; k < m; k++) gi[k]=factor*G*pow(E,k*I);
+//    for(unsigned int k=0; k < m; k++) fi[k]=factor*F*k;
+//    for(unsigned int k=0; k < m; k++) gi[k]=factor*G*k;
+    } else {
+      fi[0]=1.0*factor;
+      for(unsigned int k=1; k < m; k++) fi[k]=factor*Complex(3.0,2.0);
+      gi[0]=2.0*factor;
+      for(unsigned int k=1; k < m; k++) gi[k]=factor*Complex(5.0,3.0);
+    }
   }
 }
 
@@ -61,7 +68,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:");
+    int c = getopt(argc,argv,"deiptM:N:m:");
     if (c == -1) break;
 		
     switch (c) {
@@ -79,6 +86,9 @@ int main(int argc, char* argv[])
         Explicit=false;
         break;
       case 'p':
+        break;
+      case 'M':
+        M=atoi(optarg);
         break;
       case 'N':
         N=atoi(optarg);
@@ -108,6 +118,7 @@ int main(int argc, char* argv[])
   cout << "N=" << N << endl;
   
   unsigned int np=Explicit ? n/2+1 : m;
+  if(Implicit) np *= M;
     
   Complex *f=ComplexAlign(np);
   Complex *g=ComplexAlign(np);
@@ -124,19 +135,14 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    unsigned int c=m/2;
-    Complex *u=ComplexAlign(c+1);
-    Complex *v=ComplexAlign(c+1);
-    ImplicitHConvolution C(m,u,v);
+    ImplicitHConvolution C(m,M);
     for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
+      init(f,g,M);
       seconds();
-      C.convolve(f,g,u,v);
+      C.convolve(f,g);
       sum += seconds();
     }
-    deleteAlign(v);
-    deleteAlign(u);
-    
+     
     cout << endl;
     cout << "Implicit:" << endl;
     cout << (sum-offset)/N << endl;

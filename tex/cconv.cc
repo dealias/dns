@@ -42,17 +42,17 @@ inline double seconds()
 
 inline void init(Complex *f, Complex *g, int M=1) 
 {
-  if(Test) {
-    for(unsigned int k=0; k < m; k++) f[k]=F*pow(E,k*I);
-    for(unsigned int k=0; k < m; k++) g[k]=G*pow(E,k*I);
-//    for(unsigned int k=0; k < m; k++) f[k]=F*k;
-//    for(unsigned int k=0; k < m; k++) g[k]=G*k;
+  unsigned int Mm=M*m;
+  double factor=1.0/sqrt(M);
+  for(unsigned int i=0; i < Mm; i += m) {
+    Complex *fi=f+i;
+    Complex *gi=g+i;
+    if(Test) {
+      for(unsigned int k=0; k < m; k++) fi[k]=factor*F*pow(E,k*I);
+      for(unsigned int k=0; k < m; k++) gi[k]=factor*G*pow(E,k*I);
+//    for(unsigned int k=0; k < m; k++) fi[k]=factor*F*k;
+//    for(unsigned int k=0; k < m; k++) gi[k]=factor*G*k;
   } else {
-    unsigned int Mm=M*m;
-    double factor=1.0/sqrt(M);
-    for(unsigned int i=0; i < Mm; i += m) {
-      Complex *fi=f+i;
-      Complex *gi=g+i;
       for(unsigned int k=0; k < m; k++) fi[k]=factor*Complex(3.0,2.0);
       for(unsigned int k=0; k < m; k++) gi[k]=factor*Complex(5.0,3.0);
     }
@@ -75,37 +75,37 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:M:m:");
+    int c = getopt(argc,argv,"deiptM:N:m:");
     if (c == -1) break;
 		
     switch (c) {
-    case 0:
-      break;
-    case 'd':
-      Direct=true;
-      break;
-    case 'e':
-      Explicit=true;
-      Implicit=false;
-      break;
-    case 'i':
-      Implicit=true;
-      Explicit=false;
-      break;
-    case 'p':
-      break;
-    case 'N':
-      N=atoi(optarg);
-      break;
-     case 'M':
-      M=atoi(optarg);
-      break;
-    case 't':
-      Test=true;
-      break;
-    case 'm':
-      m=atoi(optarg);
-      break;
+      case 0:
+        break;
+      case 'd':
+        Direct=true;
+        break;
+      case 'e':
+        Explicit=true;
+        Implicit=false;
+        break;
+      case 'i':
+        Implicit=true;
+        Explicit=false;
+        break;
+      case 'p':
+        break;
+      case 'M':
+        M=atoi(optarg);
+        break;
+      case 'N':
+        N=atoi(optarg);
+        break;
+      case 't':
+        Test=true;
+        break;
+      case 'm':
+        m=atoi(optarg);
+        break;
     }
   }
 
@@ -141,17 +141,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    Complex *u=ComplexAlign(np);
-    Complex *v=ComplexAlign(np);
-    ImplicitConvolution C(m,u,v,M);
+    ImplicitConvolution C(m,M);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
-      C.convolve(f,g,u,v);
+      C.convolve(f,g);
       sum += seconds();
     }
-    deleteAlign(u);
-    deleteAlign(v);
     
     cout << endl;
     cout << "Implicit:" << endl;

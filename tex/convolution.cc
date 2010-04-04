@@ -65,8 +65,7 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
   Forwards->fft(f);
 }
 
-void ImplicitConvolution::convolve(Complex *f, Complex *g,
-                                   Complex *u, Complex *v)
+void ImplicitConvolution::convolve(Complex *f, Complex *g)
 {
   // all six FFTs are out-of-place
     
@@ -192,181 +191,217 @@ void ExplicitHConvolution::convolve(Complex *f, Complex *g)
   rc->fft(f);
 }
 
-void ImplicitHConvolution::convolve(Complex *f, Complex *g, Complex *u,
-                                    Complex *v)
+void ImplicitHConvolution::convolve(Complex *f, Complex *g)
 {
-  double f0=f[0].re;
-  double g0=g[0].re;
+  unsigned int cp1=c+1;
+  unsigned int mstride=m*stride;
+  
+  // seven of nine FFTs are out-of-place
+  
+  for(unsigned int i=0; i < M; ++i) {
+    unsigned int imstride=i*mstride;
+    Complex *fi=f+imstride;
+    Complex *gi=g+imstride;
+    unsigned int icp1=i*cp1;
+    Complex *ui=u+icp1;
+    Complex *vi=v+icp1;
+    if(i+1 < M) {
+      ui += cp1;
+      vi += cp1;
+    }
+    
+    double f0=fi->re;
+    double g0=gi->re;
 
-  // Arrange input data
-  u[0]=f0;
-  v[0]=g0;
-  Complex fc=f[c];
-  unsigned int m1=m-1;
-  Complex fmk=f[m1];
-  f[m1]=f0;
-  Complex gc=g[c];
-  Complex gmk=g[m1];
-  g[m1]=g0;
-  unsigned int stop=s;
-  Complex *ZetaL0=ZetaL;
+    ui[0]=f0;
+    vi[0]=g0;
+    Complex fc=fi[c];
+    unsigned int m1=m-1;
+    Complex fmk=fi[m1];
+    fi[m1]=f0;
+    Complex gc=gi[c];
+    Complex gmk=gi[m1];
+    gi[m1]=g0;
+    unsigned int stop=s;
+    Complex *ZetaL0=ZetaL;
     
 #ifdef __SSE2__      
-  Vec Fmk=LOAD(&fmk);
-  Vec Gmk=LOAD(&gmk);
-  Vec Mhalf=LOAD(&mhalf);
-  Vec HSqrt3=LOAD(&hSqrt3);
-  for(unsigned int a=0, k=1; k < c; ++a) {
-    Vec Zeta=LOAD(ZetaH+a);
-    Vec X=UNPACKL(Zeta,Zeta);
-    Vec Y=UNPACKH(CONJ(Zeta),Zeta);
-    for(; k < stop; ++k) {
-      Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-      Complex *p=f+k;
-      Complex *q=g+k;
-      Vec A=LOAD(p);
-      Vec B=LOAD(q);
-      Vec C=Fmk*Mhalf+CONJ(A);
-      Vec D=Gmk*Mhalf+CONJ(B);
-      STORE(p,A+CONJ(Fmk));
-      STORE(q,B+CONJ(Gmk));
-      Fmk *= HSqrt3;
-      Gmk *= HSqrt3;
-      A=ZMULTC(Zetak,UNPACKL(C,Fmk));
-      B=ZMULTIC(Zetak,UNPACKH(C,Fmk));
-      C=ZMULTC(Zetak,UNPACKL(D,Gmk));
-      D=ZMULTIC(Zetak,UNPACKH(D,Gmk));
-      STORE(u+k,A-B);
-      STORE(v+k,C-D);
-      p=f+m1-k;
-      Fmk=LOAD(p);
-      STORE(p,A+B);
-      q=g+m1-k;
-      Gmk=LOAD(q);
-      STORE(q,C+D);
+    Vec Fmk=LOAD(&fmk);
+    Vec Gmk=LOAD(&gmk);
+    Vec Mhalf=LOAD(&mhalf);
+    Vec HSqrt3=LOAD(&hSqrt3);
+    for(unsigned int a=0, k=1; k < c; ++a) {
+      Vec Zeta=LOAD(ZetaH+a);
+      Vec X=UNPACKL(Zeta,Zeta);
+      Vec Y=UNPACKH(CONJ(Zeta),Zeta);
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
+        Complex *p=fi+k;
+        Complex *q=gi+k;
+        Vec A=LOAD(p);
+        Vec B=LOAD(q);
+        Vec C=Fmk*Mhalf+CONJ(A);
+        Vec D=Gmk*Mhalf+CONJ(B);
+        STORE(p,A+CONJ(Fmk));
+        STORE(q,B+CONJ(Gmk));
+        Fmk *= HSqrt3;
+        Gmk *= HSqrt3;
+        A=ZMULTC(Zetak,UNPACKL(C,Fmk));
+        B=ZMULTIC(Zetak,UNPACKH(C,Fmk));
+        C=ZMULTC(Zetak,UNPACKL(D,Gmk));
+        D=ZMULTIC(Zetak,UNPACKH(D,Gmk));
+        STORE(ui+k,A-B);
+        STORE(vi+k,C-D);
+        p=fi+m1-k;
+        Fmk=LOAD(p);
+        STORE(p,A+B);
+        q=gi+m1-k;
+        Gmk=LOAD(q);
+        STORE(q,C+D);
+      }
+      stop=min(k+s,c);
+      ZetaL0=ZetaL-k;
     }
-    stop=min(k+s,c);
-    ZetaL0=ZetaL-k;
-  }
 #else
-  for(unsigned int a=0, k=1; k < c; ++a) {
-    double fmkre=fmk.re;
-    double fmkim=fmk.im;
-    double gmkre=gmk.re;
-    double gmkim=gmk.im;
-    Complex *p=ZetaH+a;
-    double Hre=p->re;
-    double Him=-p->im;
-    for(; k < stop; ++k) {
-      Complex *p=f+k;
-      Complex *q=g+k;
-      Complex L=*(ZetaL0+k);
-      double Re=Hre*L.re+Him*L.im;
-      double Im=Him*L.re-Hre*L.im;
-      double re=-0.5*fmkre+p->re;
-      double im=hsqrt3*fmkre;
-      double Are=Re*re-Im*im;
-      double Aim=Re*im+Im*re;
-      re=-0.5*fmkim-p->im;
-      im=hsqrt3*fmkim;
-      p->re += fmkre;
-      p->im -= fmkim;
-      double Bre=-Re*im-Im*re;
-      double Bim=Re*re-Im*im;
-      p=u+k;
-      p->re=Are-Bre;
-      p->im=Aim-Bim;
-      p=f+m1-k;
-      fmkre=p->re;
-      fmkim=p->im;
-      p->re=Are+Bre;
-      p->im=Aim+Bim;
+    for(unsigned int a=0, k=1; k < c; ++a) {
+      double fmkre=fmk.re;
+      double fmkim=fmk.im;
+      double gmkre=gmk.re;
+      double gmkim=gmk.im;
+      Complex *p=ZetaH+a;
+      double Hre=p->re;
+      double Him=-p->im;
+      for(; k < stop; ++k) {
+        Complex *p=fi+k;
+        Complex *q=gi+k;
+        Complex L=*(ZetaL0+k);
+        double Re=Hre*L.re+Him*L.im;
+        double Im=Him*L.re-Hre*L.im;
+        double re=-0.5*fmkre+p->re;
+        double im=hsqrt3*fmkre;
+        double Are=Re*re-Im*im;
+        double Aim=Re*im+Im*re;
+        re=-0.5*fmkim-p->im;
+        im=hsqrt3*fmkim;
+        p->re += fmkre;
+        p->im -= fmkim;
+        double Bre=-Re*im-Im*re;
+        double Bim=Re*re-Im*im;
+        p=ui+k;
+        p->re=Are-Bre;
+        p->im=Aim-Bim;
+        p=fi+m1-k;
+        fmkre=p->re;
+        fmkim=p->im;
+        p->re=Are+Bre;
+        p->im=Aim+Bim;
 
-      re=-0.5*gmkre+q->re;
-      im=hsqrt3*gmkre;
-      Are=Re*re-Im*im;
-      Aim=Re*im+Im*re;
-      re=-0.5*gmkim-q->im;
-      im=hsqrt3*gmkim;
-      q->re += gmkre;
-      q->im -= gmkim;
-      Bre=-Re*im-Im*re;
-      Bim=Re*re-Im*im;
-      q=v+k;
-      q->re=Are-Bre;
-      q->im=Aim-Bim;
-      q=g+m1-k;
-      gmkre=q->re;
-      gmkim=q->im;
-      q->re=Are+Bre;
-      q->im=Aim+Bim;
+        re=-0.5*gmkre+q->re;
+        im=hsqrt3*gmkre;
+        Are=Re*re-Im*im;
+        Aim=Re*im+Im*re;
+        re=-0.5*gmkim-q->im;
+        im=hsqrt3*gmkim;
+        q->re += gmkre;
+        q->im -= gmkim;
+        Bre=-Re*im-Im*re;
+        Bim=Re*re-Im*im;
+        q=vi+k;
+        q->re=Are-Bre;
+        q->im=Aim-Bim;
+        q=gi+m1-k;
+        gmkre=q->re;
+        gmkim=q->im;
+        q->re=Are+Bre;
+        q->im=Aim+Bim;
+      }
+      stop=min(k+s,c);
+      ZetaL0=ZetaL-k;
     }
-    stop=min(k+s,c);
-    ZetaL0=ZetaL-k;
-  }
 #endif      
   
-  double A=fc.re;
-  double B=sqrt3*fc.im;
-  fc=f[c];
-  f[c]=2.0*A;
-  u[c]=A+B;
-  A -= B;
+    Complex *wi=w+3*i;
+    double A=fc.re;
+    double B=sqrt3*fc.im;
+    ui[c]=A+B;
+    wi[0].re=A-B;
+    Complex *fic=fi+c;
+    wi[1]=*fic;
+    *fic=2.0*A;
     
-  double C=gc.re;
-  B=sqrt3*gc.im;
-  gc=g[c];
-  g[c]=2.0*C;
-  v[c]=C+B;
-  C -= B;
+    A=gc.re;
+    B=sqrt3*gc.im;
+    vi[c]=A+B;
+    wi[0].im=A-B;
+    Complex *gic=gi+c;
+    wi[2]=*gic;
+    *gic=2.0*A;
     
-  // seven of nine FFTs are out-of-place
-  // r=-1:
-  cr->fft(u);
-  cr->fft(v);
+    // r=-1:
+    if(i+1 < M) {
+      cro->fft(ui,(double *) (ui-cp1));
+      cro->fft(vi,(double *) (vi-cp1));
+    } else {
+      cr->fft(ui);
+      cr->fft(vi);
+    }
+  }
+    
   double *U=(double *) u;
-  double *V=(double *) v;
-  for(unsigned int i=0; i < m; ++i)
-    V[i] *= U[i];
+  unsigned int twocp1=2*cp1;
+  mult((double *) v,U,twocp1,twocp1);
   rco->fft(v,U); // v is now free
 
   // r=0:
-  V=(double *) v;
-  cro->fft(f,V);
+  for(unsigned int i=0; i < M; ++i) {
+    unsigned int imstride=i*mstride;
+    Complex *fi=f+imstride;
+    unsigned int icp1=i*cp1;
+    cro->fft(fi,(double *) (v+icp1));
+    cro->fft(g+imstride,(double *) fi);
+  }
+  
+  double *V=(double *) v;
   double *F=(double *) f;
-  cro->fft(g,F);
-  for(unsigned int i=0; i < m; ++i)
-    V[i] *= F[i];
+  unsigned int twomstride=2*mstride;
+  mult(V,F,twocp1,twomstride);
   rco->fft(V,f);
+  
+  unsigned int cm1=c-1;
+  Complex *fcm1=f+cm1;
+  Complex S=*fcm1;
+  double T=(fcm1+1)->re;
 
   // r=1:
-  unsigned int cm1=c-1;
-  Complex *f1=f+cm1;
-  Complex S=f1[0];
-  f1[0]=A;
-  double T=f1[1].re;
-  f1[1]=fc;
-  Complex *g1=g+cm1;
-  g1[0]=C;
-  g1[1]=gc;
-  V=(double *) v;
-  cro->fft(g1,V);
-  double *G=(double *) g1;
-  cro->fft(f1,G);
-  for(unsigned int i=0; i < m; ++i)
-    G[i] *= V[i];
+  Complex *gcm1=g+cm1;
+  for(unsigned int i=0; i < M; ++i) {
+    unsigned int imstride=i*mstride;
+    Complex *f1=fcm1+imstride;
+    Complex *wi=w+3*i;
+    f1[0]=wi[0].re;
+    f1[1]=wi[1];
+    Complex *g1=gcm1+imstride;
+    g1[0]=wi[0].im;
+    g1[1]=wi[2];
+    
+    cro->fft(g1,(double *) (v+i*cp1));
+    cro->fft(f1,(double *) g1);
+  }
+  
+  double *G=(double *) gcm1;
+  mult(G,V,twomstride,twocp1);
   rco->fft(G,v);
 
   double ninv=1.0/(3.0*m);
   f[0]=(f[0].re+v[0].re+u[0].re)*ninv;
   Complex *fm=f+m;
-  stop=s;
-  ZetaL0=ZetaL;
+  unsigned int stop=s;
+  Complex *ZetaL0=ZetaL;
 #ifdef __SSE2__      
   const Complex ninv2(ninv,ninv);
   Vec Ninv=LOAD(&ninv2);
-  Fmk=LOAD(&fmk);
-  Gmk=LOAD(&gmk);
+  Vec Mhalf=LOAD(&mhalf);
+  Vec HSqrt3=LOAD(&hSqrt3);
   for(unsigned int a=0, k=1; k < cm1; ++a) {
     Vec Zeta=Ninv*LOAD(ZetaH+a);
     Vec X=UNPACKL(Zeta,Zeta);

@@ -84,14 +84,14 @@ public:
           sum += ZMULT(LOAD(p+i),LOAD(bk+i*bstride));
         STORE(p,sum);
 #else
-        Complex ak=*p;
         Complex *q=b+k;
+        Complex ak=*p;
         Complex bk=*q;
         double re=ak.re*bk.re-ak.im*bk.im;
         double im=ak.re*bk.im+ak.im*bk.re;
         for(unsigned int i=m; i < Mm; i += m) {
-          ak=p[i];
-          bk=q[i*bstride];
+          Complex ak=p[i];
+          Complex bk=q[i*bstride];
           re += ak.re*bk.re-ak.im*bk.im;
           im += ak.re*bk.im+ak.im*bk.re; 
         }
@@ -101,35 +101,68 @@ public:
       }
     }
   }
+  
+  // a[0][k]=sum_i a[i][k]*b[i][k]
+  void mult(double *a, double *b, unsigned int astride=1, 
+            unsigned int bstride=1) {
+    if(M == 1) { // a[k]=a[k]*b[k]
+      for(unsigned int k=0; k < m; ++k)
+        a[k] *= b[k];
+    } else {
+      for(unsigned int k=0; k < m; ++k) {
+        double *p=a+k;
+        double *q=b+k;
+        double sum=(*p)*(*q);
+        for(unsigned int i=1; i < M; ++i)
+          sum += p[i*astride]*q[i*bstride];
+        *p=sum;
+      }
+    }
+  }
 };
-
   
 // In-place implicitly dealiased complex convolution.
 class ImplicitConvolution : public Dot {
 protected:
   unsigned int m;
+  Complex *u,*v;
   unsigned int M;
   unsigned int stride;
   unsigned int s;
   fft1d *Backwards,*Forwards;
   Complex *ZetaH, *ZetaL;
+  bool allocated;
 public:  
   
-  
-  // u and v are distinct temporary arrays each of size m.
-  // M is the number of data blocks (each corresponding to a term in the
-  // dot product).
-  // stride is the spacing between successive data blocks in units of m.
-  ImplicitConvolution(unsigned int m, Complex *u, Complex *v,
-                      unsigned int M=1, unsigned int stride=1)
-    : Dot(m,M), m(m), M(M), stride(stride) {
+  void init() {
     Backwards=new fft1d(m,1,u,v);
     Forwards=new fft1d(m,-1,u,v);
     
     s=BuildZeta(2*m,m,ZetaH,ZetaL);
   }
   
+  // m is the number of independent data values.
+  // M is the number of data blocks (each corresponding to a term in the
+  // dot product).
+  // stride is the spacing between successive data blocks in units of m.
+  // u and v are distinct temporary arrays each of size m*M.
+  ImplicitConvolution(unsigned int m, Complex *u, Complex *v,
+                      unsigned int M=1, unsigned int stride=1)
+    : Dot(m,M), m(m), u(u), v(v), M(M), stride(stride), allocated(false) {
+    init();
+  }
+  
+  ImplicitConvolution(unsigned int m, unsigned int M=1, unsigned int stride=1)
+    : Dot(m,M), m(m), u(ComplexAlign(m*M)), v(ComplexAlign(m*M)), M(M),
+      stride(stride), allocated(true) {
+    init();
+  }
+  
   ~ImplicitConvolution() {
+    if(allocated) {
+      deleteAlign(u);
+      deleteAlign(v);
+    }
     deleteAlign(ZetaL);
     deleteAlign(ZetaH);
     delete Forwards;
@@ -139,8 +172,7 @@ public:
   // In-place implicitly dealiased convolution.
   // The input arrays f and g are each of size m (contents not preserved).
   // The output is returned in f.
-  // u and v are temporary arrays each of size m.
-  void convolve(Complex *f, Complex *g, Complex *u, Complex *v);
+  void convolve(Complex *f, Complex *g);
 };
 
 // Out-of-place direct complex convolution.
@@ -185,20 +217,21 @@ public:
 };
 
 // In-place implicitly dealiased Hermitian convolution.
-class ImplicitHConvolution {
+class ImplicitHConvolution : public Dot {
 protected:
   unsigned int m;
   unsigned int c;
+  Complex *u,*v,*w;
+  unsigned int M;
+  unsigned int stride;
   unsigned int s;
-  rcfft1d *rc, *rco;
-  crfft1d *cr, *cro;
-  Complex *ZetaH, *ZetaL;
+  rcfft1d *rc,*rco;
+  crfft1d *cr,*cro;
+  Complex *ZetaH,*ZetaL;
+  bool allocated;
 public:  
   
-  // u and v must be each allocated as m/2+1 Complex values.
-  ImplicitHConvolution(unsigned int m, Complex *u, Complex *v) : 
-    m(m), c(m/2) {
-
+  void init() {
     if(m % 2) {
       std::cerr << "Odd-sized Hermitian convolutions are not implemented;" 
                 << std::endl
@@ -217,7 +250,31 @@ public:
     s=BuildZeta(3*m,c,ZetaH,ZetaL);
   }
   
+  // m is the number of independent data values.
+  // M is the number of data blocks (each corresponding to a term in the
+  // dot product).
+  // stride is the spacing between successive data blocks in units of m.
+  // u and v are temporary arrays each of size (m/2+1)*M.
+  // w is a temporary array of size 3*M.
+  ImplicitHConvolution(unsigned int m, Complex *u, Complex *v, Complex *w,
+                       unsigned int M=1, unsigned int stride=1)
+    : Dot(m,M), m(m), c(m/2), u(u), v(v), w(w), M(M), stride(stride),
+    allocated(false) {
+    init();
+  }
+
+  ImplicitHConvolution(unsigned int m, unsigned int M=1, unsigned int stride=1)
+    : Dot(m,M), m(m), c(m/2), u(ComplexAlign(c*M+M)),v(ComplexAlign(c*M+M)),
+      w(ComplexAlign(3*M)), M(M), stride(stride), allocated(true) {
+    init();
+  }
+    
   ~ImplicitHConvolution() {
+    if(allocated) {
+      deleteAlign(w);
+      deleteAlign(v);
+      deleteAlign(u);
+    }
     deleteAlign(ZetaL);
     deleteAlign(ZetaH);
     delete cro;
@@ -227,9 +284,8 @@ public:
   }
   
   // Note: input arrays f and g are destroyed.
-  // f and g are each of size m.
-  // u and v are temporary arrays each of size m/2+1.
-  void convolve(Complex *f, Complex *g, Complex *u, Complex *v);
+  // f and g are each of size m*M.
+  void convolve(Complex *f, Complex *g);
 };
   
 // Out-of-place direct Hermitian convolution.
@@ -411,9 +467,9 @@ public:
     }
     
     for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->convolve(f+i,g+i,u1,v1);
+      yconvolve->convolve(f+i,g+i);
     for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->convolve(u2+i,v2+i,u1,v1);
+      yconvolve->convolve(u2+i,v2+i);
     
     xfftpad->forwards(f,u2);
   }
@@ -527,10 +583,10 @@ public:
   // u1 and v1 are temporary arrays of size my/2+1.
   // u2 is a temporary array of size (mx+1)*my;
   ImplicitHConvolution2(unsigned int mx, unsigned int my,
-                        Complex *u1, Complex *v1, Complex *u2) :
+                        Complex *u1, Complex *v1, Complex *w1, Complex *u2) :
     mx(mx), my(my) {
     xfftpad=new fft0pad(mx,my,my,u2);
-    yconvolve=new ImplicitHConvolution(my,u1,v1);
+    yconvolve=new ImplicitHConvolution(my,u1,v1,w1);
   }
   
   ~ImplicitHConvolution2() {
@@ -555,10 +611,10 @@ public:
 
     unsigned int mf=(2*mx-1)*my;
     for(unsigned int i=0; i < mf; i += my)
-      yconvolve->convolve(f+i,g+i,u1,v1);
+      yconvolve->convolve(f+i,g+i);
     unsigned int mu=(mx+1)*my;
     for(unsigned int i=0; i < mu; i += my)
-      yconvolve->convolve(u2+i,v2+i,u1,v1);
+      yconvolve->convolve(u2+i,v2+i);
     
     xfftpad->forwards(f,u2);
   }
@@ -688,11 +744,12 @@ public:
   // u2 is a temporary array of size (my+1)*mz.
   // u3 is a temporary array of size (mx+1)*(2my-1)*mz.
   ImplicitHConvolution3(unsigned int mx, unsigned int my, unsigned int mz,
-                        Complex *u1, Complex *v1, Complex *u2, Complex *u3) : 
+                        Complex *u1, Complex *v1, Complex *w1,
+                        Complex *u2, Complex *u3) : 
     mx(mx), my(my), mz(mz) {
     unsigned int nymz=(2*my-1)*mz;
     xfftpad=new fft0pad(mx,nymz,nymz,u3);
-    yzconvolve=new ImplicitHConvolution2(my,mz,u1,v1,u2);
+    yzconvolve=new ImplicitHConvolution2(my,mz,u1,v1,w1,u2);
   }
   
   ~ImplicitHConvolution3() {
