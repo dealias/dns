@@ -120,19 +120,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    Complex *u=ComplexAlign(np);
-    Complex *v=ComplexAlign(np);
-    Complex *w=ComplexAlign(np);
-    ImplicitHBiConvolution C(m,u,v);
+    ImplicitHBiConvolution C(m);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);
       seconds();
-      C.convolve(e,f,g,u,v,w);
+      C.convolve(e,f,g);
       sum += seconds();
     }
-    deleteAlign(w);
-    deleteAlign(v);
-    deleteAlign(u);
     
     cout << endl;
     cout << "Implicit:" << endl;

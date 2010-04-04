@@ -40,7 +40,7 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(array2<Complex>& f, array2<Complex>& g, int M=1) 
+inline void init(array2<Complex>& f, array2<Complex>& g, unsigned int M=1) 
 {
   unsigned int Mmx=M*mx;
   double factor=1.0/sqrt(M);
@@ -109,11 +109,11 @@ int main(int argc, char* argv[])
         Implicit=false;
         Pruned=true;
         break;
-      case 'N':
-        N=atoi(optarg);
-        break;
       case 'M':
         M=atoi(optarg);
+        break;
+      case 'N':
+        N=atoi(optarg);
         break;
       case 'm':
         mx=my=atoi(optarg);
@@ -157,22 +157,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    Complex *u1=ComplexAlign(my*M);
-    Complex *v1=ComplexAlign(my*M);
-    Complex *u2=ComplexAlign(nxp*my);
-    Complex *v2=ComplexAlign(nxp*my);
-    ImplicitConvolution2 C(mx,my,u1,v1,u2,M);
+    ImplicitConvolution2 C(mx,my,M);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
-      C.convolve(f,g,u1,v1,u2,v2);
+      C.convolve(f,g);
       sum += seconds();
     }
-    
-    deleteAlign(v2);
-    deleteAlign(u2);
-    deleteAlign(v1);
-    deleteAlign(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;

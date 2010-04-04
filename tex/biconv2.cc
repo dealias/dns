@@ -150,27 +150,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    unsigned int nxpnyp=nxp*nyp;
-    Complex *u1=ComplexAlign(nyp);
-    Complex *v1=ComplexAlign(nyp);
-    Complex *w1=ComplexAlign(nyp);
-    Complex *u2=ComplexAlign(nxpnyp);
-    Complex *v2=ComplexAlign(nxpnyp);
-    Complex *w2=ComplexAlign(nxpnyp);
-    ImplicitHBiConvolution2 C(mx,my,u1,v1,u2);
+    ImplicitHBiConvolution2 C(mx,my);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);
       seconds();
-      C.convolve(e,f,g,u1,v1,w1,u2,v2,w2);
+      C.convolve(e,f,g);
       sum += seconds();
     }
-    
-    deleteAlign(w2);
-    deleteAlign(v2);
-    deleteAlign(u2);
-    deleteAlign(w1);
-    deleteAlign(v1);
-    deleteAlign(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;

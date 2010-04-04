@@ -148,26 +148,13 @@ int main(int argc, char* argv[])
   double sum=0.0;
 
   if(Implicit) {
-    Complex *u1=ComplexAlign(mz);
-    Complex *v1=ComplexAlign(mz);
-    Complex *u2=ComplexAlign(my*mz);
-    Complex *v2=ComplexAlign(my*mz);
-    Complex *u3=ComplexAlign(mx*my*mz);
-    Complex *v3=ComplexAlign(mx*my*mz);
-    ImplicitConvolution3 C(mx,my,mz,u1,v1,u2,u3);
+    ImplicitConvolution3 C(mx,my,mz);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
-      C.convolve(f,g,u1,v1,u2,v2,u3,v3);
+      C.convolve(f,g);
       sum += seconds();
     }
-    
-    deleteAlign(v3);
-    deleteAlign(u3);
-    deleteAlign(v2);
-    deleteAlign(u2);
-    deleteAlign(v1);
-    deleteAlign(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;

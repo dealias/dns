@@ -23,6 +23,7 @@ unsigned int mx=4;
 unsigned int my=4;
 unsigned int nxp;
 unsigned int nyp;
+unsigned int M=1;
 
 bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 
@@ -43,21 +44,23 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(array2<Complex>& f, array2<Complex>& g) 
+inline void init(array2<Complex>& f, array2<Complex>& g, unsigned int M=1) 
 {
   unsigned int offset=Explicit ? nx/2-mx+1 : 0;
   unsigned int origin=offset+mx-1;
-  unsigned int stop=origin+mx;
-  
-  for(unsigned int i=offset; i < stop; i++) {
+  unsigned int stop=(origin+mx)*M;
+  double factor=1.0/sqrt(M);
+  for(unsigned int i=offset; i < stop; ++i) {
     for(unsigned int j=0; j < my; j++) {
-      f[i][j]=Complex(3.0,2.0);
-      g[i][j]=Complex(5.0,3.0);
+      f[i][j]=factor*Complex(3.0,2.0);
+      g[i][j]=factor*Complex(5.0,3.0);
     }
   }
 
-  f[origin][0]=f[origin][0].re;
-  g[origin][0]=g[origin][0].re;
+  for(unsigned int i=0; i < M; ++i) {
+    f[origin+i*nxp][0]=f[origin+i*nxp][0].re;
+    g[origin+i*nxp][0]=g[origin+i*nxp][0].re;
+  }
 }
 
 unsigned int padding(unsigned int m)
@@ -80,7 +83,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:x:y:");
+    int c = getopt(argc,argv,"deiptM:N:m:x:y:");
     if (c == -1) break;
 		
     switch (c) {
@@ -102,6 +105,9 @@ int main(int argc, char* argv[])
         Explicit=true;
         Implicit=false;
         Pruned=true;
+        break;
+      case 'M':
+        M=atoi(optarg);
         break;
       case 'N':
         N=atoi(optarg);
@@ -133,8 +139,9 @@ int main(int argc, char* argv[])
   size_t align=sizeof(Complex);
   nxp=Explicit ? nx : 2*mx-1;
   nyp=Explicit ? ny/2+1 : my;
-  array2<Complex> f(nxp,nyp,align);
-  array2<Complex> g(nxp,nyp,align);
+  unsigned int nxp0=Implicit ? nxp*M : nxp;
+  array2<Complex> f(nxp0,nyp,align);
+  array2<Complex> g(nxp0,nyp,align);
 
   double offset=0.0;
   seconds();
@@ -145,26 +152,13 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    unsigned int c=my/2;
-    unsigned int mxpmy=(mx+1)*my;
-    Complex *u1=ComplexAlign(c+1);
-    Complex *v1=ComplexAlign(c+1);
-    Complex *w1=ComplexAlign(3);
-    Complex *u2=ComplexAlign(mxpmy);
-    Complex *v2=ComplexAlign(mxpmy);
-    ImplicitHConvolution2 C(mx,my,u1,v1,w1,u2);
+    ImplicitHConvolution2 C(mx,my,M);
     for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
+      init(f,g,M);
       seconds();
-      C.convolve(f,g,u1,v1,u2,v2);
+      C.convolve(f,g);
       sum += seconds();
     }
-    
-    deleteAlign(v2);
-    deleteAlign(u2);
-    deleteAlign(w1);
-    deleteAlign(v1);
-    deleteAlign(u1);
     
     cout << endl;
     cout << "Implicit:" << endl;

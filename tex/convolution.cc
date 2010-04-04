@@ -65,7 +65,7 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
   Forwards->fft(f);
 }
 
-void ImplicitConvolution::convolve(Complex *f, Complex *g)
+void ImplicitConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
 {
   // all six FFTs are out-of-place
     
@@ -191,7 +191,7 @@ void ExplicitHConvolution::convolve(Complex *f, Complex *g)
   rc->fft(f);
 }
 
-void ImplicitHConvolution::convolve(Complex *f, Complex *g)
+void ImplicitHConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
 {
   unsigned int cp1=c+1;
   unsigned int mstride=m*stride;
@@ -1053,8 +1053,7 @@ void ExplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h)
   rc->fft(f);
 }
 
-void ImplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h,
-                                      Complex *u, Complex *v, Complex *w)
+void ImplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h)
 {
   for(unsigned int a=0, k=0; k < m; ++a) {
     unsigned int stop=min(k+s,m);

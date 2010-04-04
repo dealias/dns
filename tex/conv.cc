@@ -37,7 +37,7 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(Complex *f, Complex *g, int M=1) 
+inline void init(Complex *f, Complex *g, unsigned int M=1) 
 {
   unsigned int Mm=M*m;
   double factor=1.0/sqrt(M);
