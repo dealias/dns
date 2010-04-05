@@ -1,3 +1,4 @@
+using namespace std; // **** REMOVE ******
 // Add namespace to fftw++ and here and cmult-sse2.
 
 #include "fftw++.h"
@@ -646,15 +647,15 @@ public:
     unsigned int xorigin=mx-1;
     unsigned int nx=2*mx-1;
     unsigned int mf=nx*my;
-    unsigned int Mmf=M*mf;
-    for(unsigned int i=0; i < Mmf; i += mf) {
+    unsigned int mfstride=mf*stride;
+    unsigned int Mmf=M*mfstride;
+    for(unsigned int i=0; i < Mmf; i += mfstride) {
       HermitianSymmetrizeX(mx,my,xorigin,f+i);
       HermitianSymmetrizeX(mx,my,xorigin,g+i);
     }
     
     unsigned int mxp1=mx+1;
     unsigned int mu=mxp1*my;
-    unsigned int mfstride=mf*stride;
     for(unsigned int i=0; i < M; ++i) {
       unsigned int imf=i*mfstride;
       unsigned int imu=i*mu;
@@ -888,15 +889,15 @@ public:
     unsigned int nx=xorigin+mx;
     unsigned int ny=yorigin+my;
     unsigned int mf=nx*ny*mz;
-    unsigned int Mmf=M*mf;
-    for(unsigned int i=0; i < Mmf; i += mf) {
+    unsigned int mfstride=mf*stride;
+    unsigned int Mmf=M*mfstride;
+    for(unsigned int i=0; i < Mmf; i += mfstride) {
       HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,f+i);
       HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,g+i);
     }
     
     unsigned int mxp1=mx+1;
     unsigned int mu=mxp1*ny*mz;
-    unsigned int mfstride=mf*stride;
     for(unsigned int i=0; i < M; ++i) {
       unsigned int imf=i*mfstride;
       unsigned int imu=i*mu;
