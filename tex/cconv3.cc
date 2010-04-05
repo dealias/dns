@@ -23,6 +23,7 @@ unsigned int nz=0;
 unsigned int mx=4;
 unsigned int my=4;
 unsigned int mz=4;
+unsigned int M=1;
 
 bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 
@@ -41,13 +42,15 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(array3<Complex>& f, array3<Complex>& g) 
+inline void init(array3<Complex>& f, array3<Complex>& g, unsigned int M=1) 
 {
-  for(unsigned int i=0; i < mx; i++) {
+  unsigned int Mmx=M*mx;
+  double factor=1.0/sqrt(M);
+  for(unsigned int i=0; i < Mmx; ++i) {
     for(unsigned int j=0; j < my; j++) {
       for(unsigned int k=0; k < mz; k++) {
-        f[i][j][k]=Complex(3.0,2.0);
-        g[i][j][k]=Complex(5.0,3.0);
+        f[i][j][k]=factor*Complex(3.0,2.0);
+        g[i][j][k]=factor*Complex(5.0,3.0);
       }
     }
   }
@@ -75,7 +78,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:x:y:");
+    int c = getopt(argc,argv,"deiptM:N:m:x:y:");
     if (c == -1) break;
 		
     switch (c) {
@@ -97,6 +100,9 @@ int main(int argc, char* argv[])
         Explicit=true;
         Implicit=false;
         Pruned=true;
+        break;
+      case 'M':
+        M=atoi(optarg);
         break;
       case 'N':
         N=atoi(optarg);
@@ -135,6 +141,7 @@ int main(int argc, char* argv[])
   int nxp=Explicit ? nx : mx;
   int nyp=Explicit ? ny : my;
   int nzp=Explicit ? nz : mz;
+  if(Implicit) nxp *= M;
   array3<Complex> f(nxp,nyp,nzp,align);
   array3<Complex> g(nxp,nyp,nzp,align);
 
@@ -148,9 +155,11 @@ int main(int argc, char* argv[])
   double sum=0.0;
 
   if(Implicit) {
-    ImplicitConvolution3 C(mx,my,mz);
+    ImplicitConvolution3 C(mx,my,mz,M);
+    f=0.0;
+    g=0.0;
     for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
+      init(f,g,M);
       seconds();
       C.convolve(f,g);
       sum += seconds();
@@ -160,7 +169,8 @@ int main(int argc, char* argv[])
     cout << "Implicit:" << endl;
     cout << (sum-offset)/N << endl;
     cout << endl;
-    if(mx*my < outlimit) 
+
+    if(mx*my*mz < outlimit) 
       for(unsigned int i=0; i < mx; i++) {
         for(unsigned int j=0; j < my; j++) {
           for(unsigned int k=0; k < mz; k++) 

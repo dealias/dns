@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:M:m:x:y:");
+    int c = getopt(argc,argv,"deiptM:N:m:x:y:");
     if (c == -1) break;
 		
     switch (c) {

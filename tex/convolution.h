@@ -77,14 +77,13 @@ public:
       unsigned int Mm=M*m;
       for(unsigned int k=0; k < m; ++k) {
         Complex *p=a+k;
+        Complex *q=b+k;
 #ifdef __SSE2__      
-        Complex *bk=b+k;
-        Vec sum=ZMULT(LOAD(p),LOAD(bk));
+        Vec sum=ZMULT(LOAD(p),LOAD(q));
         for(unsigned int i=m; i < Mm; i += m)
-          sum += ZMULT(LOAD(p+i),LOAD(bk+i*bstride));
+          sum += ZMULT(LOAD(p+i),LOAD(q+i*bstride));
         STORE(p,sum);
 #else
-        Complex *q=b+k;
         Complex ak=*p;
         Complex bk=*q;
         double re=ak.re*bk.re-ak.im*bk.im;
@@ -475,17 +474,17 @@ public:
   void convolve(Complex *f, Complex *g, unsigned int stride=1) {
     unsigned int mxy=mx*my;
     unsigned int Mmxy=M*mxy;
-    unsigned int mxystride=mxy*stride;
-    for(unsigned int i=0; i < Mmxy; i += mxystride) {
-      xfftpad->backwards(f+i,u2+i);
-      xfftpad->backwards(g+i,v2+i);
+    for(unsigned int i=0; i < Mmxy; i += mxy) {
+      unsigned int istride=i*stride;
+      xfftpad->backwards(f+istride,u2+i);
+      xfftpad->backwards(g+istride,v2+i);
     }
     
     unsigned int mstride=mx*stride;
     for(unsigned int i=0; i < mxy; i += my)
       yconvolve->convolve(f+i,g+i,mstride);
     for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->convolve(u2+i,v2+i,mstride);
+      yconvolve->convolve(u2+i,v2+i,mx);
     
     xfftpad->forwards(f,u2);
   }
@@ -645,8 +644,8 @@ public:
   // The output is returned in f.
   void convolve(Complex *f, Complex *g, unsigned int stride=1) {
     unsigned int xorigin=mx-1;
-    
-    unsigned int mf=(xorigin+mx)*my;
+    unsigned int nx=2*mx-1;
+    unsigned int mf=nx*my;
     for(unsigned int i=0; i < M; ++i) {
       unsigned int imf=i*mf;
       HermitianSymmetrizeX(mx,my,xorigin,f+imf);
@@ -661,12 +660,12 @@ public:
       xfftpad->backwards(g+imf,v2+imu);
     }
 
-    unsigned int fstride=(2*mx-1)*stride;
+    unsigned int nstride=nx*stride;
     for(unsigned int i=0; i < mf; i += my)
-      yconvolve->convolve(f+i,g+i,fstride);
-    unsigned int ustride=(mx+1)*stride;
+      yconvolve->convolve(f+i,g+i,nstride);
+    unsigned int mxp1=mx+1;
     for(unsigned int i=0; i < mu; i += my)
-      yconvolve->convolve(u2+i,v2+i,ustride);
+      yconvolve->convolve(u2+i,v2+i,mxp1);
     
     xfftpad->forwards(f,u2);
   }
@@ -743,7 +742,8 @@ protected:
   bool allocated;
 public:  
   void init() {
-    xfftpad=new fftpad(mx,my*mz,my*mz,u3);
+    unsigned int mymz=my*mz;
+    xfftpad=new fftpad(mx,mymz,mymz,u3);
     yzconvolve=new ImplicitConvolution2(my,mz,u1,v1,u2,v2,M);
   }
   
@@ -759,7 +759,7 @@ public:
     u3(u3), v3(v3), M(M), allocated(false) {
     init();
   }
-  
+
   ImplicitConvolution3(unsigned int mx, unsigned int my, unsigned int mz,
                        unsigned int M=1) :
     mx(mx), my(my), mz(mz), u1(ComplexAlign(mz*M)), v1(ComplexAlign(mz*M)),
@@ -783,19 +783,26 @@ public:
     delete xfftpad;
   }
   
-  // The distinct input arrays f and g must be allocated as Complex[mx*my*mz]. 
+  // The distinct input data blocks in f and g are each of size mx*my*mz
+  // (contents not preserved);
+  // stride is the spacing between successive data blocks in units of mx*my*mz.
   // The output is returned in f.
   void convolve(Complex *f, Complex *g, unsigned int stride=1) {
-    xfftpad->backwards(f,u3);
-    xfftpad->backwards(g,v3);
-
     unsigned int myz=my*mz;
     unsigned int mxyz=mx*myz;
+    unsigned int Mmxyz=M*mxyz;
+    
+    for(unsigned int i=0; i < Mmxyz; i += mxyz) {
+      unsigned int istride=i*stride;
+      xfftpad->backwards(f+istride,u3+i);
+      xfftpad->backwards(g+istride,v3+i);
+    }
+
     unsigned int mstride=mx*stride;
     for(unsigned int i=0; i < mxyz; i += myz)
       yzconvolve->convolve(f+i,g+i,mstride);
     for(unsigned int i=0; i < mxyz; i += myz)
-      yzconvolve->convolve(u3+i,v3+i,mstride);
+      yzconvolve->convolve(u3+i,v3+i,mx);
     
     xfftpad->forwards(f,u3);
   }
