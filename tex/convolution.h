@@ -646,15 +646,17 @@ public:
     unsigned int xorigin=mx-1;
     unsigned int nx=2*mx-1;
     unsigned int mf=nx*my;
-    for(unsigned int i=0; i < M; ++i) {
-      unsigned int imf=i*mf;
-      HermitianSymmetrizeX(mx,my,xorigin,f+imf);
-      HermitianSymmetrizeX(mx,my,xorigin,g+imf);
+    unsigned int Mmf=M*mf;
+    for(unsigned int i=0; i < Mmf; i += mf) {
+      HermitianSymmetrizeX(mx,my,xorigin,f+i);
+      HermitianSymmetrizeX(mx,my,xorigin,g+i);
     }
     
-    unsigned int mu=mx*my+my;
+    unsigned int mxp1=mx+1;
+    unsigned int mu=mxp1*my;
+    unsigned int mfstride=mf*stride;
     for(unsigned int i=0; i < M; ++i) {
-      unsigned int imf=i*mf;
+      unsigned int imf=i*mfstride;
       unsigned int imu=i*mu;
       xfftpad->backwards(f+imf,u2+imu);
       xfftpad->backwards(g+imf,v2+imu);
@@ -663,7 +665,6 @@ public:
     unsigned int nstride=nx*stride;
     for(unsigned int i=0; i < mf; i += my)
       yconvolve->convolve(f+i,g+i,nstride);
-    unsigned int mxp1=mx+1;
     for(unsigned int i=0; i < mu; i += my)
       yconvolve->convolve(u2+i,v2+i,mxp1);
     
@@ -835,12 +836,13 @@ public:
   void init() {
     unsigned int nymz=(2*my-1)*mz;
     xfftpad=new fft0pad(mx,nymz,nymz,u3);
-    yzconvolve=new ImplicitHConvolution2(my,mz,u1,v1,w1,u2,v2);
+    yzconvolve=new ImplicitHConvolution2(my,mz,u1,v1,w1,u2,v2,M);
   }
   
   // u1 and v1 are temporary arrays of size (mz/2+1)*M.
-  // u2 is a temporary array of size (my+1)*mz*M.
-  // u3 is a temporary array of size (mx+1)*(2my-1)*mz*M.
+  // w1 is a temporary array of size 3*M.
+  // u2 and v2 are temporary array of size (my+1)*mz*M.
+  // u3 and v3 are temporary arrays of size (mx+1)*(2my-1)*mz*M.
   // M is the number of data blocks (each corresponding to a dot product term).
   ImplicitHConvolution3(unsigned int mx, unsigned int my, unsigned int mz,
                         Complex *u1, Complex *v1, Complex *w1,
@@ -877,30 +879,37 @@ public:
     delete xfftpad;
   }
   
-  // The distinct input arrays f and g must be allocated as 
-  // Complex[(2mx-1)*(2my-1)*mz] (not preserved). 
-  // u1 and v1 are temporary arrays allocated as Complex[mz/2+1].
-  // u2 and v2 are temporary arrays allocated as Complex[(my+1)*mz].
-  // u3 and v3 are temporary arrays allocated as Complex[(mx+1)*(2my-1)*mz].
+  // The distinct input data blocks in f and g are each of size 
+  // (2mx-1)*(2my-1)*mz (contents not preserved). 
   // The output is returned in f.
-  void convolve(Complex *f, Complex *g, unsigned int M=1) {
+  void convolve(Complex *f, Complex *g, unsigned int stride=1) {
     unsigned int xorigin=mx-1;
     unsigned int yorigin=my-1;
-    unsigned int ny=2*my-1;
+    unsigned int nx=xorigin+mx;
+    unsigned int ny=yorigin+my;
+    unsigned int mf=nx*ny*mz;
+    unsigned int Mmf=M*mf;
+    for(unsigned int i=0; i < Mmf; i += mf) {
+      HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,f+i);
+      HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,g+i);
+    }
     
-    HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,f);
-    HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,g);
+    unsigned int mxp1=mx+1;
+    unsigned int mu=mxp1*ny*mz;
+    unsigned int mfstride=mf*stride;
+    for(unsigned int i=0; i < M; ++i) {
+      unsigned int imf=i*mfstride;
+      unsigned int imu=i*mu;
+      xfftpad->backwards(f+imf,u3+imu);
+      xfftpad->backwards(g+imf,v3+imu);
+    }
     
-    xfftpad->backwards(f,u3);
-    xfftpad->backwards(g,v3);
-
-    unsigned int incr=ny*mz;
-    unsigned int fstop=(2*mx-1)*incr;
-    for(unsigned int i=0; i < fstop; i += incr)
-      yzconvolve->convolve(f+i,g+i);
-    unsigned int ustop=(mx+1)*incr;
-    for(unsigned int i=0; i < ustop; i += incr)
-      yzconvolve->convolve(u3+i,v3+i);
+    unsigned int nymz=ny*mz;
+    unsigned int nstride=nx*stride;
+    for(unsigned int i=0; i < mf; i += nymz)
+      yzconvolve->convolve(f+i,g+i,nstride);
+    for(unsigned int i=0; i < mu; i += nymz)
+      yzconvolve->convolve(u3+i,v3+i,mxp1);
     
     xfftpad->forwards(f,u3);
   }

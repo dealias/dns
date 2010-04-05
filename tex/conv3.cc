@@ -26,6 +26,7 @@ unsigned int mz=4;
 unsigned int nxp;
 unsigned int nyp;
 unsigned int nzp;
+unsigned int M=1;
 
 bool Direct=false, Implicit=true;
 
@@ -46,24 +47,27 @@ inline double seconds()
   return seconds;
 }
 
-inline void init(array3<Complex>& f, array3<Complex>& g) 
+inline void init(array3<Complex>& f, array3<Complex>& g, unsigned int M=1) 
 {
   unsigned int xorigin=mx-1;
   unsigned int yorigin=my-1;
-  unsigned int xstop=xorigin+mx;
-  unsigned int ystop=yorigin+my;
+  unsigned int xstop=nxp*M;
+  double factor=1.0/sqrt(M);
+  
   
   for(unsigned int i=0; i < xstop; ++i) {
-    for(unsigned int j=0; j < ystop; ++j) {
+    for(unsigned int j=0; j < nyp; ++j) {
       for(unsigned int k=0; k < mz; ++k) {
-        f[i][j][k]=Complex(3.0,2.0);
-        g[i][j][k]=Complex(5.0,3.0);
+        f[i][j][k]=factor*Complex(3.0,2.0);
+        g[i][j][k]=factor*Complex(5.0,3.0);
       }
     }
   }
 
-  f[xorigin][yorigin][0]=f[xorigin][yorigin][0].re;
-  g[xorigin][yorigin][0]=g[xorigin][yorigin][0].re;
+  for(unsigned int i=0; i < M; ++i) {
+    f[xorigin+i*nxp][yorigin][0]=f[xorigin+i*nxp][yorigin][0].re;
+    g[xorigin+i*nxp][yorigin][0]=g[xorigin+i*nxp][yorigin][0].re;
+  }
 }
 
 unsigned int padding(unsigned int m)
@@ -86,7 +90,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:x:y:");
+    int c = getopt(argc,argv,"deiptM:N:m:x:y:");
     if (c == -1) break;
 		
     switch (c) {
@@ -103,6 +107,9 @@ int main(int argc, char* argv[])
         break;
       case 'p':
         Implicit=false;
+        break;
+      case 'M':
+        M=atoi(optarg);
         break;
       case 'N':
         N=atoi(optarg);
@@ -139,8 +146,9 @@ int main(int argc, char* argv[])
   nxp=2*mx-1;
   nyp=2*my-1;
   nzp=mz;
-  array3<Complex> f(nxp,nyp,nzp,align);
-  array3<Complex> g(nxp,nyp,nzp,align);
+  unsigned int nxp0=Implicit ? nxp*M : nxp;
+  array3<Complex> f(nxp0,nyp,nzp,align);
+  array3<Complex> g(nxp0,nyp,nzp,align);
 
   double offset=0.0;
   seconds();
@@ -151,9 +159,9 @@ int main(int argc, char* argv[])
 
   double sum=0.0;
   if(Implicit) {
-    ImplicitHConvolution3 C(mx,my,mz);
+    ImplicitHConvolution3 C(mx,my,mz,M);
     for(unsigned int i=0; i < N; ++i) {
-      init(f,g);
+      init(f,g,M);
       seconds();
       C.convolve(f,g);
       sum += seconds();
@@ -176,8 +184,6 @@ int main(int argc, char* argv[])
   }
   
   if(Direct) {
-    unsigned int nxp=2*mx-1;
-    unsigned int nyp=2*my-1;
     array3<Complex> h(nxp,nyp,mz,align);
     array3<Complex> f(nxp,nyp,mz,align);
     array3<Complex> g(nxp,nyp,mz,align);
