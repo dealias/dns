@@ -8,7 +8,7 @@ if [ "$1" == "" ]; then
     exit
 fi
 
-N=100000000
+N=1000000000
 onwg=$(echo $HOSTNAME | grep westgrid)
 echo $onwg
 if [ "$onwg" == "" ]; then
