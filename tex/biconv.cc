@@ -100,10 +100,7 @@ int main(int argc, char* argv[])
   Complex *h0=NULL;
   if(Test) h0=ComplexAlign(m);
 
-  
-  double offset=0.0, mean=0.0, sigma=0.0;
   double *T=new double[N];
-  offset=emptytime(T,N);
 
   if(Implicit) {
     ImplicitHBiConvolution C(m);
@@ -114,8 +111,7 @@ int main(int argc, char* argv[])
       T[i]=seconds();
     }
     
-    timings(T,N,offset,mean,sigma);
-    cout << "\nImplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+    timings("Implicit",T,N);
 
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << e[i] << endl;
@@ -133,8 +129,7 @@ int main(int argc, char* argv[])
       T[i]=seconds();
     }
     
-    timings(T,N,offset,mean,sigma);
-    cout << "\nExplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+    timings("Explicit",T,N);
 
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << e[i] << endl;
@@ -148,9 +143,9 @@ int main(int argc, char* argv[])
     Complex *h=ComplexAlign(m);
     seconds();
     C.convolve(h,e,f,g);
-    mean=seconds();
+    T[0]=seconds();
     
-    cout << "\nDirect:\n" << mean << "\t" << "0" << "\n" << endl;
+    timings("Direct",T,1);
 
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;

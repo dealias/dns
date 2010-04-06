@@ -132,9 +132,7 @@ int main(int argc, char* argv[])
   array2<Complex> f(nxp0,nyp,align);
   array2<Complex> g(nxp0,nyp,align);
 
-  double offset=0.0, mean=0.0, sigma=0.0;
   double *T=new double[N];
-  offset=emptytime(T,N);
 
   if(Implicit) {
     ImplicitHConvolution2 C(mx,my,M);
@@ -145,8 +143,7 @@ int main(int argc, char* argv[])
       T[i]=seconds();
     }
     
-    timings(T,N,offset,mean,sigma);
-    cout << "\nImplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+    timings("Implicit",T,N);
 
     if(nxp*my < outlimit)
       for(unsigned int i=0; i < nxp; i++) {
@@ -166,9 +163,7 @@ int main(int argc, char* argv[])
       T[i]=seconds();
     }
 
-    timings(T,N,offset,mean,sigma);
-    cout << "\n"<< (Pruned ? "Pruned:" : "Explicit:")
-	 <<"\n" << mean << "\t" << sigma << "\n" << endl;
+    timings(Pruned ? "Pruned:" : "Explicit:",T,N);
 
     unsigned int offset=nx/2-mx+1;
     if(2*(mx-1)*my < outlimit) 
@@ -189,9 +184,9 @@ int main(int argc, char* argv[])
     init(f,g);
     seconds();
     C.convolve(h,f,g);
-    mean=seconds();
+    T[0]=seconds();
   
-    cout << "\nDirect:\n" << mean << "\t" << "0" << "\n" << endl;
+    timings("Direct",T,1);
 
     if(nxp*my < outlimit)
       for(unsigned int i=0; i < nxp; i++) {

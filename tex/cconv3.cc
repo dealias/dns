@@ -2,6 +2,7 @@ using namespace std;
 
 #include "Complex.h"
 #include "convolution.h"
+#include "utils.h"
 
 #include "Array.h"
 
@@ -26,21 +27,6 @@ unsigned int mz=4;
 unsigned int M=1;
 
 bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
-
-using namespace std;
-
-#include <sys/time.h>
-
-inline double seconds()
-{
-  static timeval lasttime;
-  timeval tv;
-  gettimeofday(&tv,NULL);
-  double seconds=tv.tv_sec-lasttime.tv_sec+
-    ((double) tv.tv_usec-lasttime.tv_usec)/1000000.0;
-  lasttime=tv;
-  return seconds;
-}
 
 inline void init(array3<Complex>& f, array3<Complex>& g, unsigned int M=1) 
 {
@@ -148,15 +134,8 @@ int main(int argc, char* argv[])
   array3<Complex> f(nxp,nyp,nzp,align);
   array3<Complex> g(nxp,nyp,nzp,align);
 
-  double offset=0.0;
-  seconds();
-  for(unsigned int i=0; i < N; ++i) {
-    seconds();
-    offset += seconds();
-  }
-
-  double sum=0.0;
-
+  double *T=new double[N];
+  
   if(Implicit) {
     ImplicitConvolution3 C(mx,my,mz,M);
     f=0.0;
@@ -165,13 +144,10 @@ int main(int argc, char* argv[])
       init(f,g,M);
       seconds();
       C.convolve(f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
     
-    cout << endl;
-    cout << "Implicit:" << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+    timings("Implicit",T,N);
 
     if(mx*my*mz < outlimit) 
       for(unsigned int i=0; i < mx; i++) {
@@ -186,18 +162,16 @@ int main(int argc, char* argv[])
   }
   
   if(Explicit) {
-    sum=0.0;
     ExplicitConvolution3 C(nx,ny,nz,mx,my,mz,f,Pruned);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
       C.convolve(f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
-    cout << endl;
-    cout << (Pruned ? "Pruned:" : "Explicit:") << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+    
+    timings(Pruned ? "Pruned:" : "Explicit:",T,N);
+
     if(mx*my*mz < outlimit) {
       for(unsigned int i=0; i < mx; i++) {
         for(unsigned int j=0; j < my; j++) {
@@ -218,12 +192,9 @@ int main(int argc, char* argv[])
     init(f,g);
     seconds();
     C.convolve(h,f,g);
-    sum=seconds();
+    T[0]=seconds();
   
-    cout << endl;
-    cout << "Direct:" << endl;
-    cout << sum-offset/N << endl;
-    cout << endl;
+    timings("Direct",T,1);
 
     if(mx*my*mz < outlimit) {
       for(unsigned int i=0; i < mx; i++) {

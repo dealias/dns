@@ -129,9 +129,7 @@ int main(int argc, char* argv[])
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
 
-  double offset=0.0, mean=0.0, sigma=0.0;
   double *T=new double[N];
-  offset=emptytime(T,N);
 
   if(Implicit) {
     ImplicitHBiConvolution2 C(mx,my);
@@ -142,8 +140,7 @@ int main(int argc, char* argv[])
       T[i]=seconds();
     }
     
-    timings(T,N,offset,mean,sigma);
-    cout << "\nImplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+    timings("Implicit",T,N);
     
     if(nxp*my < outlimit)
       for(unsigned int i=1; i < nxp; i++) {
@@ -163,8 +160,7 @@ int main(int argc, char* argv[])
       T[i]=seconds();
     }
     
-    timings(T,N,offset,mean,sigma);
-    cout << "\nExplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+    timings("Explicit",T,N);
 
     unsigned int offset=nx/2-mx+1;
     if(2*(mx-1)*my < outlimit) 
@@ -186,10 +182,9 @@ int main(int argc, char* argv[])
     init(e,f,g);
     seconds();
     C.convolve(h,e,f,g);
-    mean=seconds();
+    T[0]=seconds();
   
-    
-    cout << "\nDirect:\n" << mean << "\t" << "0" << "\n" << endl;
+    timings("Direct",T,1);
 
     if(nxp*my < outlimit)
       for(unsigned int i=0; i < nxp; i++) {

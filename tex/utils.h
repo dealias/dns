@@ -4,8 +4,8 @@
 #define __utils_h__ 1
 #endif
 
+#include <iostream>
 #include <sys/time.h>
-
 
 inline double seconds()
 {
@@ -28,34 +28,40 @@ double emptytime(double *T, unsigned int N)
   }
   for(unsigned int i=0; i < N; ++i) 
     val += T[i];
-  return val;
+  return val/N;
 }
 
-void rmoffset(double *T, unsigned int N, double offset)
+void stdev(double *T, unsigned int N, double mean, double &sigmaL,
+           double& sigmaH) 
 {
-  for(unsigned int i=0; i < N; ++i) {
-    T[i] -= offset/N;
-  }
-}
-
-double stdev(double *T, unsigned int N, double mean) 
-{
-  double sigma=0.0;
+  sigmaL=0.0, sigmaH=0.0;
+  unsigned int L=0, H=0;
   for(unsigned int i=0; i < N; ++i) {
     double v=T[i]-mean;
-    sigma += v*v;
+    if(v <= 0) {
+      sigmaL += v*v;
+      ++L;
+    }
+    if(v >= 0) {
+      ++H;
+      sigmaH += v*v;
+    }
+    
   }
   
-  return N > 1 ? sqrt(sigma/(N-1)) : 0;
+  sigmaL=L > 1 ? sqrt(sigmaL/(L-1)) : 0;
+  sigmaH=H > 1 ? sqrt(sigmaH/(H-1)) : 0;
 }
 
-void timings(double *T, unsigned int N, double &offset, double &mean, 
-	     double &sigma)
+void timings(const char* text, double *T, unsigned int N)
 {
-  mean=0.0;
-  rmoffset(T,N,offset);
-  for(unsigned int i=0; i < N; ++i) 
+  double sigmaL=0.0, sigmaH=0.0;
+  double mean=0.0;
+  for(unsigned int i=0; i < N; ++i)
     mean += T[i];
   mean /= N;
-  sigma=stdev(T,N,mean);
+  stdev(T,N,mean,sigmaL,sigmaH);
+  mean -= emptytime(T,N);
+  std::cout << std::endl << text << ":\n" << mean << "\t" << sigmaL << "\t" <<
+    sigmaH << std::endl << std::endl;
 }
