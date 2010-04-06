@@ -8,21 +8,21 @@ if [ "$1" == "" ]; then
     exit
 fi
 
-N=1000000000
-onwg=$(echo $HOSTNAME | grep westgrid)
-echo $onwg
-if [ "$onwg" == "" ]; then
-    N=10000000
+N0=10000000
+if [ "$HOSTTYPE" == "x86_64-linux" ]; then
+    N0=100000000
 fi
 
 prune=no
 divisor=0;
+N=$N0
 
 if [ "$1" == "conv" ]; then
     shift=1;
     offset=2;
     divisor=3;
     outdir=timings1r
+    N=$N0
 fi
 if [ "$1" == "conv2" ]; then
     shift=1;
@@ -33,6 +33,7 @@ if [ "$1" == "conv2" ]; then
 fi
 if [ "$1" == "cconv" ]; then
     outdir=timings1c
+    N=$N0
 fi
 if [ "$1" == "cconv2" ]; then
     outdir=timings2c
@@ -43,6 +44,7 @@ if [ "$1" == "biconv" ]; then
     offset=3;
     divisor=4;
     outdir=timings1b
+    N=$N0
 fi
 if [ "$1" == "biconv2" ]; then
     shift=2;
