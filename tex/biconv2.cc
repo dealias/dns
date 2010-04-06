@@ -2,7 +2,7 @@ using namespace std;
 
 #include "Complex.h"
 #include "convolution.h"
-
+#include "utils.h"
 #include "Array.h"
 
 using namespace Array;
@@ -27,21 +27,6 @@ unsigned int nyp;
 bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 
 unsigned int outlimit=100;
-
-using namespace std;
-
-#include <sys/time.h>
-
-inline double seconds()
-{
-  static timeval lasttime;
-  timeval tv;
-  gettimeofday(&tv,NULL);
-  double seconds=tv.tv_sec-lasttime.tv_sec+
-    ((double) tv.tv_usec-lasttime.tv_usec)/1000000.0;
-  lasttime=tv;
-  return seconds;
-}
 
 inline void init(array2<Complex>& e, array2<Complex>& f, array2<Complex>& g) 
 {
@@ -141,27 +126,22 @@ int main(int argc, char* argv[])
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
 
-  double offset=0.0;
-  seconds();
-  for(unsigned int i=0; i < N; ++i) {
-    seconds();
-    offset += seconds();
-  }
+  double offset=0.0, mean=0.0, sigma=0.0;
+  double T[N];
+  offset=emptytime(T,N);
 
-  double sum=0.0;
   if(Implicit) {
     ImplicitHBiConvolution2 C(mx,my);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);
       seconds();
       C.convolve(e,f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
     
-    cout << endl;
-    cout << "Implicit:" << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+    timings(T,N,offset,mean,sigma);
+    cout << "\nImplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+    
     if(nxp*my < outlimit)
       for(unsigned int i=1; i < nxp; i++) {
         for(unsigned int j=0; j < my; j++)
@@ -172,18 +152,17 @@ int main(int argc, char* argv[])
   }
   
   if(Explicit) {
-    sum=0.0;
     ExplicitHBiConvolution2 C(nx,ny,mx,my,f,Pruned);
     for(unsigned int i=0; i < N; ++i) {
       init(e,f,g);
       seconds();
       C.convolve(e,f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
-    cout << endl;
-    cout << (Pruned ? "Pruned:" : "Explicit:") << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+    
+    timings(T,N,offset,mean,sigma);
+    cout << "\nExplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+
     unsigned int offset=nx/2-mx+1;
     if(2*(mx-1)*my < outlimit) 
       for(unsigned int i=offset; i < offset+2*mx-1; i++) {
@@ -204,12 +183,10 @@ int main(int argc, char* argv[])
     init(e,f,g);
     seconds();
     C.convolve(h,e,f,g);
-    sum=seconds();
+    mean=seconds();
   
-    cout << endl;
-    cout << "Direct:" << endl;
-    cout << sum-offset/N << endl;
-    cout << endl;
+    
+    cout << "\nDirect:\n" << mean << "\t" << "0" << "\n" << endl;
 
     if(nxp*my < outlimit)
       for(unsigned int i=0; i < nxp; i++) {

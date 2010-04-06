@@ -2,7 +2,7 @@ using namespace std;
 
 #include "Complex.h"
 #include "convolution.h"
-
+#include "utils.h"
 #include "Array.h"
 
 using namespace Array;
@@ -24,21 +24,6 @@ unsigned int my=4;
 unsigned int M=1;
 
 bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
-
-using namespace std;
-
-#include <sys/time.h>
-
-inline double seconds()
-{
-  static timeval lasttime;
-  timeval tv;
-  gettimeofday(&tv,NULL);
-  double seconds=tv.tv_sec-lasttime.tv_sec+
-    ((double) tv.tv_usec-lasttime.tv_usec)/1000000.0;
-  lasttime=tv;
-  return seconds;
-}
 
 inline void init(array2<Complex>& f, array2<Complex>& g, unsigned int M=1) 
 {
@@ -148,27 +133,23 @@ int main(int argc, char* argv[])
   array2<Complex> f(nxp,nyp,align);
   array2<Complex> g(nxp,nyp,align);
 
-  double offset=0.0;
-  seconds();
-  for(unsigned int i=0; i < N; ++i) {
-    seconds();
-    offset += seconds();
-  }
 
-  double sum=0.0;
+  double offset=0.0, mean=0.0, sigma=0.0;
+  double T[N];
+  offset=emptytime(T,N);
+
   if(Implicit) {
     ImplicitConvolution2 C(mx,my,M);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
       C.convolve(f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
     
-    cout << endl;
-    cout << "Implicit:" << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+    timings(T,N,offset,mean,sigma);
+    cout << "\nImplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+
     if(mx*my < outlimit) 
       for(unsigned int i=0; i < mx; i++) {
         for(unsigned int j=0; j < my; j++)
@@ -179,18 +160,18 @@ int main(int argc, char* argv[])
   }
   
   if(Explicit) {
-    sum=0.0;
     ExplicitConvolution2 C(nx,ny,mx,my,f,Pruned);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
       C.convolve(f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
-    cout << endl;
-    cout << (Pruned ? "Pruned:" : "Explicit:") << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+
+    timings(T,N,offset,mean,sigma);
+    cout << "\n"<< (Pruned ? "Pruned:" : "Explicit:")
+	 <<"\n" << mean << "\t" << sigma << "\n" << endl;
+
     if(mx*my < outlimit) 
       for(unsigned int i=0; i < mx; i++) {
         for(unsigned int j=0; j < my; j++)
@@ -207,12 +188,9 @@ int main(int argc, char* argv[])
     init(f,g);
     seconds();
     C.convolve(h,f,g);
-    sum=seconds();
+    mean=seconds();
   
-    cout << endl;
-    cout << "Direct:" << endl;
-    cout << sum-offset/N << endl;
-    cout << endl;
+    cout << "\nDirect:\n" << mean << "\t" << "0" << "\n" << endl;
 
     if(mx*my < outlimit) 
       for(unsigned int i=0; i < mx; i++) {

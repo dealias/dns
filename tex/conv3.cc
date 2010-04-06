@@ -2,7 +2,7 @@ using namespace std;
 
 #include "Complex.h"
 #include "convolution.h"
-
+#include "utils.h"
 #include "Array.h"
 
 using namespace Array;
@@ -31,21 +31,6 @@ unsigned int M=1;
 bool Direct=false, Implicit=true;
 
 unsigned int outlimit=300;
-
-using namespace std;
-
-#include <sys/time.h>
-
-inline double seconds()
-{
-  static timeval lasttime;
-  timeval tv;
-  gettimeofday(&tv,NULL);
-  double seconds=tv.tv_sec-lasttime.tv_sec+
-    ((double) tv.tv_usec-lasttime.tv_usec)/1000000.0;
-  lasttime=tv;
-  return seconds;
-}
 
 inline void init(array3<Complex>& f, array3<Complex>& g, unsigned int M=1) 
 {
@@ -150,27 +135,22 @@ int main(int argc, char* argv[])
   array3<Complex> f(nxp0,nyp,nzp,align);
   array3<Complex> g(nxp0,nyp,nzp,align);
 
-  double offset=0.0;
-  seconds();
-  for(unsigned int i=0; i < N; ++i) {
-    seconds();
-    offset += seconds();
-  }
+  double offset=0.0, mean=0.0, sigma=0.0;
+  double T[N];
+  offset=emptytime(T,N);
 
-  double sum=0.0;
   if(Implicit) {
     ImplicitHConvolution3 C(mx,my,mz,M);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
       C.convolve(f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
     
-    cout << endl;
-    cout << "Implicit:" << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+    timings(T,N,offset,mean,sigma);
+    cout << "\nImplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+
     if(nxp*nyp*mz < outlimit) {
       for(unsigned int i=0; i < nxp; ++i) {
         for(unsigned int j=0; j < nyp; ++j) {
@@ -191,12 +171,9 @@ int main(int argc, char* argv[])
     init(f,g);
     seconds();
     C.convolve(h,f,g);
-    sum=seconds();
+    mean=seconds();
   
-    cout << endl;
-    cout << "Direct:" << endl;
-    cout << sum-offset/N << endl;
-    cout << endl;
+    cout << "\nDirect:\n" << mean << "\t" << "0" << "\n" << endl;
 
     if(nxp*nyp*mz < outlimit)
       for(unsigned int i=0; i < nxp; ++i) {

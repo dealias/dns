@@ -1,6 +1,8 @@
 using namespace std;
 #include "Complex.h"
 #include "convolution.h"
+#include "utils.h"
+using namespace std;
 
 // g++ -g -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffast-math -msse2 -mfpmath=sse cconv.cc fftw++.cc -lfftw3 -march=native
 
@@ -24,21 +26,6 @@ unsigned int n=2*m;
 unsigned int M=1;
 
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
-
-using namespace std;
-
-#include <sys/time.h>
-
-inline double seconds()
-{
-  static timeval lasttime;
-  timeval tv;
-  gettimeofday(&tv,NULL);
-  double seconds=tv.tv_sec-lasttime.tv_sec+
-    ((double) tv.tv_usec-lasttime.tv_usec)/1000000.0;
-  lasttime=tv;
-  return seconds;
-}
 
 inline void init(Complex *f, Complex *g, unsigned int M=1) 
 {
@@ -132,27 +119,22 @@ int main(int argc, char* argv[])
   Complex *h0=NULL;
   if(Test) h0=ComplexAlign(m);
 
-  double offset=0.0;
-  seconds();
-  for(unsigned int i=0; i < N; ++i) {
-    seconds();
-    offset += seconds();
-  }
+  double offset=0.0, mean=0.0, sigma=0.0;
+  double T[N];
+  offset=emptytime(T,N);
 
-  double sum=0.0;
   if(Implicit) {
     ImplicitConvolution C(m,M);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
       C.convolve(f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
     
-    cout << endl;
-    cout << "Implicit:" << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+    timings(T,N,offset,mean,sigma);
+    cout << "\nImplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
     else cout << f[0] << endl;
@@ -160,18 +142,17 @@ int main(int argc, char* argv[])
   }
   
   if(Explicit) {
-    sum=0.0;
     ExplicitConvolution C(n,m,f);
     for(unsigned int i=0; i < N; ++i) {
       init(f,g);
       seconds();
       C.convolve(f,g);
-      sum += seconds();
+      T[i]=seconds();
     }
-    cout << endl;
-    cout << "Explicit:" << endl;
-    cout << (sum-offset)/N << endl;
-    cout << endl;
+
+    timings(T,N,offset,mean,sigma);
+    cout << "\nExplicit:\n" << mean << "\t" << sigma << "\n" << endl;
+
     if(m < 100) 
       for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
     else cout << f[0] << endl;
@@ -185,12 +166,9 @@ int main(int argc, char* argv[])
     Complex *h=ComplexAlign(n);
     seconds();
     C.convolve(h,f,g);
-    sum=seconds();
+    mean=seconds();
   
-    cout << endl;
-    cout << "Direct:" << endl;
-    cout << sum-offset/N << endl;
-    cout << endl;
+    cout << "\nDirect:\n" << mean << "\t" << "0" << "\n" << endl;
 
     if(m < 100)
       for(unsigned int i=0; i < m; i++) cout << h[i] << endl;
