@@ -8,6 +8,13 @@ if [ "$1" == "" ]; then
     exit
 fi
 
+N=100000000
+onwg=$(echo $HOSTNAME | grep westgrid)
+echo $onwg
+if [ "$onwg" == "" ]; then
+    N=10000000
+fi
+
 prune=no
 divisor=0;
 
@@ -71,13 +78,13 @@ for (( i=$start; i<=$stop; i++ ))
 do
     echo $i
     m=$(asy -c "2^$i")
-    echo -e "$m \t $(./$1 -m $m -i | grep -A 1 Implicit | tail -n 1)"| cat >> $outdir/implicit
+    echo -e "$m \t $(./$1 -m $m -i -n $N| grep -A 1 Implicit | tail -n 1)"| cat >> $outdir/implicit
     if [ "$divisor" != "0" ]; then
 	m=$(asy -c "quotient(2^($i+$shift)+$offset,$divisor)")
     fi
-    echo -e "$m \t $(./$1 -m $m -e | grep -A 1 Explicit | tail -n 1)" | cat >> $outdir/explicit
+    echo -e "$m \t $(./$1 -m $m -e -n $N| grep -A 1 Explicit | tail -n 1)" | cat >> $outdir/explicit
     if [ "$prune" == "yes" ]; then
-	echo -e "$m \t $(./$1 -m $m -p | grep -A 1 Pruned | tail -n 1)" | cat >> $outdir/pruned
+	echo -e "$m \t $(./$1 -m $m -p -n $N| grep -A 1 Pruned | tail -n 1)" | cat >> $outdir/pruned
     fi
 
 done

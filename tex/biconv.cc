@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:");
+    int c = getopt(argc,argv,"deiptN:m:n:");
     if (c == -1) break;
 		
     switch (c) {
@@ -69,6 +69,9 @@ int main(int argc, char* argv[])
         break;
       case 'm':
         m=atoi(optarg);
+        break;
+      case 'n':
+        N0=atoi(optarg);
         break;
     }
   }
