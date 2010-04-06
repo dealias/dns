@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
 
 
   double offset=0.0, mean=0.0, sigma=0.0;
-  double T[N];
+  double *T=new double[N];
   offset=emptytime(T,N);
 
   if(Implicit) {

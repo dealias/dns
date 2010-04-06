@@ -19,33 +19,39 @@ inline double seconds()
 }
 
 // timing routines
-double emptytime(double T[], unsigned int N) {
-  seconds();
+double emptytime(double *T, unsigned int N)
+{
   double val=0.0;
   for(unsigned int i=0; i < N; ++i) {
     seconds();
     T[i]=seconds();
   }
   for(unsigned int i=0; i < N; ++i) 
-    val+=T[i];
+    val += T[i];
   return val;
 }
 
-void rmoffset(double T[], unsigned int N, double offset) {
+void rmoffset(double *T, unsigned int N, double offset)
+{
   for(unsigned int i=0; i < N; ++i) {
     T[i] -= offset/N;
   }
 }
 
-double stdev(double T[], unsigned int N, double mean) {
+double stdev(double *T, unsigned int N, double mean) 
+{
   double sigma=0.0;
-  for(unsigned int i=0; i < N; ++i) 
-    sigma += (T[i]-mean)*(T[i]-mean);
-  return sqrt(sigma/N);
+  for(unsigned int i=0; i < N; ++i) {
+    double v=T[i]-mean;
+    sigma += v*v;
+  }
+  
+  return N > 1 ? sqrt(sigma/(N-1)) : 0;
 }
 
-void timings(double T[], unsigned int N, double &offset, double &mean, 
-	     double &sigma) {
+void timings(double *T, unsigned int N, double &offset, double &mean, 
+	     double &sigma)
+{
   mean=0.0;
   rmoffset(T,N,offset);
   for(unsigned int i=0; i < N; ++i) 
