@@ -1,4 +1,3 @@
-using namespace std; // **** REMOVE ******
 // Add namespace to fftw++ and here and cmult-sse2.
 
 #include "fftw++.h"
@@ -15,11 +14,6 @@ extern const Complex hSqrt3;
 extern const Complex mhsqrt3;
 extern const Complex mhalf;
 extern const Complex zeta3;
-
-inline unsigned int min(unsigned int a, unsigned int b)
-{
-  return (a < b) ? a : b;
-}
 
 // Build the factored zeta tables.
 unsigned int BuildZeta(unsigned int n, unsigned int m,

@@ -11,6 +11,11 @@ const union uvec sse2_mm = {
 };
 #endif
 
+inline unsigned int min(unsigned int a, unsigned int b)
+{
+  return (a < b) ? a : b;
+}
+
 const double sqrt3=sqrt(3.0);
 const double hsqrt3=0.5*sqrt3;
 
