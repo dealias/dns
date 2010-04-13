@@ -35,22 +35,17 @@ void stdev(double *T, unsigned int N, double mean, double &sigmaL,
            double& sigmaH) 
 {
   sigmaL=0.0, sigmaH=0.0;
-  unsigned int L=0, H=0;
   for(unsigned int i=0; i < N; ++i) {
     double v=T[i]-mean;
-    if(v <= 0) {
+    if(v < 0)
       sigmaL += v*v;
-      ++L;
-    }
-    if(v >= 0) {
-      ++H;
+    if(v >= 0)
       sigmaH += v*v;
-    }
-    
   }
   
-  sigmaL=L > 1 ? sqrt(sigmaL/(L-1)) : 0;
-  sigmaH=H > 1 ? sqrt(sigmaH/(H-1)) : 0;
+  double factor=N > 1 ? 2.0/(N-1) : 0.0; 
+  sigmaL=sqrt(sigmaL*factor);
+  sigmaH=sqrt(sigmaH*factor);
 }
 
 void timings(const char* text, double *T, unsigned int N)
