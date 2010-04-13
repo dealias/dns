@@ -27,12 +27,16 @@ bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 
 inline void init(array2<Complex>& f, array2<Complex>& g, unsigned int M=1) 
 {
-  unsigned int Mmx=M*mx;
   double factor=1.0/sqrt(M);
-  for(unsigned int i=0; i < Mmx; ++i) {
-    for(unsigned int j=0; j < my; j++) {
-      f[i][j]=factor*Complex(3.0,2.0);
-      g[i][j]=factor*Complex(5.0,3.0);
+  double ffactor=2.0*factor;
+  double gfactor=0.5*factor;
+  for(unsigned int s=0; s < M; ++s) {
+    for(unsigned int i=0; i < mx; ++i) {
+      unsigned int I=s*mx+i;
+      for(unsigned int j=0; j < my; j++) {
+        f[I][j]=ffactor*Complex(i,j);
+        g[I][j]=gfactor*Complex(2*i,j+1);
+      }
     }
   }
 }
@@ -140,10 +144,19 @@ int main(int argc, char* argv[])
 
   if(Implicit) {
     ImplicitConvolution2 C(mx,my,M);
+    unsigned int mxy=mx*my;
+    Complex **F=new Complex *[M];
+    Complex **G=new Complex *[M];
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smxy=s*mxy;
+      F[s]=f+smxy;
+      G[s]=g+smxy;
+    }
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
-      C.convolve(f,g);
+      C.convolve(F,G);
+//      C.convolve(f,g);
       T[i]=seconds();
     }
     

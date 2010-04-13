@@ -70,23 +70,22 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
   Forwards->fft(f);
 }
 
-void ImplicitConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
+void ImplicitConvolution::convolve(Complex **F, Complex **G,
+                                   unsigned int offset)
 {
   // all six FFTs are out-of-place
     
-  unsigned int Mm=M*m;
-  for(unsigned int i=0; i < Mm; i += m) {
-    unsigned int istride=i*stride;
-    Backwards->fft(f+istride,u+i);
-    Backwards->fft(g+istride,v+i);
+  for(unsigned int i=0; i < M; ++i) {
+    unsigned int im=i*m;
+    Backwards->fft(F[i]+offset,u+im);
+    Backwards->fft(G[i]+offset,v+im);
   }
-  
-  mult(u,v);
 
-  for(unsigned int i=0; i < Mm; i += m) {
-    unsigned int istride=i*stride;
-    Complex *fi=f+istride;
-    Complex *gi=g+istride;
+  mult(u,V);
+
+  for(unsigned int i=0; i < M; ++i) {
+    Complex *f=F[i]+offset;
+    Complex *g=G[i]+offset;
     for(unsigned int a=0, k=0; k < m; ++a) {
       unsigned int stop=min(k+s,m);
       Complex *ZetaL0=ZetaL-k;
@@ -96,8 +95,8 @@ void ImplicitConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
       Vec Y=UNPACKH(CONJ(Zeta),Zeta);
       for(; k < stop; ++k) {
         Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-        Complex *fki=fi+k;
-        Complex *gki=gi+k;
+        Complex *fki=f+k;
+        Complex *gki=g+k;
         Vec Fki=LOAD(fki);
         Vec Gki=LOAD(gki);
         STORE(fki,ZMULT(Zetak,Fki));
@@ -108,8 +107,8 @@ void ImplicitConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
       double Hre=p->re;
       double Him=p->im;
       for(; k < stop; ++k) {
-        Complex *P=fi+k;
-        Complex *Q=gi+k;
+        Complex *P=f+k;
+        Complex *Q=g+k;
         Complex fk=*P;
         Complex gk=*Q;
         Complex L=*(ZetaL0+k);
@@ -122,12 +121,13 @@ void ImplicitConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
       }
 #endif      
     }
-    Backwards->fft(fi,v+i);
-    Backwards->fft(gi,fi);
+    Backwards->fft(f,v+i*m);
+    Backwards->fft(g,f);
   }
     
-  mult(v,f,stride);
+  mult(v,F,offset);
 
+  Complex *f=F[0]+offset;
   Forwards->fft(u,f);
   Forwards->fft(v,u);
 

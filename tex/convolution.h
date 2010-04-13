@@ -19,7 +19,7 @@ extern const Complex zeta3;
 unsigned int BuildZeta(unsigned int n, unsigned int m,
                        Complex *&ZetaH, Complex *&ZetaL);
 
-// In-place explicitly dealiased complex convolution.
+// In-place explicitly dealiased 1D complex convolution.
 class ExplicitConvolution {
 protected:
   unsigned int n,m;
@@ -55,8 +55,9 @@ public:
     m(m), M(M) {}
   
   // a[0][k]=sum_i a[i][k]*b[i][k]
-  void mult(Complex *a, Complex *b, unsigned int bstride=1) {
+  void mult(Complex *a, Complex **B, unsigned int offset=0) {
     if(M == 1) { // a[k]=a[k]*b[k]
+      Complex *b=B[0]+offset;
       for(unsigned int k=0; k < m; ++k) {
         Complex *p=a+k;
 #ifdef __SSE2__      
@@ -68,24 +69,74 @@ public:
         p->im=ak.re*bk.im+ak.im*bk.re;
 #endif      
       }
-    } else {
-      unsigned int Mm=M*m;
+    } else if(M == 2) {
+      Complex *A1=a+m;
+      Complex *B0=B[0]+offset;
+      Complex *B1=B[1]+offset;
       for(unsigned int k=0; k < m; ++k) {
         Complex *p=a+k;
-        Complex *q=b+k;
+#ifdef __SSE2__
+        STORE(p,ZMULT(LOAD(p),LOAD(B0+k))+ZMULT(LOAD(A1+k),LOAD(B1+k)));
+#else
+        Complex ak=*p;
+        Complex bk=B0[k];
+        double re=ak.re*bk.re-ak.im*bk.im;
+        double im=ak.re*bk.im+ak.im*bk.re;
+        ak=A1[k];
+        bk=B1[k];
+        re += ak.re*bk.re-ak.im*bk.im;
+        im += ak.re*bk.im+ak.im*bk.re; 
+        p->re=re;
+        p->im=im;
+#endif      
+      }
+    } else if(M == 3) {
+      Complex *A1=a+m;
+      Complex *A2=a+2*m;
+      Complex *B0=B[0]+offset;
+      Complex *B1=B[1]+offset;
+      Complex *B2=B[2]+offset;
+      for(unsigned int k=0; k < m; ++k) {
+        Complex *p=a+k;
+#ifdef __SSE2__
+        STORE(p,ZMULT(LOAD(p),LOAD(B0+k))+ZMULT(LOAD(A1+k),LOAD(B1+k))
+              +ZMULT(LOAD(A2+k),LOAD(B2+k)));
+#else
+        Complex ak=*p;
+        Complex bk=B0[k];
+        double re=ak.re*bk.re-ak.im*bk.im;
+        double im=ak.re*bk.im+ak.im*bk.re;
+        ak=A1[k];
+        bk=B1[k];
+        re += ak.re*bk.re-ak.im*bk.im;
+        im += ak.re*bk.im+ak.im*bk.re; 
+        ak=A2[k];
+        bk=B2[k];
+        re += ak.re*bk.re-ak.im*bk.im;
+        im += ak.re*bk.im+ak.im*bk.re; 
+        p->re=re;
+        p->im=im;
+#endif      
+      }
+    } else {
+      Complex *B0=B[0];
+      Complex *A=a-offset;
+      unsigned int stop=offset+m;
+      for(unsigned int k=offset; k < stop; ++k) {
+        Complex *p=A+k;
 #ifdef __SSE2__      
-        Vec sum=ZMULT(LOAD(p),LOAD(q));
-        for(unsigned int i=m; i < Mm; i += m)
-          sum += ZMULT(LOAD(p+i),LOAD(q+i*bstride));
+        Vec sum=ZMULT(LOAD(p),LOAD(B0+k));
+        for(unsigned int i=1; i < M; ++i)
+          sum += ZMULT(LOAD(p+m*i),LOAD(B[i]+k));
         STORE(p,sum);
 #else
         Complex ak=*p;
-        Complex bk=*q;
+        Complex bk=B0[k];
         double re=ak.re*bk.re-ak.im*bk.im;
         double im=ak.re*bk.im+ak.im*bk.re;
-        for(unsigned int i=m; i < Mm; i += m) {
-          Complex ak=p[i];
-          Complex bk=q[i*bstride];
+        for(unsigned int i=1; i < M; ++i) {
+          Complex ak=p[m*i];
+          Complex bk=B[i][k];
           re += ak.re*bk.re-ak.im*bk.im;
           im += ak.re*bk.im+ak.im*bk.re; 
         }
@@ -108,14 +159,14 @@ public:
         double *q=b+k;
         double sum=(*p)*(*q);
         for(unsigned int i=1; i < M; ++i)
-          sum += p[i*astride]*q[i*bstride];
+          sum += p[i*astride]*q[i*bstride]; // TODO: Vectorize
         *p=sum;
       }
     }
   }
 };
   
-// In-place implicitly dealiased complex convolution.
+// In-place implicitly dealiased 1D complex convolution.
 class ImplicitConvolution : public Dot {
 protected:
   unsigned int m;
@@ -124,6 +175,7 @@ protected:
   unsigned int s;
   fft1d *Backwards,*Forwards;
   Complex *ZetaH, *ZetaL;
+  Complex **V;
   bool allocated;
 public:  
   
@@ -132,6 +184,10 @@ public:
     Forwards=new fft1d(m,-1,u,v);
     
     s=BuildZeta(2*m,m,ZetaH,ZetaL);
+    
+    V=new Complex *[M];
+    for(unsigned int s=0; s < M; ++s)
+      V[s]=v+s*m;
   }
   
   // m is the number of independent data values.
@@ -159,15 +215,18 @@ public:
     delete Backwards;
   }
   
-  // In-place implicitly dealiased convolution.
-  // The distinct input data blocks in f and g are each of size m (contents not
-  // preserved).
-  // stride is the spacing between successive data blocks in units of m.
+  // F and G are pointers to M distinct data blocks each of size m,
+  // shifted by offset (contents not preserved).
   // The output is returned in f.
-  void convolve(Complex *f, Complex *g, unsigned int stride=1);
+  void convolve(Complex **F, Complex **G, unsigned int offset=0);
+  
+  // Constructor for special case M=1:
+  void convolve(Complex *f, Complex *g) {
+    convolve(&f,&g);
+  }
 };
 
-// Out-of-place direct complex convolution.
+// Out-of-place direct 1D complex convolution.
 class DirectConvolution {
 protected:
   unsigned int m;
@@ -177,7 +236,7 @@ public:
   void convolve(Complex *h, Complex *f, Complex *g);
 };
 
-// In-place explicitly dealiased Hermitian convolution.
+// In-place explicitly dealiased 1D Hermitian convolution.
 class ExplicitHConvolution {
 protected:
   unsigned int n,m;
@@ -208,7 +267,7 @@ public:
   void convolve(Complex *f, Complex *g);
 };
 
-// In-place implicitly dealiased Hermitian convolution.
+// In-place implicitly dealiased 1D Hermitian convolution.
 class ImplicitHConvolution : public Dot {
 protected:
   unsigned int m;
@@ -280,7 +339,7 @@ public:
   void convolve(Complex *f, Complex *g, unsigned int stride=1);
 };
   
-// Out-of-place direct Hermitian convolution.
+// Out-of-place direct 1D Hermitian convolution.
 class DirectHConvolution {
 protected:
   unsigned int m;
@@ -426,11 +485,21 @@ protected:
   unsigned int M;
   fftpad *xfftpad;
   ImplicitConvolution *yconvolve;
+  Complex **U2,**V2;
   bool allocated;
 public:  
   void init() {
     xfftpad=new fftpad(mx,my,my,u2);
     yconvolve=new ImplicitConvolution(my,u1,v1,M);
+    
+    U2=new Complex *[M];
+    V2=new Complex *[M];
+    unsigned int mxy=mx*my;
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smxy=s*mxy;
+      U2[s]=u2+smxy;
+      V2[s]=v2+smxy;
+    }
   }
   
   // u1 and v1 are temporary arrays of size my*M.
@@ -451,37 +520,42 @@ public:
   }
   
   ~ImplicitConvolution2() {
+    delete [] V2;
+    delete [] U2;
+    
+    delete yconvolve;
+    delete xfftpad;
+    
     if(allocated) {
       deleteAlign(v2);
       deleteAlign(u2);
       deleteAlign(v1);
       deleteAlign(u1);
     }
-    
-    delete yconvolve;
-    delete xfftpad;
   }
   
-  // The distinct input data blocks in f and g are each of size mx*my (contents
-  // not preserved).
-  // stride is the spacing between successive data blocks in units of mx*my.
+  // F and G are pointers to M distinct data blocks each of size mx*my,
+  // shifted by offset (contents not preserved).
   // The output is returned in f.
-  void convolve(Complex *f, Complex *g, unsigned int stride=1) {
+  void convolve(Complex **F, Complex **G, unsigned int offset=0) {
     unsigned int mxy=mx*my;
-    unsigned int Mmxy=M*mxy;
-    for(unsigned int i=0; i < Mmxy; i += mxy) {
-      unsigned int istride=i*stride;
-      xfftpad->backwards(f+istride,u2+i);
-      xfftpad->backwards(g+istride,v2+i);
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smxy=s*mxy;
+      xfftpad->backwards(F[s]+offset,u2+smxy);
+      xfftpad->backwards(G[s]+offset,v2+smxy);
     }
     
-    unsigned int mstride=mx*stride;
     for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->convolve(f+i,g+i,mstride);
+      yconvolve->convolve(F,G,i+offset);
     for(unsigned int i=0; i < mxy; i += my)
-      yconvolve->convolve(u2+i,v2+i,mx);
-    
-    xfftpad->forwards(f,u2);
+      yconvolve->convolve(U2,V2,i);
+        
+    xfftpad->forwards(F[0]+offset,u2);
+  }
+  
+  // Constructor for special case M=1:
+  void convolve(Complex *f, Complex *g) {
+    convolve(&f,&g);
   }
 };
 
@@ -735,12 +809,22 @@ protected:
   unsigned int M;
   fftpad *xfftpad;
   ImplicitConvolution2 *yzconvolve;
+  Complex **U3,**V3;
   bool allocated;
 public:  
   void init() {
-    unsigned int mymz=my*mz;
-    xfftpad=new fftpad(mx,mymz,mymz,u3);
+    unsigned int myz=my*mz;
+    xfftpad=new fftpad(mx,myz,myz,u3);
     yzconvolve=new ImplicitConvolution2(my,mz,u1,v1,u2,v2,M);
+    
+    U3=new Complex *[M];
+    V3=new Complex *[M];
+    unsigned int mxyz=mx*myz;
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smxy=s*mxyz;
+      U3[s]=u3+smxy;
+      V3[s]=v3+smxy;
+    }
   }
   
   // u1 and v1 are temporary arrays of size mz*M.
@@ -766,6 +850,9 @@ public:
   }
   
   ~ImplicitConvolution3() {
+    delete [] V3;
+    delete [] U3;
+    
     if(allocated) {
       deleteAlign(v3);
       deleteAlign(u3);
@@ -779,28 +866,30 @@ public:
     delete xfftpad;
   }
   
-  // The distinct input data blocks in f and g are each of size mx*my*mz
-  // (contents not preserved);
-  // stride is the spacing between successive data blocks in units of mx*my*mz.
+  // F and G are pointers to M distinct data blocks each of size mx*my*mz,
+  // shifted by offset (contents not preserved).
   // The output is returned in f.
-  void convolve(Complex *f, Complex *g, unsigned int stride=1) {
+  void convolve(Complex **F, Complex **G, unsigned int offset=0) {
     unsigned int myz=my*mz;
     unsigned int mxyz=mx*myz;
-    unsigned int Mmxyz=M*mxyz;
     
-    for(unsigned int i=0; i < Mmxyz; i += mxyz) {
-      unsigned int istride=i*stride;
-      xfftpad->backwards(f+istride,u3+i);
-      xfftpad->backwards(g+istride,v3+i);
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smxyz=s*mxyz;
+      xfftpad->backwards(F[s]+offset,u3+smxyz);
+      xfftpad->backwards(G[s]+offset,v3+smxyz);
     }
 
-    unsigned int mstride=mx*stride;
     for(unsigned int i=0; i < mxyz; i += myz)
-      yzconvolve->convolve(f+i,g+i,mstride);
+      yzconvolve->convolve(F,G,i+offset);
     for(unsigned int i=0; i < mxyz; i += myz)
-      yzconvolve->convolve(u3+i,v3+i,mx);
+      yzconvolve->convolve(U3,V3,i);
     
-    xfftpad->forwards(f,u3);
+    xfftpad->forwards(F[0]+offset,u3);
+  }
+  
+  // Constructor for special case M=1:
+  void convolve(Complex *f, Complex *g) {
+    convolve(&f,&g);
   }
 };
 

@@ -40,8 +40,10 @@ inline void init(Complex *f, Complex *g, unsigned int M=1)
 //    for(unsigned int k=0; k < m; k++) fi[k]=factor*F*k;
 //    for(unsigned int k=0; k < m; k++) gi[k]=factor*G*k;
   } else {
-      for(unsigned int k=0; k < m; k++) fi[k]=factor*Complex(3.0,2.0);
-      for(unsigned int k=0; k < m; k++) gi[k]=factor*Complex(5.0,3.0);
+      double ffactor=2.0*factor;
+      double gfactor=0.5*factor;
+      for(unsigned int k=0; k < m; k++) fi[k]=ffactor*Complex(k,k+1);
+      for(unsigned int k=0; k < m; k++) gi[k]=gfactor*Complex(k,2*k+1);
     }
   }
 }
@@ -126,10 +128,18 @@ int main(int argc, char* argv[])
 
   if(Implicit) {
     ImplicitConvolution C(m,M);
+    Complex **F=new Complex *[M];
+    Complex **G=new Complex *[M];
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int sm=s*m;
+      F[s]=f+sm;
+      G[s]=g+sm;
+    }
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
-      C.convolve(f,g);
+      C.convolve(F,G);
+//      C.convolve(f,g);
       T[i]=seconds();
     }
     
