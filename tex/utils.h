@@ -43,7 +43,7 @@ void stdev(double *T, unsigned int N, double mean, double &sigmaL,
       sigmaH += v*v;
   }
   
-  double factor=N > 1 ? 2.0/(N-1) : 0.0; 
+  double factor=N > 2 ? 2.0/(N-2.0) : 0.0; 
   sigmaL=sqrt(sigmaL*factor);
   sigmaH=sqrt(sigmaH*factor);
 }
