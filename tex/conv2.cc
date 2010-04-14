@@ -34,12 +34,17 @@ inline void init(array2<Complex>& f, array2<Complex>& g, unsigned int M=1)
 {
   unsigned int offset=Explicit ? nx/2-mx+1 : 0;
   unsigned int origin=offset+mx-1;
-  unsigned int stop=(origin+mx)*M;
+  unsigned int stop=origin+mx;
   double factor=1.0/sqrt(M);
-  for(unsigned int i=offset; i < stop; ++i) {
-    for(unsigned int j=0; j < my; j++) {
-      f[i][j]=factor*Complex(3.0,2.0);
-      g[i][j]=factor*Complex(5.0,3.0);
+  double ffactor=2.0*factor;
+  double gfactor=0.5*factor;
+  for(unsigned int s=0; s < M; ++s) {
+    for(unsigned int i=offset; i < stop; ++i) {
+      unsigned int I=s*stop+i;
+      for(unsigned int j=0; j < my; j++) {
+        f[I][j]=ffactor*Complex(i,j);
+        g[I][j]=gfactor*Complex(2*i,j+1);
+      }
     }
   }
 
@@ -136,10 +141,19 @@ int main(int argc, char* argv[])
 
   if(Implicit) {
     ImplicitHConvolution2 C(mx,my,M);
+    Complex **F=new Complex *[M];
+    Complex **G=new Complex *[M];
+    unsigned int mf=nxp*nyp;
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smf=s*mf;
+      F[s]=f+smf;
+      G[s]=g+smf;
+    }
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
-      C.convolve(f,g);
+      C.convolve(F,G);
+//      C.convolve(f,g);
       T[i]=seconds();
     }
     
@@ -152,6 +166,9 @@ int main(int argc, char* argv[])
         cout << endl;
       } else cout << f[0][0] << endl;
     cout << endl;
+    
+    delete [] G;
+    delete [] F;
   }
   
   if(Explicit) {
@@ -195,4 +212,6 @@ int main(int argc, char* argv[])
         cout << endl;
       } else cout << h[0][0] << endl;
   }
+  
+  delete [] T;
 }

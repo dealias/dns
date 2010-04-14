@@ -27,6 +27,8 @@ inline void init(Complex *f, Complex *g, unsigned int M=1)
 {
   unsigned int Mm=M*m;
   double factor=1.0/sqrt(M);
+  double ffactor=2.0*factor;
+  double gfactor=0.5*factor;
   for(unsigned int i=0; i < Mm; i += m) {
     Complex *fi=f+i;
     Complex *gi=g+i;
@@ -36,10 +38,10 @@ inline void init(Complex *f, Complex *g, unsigned int M=1)
 //    for(unsigned int k=0; k < m; k++) fi[k]=factor*F*k;
 //    for(unsigned int k=0; k < m; k++) gi[k]=factor*G*k;
     } else {
-      fi[0]=1.0*factor;
-      for(unsigned int k=1; k < m; k++) fi[k]=factor*Complex(3.0,2.0);
-      gi[0]=2.0*factor;
-      for(unsigned int k=1; k < m; k++) gi[k]=factor*Complex(5.0,3.0);
+      fi[0]=1.0*ffactor;
+      for(unsigned int k=1; k < m; k++) fi[k]=ffactor*Complex(k,k+1);
+      gi[0]=2.0*gfactor;
+      for(unsigned int k=1; k < m; k++) gi[k]=gfactor*Complex(k,2*k+1);
     }
   }
 }
@@ -119,10 +121,18 @@ int main(int argc, char* argv[])
 
   if(Implicit) {
     ImplicitHConvolution C(m,M);
+    Complex **F=new Complex *[M];
+    Complex **G=new Complex *[M];
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int sm=s*m;
+      F[s]=f+sm;
+      G[s]=g+sm;
+    }
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
-      C.convolve(f,g);
+      C.convolve(F,G);
+//      C.convolve(f,g);
       T[i]=seconds();
     }
 
@@ -133,6 +143,9 @@ int main(int argc, char* argv[])
     else cout << f[0] << endl;
     if(Test)
       for(unsigned int i=0; i < m; i++) h0[i]=f[i];
+    
+    delete [] G;
+    delete [] F;
   }
   
   if(Explicit) {
@@ -190,6 +203,7 @@ int main(int argc, char* argv[])
     deleteAlign(h);
   }
   
+  delete [] T;
   deleteAlign(f);
   deleteAlign(g);
 }

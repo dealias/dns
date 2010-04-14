@@ -141,6 +141,16 @@ static inline void STORE(Complex *z, const Vec& v)
   *(Vec *) z = v;
 }
 
+static inline Vec LOAD(const double *z)
+{
+  return *(const Vec *) z;
+}
+
+static inline void STORE(double *z, const Vec& v)
+{
+  *(Vec *) z = v;
+}
+
 #endif
 
 #endif

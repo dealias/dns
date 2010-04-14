@@ -31,6 +31,8 @@ inline void init(Complex *f, Complex *g, unsigned int M=1)
 {
   unsigned int Mm=M*m;
   double factor=1.0/sqrt(M);
+  double ffactor=2.0*factor;
+  double gfactor=0.5*factor;
   for(unsigned int i=0; i < Mm; i += m) {
     Complex *fi=f+i;
     Complex *gi=g+i;
@@ -40,8 +42,6 @@ inline void init(Complex *f, Complex *g, unsigned int M=1)
 //    for(unsigned int k=0; k < m; k++) fi[k]=factor*F*k;
 //    for(unsigned int k=0; k < m; k++) gi[k]=factor*G*k;
   } else {
-      double ffactor=2.0*factor;
-      double gfactor=0.5*factor;
       for(unsigned int k=0; k < m; k++) fi[k]=ffactor*Complex(k,k+1);
       for(unsigned int k=0; k < m; k++) gi[k]=gfactor*Complex(k,2*k+1);
     }
@@ -149,6 +149,9 @@ int main(int argc, char* argv[])
       for(unsigned int i=0; i < m; i++) cout << f[i] << endl;
     else cout << f[0] << endl;
     if(Test) for(unsigned int i=0; i < m; i++) h0[i]=f[i];
+    
+    delete [] G;
+    delete [] F;
   }
   
   if(Explicit) {
@@ -206,6 +209,7 @@ int main(int argc, char* argv[])
     deleteAlign(h);
   }
 
+  delete [] T;
   deleteAlign(g);
   deleteAlign(f);
 }

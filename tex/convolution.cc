@@ -73,7 +73,7 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
 void ImplicitConvolution::convolve(Complex **F, Complex **G,
                                    unsigned int offset)
 {
-  // all six FFTs are out-of-place
+  // all 6M FFTs are out-of-place
     
   for(unsigned int i=0; i < M; ++i) {
     unsigned int im=i*m;
@@ -196,17 +196,16 @@ void ExplicitHConvolution::convolve(Complex *f, Complex *g)
   rc->fft(f);
 }
 
-void ImplicitHConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
+void ImplicitHConvolution::convolve(Complex **F, Complex **G, 
+                                    unsigned int offset)
 {
   unsigned int cp1=c+1;
-  unsigned int mstride=m*stride;
   
-  // seven of nine FFTs are out-of-place
+  // 9M-2 of 9M FFTs are out-of-place 
   
   for(unsigned int i=0; i < M; ++i) {
-    unsigned int imstride=i*mstride;
-    Complex *fi=f+imstride;
-    Complex *gi=g+imstride;
+    Complex *fi=F[i]+offset;
+    Complex *gi=G[i]+offset;
     unsigned int icp1=i*cp1;
     Complex *ui=u+icp1;
     Complex *vi=v+icp1;
@@ -351,54 +350,45 @@ void ImplicitHConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
       cr->fft(vi);
     }
   }
-    
-  double *U=(double *) u;
-  unsigned int twocp1=2*cp1;
-  mult((double *) v,U,twocp1,twocp1);
-  rco->fft(v,U); // v is now free
+  mult((double *) v,(double **) U);
+  rco->fft((double *) v,u); // v is now free
 
   // r=0:
   for(unsigned int i=0; i < M; ++i) {
-    unsigned int imstride=i*mstride;
-    Complex *fi=f+imstride;
+    Complex *fi=F[i]+offset;
     unsigned int icp1=i*cp1;
     cro->fft(fi,(double *) (v+icp1));
-    cro->fft(g+imstride,(double *) fi);
+    cro->fft(G[i]+offset,(double *) fi);
   }
-  
-  double *V=(double *) v;
-  double *F=(double *) f;
-  unsigned int twomstride=2*mstride;
-  mult(V,F,twocp1,twomstride);
-  rco->fft(V,f);
+  mult((double *) v,(double **) F,2*offset);
+  rco->fft((double *) v,F[0]+offset);
   
   unsigned int cm1=c-1;
-  Complex *fcm1=f+cm1;
+  unsigned int offsetcm1=offset+cm1;
+  Complex *fcm1=F[0]+offsetcm1;
   Complex S=*fcm1;
   double T=(fcm1+1)->re;
 
   // r=1:
-  Complex *gcm1=g+cm1;
   for(unsigned int i=0; i < M; ++i) {
-    unsigned int imstride=i*mstride;
-    Complex *f1=fcm1+imstride;
+    Complex *f1=F[i]+offsetcm1;
     Complex *wi=w+3*i;
     f1[0]=wi[0].re;
     f1[1]=wi[1];
-    Complex *g1=gcm1+imstride;
+    Complex *g1=G[i]+offsetcm1;
     g1[0]=wi[0].im;
     g1[1]=wi[2];
     
     cro->fft(g1,(double *) (v+i*cp1));
     cro->fft(f1,(double *) g1);
   }
-  
-  double *G=(double *) gcm1;
-  mult(G,V,twomstride,twocp1);
-  rco->fft(G,v);
+  mult((double *) v,(double **) G,2*offsetcm1);
+  Complex *gcm1=G[0]+offsetcm1;
+  rco->fft((double *) v,gcm1);
 
   double ninv=1.0/(3.0*m);
-  f[0]=(f[0].re+v[0].re+u[0].re)*ninv;
+  Complex *f=F[0]+offset;
+  f[0]=(f[0].re+gcm1[0].re+u[0].re)*ninv;
   Complex *fm=f+m;
   unsigned int stop=s;
   Complex *ZetaL0=ZetaL;
@@ -416,7 +406,7 @@ void ImplicitHConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
       Complex *s=fm-k;
       Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
       Vec F0=LOAD(p)*Ninv;
-      Vec F1=ZMULTC(Zetak,LOAD(v+k));
+      Vec F1=ZMULTC(Zetak,LOAD(gcm1+k));
       Vec F2=ZMULT(Zetak,LOAD(u+k));
       Vec S=F1+F2;
       STORE(p,F0+S);
@@ -433,7 +423,7 @@ void ImplicitHConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
     for(; k < stop; ++k) {
       Complex *p=f+k;
       Complex *s=fm-k;
-      Complex q=v[k];
+      Complex q=gcm1[k];
       Complex r=u[k];
       Complex L=*(ZetaL0+k);
       double Re=Hre*L.re-Him*L.im;
@@ -459,11 +449,11 @@ void ImplicitHConvolution::convolve(Complex *f, Complex *g, unsigned int stride)
   unsigned int a=(c-1)/s;
   Complex Zetak0=ninv*ZetaH[a]*ZetaL[c-1-s*a];
   S *= ninv;
-  Complex f1k=conj(Zetak0)*v[cm1];
+  Complex f1k=conj(Zetak0)*gcm1[cm1];
   Complex f2k=Zetak0*u[cm1];
   f[cm1]=S+f1k+f2k;
   if(c > 1) f[c+1]=conj(S+zeta3*f1k)+zeta3*conj(f2k);
-  f[c]=(T-v[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
+  f[c]=(T-gcm1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
 }
 
 void DirectHConvolution::convolve(Complex *h, Complex *f, Complex *g)
@@ -1114,6 +1104,7 @@ void ImplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h)
   double *W=(double *) w;
     
   unsigned int twom=2*m;
+  // TODO: Use mult?
   for(unsigned int i=0; i < twom; ++i)
     V[i] *= U[i]*W[i];
   rco->fft(v,U); // v and w are now free

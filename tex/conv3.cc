@@ -36,19 +36,22 @@ inline void init(array3<Complex>& f, array3<Complex>& g, unsigned int M=1)
 {
   unsigned int xorigin=mx-1;
   unsigned int yorigin=my-1;
-  unsigned int xstop=nxp*M;
+  unsigned int xstop=nxp;
   double factor=1.0/sqrt(M);
-  
-  
-  for(unsigned int i=0; i < xstop; ++i) {
-    for(unsigned int j=0; j < nyp; ++j) {
-      for(unsigned int k=0; k < mz; ++k) {
-        f[i][j][k]=factor*Complex(3.0,2.0);
-        g[i][j][k]=factor*Complex(5.0,3.0);
+  double ffactor=2.0*factor;
+  double gfactor=0.5*factor;
+  for(unsigned int s=0; s < M; ++s) {
+    for(unsigned int i=0; i < xstop; ++i) {
+      unsigned int I=s*xstop+i;
+      for(unsigned int j=0; j < nyp; ++j) {
+        for(unsigned int k=0; k < mz; ++k) {
+          f[I][j][k]=ffactor*Complex(i+k,j+k);
+          g[I][j][k]=gfactor*Complex(2*i+k,j+1+k);
+        }
       }
     }
   }
-
+  
   for(unsigned int i=0; i < M; ++i) {
     f[xorigin+i*nxp][yorigin][0]=f[xorigin+i*nxp][yorigin][0].re;
     g[xorigin+i*nxp][yorigin][0]=g[xorigin+i*nxp][yorigin][0].re;
@@ -142,10 +145,19 @@ int main(int argc, char* argv[])
 
   if(Implicit) {
     ImplicitHConvolution3 C(mx,my,mz,M);
+    Complex **F=new Complex *[M];
+    Complex **G=new Complex *[M];
+    unsigned int mf=nxp*nyp*nzp;
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smf=s*mf;
+      F[s]=f+smf;
+      G[s]=g+smf;
+    }
     for(unsigned int i=0; i < N; ++i) {
       init(f,g,M);
       seconds();
-      C.convolve(f,g);
+      C.convolve(F,G);
+//      C.convolve(f,g);
       T[i]=seconds();
     }
     
@@ -161,6 +173,9 @@ int main(int argc, char* argv[])
         cout << endl;
       }
     } else cout << f[0][0][0] << endl;
+    
+    delete [] G;
+    delete [] F;
   }
   
   if(Direct) {
@@ -187,4 +202,6 @@ int main(int argc, char* argv[])
     else cout << h[0][0][0] << endl;
     
   }
+  
+  delete [] T;
 }

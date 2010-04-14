@@ -169,6 +169,9 @@ int main(int argc, char* argv[])
         cout << endl;
       } else cout << f[0][0] << endl;
     cout << endl;
+    
+    delete [] G;
+    delete [] F;
   }
   
   if(Explicit) {
@@ -209,5 +212,7 @@ int main(int argc, char* argv[])
         cout << endl;
       } else cout << h[0][0] << endl;
   }
+  
+  delete [] T;
 }
 
