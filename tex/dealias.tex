@@ -1,3 +1,5 @@
+% Fix definition of cyclic convolution.
+% dashed line types
 % Error bars
 % Add explanation in conclusions that memory savings is achieved by not
 % computing all Fourier transformed data at once.
@@ -795,7 +797,7 @@ convolution is $1.37$ times faster than a conventional explicit
 implementation, the pruned method becomes $1.73$ times {\it slower} for the
 $8192^2$ case. Our implicitly dealised convolution is also subject
 to these same optimization losses, but the savings due to implicit padding,
-in-place subtransforms, the neglect of high-level bit reversal, and the
+out-of-place subtransforms, the neglect of high-level bit reversal, and the
 immediate convolution of constant $x$ columns (while still possibly in
 cache) outweigh these losses.
 
@@ -1196,7 +1198,6 @@ straightforward exercise.
 
 % Mention parallelization issues (another advantage of removing zeros).
 % CRAY power-of-2 stride issue
-%Use out-of-place Fourier transforms where possible.
 %padding to smooth data vs. chirp-z algorithm
 
 \bibliography{refs}
