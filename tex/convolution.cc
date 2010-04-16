@@ -829,13 +829,15 @@ void ExplicitHConvolution2::padBackwards(Complex *f)
     Backwards->fft(f);
 }
 
-void ExplicitHConvolution2::convolve(Complex *f, Complex *g)
+void ExplicitHConvolution2::convolve(Complex *f, Complex *g, bool symmetrize)
 {
   unsigned int xorigin=nx/2;
   unsigned int nyp=ny/2+1;
     
-  HermitianSymmetrizeX(mx,nyp,xorigin,f);
-  HermitianSymmetrizeX(mx,nyp,xorigin,g);
+  if(symmetrize) {
+    HermitianSymmetrizeX(mx,nyp,xorigin,f);
+    HermitianSymmetrizeX(mx,nyp,xorigin,g);
+  }
     
   padBackwards(f);
   padBackwards(g);
@@ -861,12 +863,15 @@ void ExplicitHConvolution2::convolve(Complex *f, Complex *g)
     Forwards->fft0(f);
 }
 
-void DirectHConvolution2::convolve(Complex *h, Complex *f, Complex *g)
+void DirectHConvolution2::convolve(Complex *h, Complex *f, Complex *g,
+                                   bool symmetrize)
 {
   unsigned int xorigin=mx-1;
     
-  HermitianSymmetrizeX(mx,my,xorigin,f);
-  HermitianSymmetrizeX(mx,my,xorigin,g);
+  if(symmetrize) {
+    HermitianSymmetrizeX(mx,my,xorigin,f);
+    HermitianSymmetrizeX(mx,my,xorigin,g);
+  }
     
   int xstart=-xorigin;
   int ystart=1-my;
@@ -979,14 +984,17 @@ void DirectConvolution3::convolve(Complex *h, Complex *f, Complex *g)
   }
 }	
 
-void DirectHConvolution3::convolve(Complex *h, Complex *f, Complex *g)
+void DirectHConvolution3::convolve(Complex *h, Complex *f, Complex *g, 
+                                   bool symmetrize)
 {
   unsigned int xorigin=mx-1;
   unsigned int yorigin=my-1;
   unsigned int ny=2*my-1;
-    
-  HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,f);
-  HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,g);
+  
+  if(symmetrize) {
+    HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,f);
+    HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,g);
+  }
     
   int xstart=-xorigin;
   int ystart=-yorigin;
@@ -1309,15 +1317,18 @@ void ExplicitHBiConvolution2::padBackwards(Complex *f)
     return Backwards->fft(f);
 }
 
-void ExplicitHBiConvolution2::convolve(Complex *f, Complex *g, Complex *h)
+void ExplicitHBiConvolution2::convolve(Complex *f, Complex *g, Complex *h,
+                                       bool symmetrize)
 {
   unsigned int xorigin=nx/2;
   unsigned int nyp=ny/2+1;
     
-  HermitianSymmetrizeX(mx,nyp,xorigin,f);
-  HermitianSymmetrizeX(mx,nyp,xorigin,g);
-  HermitianSymmetrizeX(mx,nyp,xorigin,h);
-    
+  if(symmetrize) {
+    HermitianSymmetrizeX(mx,nyp,xorigin,f);
+    HermitianSymmetrizeX(mx,nyp,xorigin,g);
+    HermitianSymmetrizeX(mx,nyp,xorigin,h);
+  }
+  
   padBackwards(f);
   padBackwards(g);
   padBackwards(h);
@@ -1345,11 +1356,13 @@ void ExplicitHBiConvolution2::convolve(Complex *f, Complex *g, Complex *h)
 }
 
 void DirectHBiConvolution2::convolve(Complex *h, Complex *e, Complex *f,
-                                     Complex *g)
+                                     Complex *g, bool symmetrize)
 {
-  HermitianSymmetrizeX(mx,my,mx-1,e);
-  HermitianSymmetrizeX(mx,my,mx-1,f);
-  HermitianSymmetrizeX(mx,my,mx-1,g);
+  if(symmetrize) {
+    HermitianSymmetrizeX(mx,my,mx-1,e);
+    HermitianSymmetrizeX(mx,my,mx-1,f);
+    HermitianSymmetrizeX(mx,my,mx-1,g);
+  }
     
   unsigned int xorigin=mx-1;
   int xstart=-xorigin;

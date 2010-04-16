@@ -650,30 +650,39 @@ inline void HermitianSymmetrizeX(unsigned int mx, unsigned int my,
     f[offset-i]=conj(f[offset+i]);
 }
 
-// Enforce Hermiticity by symmetrizing D data on the X axis.
+// Enforce Hermiticity by symmetrizing 3D data on the X axis.
 inline void HermitianSymmetrizeX(unsigned int mx, unsigned int my,
                                  unsigned int mz, unsigned int ny,
                                  unsigned int xorigin, unsigned int yorigin, 
                                  Complex *f)
 {
-  for(unsigned int i=1; i < mx; ++i)
-    f[((xorigin-i)*ny+yorigin)*mz]=conj(f[((xorigin+i)*ny+yorigin)*mz]);
+  unsigned int nymz=ny*mz;
+  unsigned int offset=xorigin*nymz+yorigin*mz;
+  unsigned int mxnymz=mx*nymz;
+  for(unsigned int i=nymz; i < mxnymz; i += nymz)
+    f[offset-i]=conj(f[offset+i]);
 }
 
-// Enforce Hermiticity by symmetrizing D data on the XY plane.
+// Enforce Hermiticity by symmetrizing 2D data on the XY plane.
 inline void HermitianSymmetrizeXY(unsigned int mx, unsigned int my,
                                   unsigned int mz, unsigned int ny,
                                   unsigned int xorigin, unsigned int yorigin, 
                                   Complex *f)
 {
-  for(unsigned int i=1; i < mx; ++i)
-    f[((xorigin-i)*ny+yorigin)*mz]=conj(f[((xorigin+i)*ny+yorigin)*mz]);
+  HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,f);
   
-  for(unsigned int i=0; i < mx; ++i)
-    for(unsigned int j=1; j < my; ++j) {
-      f[((xorigin-i)*ny+yorigin-j)*mz]=conj(f[((xorigin+i)*ny+(yorigin+j))*mz]);
-      f[((xorigin+i)*ny+yorigin-j)*mz]=conj(f[((xorigin-i)*ny+(yorigin+j))*mz]);
+  unsigned int mymz=my*mz;
+  unsigned int nymz=ny*mz;
+  unsigned int mxnymz=mx*nymz;
+  unsigned int offset=xorigin*nymz+yorigin*mz;
+  for(unsigned int i=0; i < mxnymz; i += nymz) {
+    unsigned int offsetm=offset-i;
+    unsigned int offsetp=offset+i;
+    for(unsigned int j=mz; j < mymz; j += mz) {
+      f[offsetm-j]=conj(f[offsetp+j]);
+      f[offsetp-j]=conj(f[offsetm+j]);
     }
+  }
 }
 
 // In-place explicitly dealiased 2D Hermitian convolution.
@@ -725,7 +734,7 @@ public:
   }    
   
   void padBackwards(Complex *f);
-  void convolve(Complex *f, Complex *g);
+  void convolve(Complex *f, Complex *g, bool symmetrize=true);
 };
 
 // In-place implicitly dealiased 2D Hermitian convolution.
@@ -793,12 +802,15 @@ public:
   // F and G are pointers to M distinct data blocks each of size (2mx-1)*my,
   // shifted by offset (contents not preserved).
   // The output is returned in F[0].
-  void convolve(Complex **F, Complex **G, unsigned int offset=0) {
+  void convolve(Complex **F, Complex **G, bool symmetrize=true,
+                unsigned int offset=0) {
     unsigned int xorigin=mx-1;
     unsigned int nx=2*mx-1;
-    for(unsigned int s=0; s < M; ++s) {
-      HermitianSymmetrizeX(mx,my,xorigin,F[s]+offset);
-      HermitianSymmetrizeX(mx,my,xorigin,G[s]+offset);
+    if(symmetrize) {
+      for(unsigned int s=0; s < M; ++s)
+        HermitianSymmetrizeX(mx,my,xorigin,F[s]+offset);
+      for(unsigned int s=0; s < M; ++s)
+        HermitianSymmetrizeX(mx,my,xorigin,G[s]+offset);
     }
     
     unsigned int mu=(mx+1)*my;
@@ -818,8 +830,8 @@ public:
   }
   
   // Constructor for special case M=1:
-  void convolve(Complex *f, Complex *g) {
-    convolve(&f,&g);
+  void convolve(Complex *f, Complex *g, bool symmetrize=true) {
+    convolve(&f,&g,symmetrize);
   }
 };
 
@@ -830,7 +842,7 @@ protected:
 public:
   DirectHConvolution2(unsigned int mx, unsigned int my) : mx(mx), my(my) {}
   
-  void convolve(Complex *h, Complex *f, Complex *g);
+  void convolve(Complex *h, Complex *f, Complex *g, bool symmetrize=true);
 };
 
 // In-place explicitly dealiased 3D complex convolution.
@@ -1061,17 +1073,21 @@ public:
   // F and G are pointers to M distinct data blocks each of size 
   // (2mx-1)*(2my-1)*mz,   // shifted by offset (contents not preserved).
   // The output is returned in F[0].
-  void convolve(Complex **F, Complex **G, unsigned int offset=0) {
+  void convolve(Complex **F, Complex **G, bool symmetrize=true,
+                unsigned int offset=0) {
     unsigned int xorigin=mx-1;
     unsigned int yorigin=my-1;
     unsigned int nx=xorigin+mx;
     unsigned int ny=yorigin+my;
     unsigned int mf=nx*ny*mz;
-    for(unsigned int s=0; s < M; ++s) {
-      HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,F[s]+offset);
-      HermitianSymmetrizeX(mx,my,mz,ny,xorigin,yorigin,G[s]+offset);
-    }
     
+    if(symmetrize) {
+      for(unsigned int s=0; s < M; ++s)
+        HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,F[s]+offset);
+      for(unsigned int s=0; s < M; ++s)
+        HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,G[s]+offset);
+    }
+        
     unsigned int mxp1=mx+1;
     unsigned int mu=mxp1*ny*mz;
     for(unsigned int s=0; s < M; ++s) {
@@ -1082,16 +1098,16 @@ public:
     
     unsigned int nymz=ny*mz;
     for(unsigned int i=0; i < mf; i += nymz)
-      yzconvolve->convolve(F,G,i+offset);
+      yzconvolve->convolve(F,G,false,i+offset);
     for(unsigned int i=0; i < mu; i += nymz)
-      yzconvolve->convolve(U3,V3,i);
+      yzconvolve->convolve(U3,V3,false,i);
     
     xfftpad->forwards(F[0]+offset,u3);
   }
   
   // Constructor for special case M=1:
-  void convolve(Complex *f, Complex *g) {
-    convolve(&f,&g);
+  void convolve(Complex *f, Complex *g, bool symmetrize=true) {
+    convolve(&f,&g,symmetrize);
   }
 };
 
@@ -1103,7 +1119,7 @@ public:
   DirectHConvolution3(unsigned int mx, unsigned int my, unsigned int mz) : 
     mx(mx), my(my), mz(mz) {}
   
-  void convolve(Complex *h, Complex *f, Complex *g);
+  void convolve(Complex *h, Complex *f, Complex *g, bool symmetrize=true);
 };
 
 // In-place explicitly dealiased Hermitian biconvolution.
@@ -1303,7 +1319,7 @@ public:
   }    
   
   void padBackwards(Complex *f);
-  void convolve(Complex *f, Complex *g, Complex *h);
+  void convolve(Complex *f, Complex *g, Complex *h, bool symmetrize=true);
 };
 
 // In-place implicitly dealiased 2D Hermitian biconvolution.
@@ -1360,11 +1376,14 @@ public:
   // u1, v1, and w1 are temporary arrays allocated as Complex[my+1].
   // u2, v2, and w2 are temporary arrays allocated as Complex [2mx*(my+1)];
   // The output is returned in f.
-  void convolve(Complex *f, Complex *g, Complex *h, unsigned int stride=1) {
+  void convolve(Complex *f, Complex *g, Complex *h, bool symmetrize=true,
+                unsigned int stride=1) {
     unsigned int my1=my+1;
-    HermitianSymmetrizeX(mx,my1,mx,f);
-    HermitianSymmetrizeX(mx,my1,mx,g);
-    HermitianSymmetrizeX(mx,my1,mx,h);
+    if(symmetrize) {
+      HermitianSymmetrizeX(mx,my1,mx,f);
+      HermitianSymmetrizeX(mx,my1,mx,g);
+      HermitianSymmetrizeX(mx,my1,mx,h);
+    }
     
     xfftpad->backwards(f,u2);
     xfftpad->backwards(g,v2);
@@ -1388,7 +1407,8 @@ protected:
 public:
   DirectHBiConvolution2(unsigned int mx, unsigned int my) : mx(mx), my(my) {}
   
-  void convolve(Complex *h, Complex *e, Complex *f, Complex *g);
+  void convolve(Complex *h, Complex *e, Complex *f, Complex *g,
+                bool symmetrize=true);
 };
 
 #endif
