@@ -1,1 +1,0 @@
-/u/bowman/tex/fluids10/logo3.asy
