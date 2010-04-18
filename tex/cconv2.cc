@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
       T[i]=seconds();
     }
 
-    timings(Pruned ? "Pruned:" : "Explicit:",T,N);
+    timings(Pruned ? "Pruned" : "Explicit",T,N);
 
     if(mx*my < outlimit) 
       for(unsigned int i=0; i < mx; i++) {

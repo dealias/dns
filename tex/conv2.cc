@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
       T[i]=seconds();
     }
 
-    timings(Pruned ? "Pruned:" : "Explicit:",T,N);
+    timings(Pruned ? "Pruned" : "Explicit",T,N);
 
     unsigned int offset=nx/2-mx+1;
     if(2*(mx-1)*my < outlimit) 
