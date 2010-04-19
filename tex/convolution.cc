@@ -800,26 +800,24 @@ void ExplicitHConvolution2::padBackwards(Complex *f)
 {
   unsigned int nyp=ny/2+1;
   unsigned int nx2=nx/2;
-  unsigned int end=nx2-mx;
-  for(unsigned int i=0; i <= end; ++i) {
-    unsigned int nypi=nyp*i;
-    unsigned int stop=nypi+nyp;
-    for(unsigned int j=nypi; j < stop; ++j)
+
+  // zero-pad left block
+  unsigned int stop=(nx2-mx+1)*nyp;
+  for(unsigned int i=0; i < stop; ++i) 
+    f[i]=0.0;
+
+  // zero-pad top-middle block
+  unsigned int stop2=2*mx*nyp+stop;
+  unsigned int diff=nyp-my;
+  for(unsigned int i=stop+nyp; i < stop2; i += nyp) {
+    for(unsigned int j=i-diff; j < i; ++j)
       f[j]=0.0;
   }
-    
-  for(unsigned int i=nx2+mx; i < nx; ++i) {
-    unsigned int nypi=nyp*i;
-    unsigned int stop=nypi+nyp;
-    for(unsigned int j=nypi; j < stop; ++j)
-      f[j]=0.0;
-  }
-  for(unsigned int i=0; i < nx; ++i) {
-    unsigned int nypi=nyp*i;
-    unsigned int stop=nypi+nyp;
-    for(unsigned int j=nypi+my; j < stop; ++j)
-      f[j]=0.0;
-  }
+
+  // zero-pad right block
+  stop=nx*nyp;
+  for(unsigned int i=(nx2+mx)*nyp; i < stop; ++i) 
+    f[i]=0.0;
     
   if(prune) {
     xBackwards->fft(f);
