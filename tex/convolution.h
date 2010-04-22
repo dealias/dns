@@ -763,11 +763,25 @@ public:
       V2[s]=v2+smu;
     }
   }
+
+  void init(unsigned int mx, unsigned int my, unsigned int M=1) {
+    mx=mx;
+    my=my;
+    M=M;
+    u1=ComplexAlign((my/2+1)*M);
+    v1=ComplexAlign((my/2+1)*M);
+    w1=ComplexAlign(3*M);
+    u2=ComplexAlign((mx+1)*my*M);
+    v2=ComplexAlign((mx+1)*my*M);
+    allocated=true;
+    init();
+   }
   
   // u1 and v1 are temporary arrays of size (my/2+1)*M.
   // w1 is a temporary array of size 3*M.
   // u2 and v2 are temporary arrays of size (mx+1)*my*M;
   // M is the number of data blocks (each corresponding to a dot product term).
+  ImplicitHConvolution2() {}
   ImplicitHConvolution2(unsigned int mx, unsigned int my,
                         Complex *u1, Complex *v1, Complex *w1,
                         Complex *u2, Complex *v2, unsigned int M=1) :
