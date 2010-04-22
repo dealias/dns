@@ -34,13 +34,14 @@ inline void init(array2<Complex>& f, array2<Complex>& g, unsigned int M=1)
 {
   unsigned int offset=Explicit ? nx/2-mx+1 : 0;
   unsigned int origin=offset+mx-1;
-  unsigned int stop=origin+mx;
+  unsigned int stop=2*mx-1;
+  unsigned int stopoffset=stop+offset;
   double factor=1.0/sqrt(M);
   double ffactor=2.0*factor;
   double gfactor=0.5*factor;
   for(unsigned int s=0; s < M; ++s) {
-    for(unsigned int i=offset; i < stop; ++i) {
-      unsigned int I=s*stop+i;
+    for(unsigned int i=0; i < stop; ++i) {
+      unsigned int I=s*stopoffset+i+offset;
       for(unsigned int j=0; j < my; j++) {
         f[I][j]=ffactor*Complex(i,j);
         g[I][j]=gfactor*Complex(2*i,j+1);
