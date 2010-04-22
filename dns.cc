@@ -24,6 +24,8 @@ Real nu=1.0;
 Real rho=1.0;
 Real ICvx=1.0;
 Real ICvy=1.0;
+unsigned int Nx=1;
+unsigned int Ny=1;
 Real xmin=0.0;
 Real xmax=1.0;
 Real ymin=0.0;
@@ -35,15 +37,6 @@ int movie=0;
 int rezero=0;
 
 typedef array1<Complex>::opt cvector;
-
-// Unused variables:
-
-Real shellmin2;
-Real shellmax2;
-int dumpbins=0;
-Real krmin;
-Real krmax;
-int reality=1;
 
 //enum Field {OMEGA,EK};
 enum Field {OMEGA};
@@ -67,10 +60,15 @@ public:
    
 class DNS : public ProblemBase {
   int iNxb,iNyb;
+  unsigned int mx, my; // size of data arrays
+  Real kx0, ky0; // grid spacing factor
   unsigned Nxb2, Nyb2; // half of Nxb, Nyb
   
-  unsigned Nxb,Nxb1,log2Nxb;
-  unsigned Nyb,Nyp,log2Nyb;
+  vector w; // array pointer for vorticity
+
+  //ImplicitHConvolution2 C(Nx,Ny,2);
+  unsigned Nxb,Nxb1;
+  unsigned Nyb,Nyp;
   unsigned nfft;
   
   Real Nxybinv;
@@ -82,7 +80,7 @@ class DNS : public ProblemBase {
   Real hxinv, hyinv;
   unsigned nmode;
 	
-  array3<Real> u,S,f;
+  array3<Real> u,S; // f declared below
   
   unsigned nshells;  // Number of spectral shells
   
@@ -93,8 +91,7 @@ class DNS : public ProblemBase {
   
   Real coeffx,coeffy;
   array3<Complex> f,g;
-  array2<Complex> f0,f1;
-  array2<Complex> g0,g1;
+  array2<Complex> f0,f1,g0,g1;
   
 public:
   DNS();
@@ -169,6 +166,13 @@ oxstream fvx,fvy,fw,fekvk;
 
 void DNS::InitialConditions()
 {
+  kx0=1.0;
+  ky0=1.0;
+  mx=Nx;
+  my=Ny/2;  // FIXME: plus one?
+
+
+  // FIXME: what is this?
   iNxb=Nxb;
   iNyb=Nyb;
   
@@ -178,12 +182,12 @@ void DNS::InitialConditions()
   nshells=(unsigned) (sqrt(Nx2*Nx2+Ny2*Ny2)+0.5);
   
   NY[OMEGA]=Nxb*Nyb;
-  NY[EK]=nshells;
+  //  NY[EK]=nshells;
   
-  f0.Dimension(Nx,my);
-  f1.Allocate(Nx,my);
-  g0.Allocate(Nx,my);
-  g1.Allocate(Nx,my);
+  f0.Dimension(mx,my);
+  f1.Allocate(mx,my);
+  g0.Allocate(mx,my);
+  g1.Allocate(mx,my);
   
   Allocator();
   
@@ -194,9 +198,9 @@ void DNS::InitialConditions()
   f.Allocate(2,uNx,my,align);
   g.Allocate(2,uNx,my,align);
   
-  u.Dimension(Nxb,Nyb);
+  //u.Dimension(Nxb,Nyb);
   ForceMask.Allocate(Nxb,2*Nyp,align);
-  FMk.Dimension(Nxb,Nyp,(Complex *) ForceMask());
+  //FMk.Dimension(Nxb,Nyp,(Complex *) ForceMask());
   
   cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
 
@@ -207,7 +211,7 @@ void DNS::InitialConditions()
   // Initialize arrays with zero boundary conditions
   u=0.0;
 	
-  for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
+  //  for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
   
   tcount=0;
   if(restart) {
@@ -224,7 +228,7 @@ void DNS::InitialConditions()
     remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
   }
   
-  mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
+  //mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
   errno=0;
     
   if(output) open_output(fu,dirsep,"u");
@@ -359,30 +363,33 @@ void DNS::FinalOutput()
 
 void DNS::Source(const vector2& Src, const vector2& Y, double)
 {
+
+  ImplicitHConvolution2 C(mx,my,2); // FIXME: move to initialize
+  
   w.Set(Y[OMEGA]);
   S.Set(Src[OMEGA]);
   
-  f0.Set(S);
+  //f0.Set(S[OMEGA]); // f0 is complex, but S[OMEGA] is real. FIXME
   
   unsigned int xorigin=mx-1;
   f0[xorigin][0]=0.0; // Move out later
   f1[xorigin][0]=0.0;
   g0[xorigin][0]=0.0;
   g1[xorigin][0]=0.0;
-  for(unsigned int i=0; i < uNx; ++i) {
+  for(unsigned int i=0; i < Nx; ++i) {
     Real kx=kx0*(i-xorigin);
     Real kx2=kx*kx;
-    cvector wi=w[i];
+    vector wi=w[i];
     for(unsigned int j=i == xorigin ? 1 : 0; j < my; ++j) {
       Real ky=ky0*j;
       Complex w0=wi[j];
-      Real kxw=kx*w0;
-      Real kyw=ky*w0;
+      Complex kxw=kx*w0;
+      Complex kyw=ky*w0;
       f0[i][j]=kxw;
-      f1[i][j]=-kyw0;
+      f1[i][j]=-kyw;
       Real k2inv=1.0/(kx2+ky*ky);
-      g0[i][j]=k2inv*kyw0
-      g1[i][j]=k2inv*kxw0;
+      g0[i][j]=k2inv*kyw;
+      g1[i][j]=k2inv*kxw;
     }
   }
   
