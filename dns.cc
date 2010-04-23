@@ -66,7 +66,7 @@ class DNS : public ProblemBase {
   
   vector w; // array pointer for vorticity
 
-  //ImplicitHConvolution2 C(Nx,Ny,2);
+  
   unsigned Nxb,Nxb1;
   unsigned Nyb,Nyp;
   unsigned nfft;
@@ -80,7 +80,7 @@ class DNS : public ProblemBase {
   Real hxinv, hyinv;
   unsigned nmode;
 	
-  array3<Real> u,S; // f declared below
+  array3<Complex> u,S;
   
   unsigned nshells;  // Number of spectral shells
   
@@ -97,10 +97,12 @@ public:
   DNS();
   virtual ~DNS() {}
   void InitialConditions();
+  ImplicitHConvolution2 Convolution;
   void Initialize();
   void Output(int it);
   void FinalOutput();
   void OutFrame(int it);
+  //void Source(const array2<Complex>& Src, const array2<Complex>& Y, double t);
   void Source(const vector2& Src, const vector2& Y, double t);
   void ComputeInvariants(Real& E, Real& Z);
   void Stochastic(const vector2& Y, double, double);
@@ -110,11 +112,13 @@ public:
   
   Real Xof(int i) {return xmin+i*(xmax-xmin)/Nxb;}
   Real Yof(int i) {return ymin+i*(ymax-ymin)/Nyb;}
-  
+
+  /*  
   Real Vorticity(int i, int j) {
     return coeffx*(u(i+1 < iNxb ? i+1 : 0,j,1)-u(i > 0 ? i-1 : iNxb-1,j,1))-
       coeffy*(u(i,j+1 < iNyb ? j+1 : 0,0)-u(i,j > 0 ? j-1 : iNyb-1,0));
   }
+  */
 
 };
 
@@ -193,7 +197,6 @@ void DNS::InitialConditions()
   
   unsigned int align=sizeof(Complex);
   
-  ImplicitHConvolution2 C(mx,my,2);
   unsigned uNx=2*Nx;
   f.Allocate(2,uNx,my,align);
   g.Allocate(2,uNx,my,align);
@@ -204,9 +207,11 @@ void DNS::InitialConditions()
   
   cout << endl << "GEOMETRY: (" << Nxb << " X " << Nyb << ")" << endl; 
 
+  Convolution.init(Nx,my,2);
+
   Allocate(count,nshells);
   
-  u.Set(Y[OMEGA]);
+  //u.Set(Y[OMEGA]);
 		
   // Initialize arrays with zero boundary conditions
   u=0.0;
@@ -364,12 +369,10 @@ void DNS::FinalOutput()
 void DNS::Source(const vector2& Src, const vector2& Y, double)
 {
 
-  ImplicitHConvolution2 C(mx,my,2); // FIXME: move to initialize
+  //w.Set(Y[OMEGA]);
+  //S.Set(Src[OMEGA]);
   
-  w.Set(Y[OMEGA]);
-  S.Set(Src[OMEGA]);
-  
-  //f0.Set(S[OMEGA]); // f0 is complex, but S[OMEGA] is real. FIXME
+  //f0.Set(Src[OMEGA]); // f0 is complex, but Src[OMEGA] is real. FIXME
   
   unsigned int xorigin=mx-1;
   f0[xorigin][0]=0.0; // Move out later
@@ -395,7 +398,7 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   
   Complex *F[2]={f0,f1};
   Complex *G[2]={g0,g1};
-  C.convolve(F,G);
+  Convolution.convolve(F,G);
   
 //  Spectrum(Src[EK],Y[OMEGA]);
 }
