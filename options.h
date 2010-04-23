@@ -2,11 +2,9 @@
 #define __options_h__ 1
 
 #define IMPLICIT 0
-#define COMPLEX 0
+#define COMPLEX 1
 #define NUCOMPLEX 0
-#define MCREAL 1
 #define DOUBLE_PRECISION 1
-
 
 #include "utils.h"
 

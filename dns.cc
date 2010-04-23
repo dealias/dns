@@ -6,6 +6,8 @@
 #include "InitialCondition.h"
 #include "convolution.h"
 
+#include <sys/stat.h> // On Sun computers this must come after xstream.h
+
 using namespace Array;
 
 const double ProblemVersion=1.0;
@@ -36,9 +38,6 @@ Real deltaf=2.0;
 int movie=0;
 int rezero=0;
 
-typedef array1<Complex>::opt cvector;
-typedef array2<Complex>::opt cvector2;
-
 //enum Field {OMEGA,EK};
 enum Field {OMEGA};
 
@@ -61,14 +60,13 @@ public:
    
 class DNS : public ProblemBase {
   unsigned int mx, my; // size of data arrays
-  Real kx0, ky0; // grid spacing factor
-  unsigned Nx2, Ny2; // half of Nx, Ny
-  
-  vector w; // array pointer for vorticity
+  unsigned int xorigin; // Horizontal index of Fourier origin.
 
+  Real kx0, ky0; // grid spacing factor
+  
+  array2<Complex> w; // array pointer for vorticity
   
   unsigned Nx1;
-  unsigned Nyp;
   unsigned nfft;
   
   Real Nxybinv;
@@ -80,7 +78,7 @@ class DNS : public ProblemBase {
   Real hxinv, hyinv;
   unsigned nmode;
 	
-  array3<Complex> u,S;
+//  array3<Complex> S;
   
   unsigned nshells;  // Number of spectral shells
   
@@ -89,36 +87,22 @@ class DNS : public ProblemBase {
   array3<Real> ForceMask;
   array3<Complex> FMk;
   
-  Real coeffx,coeffy;
-  array3<Complex> f,g;
   array2<Complex> f0,f1,g0,g1;
+  ImplicitHConvolution2 *Convolution;
   
 public:
   DNS();
   virtual ~DNS() {}
   void InitialConditions();
-  ImplicitHConvolution2 Convolution;
   void Initialize();
   void Output(int it);
   void FinalOutput();
   void OutFrame(int it);
   void Source(const vector2& Src, const vector2& Y, double t);
-  void ComputeInvariants(Real& E, Real& Z);
+  void ComputeInvariants(Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
-  void SetFFTparameters();
   
-  void Spectrum(vector& S, const vector& y);
-  
-  Real Xof(int i) {return xmin+i*(xmax-xmin)/Nx;}
-  Real Yof(int i) {return ymin+i*(ymax-ymin)/Ny;}
-
-  /*  
-  Real Vorticity(unsigned int i, unsigned int j) {
-    return coeffx*(u(i+1 < Nx ? i+1 : 0,j,1)-u(i > 0 ? i-1 : Nx-1,j,1))-
-      coeffy*(u(i,j+1 < Ny ? j+1 : 0,0)-u(i,j > 0 ? j-1 : Ny-1,0));
-  }
-  */
-
+//  void Spectrum(vector& S, const vector& y);
 };
 
 DNS *DNSProblem;
@@ -171,44 +155,52 @@ void DNS::InitialConditions()
 {
   kx0=1.0;
   ky0=1.0;
-  mx=Nx;
-  my=Ny/2;  // FIXME: plus one?
+  mx=(Nx+1)/2;
+  my=(Ny+1)/2;
 
-  Nx2=Nx/2, Ny2=Ny/2;
+  xorigin=mx-1;
+  nshells=(unsigned int) (hypot(mx-1,my-1)+0.5);
   
-  unsigned Nx2=(Nx-1)/2, Ny2=(Ny-1)/2;
-  nshells=(unsigned) (sqrt(Nx2*Nx2+Ny2*Ny2)+0.5);
-  
-  NY[OMEGA]=Nx*Ny;
+  NY[OMEGA]=Nx*my;
   //  NY[EK]=nshells;
   
-  f0.Dimension(mx,my);
-  f1.Allocate(mx,my);
-  g0.Allocate(mx,my);
-  g1.Allocate(mx,my);
+  size_t align=sizeof(Complex);  
   
-  Allocator();
+  Allocator(align);
   
-  unsigned int align=sizeof(Complex);  
-  f.Allocate(2,2*Nx,my,align);
-  g.Allocate(2,2*Nx,my,align);
+  w.Dimension(Nx,my);
+  f0.Dimension(Nx,my);
+  f1.Allocate(Nx,my,align);
+  g0.Allocate(Nx,my,align);
+  g1.Allocate(Nx,my,align);
   
   //u.Dimension(Nx,Ny);
-  ForceMask.Allocate(Nx,2*Nyp,align);
-  //FMk.Dimension(Nx,Nyp,(Complex *) ForceMask());
+//  ForceMask.Allocate(Nx,my,align);
+  //FMk.Dimension(Nx,my,(Complex *) ForceMask());
   
   cout << endl << "GEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
 
-  //Convolution.init(Nx,my,2);
-  //Convolution=new ImplicitHConvolution2(Nx,my,2);
+  Convolution=new ImplicitHConvolution2(mx,my,2);
 
   Allocate(count,nshells);
   
-  //u.Set(Y[OMEGA]);
-		
   // Initialize arrays with zero boundary conditions
-  u=0.0;
-	
+  w.Set(Y[OMEGA]);
+  
+  w[xorigin][0]=0.0;
+  for(unsigned i=0; i < Nx; i++) {
+    Real kx=kx0*((int) i-(int) xorigin);
+    Real kx2=kx*kx;
+    vector wi=w[i];
+    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      wi[j]=Complex(1.0,2.0);
+    }
+  }
+  
+  HermitianSymmetrizeX(mx,my,xorigin,w);
+  
+  cout << w << endl;
+  
   //  for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
   
   tcount=0;
@@ -224,7 +216,7 @@ void DNS::InitialConditions()
   
   if(!restart) 
     remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
-  //mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
+  mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
   
   errno=0;
     
@@ -255,13 +247,13 @@ void DNS::Spectrum(vector& S, const vector& y)
   // Compute instantaneous angular average over circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
-    int kx=i-Nx2;
+    int kx=i-xorigin;
     rvector k2maski=k2maskij[i];
-    for(unsigned j=(kx > 0) ? 0 : 1; j < Nyp; j++) {
+    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
       if(k2maski[j]) {
         int K2=kx*kx+j*j;
         unsigned K=(unsigned)(sqrt(K2)-0.5);
-        count[K]++;
+        count[K]++; // Move to initialize.
         S[K] += abs2(Sk(i,j));
       }
     }
@@ -328,60 +320,54 @@ void DNS::OutFrame(int)
   */
 }	
 
-void DNS::ComputeInvariants(Real& E, Real& Z)
+void DNS::ComputeInvariants(Real& E, Real& Z, Real& P)
 {
-  /*
-  E=Z=0.0;
-	
+  E=Z=P=0.0;
+  w.Set(Y[OMEGA]);
   for(unsigned i=0; i < Nx; i++) {
-    array1<Complex>::opt ui=u[i];
-    for(unsigned j=0; j < Ny; j++) {
-      Complex uij=ui[j];
-      E += uij*uij;
-      Real w=Vorticity(i,j);
-      Z += w*w;
+    Real kx=kx0*((int) i-(int) xorigin);
+    Real kx2=kx*kx;
+    vector wi=w[i];
+    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      Real w2=abs2(wi[j]);
+      Z += w2;
+      Real ky=ky0*j;
+      Real k2=(kx2+ky*ky);
+      E += w2/k2;
+      P += k2*w2;
     }
   }
-  
-  E *= factor;
-  Z *= factor;
-  */
 }
 
 void DNS::FinalOutput()
 {
-  /*
-  Real E,Z;
-  ComputeInvariants(E,Z);
+  Real E,Z,P;
+  ComputeInvariants(E,Z,P);
   cout << endl;
   cout << "Energy = " << E << newl;
   cout << "Enstrophy = " << Z << newl;
-  */
+  cout << "Palenstrophy = " << P << newl;
 }
 
 void DNS::Source(const vector2& Src, const vector2& Y, double)
 {
-  /*
-  //w.Set(Y[OMEGA]);
-  //S.Set(Src[OMEGA]);
-  
-  f0.Set(Src[OMEGA]); // f0 is complex, but Src[OMEGA] is real. FIXME
-  
-  unsigned int xorigin=mx-1;
+ w.Set(Y[OMEGA]);
+ f0.Set(Src[OMEGA]);
+ 
   f0[xorigin][0]=0.0; // Move out later
   f1[xorigin][0]=0.0;
   g0[xorigin][0]=0.0;
   g1[xorigin][0]=0.0;
   for(unsigned int i=0; i < Nx; ++i) {
-    Real kx=kx0*(i-xorigin);
+    Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
-    for(unsigned int j=i == xorigin ? 1 : 0; j < my; ++j) {
+    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real ky=ky0*j;
-      Complex w0=wi[j];
-      Complex kxw=kx*w0;
-      Complex kyw=ky*w0;
-      f0[i][j]=kxw;
+      Complex wij=wi[j];
+      Complex kxw=kx*wij;
+      Complex kyw=ky*wij;
+      f0[i][j]=kxw; // TODO: optimize
       f1[i][j]=-kyw;
       Real k2inv=1.0/(kx2+ky*ky);
       g0[i][j]=k2inv*kyw;
@@ -391,10 +377,23 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   
   Complex *F[2]={f0,f1};
   Complex *G[2]={g0,g1};
-  Convolution.convolve(F,G);
+  Convolution->convolve(F,G);
   
-  //  Spectrum(Src[EK],Y[OMEGA]);
-  */
+  cout << f0 << endl;
+  
+  
+  Var sum=0.0;
+  for(unsigned int i=0; i < Nx; ++i) {
+    vector wi=w[i];
+    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      Complex wij=wi[j];
+      sum += f0[i][j]*conj(wij);
+    }
+  }
+  
+  cout << sum << endl;
+  
+//  Spectrum(Src[EK],Y[OMEGA]);
 }
 
 void DNS::Stochastic(const vector2&Y, double, double)
