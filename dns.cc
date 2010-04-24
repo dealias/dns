@@ -193,7 +193,7 @@ void DNS::InitialConditions()
     Real kx2=kx*kx;
     vector wi=w[i];
     for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      wi[j]=Complex(1.0,2.0);
+      wi[j]=Complex(1.0,0.0);
     }
   }
   
@@ -362,16 +362,20 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
     Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
+    vector f0i=f0[i];
+    vector f1i=f1[i];
+    vector g0i=g0[i];
+    vector g1i=g1[i];
     for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real ky=ky0*j;
       Complex wij=wi[j];
       Complex kxw=kx*wij;
       Complex kyw=ky*wij;
-      f0[i][j]=kxw; // TODO: optimize
-      f1[i][j]=-kyw;
+      f0i[j]=kxw;
+      f1i[j]=-kyw;
       Real k2inv=1.0/(kx2+ky*ky);
-      g0[i][j]=k2inv*kyw;
-      g1[i][j]=k2inv*kxw;
+      g0i[j]=k2inv*kyw;
+      g1i[j]=k2inv*kxw;
     }
   }
   
