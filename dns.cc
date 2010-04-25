@@ -189,7 +189,7 @@ void DNS::InitialConditions()
   
   w[xorigin][0]=0.0;
   for(unsigned i=0; i < Nx; i++) {
-    Real kx=kx0*((int) i-(int)xorigin);
+    Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
     for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
@@ -359,41 +359,28 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   g0[xorigin][0]=0.0;
   g1[xorigin][0]=0.0;
   for(unsigned int i=0; i < Nx; ++i) {
-    Real kx=kx0*(((int) i)-(int)xorigin);
+    Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
     vector f0i=f0[i];
     vector f1i=f1[i];
     vector g0i=g0[i];
     vector g1i=g1[i];
-    for(unsigned int j=i == xorigin ? 1 : 0; j < my; ++j) {
+    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real ky=ky0*j;
-      Complex wij=wi[j];
+      Complex wij=I*wi[j]; // TODO: optimize
       Complex kxw=kx*wij;
       Complex kyw=ky*wij;
-      Real k2inv=1.0/(kx2+ky*ky);
       f0i[j]=kxw;
-      f1i[j]=-kyw;
+      f1i[j]=kyw;
+      Real k2inv=1.0/(kx2+ky*ky);
       g0i[j]=k2inv*kyw;
-      g1i[j]=k2inv*kxw;
+      g1i[j]=-k2inv*kxw;
     }
   }
   
   Complex *F[2]={f0,f1};
   Complex *G[2]={g0,g1};
-  // temporary
-  cout << "f0\n" << f0 << endl;
-  HermitianSymmetrizeX(mx,my,xorigin,f0);  
-  HermitianSymmetrizeX(mx,my,xorigin,f1);  
-  HermitianSymmetrizeX(mx,my,xorigin,g0);  
-  HermitianSymmetrizeX(mx,my,xorigin,g1);  
-  cout << "w\n" << w << endl;
-  cout << "f0\n" << f0 << endl;
-  cout << "f1\n" << f1 << endl;
-  cout << "g0\n" << g0 << endl;
-  cout << "g1\n" << g1 << endl;
-  // end temporary
-
   Convolution->convolve(F,G);
   
   Var sum=0.0;
