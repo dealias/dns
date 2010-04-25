@@ -60,7 +60,7 @@ public:
    
 class DNS : public ProblemBase {
   unsigned int mx, my; // size of data arrays
-  unsigned int xorigin; // Horizontal index of Fourier origin.
+  int xorigin; // Horizontal index of Fourier origin.
 
   Real kx0, ky0; // grid spacing factor
   
@@ -158,7 +158,7 @@ void DNS::InitialConditions()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
-  xorigin=mx-1;
+  xorigin=(int) mx-1;
   nshells=(unsigned int) (hypot(mx-1,my-1)+0.5);
   
   NY[OMEGA]=Nx*my;
@@ -359,7 +359,7 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   g0[xorigin][0]=0.0;
   g1[xorigin][0]=0.0;
   for(unsigned int i=0; i < Nx; ++i) {
-    Real kx=kx0*((int) i-(int) xorigin);
+    Real kx=kx0*(((int) i)-xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
     vector f0i=f0[i];
@@ -371,9 +371,9 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
       Complex wij=wi[j];
       Complex kxw=kx*wij;
       Complex kyw=ky*wij;
+      Real k2inv=1.0/(kx2+ky*ky);
       f0i[j]=kxw;
       f1i[j]=-kyw;
-      Real k2inv=1.0/(kx2+ky*ky);
       g0i[j]=k2inv*kyw;
       g1i[j]=k2inv*kxw;
     }
@@ -381,10 +381,19 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   
   Complex *F[2]={f0,f1};
   Complex *G[2]={g0,g1};
+  // temporary
+  HermitianSymmetrizeX(mx,my,xorigin,f0);  
+  HermitianSymmetrizeX(mx,my,xorigin,f1);  
+  HermitianSymmetrizeX(mx,my,xorigin,g0);  
+  HermitianSymmetrizeX(mx,my,xorigin,g1);  
+  cout << "w\n" << w << endl;
+  cout << "f0\n" << f0 << endl;
+  cout << "f1\n" << f1 << endl;
+  cout << "g0\n" << g0 << endl;
+  cout << "g1\n" << g1 << endl;
+  // end temporary
+
   Convolution->convolve(F,G);
-  
-  cout << f0 << endl;
-  
   
   Var sum=0.0;
   for(unsigned int i=0; i < Nx; ++i) {
