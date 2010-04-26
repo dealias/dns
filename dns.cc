@@ -60,7 +60,8 @@ public:
    
 class DNS : public ProblemBase {
   unsigned int mx, my; // size of data arrays
-  unsigned int xorigin; // Horizontal index of Fourier origin.
+  unsigned int origin; // linear index of Fourier origin.
+  unsigned int xorigin; // horizontal index of Fourier origin.
 
   Real kx0, ky0; // grid spacing factor
   
@@ -159,6 +160,7 @@ void DNS::InitialConditions()
   my=(Ny+1)/2;
 
   xorigin=mx-1;
+  origin=xorigin*my;
   nshells=(unsigned int) (hypot(mx-1,my-1)+0.5);
   
   NY[OMEGA]=Nx*my;
@@ -187,7 +189,7 @@ void DNS::InitialConditions()
   // Initialize arrays with zero boundary conditions
   w.Set(Y[OMEGA]);
   
-  w[xorigin][0]=0.0;
+  w(origin)=0.0;
   for(unsigned i=0; i < Nx; i++) {
     Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
@@ -233,88 +235,88 @@ void DNS::Initialize()
 }
 
 /*
-void DNS::Spectrum(vector& S, const vector& y)
-{
+  void DNS::Spectrum(vector& S, const vector& y)
+  {
   u.Set(y);
   
   for(unsigned K=0; K < nshells; K++) {
-    count[K]=0;
-    S[K]=0.0;
+  count[K]=0;
+  S[K]=0.0;
   }
 				
   // Compute instantaneous angular average over circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
-    int kx=i-xorigin;
-    rvector k2maski=k2maskij[i];
-    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(k2maski[j]) {
-        int K2=kx*kx+j*j;
-        unsigned K=(unsigned)(sqrt(K2)-0.5);
-        count[K]++; // Move to initialize.
-        S[K] += abs2(Sk(i,j));
-      }
-    }
+  int kx=i-xorigin;
+  rvector k2maski=k2maskij[i];
+  for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
+  if(k2maski[j]) {
+  int K2=kx*kx+j*j;
+  unsigned K=(unsigned)(sqrt(K2)-0.5);
+  count[K]++; // Move to initialize.
+  S[K] += abs2(Sk(i,j));
+  }
+  }
   }
   
   for(unsigned K=0; K < nshells; K++)
-    if(count[K]) S[K] *= twopi*K/count[K];
-}
+  if(count[K]) S[K] *= twopi*K/count[K];
+  }
 */
 
 void DNS::Output(int it)
 {
   /*
-  Real E,Z;
+    Real E,Z;
 	
-  u.Set(y);
-  ComputeInvariants(E,Z);
-  fevt << t << "\t" << E << "\t" << Z << endl;
+    u.Set(y);
+    ComputeInvariants(E,Z);
+    fevt << t << "\t" << E << "\t" << Z << endl;
 
-  Var *y=Y[0];
-  if(output) out_curve(fu,y,"u",NY[0]);
+    Var *y=Y[0];
+    if(output) out_curve(fu,y,"u",NY[0]);
   
-  if(movie) OutFrame(it);
+    if(movie) OutFrame(it);
 	
-  ostringstream buf;
-  buf << "ekvk" << dirsep << "t" << tcount;
-  open_output(fekvk,dirsep,buf.str().c_str(),0);
-  out_curve(fekvk,t,"t");
-  Var *y1=Y[EK];
-  out_curve(fekvk,y1,"ekvk",nshells);
-  fekvk.close();
-  if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
+    ostringstream buf;
+    buf << "ekvk" << dirsep << "t" << tcount;
+    open_output(fekvk,dirsep,buf.str().c_str(),0);
+    out_curve(fekvk,t,"t");
+    Var *y1=Y[EK];
+    out_curve(fekvk,y1,"ekvk",nshells);
+    fekvk.close();
+    if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
     
-  tcount++;
-  ft << t << endl;
+    tcount++;
+    ft << t << endl;
   
-  if(rezero && it % rezero == 0) {
+    if(rezero && it % rezero == 0) {
     vector2 Y=Integrator->YVector();
     vector T=Y[EK];
     for(unsigned int i=0; i < NY[EK]; i++)
-      T[i]=0.0;
-  }
+    T[i]=0.0;
+    }
   */
 }
 
 void DNS::OutFrame(int)
 {
   /*
-  fvx << 1 << Ny << Nx;
-  fvy << 1 << Ny << Nx;
-  fw << 1 << Ny << Nx;  
+    fvx << 1 << Ny << Nx;
+    fvy << 1 << Ny << Nx;
+    fw << 1 << Ny << Nx;  
   
-  for(int j=iNy-1; j >= 0; j--) {
+    for(int j=iNy-1; j >= 0; j--) {
     for(unsigned int i=0; i < Nx; i++) {
-      fvx << (float) u(i,j,0);
-      fvy << (float) u(i,j,1);
-      fw << (float) Vorticity(i,j);
+    fvx << (float) u(i,j,0);
+    fvy << (float) u(i,j,1);
+    fw << (float) Vorticity(i,j);
     }
-  }
+    }
   
-  fvx.flush();
-  fvy.flush();
-  fw.flush();
+    fvx.flush();
+    fvy.flush();
+    fw.flush();
   */
 }	
 
@@ -349,13 +351,13 @@ void DNS::FinalOutput()
 
 void DNS::Source(const vector2& Src, const vector2& Y, double)
 {
- w.Set(Y[OMEGA]);
- f0.Set(Src[OMEGA]);
+  w.Set(Y[OMEGA]);
+  f0.Set(Src[OMEGA]);
  
-  f0[xorigin][0]=0.0; // Move out later
-  f1[xorigin][0]=0.0;
-  g0[xorigin][0]=0.0;
-  g1[xorigin][0]=0.0;
+  f0(origin)=0.0;
+  f1(origin)=0.0;
+  g0(origin)=0.0;
+  g1(origin)=0.0;
   for(unsigned int i=0; i < Nx; ++i) {
     Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
@@ -381,7 +383,7 @@ void DNS::Source(const vector2& Src, const vector2& Y, double)
   Complex *G[2]={g0,g1};
   Convolution->convolve(F,G);
   
-#if 0 
+#if 0
   double sum=0.0;
   for(unsigned int i=0; i < Nx; ++i) {
     vector wi=w[i];
