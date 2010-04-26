@@ -5,6 +5,7 @@
 #include "Forcing.h"
 #include "InitialCondition.h"
 #include "convolution.h"
+#include "Conservative.h"
 
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
 
@@ -57,6 +58,8 @@ public:
     return InitialConditionTable->Locate(key);
   }
 };
+
+DNSVocabulary DNS_Vocabulary;
    
 class DNS : public ProblemBase {
   unsigned int mx, my; // size of data arrays
@@ -99,9 +102,25 @@ public:
   void Output(int it);
   void FinalOutput();
   void OutFrame(int it);
-  void Source(const vector2& Src, const vector2& Y, double t);
   void ComputeInvariants(Real& E, Real& Z, Real& P);
+
+  void Source(const vector2& Src, const vector2& Y, double t);
+  void ConservativeSource(const vector2& Src, const vector2& Y, double t);
+  void NonConservativeSource(const vector2& Src, const vector2& Y, double t);
+  void NonLinearSource(const vector2& Src, const vector2& Y, double t);
   void Stochastic(const vector2& Y, double, double);
+
+    void IndexLimits(unsigned int& start, unsigned int& stop,
+		   unsigned int& startT, unsigned int& stopT,
+		   unsigned int& startM, unsigned int& stopM) {
+    start=0;
+    stop=NY[OMEGA];
+    startT=NY[OMEGA];
+    stopT=NY[OMEGA];
+    startM=NY[OMEGA];
+    stopM=NY[OMEGA];
+  }
+
   
 //  void Spectrum(vector& S, const vector& y);
 };
@@ -112,6 +131,7 @@ DNS::DNS()
 {
   DNSProblem=this;
   check_compatibility(DEBUG);
+  ConservativeIntegrators(DNS_Vocabulary.IntegratorTable,this);
 }
 
 DNSVocabulary::DNSVocabulary()
@@ -146,7 +166,7 @@ DNSVocabulary::DNSVocabulary()
   METHOD(DNS);
 }
 
-DNSVocabulary DNS_Vocabulary;
+
 
 ifstream ftin;
 ofstream ft,fevt,fu;
@@ -349,7 +369,21 @@ void DNS::FinalOutput()
   cout << "Palenstrophy = " << P << newl;
 }
 
-void DNS::Source(const vector2& Src, const vector2& Y, double)
+void DNS::Source(const vector2& Src, const vector2& Y, double t)
+{
+  ConservativeSource(Src,Y,t);
+}
+
+void DNS::ConservativeSource(const vector2& Src, const vector2& Y, double t) 
+{
+  NonLinearSource(Src,Y,t);
+}
+
+void DNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t) 
+{
+}
+
+void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
 {
   w.Set(Y[OMEGA]);
   f0.Set(Src[OMEGA]);
