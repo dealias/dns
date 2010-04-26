@@ -27,7 +27,8 @@ The vorticity formulation of the 2-D Navier--Stokes equations is
   \delta \( k +  p +  q \)
 \end{eqnarray}
 where $ F_{ k}$ represents an external force. The 2D equations conserve
-energy $E = \sum_i |u_i|^2$ and enstrophy $  Z = \sum_i k_i^2|u_i|^2$.
+energy $E = \half\sum_i \w_i^2/k^2$ and enstrophy 
+$Z = \half\sum_i \w_i^2$.
 
 The stream-function formulation is
 \be
@@ -51,7 +52,7 @@ where
 f^{(0)}_{\v k} = i k_x \w_{\v k}, \quad
 g^{(0)}_{\v k} = \frac{i k_y \w_{\v k}}{k^2},  \quad
 f^{(1)}_{\v k} = i k_y \w_{\v k},   \quad
-g^{(1)}_{\v k} = \frac{-i k_x \w_{\v k}}{q^2}.
+g^{(1)}_{\v k} = -\frac{i k_x \w_{\v k}}{k^2}.
 \eec
 Using this notation, $f^{(0)}$, $g^{(0)}$, $f^{(1)}$, and $g^{(1)}$ are all
 Hermitian, implying that their inverse Fourier transforms are real-valued.
