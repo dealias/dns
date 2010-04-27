@@ -28,17 +28,25 @@ bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 
 unsigned int outlimit=100;
 
-inline void init(array2<Complex>& e, array2<Complex>& f, array2<Complex>& g) 
+inline void init(array2<Complex>& e, array2<Complex>& f, array2<Complex>& g,
+                 unsigned int M=1) 
 {
   unsigned int offset=Explicit ? nx/2-mx+1 : (Implicit ? 1 : 0);
   unsigned int origin=offset+mx-1;
-  unsigned int stop=origin+mx;
-  
-  for(unsigned int i=offset; i < stop; i++) {
-    for(unsigned int j=0; j < my; j++) {
-      e[i][j]=Complex(2.0,-1.0);
-      f[i][j]=Complex(3.0,2.0);
-      g[i][j]=Complex(5.0,3.0);
+  unsigned int stop=2*mx-1;
+  unsigned int stopoffset=stop+offset;
+  double factor=1.0/sqrt(M);
+  double efactor=factor;
+  double ffactor=2.0*factor;
+  double gfactor=0.5*factor;
+  for(unsigned int s=0; s < M; ++s) {
+    for(unsigned int i=0; i < stop; i++) {
+      for(unsigned int j=0; j < my; j++) {
+        unsigned int I=s*stopoffset+i+offset;
+        e[I][j]=efactor*Complex(i,j);
+        f[I][j]=ffactor*Complex(i+1,j+2);
+        g[I][j]=gfactor*Complex(2*i,j+1);
+      }
     }
   }
 

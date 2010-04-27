@@ -89,6 +89,9 @@ array2<Complex> w; // array pointer for vorticity
   array3<Complex> FMk;
   
   array2<Complex> f0,f1,g0,g1;
+  Complex *F[2];
+  Complex *G[2];
+  
   ImplicitHConvolution2 *Convolution;
 public:
   DNS();
@@ -205,6 +208,10 @@ void DNS::InitialConditions()
   g0.Allocate(Nx,my,align);
   g1.Allocate(Nx,my,align);
   
+  F[1]=f1;
+  G[0]=g0;
+  G[1]=g1;
+    
   //u.Dimension(Nx,Ny);
 //  ForceMask.Allocate(Nx,my,align);
   //FMk.Dimension(Nx,my,(Complex *) ForceMask());
@@ -413,8 +420,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
     }
   }
   
-  Complex *F[2]={f0,f1};
-  Complex *G[2]={g0,g1};
+  F[0]=f0;
   Convolution->convolve(F,G);
   
 #if 0

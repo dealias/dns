@@ -20,16 +20,20 @@ Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0
 
 unsigned int m=sizeof(d)/sizeof(Complex);
 	
-inline void init(Complex *e, Complex *f, Complex *g) 
+inline void init(Complex *e, Complex *f, Complex *g, unsigned int M=1) 
 {
 //  for(unsigned int i=0; i < m; i++) f[i]=d[i];
 //  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  e[0]=-2.0;
-  for(unsigned int i=1; i < m; i++) e[i]=Complex(2.0,-1.0);
-  f[0]=1.0;
-  for(unsigned int i=1; i < m; i++) f[i]=Complex(3.0,2.0);
-  g[0]=2.0;
-  for(unsigned int i=1; i < m; i++) g[i]=Complex(5.0,3.0);
+  double factor=1.0/sqrt(M);
+  double efactor=factor;
+  double ffactor=2.0*factor;
+  double gfactor=0.5*factor;
+  e[0]=1.0*efactor;
+  for(unsigned int k=1; k < m; k++) e[k]=efactor*Complex(k,k+1);
+  f[0]=1.0*ffactor;
+  for(unsigned int k=1; k < m; k++) f[k]=ffactor*Complex(k,k+1);
+  g[0]=2.0*gfactor;
+  for(unsigned int k=1; k < m; k++) g[k]=gfactor*Complex(k,2*k+1);
 }
 
 int main(int argc, char* argv[])
