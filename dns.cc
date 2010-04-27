@@ -89,7 +89,11 @@ array2<Complex> w; // array pointer for vorticity
   array3<Complex> FMk;
   
   array2<Complex> f0,f1,g0,g1;
-  ImplicitHConvolution2 *Convolution;
+//  ImplicitHConvolution2 *Convolution;
+  
+  DirectHConvolution2 *Convolution;
+  array2<Complex> h0; // Temporary.
+  
   
 public:
   DNS();
@@ -206,13 +210,17 @@ void DNS::InitialConditions()
   g0.Allocate(Nx,my,align);
   g1.Allocate(Nx,my,align);
   
+  h0.Allocate(Nx,my,align);
+
+  
   //u.Dimension(Nx,Ny);
 //  ForceMask.Allocate(Nx,my,align);
   //FMk.Dimension(Nx,my,(Complex *) ForceMask());
   
   cout << endl << "GEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
 
-  Convolution=new ImplicitHConvolution2(mx,my,2);
+//  Convolution=new ImplicitHConvolution2(mx,my,2);
+  Convolution=new DirectHConvolution2(mx,my);
 
   Allocate(count,nshells);
   
@@ -221,12 +229,11 @@ void DNS::InitialConditions()
   
   w(origin)=0.0;
   for(unsigned i=0; i < Nx; i++) {
-    Real kx=kx0*((int) i-(int) xorigin);
-    Real kx2=kx*kx;
+//    Real kx=kx0*((int) i-(int) xorigin);
+//    Real kx2=kx*kx;
     vector wi=w[i];
     for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
-//      wi[j]=Complex(i+1,0);
-      wi[j]=Complex(1.0,0);
+      wi[j]=Complex(i+1,j+2);
     }
   }
   
@@ -417,12 +424,17 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
     }
   }
   
-//  HermitianSymmetrizeX(mx,my,xorigin,f0);
-//  cout << f0 << endl;
-  
+  /*
   Complex *F[2]={f0,f1};
   Complex *G[2]={g0,g1};
   Convolution->convolve(F,G);
+  */
+  
+  Convolution->convolve(h0,f0,g0);
+  Convolution->convolve(f0,f1,g1);
+  f0 += h0;
+  
+  cout << f0 << endl;
   
 #if 1
   double sum=0.0;
