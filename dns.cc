@@ -58,8 +58,6 @@ public:
     return InitialConditionTable->Locate(key);
   }
 };
-
-DNSVocabulary DNS_Vocabulary;
    
 class DNS : public ProblemBase {
   unsigned int mx, my; // size of data arrays
@@ -67,8 +65,7 @@ class DNS : public ProblemBase {
   unsigned int xorigin; // horizontal index of Fourier origin.
 
   Real kx0, ky0; // grid spacing factor
-  
-  array2<Complex> w; // array pointer for vorticity
+array2<Complex> w; // array pointer for vorticity
   
   unsigned Nx1;
   unsigned nfft;
@@ -97,42 +94,46 @@ class DNS : public ProblemBase {
 public:
   DNS();
   virtual ~DNS() {}
+  
+  void IndexLimits(unsigned int& start, unsigned int& stop,
+		   unsigned int& startT, unsigned int& stopT,
+		   unsigned int& startM, unsigned int& stopM) {
+    start=Start(OMEGA);
+    stop=Stop(OMEGA);
+    /*
+    startT=Start(TRANSFER);
+    stopT=Stop(TRANSFER);
+    startM=Start(MOMENT);
+    stopM=Stop(MOMENT);
+    */
+  }
+  
   void InitialConditions();
   void Initialize();
   void Output(int it);
   void FinalOutput();
   void OutFrame(int it);
-  void ComputeInvariants(Real& E, Real& Z, Real& P);
-
-  void Source(const vector2& Src, const vector2& Y, double t);
-  void ConservativeSource(const vector2& Src, const vector2& Y, double t);
-  void NonConservativeSource(const vector2& Src, const vector2& Y, double t);
   void NonLinearSource(const vector2& Src, const vector2& Y, double t);
-  void Stochastic(const vector2& Y, double, double);
-
-    void IndexLimits(unsigned int& start, unsigned int& stop,
-		   unsigned int& startT, unsigned int& stopT,
-		   unsigned int& startM, unsigned int& stopM) {
-    start=0;
-    stop=NY[OMEGA];
-    startT=NY[OMEGA];
-    stopT=NY[OMEGA];
-    startM=NY[OMEGA];
-    stopM=NY[OMEGA];
+  void LinearSource(const vector2& Src, const vector2& Y, double t);
+  
+  void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
+    NonLinearSource(Src,Y,t);
+    LinearSource(Src,Y,t);
   }
-
+  void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {}
+  void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
+    NonLinearSource(Src,Y,t);
+    NonConservativeSource(Src,Y,t);
+  }
+  void Source(const vector2& Src, const vector2& Y, double t) {
+    ConservativeSource(Src,Y,t);
+    NonConservativeSource(Src,Y,t);
+  }
+  void ComputeInvariants(Real& E, Real& Z, Real& P);
+  void Stochastic(const vector2& Y, double, double);
   
 //  void Spectrum(vector& S, const vector& y);
 };
-
-DNS *DNSProblem;
-
-DNS::DNS()
-{
-  DNSProblem=this;
-  check_compatibility(DEBUG);
-  ConservativeIntegrators(DNS_Vocabulary.IntegratorTable,this);
-}
 
 DNSVocabulary::DNSVocabulary()
 {
@@ -166,7 +167,16 @@ DNSVocabulary::DNSVocabulary()
   METHOD(DNS);
 }
 
+DNSVocabulary DNS_Vocabulary;
 
+DNS *DNSProblem;
+
+DNS::DNS()
+{
+  DNSProblem=this;
+  check_compatibility(DEBUG);
+  ConservativeIntegrators(DNS_Vocabulary.IntegratorTable,this);
+}
 
 ifstream ftin;
 ofstream ft,fevt,fu;
@@ -215,11 +225,14 @@ void DNS::InitialConditions()
     Real kx2=kx*kx;
     vector wi=w[i];
     for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      wi[j]=Complex(1.0,2.0);
+//      wi[j]=Complex(i+1,0);
+      wi[j]=Complex(1.0,0);
     }
   }
   
   HermitianSymmetrizeX(mx,my,xorigin,w);
+  
+  cout << w << endl;
   
   //  for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
   
@@ -369,17 +382,7 @@ void DNS::FinalOutput()
   cout << "Palenstrophy = " << P << newl;
 }
 
-void DNS::Source(const vector2& Src, const vector2& Y, double t)
-{
-  ConservativeSource(Src,Y,t);
-}
-
-void DNS::ConservativeSource(const vector2& Src, const vector2& Y, double t) 
-{
-  NonLinearSource(Src,Y,t);
-}
-
-void DNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t) 
+void DNS::LinearSource(const vector2& Src, const vector2& Y, double)
 {
 }
 
@@ -392,6 +395,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   f1(origin)=0.0;
   g0(origin)=0.0;
   g1(origin)=0.0;
+  
   for(unsigned int i=0; i < Nx; ++i) {
     Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
@@ -413,11 +417,14 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
     }
   }
   
+//  HermitianSymmetrizeX(mx,my,xorigin,f0);
+//  cout << f0 << endl;
+  
   Complex *F[2]={f0,f1};
   Complex *G[2]={g0,g1};
   Convolution->convolve(F,G);
   
-#if 0
+#if 1
   double sum=0.0;
   for(unsigned int i=0; i < Nx; ++i) {
     vector wi=w[i];
