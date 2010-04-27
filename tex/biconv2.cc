@@ -21,6 +21,8 @@ unsigned int nx=0;
 unsigned int ny=0;
 unsigned int mx=4;
 unsigned int my=4;
+unsigned int M=1;
+
 unsigned int nxp;
 unsigned int nyp;
 
@@ -35,11 +37,12 @@ inline void init(array2<Complex>& e, array2<Complex>& f, array2<Complex>& g,
   unsigned int origin=offset+mx-1;
   unsigned int stop=2*mx-1;
   unsigned int stopoffset=stop+offset;
-  double factor=1.0/sqrt(M);
-  double efactor=factor;
-  double ffactor=2.0*factor;
-  double gfactor=0.5*factor;
+  double factor=1.0/cbrt(M);
   for(unsigned int s=0; s < M; ++s) {
+    double S=sqrt(1.0+s);
+    double efactor=1.0/S*factor;
+    double ffactor=(1.0+S)*S*factor;
+    double gfactor=1.0/(1.0+S)*factor;
     for(unsigned int i=0; i < stop; i++) {
       for(unsigned int j=0; j < my; j++) {
         unsigned int I=s*stopoffset+i+offset;
@@ -50,9 +53,11 @@ inline void init(array2<Complex>& e, array2<Complex>& f, array2<Complex>& g,
     }
   }
 
-  e[origin][0]=e[origin][0].re;
-  f[origin][0]=f[origin][0].re;
-  g[origin][0]=g[origin][0].re;
+  for(unsigned int i=0; i < M; ++i) {
+    e[origin+i*nxp][0]=e[origin+i*nxp][0].re;
+    f[origin+i*nxp][0]=f[origin+i*nxp][0].re;
+    g[origin+i*nxp][0]=g[origin+i*nxp][0].re;
+  }
 }
 
 unsigned int padding(unsigned int m)
@@ -75,7 +80,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:x:y:n:");
+    int c = getopt(argc,argv,"deiptM:N:m:x:y:n:");
     if (c == -1) break;
 		
     switch (c) {
@@ -99,6 +104,9 @@ int main(int argc, char* argv[])
         Explicit=true;
         Implicit=false;
         Pruned=true;
+        break;
+      case 'M':
+        M=atoi(optarg);
         break;
       case 'N':
         N=atoi(optarg);
@@ -133,18 +141,30 @@ int main(int argc, char* argv[])
   size_t align=sizeof(Complex);
   nxp=Explicit ? nx : (Implicit ? 2*mx : 2*mx-1);
   nyp=Explicit ? ny/2+1 : (Implicit ? my+1 : my);
-  array2<Complex> e(nxp,nyp,align);
-  array2<Complex> f(nxp,nyp,align);
-  array2<Complex> g(nxp,nyp,align);
+  unsigned int nxp0=Implicit ? nxp*M : nxp;
+  array2<Complex> e(nxp0,nyp,align);
+  array2<Complex> f(nxp0,nyp,align);
+  array2<Complex> g(nxp0,nyp,align);
 
   double *T=new double[N];
 
   if(Implicit) {
-    ImplicitHBiConvolution2 C(mx,my);
+    ImplicitHBiConvolution2 C(mx,my,M);
+    Complex **E=new Complex *[M];
+    Complex **F=new Complex *[M];
+    Complex **G=new Complex *[M];
+    unsigned int mf=nxp*nyp;
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smf=s*mf;
+      E[s]=e+smf;
+      F[s]=f+smf;
+      G[s]=g+smf;
+    }
     for(unsigned int i=0; i < N; ++i) {
-      init(e,f,g);
+      init(e,f,g,M);
       seconds();
-      C.convolve(e,f,g);
+      C.convolve(E,F,G);
+//      C.convolve(e,f,g);
       T[i]=seconds();
     }
     

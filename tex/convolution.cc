@@ -361,15 +361,16 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
     cro->fft(G[i]+offset,(double *) fi);
   }
   mult((double *) v,(double **) F,2*offset);
-  rco->fft((double *) v,F[0]+offset);
+  Complex *f=F[0]+offset;
+  rco->fft((double *) v,f);
   
   unsigned int cm1=c-1;
-  unsigned int offsetcm1=offset+cm1;
-  Complex *fcm1=F[0]+offsetcm1;
+  Complex *fcm1=f+cm1;
   Complex S=*fcm1;
   double T=(fcm1+1)->re;
 
   // r=1:
+  unsigned int offsetcm1=offset+cm1;
   for(unsigned int i=0; i < M; ++i) {
     Complex *f1=F[i]+offsetcm1;
     Complex *wi=w+3*i;
@@ -387,7 +388,6 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
   rco->fft((double *) v,gcm1);
 
   double ninv=1.0/(3.0*m);
-  Complex *f=F[0]+offset;
   f[0]=(f[0].re+gcm1[0].re+u[0].re)*ninv;
   Complex *fm=f+m;
   unsigned int stop=s;
@@ -1054,79 +1054,99 @@ void ExplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h)
   rc->fft(f);
 }
 
-void ImplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h)
+void ImplicitHBiConvolution::convolve(Complex **F, Complex **G, Complex **H,
+                                      unsigned int offset)
 {
-  for(unsigned int a=0, k=0; k < m; ++a) {
-    unsigned int stop=min(k+s,m);
-    Complex *ZetaL0=ZetaL-k;
+  // 8M-3 of 8M FFTs are out-of-place
+    
+  unsigned int m1=m+1;
+  for(unsigned int i=0; i < M; ++i) {
+    Complex *fi=F[i]+offset;
+    Complex *gi=G[i]+offset;
+    Complex *hi=H[i]+offset;
+    unsigned int im1=i*m1;
+    Complex *ui=u+im1;
+    Complex *vi=v+im1;
+    Complex *wi=w+im1;
+    if(i+1 < M) {
+      ui += m1;
+      vi += m1;
+      wi += m1;
+    }
+    for(unsigned int a=0, k=0; k < m; ++a) {
+      unsigned int stop=min(k+s,m);
+      Complex *ZetaL0=ZetaL-k;
 #ifdef __SSE2__      
-    Vec Zeta=LOAD(ZetaH+a);
-    Vec X=UNPACKL(Zeta,Zeta);
-    Vec Y=UNPACKH(CONJ(Zeta),Zeta);
-    for(; k < stop; ++k) {
-      Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
-      Vec Fk=LOAD(f+k);
-      Vec Gk=LOAD(g+k);
-      Vec Hk=LOAD(h+k);
-      STORE(u+k,ZMULT(Zetak,Fk));
-      STORE(v+k,ZMULT(Zetak,Gk));
-      STORE(w+k,ZMULT(Zetak,Hk));
-    }
+      Vec Zeta=LOAD(ZetaH+a);
+      Vec X=UNPACKL(Zeta,Zeta);
+      Vec Y=UNPACKH(CONJ(Zeta),Zeta);
+      for(; k < stop; ++k) {
+        Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
+        Vec Fk=LOAD(fi+k);
+        Vec Gk=LOAD(gi+k);
+        Vec Hk=LOAD(hi+k);
+        STORE(ui+k,ZMULT(Zetak,Fk));
+        STORE(vi+k,ZMULT(Zetak,Gk));
+        STORE(wi+k,ZMULT(Zetak,Hk));
+      }
 #else
-    Complex *p=ZetaH+a;
-    double Hre=p->re;
-    double Him=p->im;
-    for(; k < stop; ++k) {
-      Complex *P=u+k;
-      Complex *Q=v+k;
-      Complex *R=w+k;
-      Complex fk=*(f+k);
-      Complex gk=*(g+k);
-      Complex hk=*(h+k);
-      Complex L=*(ZetaL0+k);
-      double Re=Hre*L.re-Him*L.im;
-      double Im=Hre*L.im+Him*L.re;
-      P->re=Re*fk.re-Im*fk.im;
-      P->im=Im*fk.re+Re*fk.im;
-      Q->re=Re*gk.re-Im*gk.im;
-      Q->im=Im*gk.re+Re*gk.im;
-      R->re=Re*hk.re-Im*hk.im;
-      R->im=Im*hk.re+Re*hk.im;
-    }
+      Complex *p=ZetaH+a;
+      double Hre=p->re;
+      double Him=p->im;
+      for(; k < stop; ++k) {
+        Complex *P=ui+k;
+        Complex *Q=vi+k;
+        Complex *R=wi+k;
+        Complex fk=*(fi+k);
+        Complex gk=*(gi+k);
+        Complex hk=*(hi+k);
+        Complex L=*(ZetaL0+k);
+        double Re=Hre*L.re-Him*L.im;
+        double Im=Hre*L.im+Him*L.re;
+        P->re=Re*fk.re-Im*fk.im;
+        P->im=Im*fk.re+Re*fk.im;
+        Q->re=Re*gk.re-Im*gk.im;
+        Q->im=Im*gk.re+Re*gk.im;
+        R->re=Re*hk.re-Im*hk.im;
+        R->im=Im*hk.re+Re*hk.im;
+      }
 #endif      
-  }  
+    }  
+  
+    ui[m]=0.0;
+    vi[m]=0.0;
+    wi[m]=0.0;
     
-  // five of eight FFTs are out-of-place
-    
-  u[m]=0.0;
-  cr->fft(u);
-  v[m]=0.0;
-  cr->fft(v);
-  w[m]=0.0;
-  cr->fft(w);
-    
-  double *U=(double *) u;
-  double *V=(double *) v;
-  double *W=(double *) w;
-    
-  unsigned int twom=2*m;
-  // TODO: Use mult?
-  for(unsigned int i=0; i < twom; ++i)
-    V[i] *= U[i]*W[i];
-  rco->fft(v,U); // v and w are now free
+    if(i+1 < M) {
+      cro->fft(ui,(double *) (ui-m1));
+      cro->fft(vi,(double *) (vi-m1));
+      cro->fft(wi,(double *) (wi-m1));
+    } else {
+      cr->fft(ui);
+      cr->fft(vi);
+      cr->fft(wi);
+    }
+  }
+  
+  mult((double *) v,(double *) u,(double **) W);
+  rco->fft((double *) v,u); // v and w are now free
 
-  V=(double *) v;
-  f[m]=0.0;
-  cro->fft(f,V);
-  double *F=(double *) f;
-  g[m]=0.0;
-  cro->fft(g,F);
-  double *G=(double *) g;
-  h[m]=0.0;
-  cro->fft(h,G);
-  for(unsigned int i=0; i < twom; ++i)
-    V[i] *= F[i]*G[i];
-  rco->fft(V,f);
+  for(unsigned int i=0; i < M; ++i) {
+    Complex *fi=F[i]+offset;
+    Complex *gi=G[i]+offset;
+    Complex *hi=H[i]+offset;
+    unsigned int im1=i*m1;
+    fi[m]=0.0;
+    cro->fft(fi,(double *) (v+im1));
+    gi[m]=0.0;
+    cro->fft(gi,(double *) (w+im1));
+    hi[m]=0.0;
+    cro->fft(hi,(double *) gi);
+  }
+  
+  mult((double *) v,(double *) w,(double **) G,2*offset);
+  Complex *f=F[0]+offset;
+  rco->fft((double *) v,f);
     
   double ninv=0.25/m;
 #ifdef __SSE2__      

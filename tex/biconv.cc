@@ -13,27 +13,31 @@ using namespace std;
 // Number of iterations.
 unsigned int N0=10000000;
 unsigned int N=0;
+unsigned int m=12;
+unsigned int M=1;
   
 bool Direct=false, Implicit=true, Explicit=false, Test=false;
 
-Complex d[]={-5,Complex(3,1),Complex(4,-2),Complex(-3,1),Complex(0,-2),Complex(0,1),Complex(4,1),Complex(-3,-1),Complex(1,2),Complex(2,1),Complex(3,1),3};
-
-unsigned int m=sizeof(d)/sizeof(Complex);
-	
 inline void init(Complex *e, Complex *f, Complex *g, unsigned int M=1) 
 {
-//  for(unsigned int i=0; i < m; i++) f[i]=d[i];
-//  for(unsigned int i=0; i < m; i++) g[i]=d[i];
-  double factor=1.0/sqrt(M);
-  double efactor=factor;
-  double ffactor=2.0*factor;
-  double gfactor=0.5*factor;
-  e[0]=1.0*efactor;
-  for(unsigned int k=1; k < m; k++) e[k]=efactor*Complex(k,k+1);
-  f[0]=1.0*ffactor;
-  for(unsigned int k=1; k < m; k++) f[k]=ffactor*Complex(k,k+1);
-  g[0]=2.0*gfactor;
-  for(unsigned int k=1; k < m; k++) g[k]=gfactor*Complex(k,2*k+1);
+  unsigned int m1=m+1;
+  unsigned int Mm=M*m1;
+  double factor=1.0/cbrt(M);
+  for(unsigned int i=0; i < Mm; i += m1) {
+    double s=sqrt(1.0+i);
+    double efactor=1.0/s*factor;
+    double ffactor=(1.0+i)*s*factor;
+    double gfactor=1.0/(1.0+i)*factor;
+    Complex *ei=e+i;
+    Complex *fi=f+i;
+    Complex *gi=g+i;
+    ei[0]=1.0*efactor;
+    for(unsigned int k=1; k < m; k++) ei[k]=efactor*Complex(k,k+1);
+    fi[0]=1.0*ffactor;
+    for(unsigned int k=1; k < m; k++) fi[k]=ffactor*Complex(k,k+1);
+    gi[0]=2.0*gfactor;
+    for(unsigned int k=1; k < m; k++) gi[k]=gfactor*Complex(k,2*k+1);
+  }
 }
 
 int main(int argc, char* argv[])
@@ -46,7 +50,7 @@ int main(int argc, char* argv[])
   optind=0;
 #endif	
   for (;;) {
-    int c = getopt(argc,argv,"deiptN:m:n:");
+    int c = getopt(argc,argv,"deiptM:N:m:n:");
     if (c == -1) break;
 		
     switch (c) {
@@ -64,6 +68,9 @@ int main(int argc, char* argv[])
         Explicit=false;
         break;
       case 'p':
+        break;
+      case 'M':
+        M=atoi(optarg);
         break;
       case 'N':
         N=atoi(optarg);
@@ -95,7 +102,9 @@ int main(int argc, char* argv[])
   }
   cout << "N=" << N << endl;
   
-  unsigned int np=Explicit ? n/2+1 : m+1;
+  unsigned int m1=m+1;
+  unsigned int np=Explicit ? n/2+1 : m1;
+  if(Implicit) np *= M;
     
   Complex *e=ComplexAlign(np);
   Complex *f=ComplexAlign(np);
@@ -107,11 +116,21 @@ int main(int argc, char* argv[])
   double *T=new double[N];
 
   if(Implicit) {
-    ImplicitHBiConvolution C(m);
+    ImplicitHBiConvolution C(m,M);
+    Complex **E=new Complex *[M];
+    Complex **F=new Complex *[M];
+    Complex **G=new Complex *[M];
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int sm=s*m1;
+      E[s]=e+sm;
+      F[s]=f+sm;
+      G[s]=g+sm;
+    }
     for(unsigned int i=0; i < N; ++i) {
-      init(e,f,g);
+      init(e,f,g,M);
       seconds();
-      C.convolve(e,f,g);
+      C.convolve(E,F,G);
+//      C.convolve(e,f,g);
       T[i]=seconds();
     }
     

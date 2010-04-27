@@ -31,9 +31,9 @@ inline void init(Complex *f, Complex *g, unsigned int M=1)
 {
   unsigned int Mm=M*m;
   double factor=1.0/sqrt(M);
-  double ffactor=2.0*factor;
-  double gfactor=0.5*factor;
   for(unsigned int i=0; i < Mm; i += m) {
+    double ffactor=(1.0+i)*factor;
+    double gfactor=1.0/(1.0+i)*factor;
     Complex *fi=f+i;
     Complex *gi=g+i;
     if(Test) {

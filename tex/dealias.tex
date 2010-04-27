@@ -1088,9 +1088,9 @@ is $1.48$ times faster than, an explicitly padded biconvolution.
   \medskip
   $\xf[m]=\xg[m]=\xh[m]=0$\;
   $\xv \leftarrow \crfft\inv(\xf)$\;
-  $\xf \leftarrow \crfft\inv(\xg)$\;
+  $\xw \leftarrow \crfft\inv(\xg)$\;
   $\xg \leftarrow \crfft\inv(\xh)$\;
-  $\xv \leftarrow \xv * \xf * \xg$\;
+  $\xv \leftarrow \xv * \xw * \xg$\;
   $\xf \leftarrow \rcfft(\xv)$\;
   \medskip
   \For{$k=0$ \KwTo $m-1$}{

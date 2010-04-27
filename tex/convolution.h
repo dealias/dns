@@ -224,6 +224,91 @@ public:
   }
 };
   
+class Dot3 {
+protected:
+  unsigned int m;
+  unsigned int M;
+  unsigned int twom;
+  unsigned int stride;
+  
+public:
+  Dot3(unsigned int m, unsigned int M) : 
+    m(m), M(M), twom(2*m), stride(twom+2) {}
+  
+  // a[0][k]=sum_i a[i][k]*b[i][k]*c[i][k]
+  void mult(double *a, double *b, double **C, unsigned int offset=0) {
+    unsigned int twom=2*m;
+    if(M == 1) { // a[k]=a[k]*b[k]*c[k]
+      double *C0=C[0]+offset;
+#ifdef __SSE2__        
+      for(unsigned int k=0; k < twom; k += 2)
+        STORE(a+k,LOAD(a+k)*LOAD(b+k)*LOAD(C0+k));
+#else        
+      for(unsigned int k=0; k < twom; ++k)
+        a[k] *= b[k]*C0[k];
+#endif        
+    } else if(M == 2) {
+      double *a1=a+stride;
+      double *b1=b+stride;
+      double *C0=C[0]+offset;
+      double *C1=C[1]+offset;
+#ifdef __SSE2__        
+      for(unsigned int k=0; k < twom; k += 2)
+        STORE(a+k,LOAD(a+k)*LOAD(b+k)*LOAD(C0+k)+
+              LOAD(a1+k)*LOAD(b1+k)*LOAD(C1+k));
+#else        
+      for(unsigned int k=0; k < twom; ++k)
+        a[k]=a[k]*b[k]*C0[k]+a1[k]*b1[k]*C1[k];
+#endif        
+    } else if(M == 3) {
+      double *a1=a+stride;
+      double *a2=a1+stride;
+      double *b1=b+stride;
+      double *b2=b1+stride;
+      double *C0=C[0]+offset;
+      double *C1=C[1]+offset;
+      double *C2=C[2]+offset;
+#ifdef __SSE2__        
+      for(unsigned int k=0; k < twom; k += 2)
+        STORE(a+k,LOAD(a+k)*LOAD(b+k)*LOAD(C0+k)+
+              LOAD(a1+k)*LOAD(b1+k)*LOAD(C1+k)+
+              LOAD(a2+k)*LOAD(b2+k)*LOAD(C2+k));
+#else        
+      for(unsigned int k=0; k < twom; ++k)
+        a[k]=a[k]*b[k]*C0[k]+a1[k]*b1[k]*C1[k]+a2[k]*b2[k]*C2[k];
+#endif        
+    } else {
+      double *A=a-offset;
+      double *B=b-offset;
+      double *C0=C[0];
+      unsigned int stop=twom+offset;
+#ifdef __SSE2__        
+      for(unsigned int k=offset; k < stop; k += 2) {
+        double *p=A+k;
+        double *q=B+k;
+        Vec sum=LOAD(p)*LOAD(q)*LOAD(C0+k);
+        for(unsigned int i=1; i < M; ++i) {
+          unsigned int istride=i*stride;
+          sum += LOAD(p+istride)*LOAD(q+istride)*LOAD(C[i]+k);
+        }
+        STORE(p,sum);
+      }
+#else        
+      for(unsigned int k=offset; k < stop; ++k) {
+        double *p=A+k;
+        double *q=B+k;
+        double sum=(*p)*(*q)*C0[k];
+        for(unsigned int i=1; i < M; ++i) {
+          unsigned int istride=i*stride;
+          sum += p[istride]*q[istride]*C[i][k];
+        }
+        *p=sum;
+      }
+#endif        
+    }
+  }
+};
+  
 // In-place implicitly dealiased 1D complex convolution.
 class ImplicitConvolution : public CDot {
 protected:
@@ -360,9 +445,8 @@ public:
     rc=new rcfft1d(m,u);
     cr=new crfft1d(m,u);
 
-    double *U=(double *) u;
-    rco=new rcfft1d(m,U,v);
-    cro=new crfft1d(m,v,U);
+    rco=new rcfft1d(m,(double *) u,v);
+    cro=new crfft1d(m,v,(double *) u);
     
     s=BuildZeta(3*m,c,ZetaH,ZetaL);
   }
@@ -610,11 +694,10 @@ public:
   // The output is returned in F[0].
   void convolve(Complex **F, Complex **G, unsigned int offset=0) {
     unsigned int mxy=mx*my;
-    for(unsigned int s=0; s < M; ++s) {
-      unsigned int smxy=s*mxy;
-      xfftpad->backwards(F[s]+offset,u2+smxy);
-      xfftpad->backwards(G[s]+offset,v2+smxy);
-    }
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(F[s]+offset,u2+s*mxy);
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(G[s]+offset,v2+s*mxy);
     
     for(unsigned int i=0; i < mxy; i += my)
       yconvolve->convolve(F,G,i+offset);
@@ -814,11 +897,10 @@ public:
     }
     
     unsigned int mu=(mx+1)*my;
-    for(unsigned int s=0; s < M; ++s) {
-      unsigned int smu=s*mu;
-      xfftpad->backwards(F[s]+offset,u2+smu);
-      xfftpad->backwards(G[s]+offset,v2+smu);
-    }
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(F[s]+offset,u2+s*mu);
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(G[s]+offset,v2+s*mu);
 
     unsigned int mf=nx*my;
     for(unsigned int i=0; i < mf; i += my)
@@ -967,11 +1049,10 @@ public:
     unsigned int myz=my*mz;
     unsigned int mxyz=mx*myz;
     
-    for(unsigned int s=0; s < M; ++s) {
-      unsigned int smxyz=s*mxyz;
-      xfftpad->backwards(F[s]+offset,u3+smxyz);
-      xfftpad->backwards(G[s]+offset,v3+smxyz);
-    }
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(F[s]+offset,u3+s*mxyz);
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(G[s]+offset,v3+s*mxyz);
 
     for(unsigned int i=0; i < mxyz; i += myz)
       yzconvolve->convolve(F,G,i+offset);
@@ -1090,11 +1171,10 @@ public:
         
     unsigned int mxp1=mx+1;
     unsigned int mu=mxp1*ny*mz;
-    for(unsigned int s=0; s < M; ++s) {
-      unsigned int smu=s*mu;
-      xfftpad->backwards(F[s]+offset,u3+smu);
-      xfftpad->backwards(G[s]+offset,v3+smu);
-    }
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(F[s]+offset,u3+s*mu);
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(G[s]+offset,v3+s*mu);
     
     unsigned int nymz=ny*mz;
     for(unsigned int i=0; i < mf; i += nymz)
@@ -1154,7 +1234,7 @@ public:
 };
 
 // In-place implicitly dealiased Hermitian biconvolution.
-class ImplicitHBiConvolution {
+class ImplicitHBiConvolution : public Dot3 {
 protected:
   unsigned int m;
   Complex *u,*v,*w;
@@ -1163,42 +1243,44 @@ protected:
   rcfft1d *rc, *rco;
   crfft1d *cr, *cro;
   Complex *ZetaH, *ZetaL;
+  Complex **W;
   bool allocated;
 public:  
   
   void init() {
-    if(M != 1) {
-      std::cerr << "Only M=1 is currently implemented." << std::endl;
-      _exit(1);
-    }
-    
     unsigned int twom=2*m;
+    
+    W=new Complex *[M];
+    unsigned int m1=m+1;
+    for(unsigned int i=0; i < M; ++i)
+      W[i]=w+i*m1;
     
     rc=new rcfft1d(twom,u);
     cr=new crfft1d(twom,u);
     
-    double *U=(double *) u;
-    rco=new rcfft1d(twom,U,v);
-    cro=new crfft1d(twom,v,U);
+    rco=new rcfft1d(twom,(double *) u,v);
+    cro=new crfft1d(twom,v,(double *) u);
     
     s=BuildZeta(4*m,m,ZetaH,ZetaL);
   }
   
-  // u and v are distinct temporary arrays each of size m+1.
+  // u, v, and w are distinct temporary arrays each of size m+1.
   ImplicitHBiConvolution(unsigned int m, Complex *u, Complex *v, Complex *w,
                          unsigned int M=1) :
-    m(m), u(u), v(v), w(w), M(M), allocated(false) {
+    Dot3(m,M), m(m), u(u), v(v), w(w), M(M), allocated(false) {
     init();
   }
   
-  // u and v are distinct temporary arrays each of size m+1.
+  // u, v, and w are distinct temporary arrays each of size m+1.
   ImplicitHBiConvolution(unsigned int m, unsigned int M=1) : 
-    m(m), u(ComplexAlign(m+1)), v(ComplexAlign(m+1)), w(ComplexAlign(m+1)),
-    M(M), allocated(true) {
+    Dot3(m,M), m(m), u(ComplexAlign(m*M+M)), v(ComplexAlign(m*M+M)),
+    w(ComplexAlign(m*M+M)), M(M), allocated(true) {
     init();
   }
   
   ~ImplicitHBiConvolution() {
+    delete [] W;
+    
     if(allocated) {
       deleteAlign(w);
       deleteAlign(v);
@@ -1216,7 +1298,12 @@ public:
   // The input arrays f, g, and h are each of size m+1 (contents not preserved).
   // The output is returned in f.
   // u, v, and w are temporary arrays each of size m+1.
-  void convolve(Complex *f, Complex *g, Complex *h);
+  void convolve(Complex **F, Complex **G, Complex **H, unsigned int offset=0);
+  
+  // Constructor for special case M=1:
+  void convolve(Complex *f, Complex *g, Complex *h) {
+    convolve(&f,&g,&h);
+  }
 };
 
 // Out-of-place direct 1D Hermitian biconvolution.
@@ -1331,15 +1418,28 @@ protected:
   unsigned int M;
   fft0bipad *xfftpad;
   ImplicitHBiConvolution *yconvolve;
+  Complex **U2,**V2,**W2;
   bool allocated;
 public:  
   void init() {
     xfftpad=new fft0bipad(mx,my,my+1,u2);
     yconvolve=new ImplicitHBiConvolution(my,u1,v1,w1,M);
+    
+    U2=new Complex *[M];
+    V2=new Complex *[M];
+    W2=new Complex *[M];
+    unsigned int mu=2*mx*(my+1);
+    for(unsigned int s=0; s < M; ++s) {
+      unsigned int smu=s*mu;
+      U2[s]=u2+smu;
+      V2[s]=v2+smu;
+      W2[s]=w2+smu;
+    }
   }
   
   // u1, v1, and w1 are temporary arrays of size (my+1)*M;
   // u2, v2, and w2 are temporary arrays of size 2mx*(my+1)*M.
+  // M is the number of data blocks (each corresponding to a dot product term).
   ImplicitHBiConvolution2(unsigned int mx, unsigned int my,
                           Complex *u1, Complex *v1, Complex *w1, 
                           Complex *u2, Complex *v2, Complex *w2,
@@ -1359,6 +1459,10 @@ public:
   }
   
   ~ImplicitHBiConvolution2() {
+    delete [] W2;
+    delete [] V2;
+    delete [] U2;
+    
     if(allocated) {
       deleteAlign(w2);
       deleteAlign(v2);
@@ -1371,32 +1475,40 @@ public:
     delete xfftpad;
   }
   
-  // The distinct input arrays f, g, and h must be allocated as 
-  // Complex[2mx*(my+1)] (not preserved).
-  // u1, v1, and w1 are temporary arrays allocated as Complex[my+1].
-  // u2, v2, and w2 are temporary arrays allocated as Complex [2mx*(my+1)];
-  // The output is returned in f.
-  void convolve(Complex *f, Complex *g, Complex *h, bool symmetrize=true,
-                unsigned int stride=1) {
+  // F, G, and H are pointers to M distinct data blocks each of size 2mx*(my+1),
+  // shifted by offset (contents not preserved).
+  // The output is returned in F[0].
+  void convolve(Complex **F, Complex **G, Complex **H, bool symmetrize=true,
+                unsigned int offset=0) {
     unsigned int my1=my+1;
     if(symmetrize) {
-      HermitianSymmetrizeX(mx,my1,mx,f);
-      HermitianSymmetrizeX(mx,my1,mx,g);
-      HermitianSymmetrizeX(mx,my1,mx,h);
+      for(unsigned int s=0; s < M; ++s)
+        HermitianSymmetrizeX(mx,my1,mx,F[s]+offset);
+      for(unsigned int s=0; s < M; ++s)
+        HermitianSymmetrizeX(mx,my1,mx,G[s]+offset);
+      for(unsigned int s=0; s < M; ++s)
+        HermitianSymmetrizeX(mx,my1,mx,H[s]+offset);
     }
     
-    xfftpad->backwards(f,u2);
-    xfftpad->backwards(g,v2);
-    xfftpad->backwards(h,w2);
-
-    unsigned int stop=2*mx*my1;
-
-    for(unsigned int i=0; i < stop; i += my1)
-      yconvolve->convolve(f+i,g+i,h+i);
-    for(unsigned int i=0; i < stop; i += my1)
-      yconvolve->convolve(u2+i,v2+i,w2+i);
+    unsigned int mu=2*mx*my1;
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(F[s]+offset,u2+s*mu);
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(G[s]+offset,v2+s*mu);
+    for(unsigned int s=0; s < M; ++s)
+      xfftpad->backwards(H[s]+offset,w2+s*mu);
     
-    xfftpad->forwards(f,u2);
+    for(unsigned int i=0; i < mu; i += my1)
+      yconvolve->convolve(F,G,H,i+offset);
+    for(unsigned int i=0; i < mu; i += my1)
+      yconvolve->convolve(U2,V2,W2,i);
+    
+    xfftpad->forwards(F[0]+offset,u2);
+  }
+  
+  // Constructor for special case M=1:
+  void convolve(Complex *f, Complex *g, Complex *h, bool symmetrize=true) {
+    convolve(&f,&g,&h,symmetrize);
   }
 };
 

@@ -31,9 +31,10 @@ bool Direct=false, Implicit=true, Explicit=false, Pruned=false;
 inline void init(array3<Complex>& f, array3<Complex>& g, unsigned int M=1) 
 {
   double factor=1.0/sqrt(M);
-  double ffactor=2.0*factor;
-  double gfactor=0.5*factor;
   for(unsigned int s=0; s < M; ++s) {
+    double S=sqrt(1.0+s);
+    double ffactor=S*factor;
+    double gfactor=1.0/S*factor;
     for(unsigned int i=0; i < mx; ++i) {
       unsigned int I=s*mx+i;
       for(unsigned int j=0; j < my; j++) {
