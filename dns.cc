@@ -27,8 +27,8 @@ Real nu=1.0;
 Real rho=1.0;
 Real ICvx=1.0;
 Real ICvy=1.0;
-unsigned int Nx=1;
-unsigned int Ny=1;
+unsigned Nx=1;
+unsigned Ny=1;
 Real xmin=0.0;
 Real xmax=1.0;
 Real ymin=0.0;
@@ -39,8 +39,7 @@ Real deltaf=2.0;
 int movie=0;
 int rezero=0;
 
-//enum Field {OMEGA,EK};
-enum Field {OMEGA};
+enum Field {OMEGA,EK};
 
 class DNSVocabulary : public VocabularyBase {
 public:
@@ -60,12 +59,12 @@ public:
 };
    
 class DNS : public ProblemBase {
-  unsigned int mx, my; // size of data arrays
-  unsigned int origin; // linear index of Fourier origin.
-  unsigned int xorigin; // horizontal index of Fourier origin.
+  unsigned mx, my; // size of data arrays
+  unsigned origin; // linear index of Fourier origin.
+  unsigned xorigin; // horizontal index of Fourier origin.
 
   Real kx0, ky0; // grid spacing factor
-array2<Complex> w; // array pointer for vorticity
+  array2<Complex> w; // array pointer for vorticity
   
   unsigned Nx1;
   unsigned nfft;
@@ -97,17 +96,17 @@ public:
   DNS();
   virtual ~DNS() {}
   
-  void IndexLimits(unsigned int& start, unsigned int& stop,
-		   unsigned int& startT, unsigned int& stopT,
-		   unsigned int& startM, unsigned int& stopM) {
+  void IndexLimits(unsigned& start, unsigned& stop,
+		   unsigned& startT, unsigned& stopT,
+		   unsigned& startM, unsigned& stopM) {
     start=Start(OMEGA);
     stop=Stop(OMEGA);
     /*
-    startT=Start(TRANSFER);
-    stopT=Stop(TRANSFER);
-    startM=Start(MOMENT);
-    stopM=Stop(MOMENT);
+      startT=Start(TRANSFER);
+      stopT=Stop(TRANSFER);
     */
+    startM=Start(EK);
+    stopM=Stop(EK);
   }
   
   void InitialConditions();
@@ -134,7 +133,7 @@ public:
   void ComputeInvariants(Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
   
-//  void Spectrum(vector& S, const vector& y);
+  void Spectrum(vector& S, const vector& y);
 };
 
 DNSVocabulary::DNSVocabulary()
@@ -191,12 +190,14 @@ void DNS::InitialConditions()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
+  cout << mx << " " << my << endl;
+  
   xorigin=mx-1;
   origin=xorigin*my;
-  nshells=(unsigned int) (hypot(mx-1,my-1)+0.5);
+  nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
   
   NY[OMEGA]=Nx*my;
-  //  NY[EK]=nshells;
+  NY[EK]=nshells;
   
   size_t align=sizeof(Complex);  
   
@@ -222,22 +223,20 @@ void DNS::InitialConditions()
 
   Allocate(count,nshells);
   
-  // Initialize arrays with zero boundary conditions
+  // Initialize the vorticity field.
   w.Set(Y[OMEGA]);
-  
   w(origin)=0.0;
   for(unsigned i=0; i < Nx; i++) {
-//    Real kx=kx0*((int) i-(int) xorigin);
-//    Real kx2=kx*kx;
     vector wi=w[i];
-    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      wi[j]=Complex(i+1,j+2);
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      wi[j]=pow(1.0/Complex(hypot(i-xorigin,j)+1),2.0);
     }
   }
   
   HermitianSymmetrizeX(mx,my,xorigin,w);
   
-  //  for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0;
+  for(unsigned i=0; i < NY[EK]; i++)
+    Y[EK][i]=0.0;
   
   tcount=0;
   if(restart) {
@@ -270,90 +269,78 @@ void DNS::Initialize()
   fevt << "#   t\t\t E\t\t\t Z" << endl;
 }
 
-/*
-  void DNS::Spectrum(vector& S, const vector& y)
-  {
-  u.Set(y);
+void DNS::Spectrum(vector& S, const vector& y)
+{
+  w.Set(y);
   
   for(unsigned K=0; K < nshells; K++) {
-  count[K]=0;
-  S[K]=0.0;
+    count[K]=0;
+    S[K]=0.0;
   }
 				
   // Compute instantaneous angular average over circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
-  int kx=i-xorigin;
-  rvector k2maski=k2maskij[i];
-  for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
-  if(k2maski[j]) {
-  int K2=kx*kx+j*j;
-  unsigned K=(unsigned)(sqrt(K2)-0.5);
-  count[K]++; // Move to initialize.
-  S[K] += abs2(Sk(i,j));
-  }
-  }
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      unsigned K=(unsigned)(sqrt(I2+j*j)-0.5);
+      count[K]++; // Move to initialize.
+      S[K] += abs2(wi[j]);
+    }
   }
   
   for(unsigned K=0; K < nshells; K++)
-  if(count[K]) S[K] *= twopi*K/count[K];
-  }
-*/
+    if(count[K]) S[K] *= twopi*K/count[K];
+}
 
 void DNS::Output(int it)
 {
-  /*
-    Real E,Z;
+  Real E,Z,P;
 	
-    u.Set(y);
-    ComputeInvariants(E,Z);
-    fevt << t << "\t" << E << "\t" << Z << endl;
+  w.Set(y);
+  ComputeInvariants(E,Z,P);
+  fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
-    Var *y=Y[0];
-    if(output) out_curve(fu,y,"u",NY[0]);
+  Var *y=Y[0];
+  if(output) out_curve(fu,y,"u",NY[0]);
   
-    if(movie) OutFrame(it);
+  if(movie) OutFrame(it);
 	
-    ostringstream buf;
-    buf << "ekvk" << dirsep << "t" << tcount;
-    open_output(fekvk,dirsep,buf.str().c_str(),0);
-    out_curve(fekvk,t,"t");
-    Var *y1=Y[EK];
-    out_curve(fekvk,y1,"ekvk",nshells);
-    fekvk.close();
-    if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
+  ostringstream buf;
+  buf << "ekvk" << dirsep << "t" << tcount;
+  open_output(fekvk,dirsep,buf.str().c_str(),0);
+  out_curve(fekvk,t,"t");
+  Var *y1=Y[EK];
+  out_curve(fekvk,y1,"ekvk",nshells);
+  fekvk.close();
+  if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
     
-    tcount++;
-    ft << t << endl;
+  tcount++;
+  ft << t << endl;
   
-    if(rezero && it % rezero == 0) {
+  if(rezero && it % rezero == 0) {
     vector2 Y=Integrator->YVector();
     vector T=Y[EK];
-    for(unsigned int i=0; i < NY[EK]; i++)
-    T[i]=0.0;
-    }
-  */
+    for(unsigned i=0; i < NY[EK]; i++)
+      T[i]=0.0;
+  }
 }
 
 void DNS::OutFrame(int)
 {
-  /*
-    fvx << 1 << Ny << Nx;
-    fvy << 1 << Ny << Nx;
-    fw << 1 << Ny << Nx;  
+/*
+  fw << 1 << Ny << Nx;  
   
-    for(int j=iNy-1; j >= 0; j--) {
-    for(unsigned int i=0; i < Nx; i++) {
-    fvx << (float) u(i,j,0);
-    fvy << (float) u(i,j,1);
-    fw << (float) Vorticity(i,j);
+  for(int j=my-1; j >= 0; j--) {
+    for(unsigned i=0; i < Nx; i++) {
+      fw << (float) Vorticity(i,j);
     }
-    }
+  }
   
-    fvx.flush();
-    fvy.flush();
-    fw.flush();
-  */
+  fw.flush();
+*/
 }	
 
 void DNS::ComputeInvariants(Real& E, Real& Z, Real& P)
@@ -364,11 +351,11 @@ void DNS::ComputeInvariants(Real& E, Real& Z, Real& P)
     Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
-    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real w2=abs2(wi[j]);
       Z += w2;
       Real ky=ky0*j;
-      Real k2=(kx2+ky*ky);
+      Real k2=kx2+ky*ky;
       E += w2/k2;
       P += k2*w2;
     }
@@ -399,7 +386,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   g0(origin)=0.0;
   g1(origin)=0.0;
   
-  for(unsigned int i=0; i < Nx; ++i) {
+  for(unsigned i=0; i < Nx; ++i) {
     Real kx=kx0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
@@ -407,7 +394,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
     vector f1i=f1[i];
     vector g0i=g0[i];
     vector g1i=g1[i];
-    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real ky=ky0*j;
       Complex wij=wi[j];
       Complex kxw=Complex(-kx*wij.im,kx*wij.re);
@@ -425,9 +412,9 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   
 #if 0
   double sum=0.0;
-  for(unsigned int i=0; i < Nx; ++i) {
+  for(unsigned i=0; i < Nx; ++i) {
     vector wi=w[i];
-    for(unsigned int j=i <= xorigin ? 1 : 0; j < my; ++j) {
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Complex wij=wi[j];
       sum += (f0[i][j]*conj(wij)).re;
     }
@@ -436,7 +423,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   cout << sum << endl;
 #endif  
   
-//  Spectrum(Src[EK],Y[OMEGA]);
+  Spectrum(Src[EK],Y[OMEGA]);
 }
 
 void DNS::Stochastic(const vector2&Y, double, double)

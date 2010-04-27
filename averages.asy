@@ -62,8 +62,6 @@ real[][] M2;
 
 void Ekavg()
 {
-  write(kb);
-  
   M2=getintegrals("ekvk",T,Tmax,2);
   Ek=0.5*angleint(M2[0]);
 
