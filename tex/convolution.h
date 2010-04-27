@@ -729,6 +729,7 @@ inline void HermitianSymmetrizeX(unsigned int mx, unsigned int my,
 {
   unsigned int offset=xorigin*my;
   unsigned int stop=mx*my;
+  f[offset].im=0.0;
   for(unsigned int i=my; i < stop; i += my)
     f[offset-i]=conj(f[offset+i]);
 }
@@ -742,6 +743,7 @@ inline void HermitianSymmetrizeX(unsigned int mx, unsigned int my,
   unsigned int nymz=ny*mz;
   unsigned int offset=xorigin*nymz+yorigin*mz;
   unsigned int mxnymz=mx*nymz;
+  f[offset].im=0.0;
   for(unsigned int i=nymz; i < mxnymz; i += nymz)
     f[offset-i]=conj(f[offset+i]);
 }

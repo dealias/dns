@@ -33,7 +33,6 @@ unsigned int outlimit=100;
 inline void init(array2<Complex>& f, array2<Complex>& g, unsigned int M=1) 
 {
   unsigned int offset=Explicit ? nx/2-mx+1 : 0;
-  unsigned int origin=offset+mx-1;
   unsigned int stop=2*mx-1;
   unsigned int stopoffset=stop+offset;
   double factor=1.0/sqrt(M);
@@ -48,11 +47,6 @@ inline void init(array2<Complex>& f, array2<Complex>& g, unsigned int M=1)
         g[I][j]=gfactor*Complex(2*i,j+1);
       }
     }
-  }
-
-  for(unsigned int i=0; i < M; ++i) {
-    f[origin+i*nxp][0]=f[origin+i*nxp][0].re;
-    g[origin+i*nxp][0]=g[origin+i*nxp][0].re;
   }
 }
 
