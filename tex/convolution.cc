@@ -267,11 +267,11 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
       ZetaL0=ZetaL-k;
     }
 #else
+    double fmkre=fmk.re;
+    double fmkim=fmk.im;
+    double gmkre=gmk.re;
+    double gmkim=gmk.im;
     for(unsigned int a=0, k=1; k < c; ++a) {
-      double fmkre=fmk.re;
-      double fmkim=fmk.im;
-      double gmkre=gmk.re;
-      double gmkim=gmk.im;
       Complex *p=ZetaH+a;
       double Hre=p->re;
       double Him=-p->im;
