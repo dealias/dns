@@ -15,7 +15,6 @@ const double ProblemVersion=1.0;
 
 const char *method="DNS";
 const char *integrator="RK5";
-const char *geometry="Cartesian";
 const char *forcing="WhiteNoiseBanded";
 const char *ic="Equilibrium";
 
@@ -66,16 +65,9 @@ class DNS : public ProblemBase {
   Real kx0, ky0; // grid spacing factor
   array2<Complex> w; // array pointer for vorticity
   
-  unsigned Nx1;
-  unsigned nfft;
-  
-  Real Nxybinv;
-  
   int tcount;
-  
   array1<unsigned>::opt count;
   
-  Real hxinv, hyinv;
   unsigned nmode;
 	
 //  array3<Complex> S;
@@ -108,7 +100,11 @@ public:
     startM=Start(EK);
     stopM=Stop(EK);
   }
-  
+  unsigned getNx() {return Nx;}
+  unsigned getmy() {return my;}
+  unsigned getxorigin() {return xorigin;}
+
+
   void InitialConditions();
   void Initialize();
   void Output(int it);
@@ -136,6 +132,41 @@ public:
   void Spectrum(vector& S, const vector& y);
 };
 
+DNS *DNSProblem;
+
+class Zero : public InitialConditionBase {
+public:
+  const char *Name() {return "Zero";}
+  void Set(Var *w, unsigned n) {
+    for(unsigned i=0; i < n; i++) 
+      w[i]=0.0;
+  }
+};
+
+class Equilibrium : public InitialConditionBase {
+public:
+  const char *Name() {return "Equilibrium";}
+  void Set(Var *w, unsigned n) {
+    unsigned Nx=DNSProblem->getNx();
+    unsigned my=DNSProblem->getmy();
+    unsigned xorigin=DNSProblem->getxorigin();
+    for(unsigned i=0; i < Nx; i++) {
+      unsigned imy=i*my;
+      for(unsigned j=0 ; j < my; ++j)
+	w[imy+j]=pow(1.0/Complex(hypot(i-xorigin,j)+1),2.0);
+    }
+  /*
+  for(unsigned i=0; i < Nx; i++) {
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      wi[j]=pow(1.0/Complex(hypot(i-xorigin,j)+1),2.0);
+    }
+  }
+  */
+  }
+};
+
+
 DNSVocabulary::DNSVocabulary()
 {
   Vocabulary=this;
@@ -145,6 +176,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(force,0.0,REAL_MAX,"force coefficient");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
+  VOCAB_NOLIMIT(ic,"Initial Condition");
   
   VOCAB(ICvx,0.0,0.0,"Initial condition multiplier for vx");
   VOCAB(ICvy,0.0,0.0,"Initial condition multiplier for vy");
@@ -163,14 +195,17 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
   
 //  ForcingTable=new Table<ForcingBase>("forcing");
-//  InitialConditionTable=new Table<InitialConditionBase>("initial condition");
+  InitialConditionTable=new Table<InitialConditionBase>("initial condition");
   
   METHOD(DNS);
+
+  INITIALCONDITION(Zero);
+  INITIALCONDITION(Equilibrium);
 }
+
 
 DNSVocabulary DNS_Vocabulary;
 
-DNS *DNSProblem;
 
 DNS::DNS()
 {
@@ -190,8 +225,6 @@ void DNS::InitialConditions()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
-  cout << mx << " " << my << endl;
-  
   xorigin=mx-1;
   origin=xorigin*my;
   nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
@@ -223,15 +256,11 @@ void DNS::InitialConditions()
 
   Allocate(count,nshells);
   
+  InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
   // Initialize the vorticity field.
   w.Set(Y[OMEGA]);
+  InitialCondition->Set(w,NY[OMEGA]);
   w(origin)=0.0;
-  for(unsigned i=0; i < Nx; i++) {
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      wi[j]=pow(1.0/Complex(hypot(i-xorigin,j)+1),2.0);
-    }
-  }
   
   HermitianSymmetrizeX(mx,my,xorigin,w);
   
