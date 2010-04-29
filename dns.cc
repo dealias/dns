@@ -23,20 +23,18 @@ InitialConditionBase *InitialCondition;
 
 // Vocabulary
 //Real nu=1.0;
-//Real rho=1.0;
 //Real ICvx=1.0;
 //Real ICvy=1.0;
 unsigned Nx=1;
 unsigned Ny=1;
-//Real xmin=0.0;
-//Real xmax=1.0;
-//Real ymin=0.0;
-//Real ymax=1.0;
 //Real force=1.0;
 //Real kforce=1.0;
 //Real deltaf=2.0;
 int movie=0;
 int rezero=0;
+
+int xpad=0;
+int ypad=0;
 
 enum Field {OMEGA,EK};
 
@@ -81,12 +79,13 @@ class DNS : public ProblemBase {
   array3<Complex> FMk;
   
   array2<Complex> f0,f1,g0,g1;
+  array2<Complex> buffer;
+  Complex *block;
   Complex *F[2];
   Complex *G[2];
   
   ImplicitHConvolution2 *Convolution;
-  
-  crfft2d *cr;
+  ExplicitHConvolution2 *Padded;
   
 public:
   DNS();
@@ -103,6 +102,7 @@ public:
     stopM=Stop(EK);
   }
   unsigned getNx() {return Nx;}
+  unsigned getmx() {return mx;}
   unsigned getmy() {return my;}
   Real getkx0() {return kx0;}
   Real getky0() {return ky0;}
@@ -150,24 +150,27 @@ public:
 class Equilibrium : public InitialConditionBase {
 public:
   const char *Name() {return "Equilibrium";}
-  void Set(Var *w0, unsigned n) {
+  void Set(Var *w0, unsigned) {
     unsigned Nx=DNSProblem->getNx();
+    unsigned mx=DNSProblem->getmx();
     unsigned my=DNSProblem->getmy();
     array2<Var> w(Nx,my,w0);
     unsigned xorigin=DNSProblem->getxorigin();
     Real kx0=DNSProblem->getkx0();
     Real ky0=DNSProblem->getky0();
+    w(xorigin,0)=0;
     for(unsigned i=0; i < Nx; i++) {
       Real kx=kx0*((int) i-(int) xorigin);
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-        wi[j]=pow(1.0/Complex(hypot(kx,ky0*j)+1),2.0); // FIXME
+//        wi[j]=pow(1.0/Complex(hypot(kx,ky0*j)+1),2.0); // FIXME
+      wi[j]=0.0;
       }
     }
       
 // For movie testing:
-// w(xorigin,my-1)=2.0;
-//  w(mx-1,0)=2.0;
+ w(xorigin,my-1)=2.0;
+//    w(mx-1,0)=2.0;
   }
 };
 
@@ -176,25 +179,13 @@ DNSVocabulary::DNSVocabulary()
 {
   Vocabulary=this;
 
-  //  VOCAB(rho,0.0,REAL_MAX,"density");
   //  VOCAB(nu,0.0,REAL_MAX,"Kinematic viscosity");
   //  VOCAB(force,0.0,REAL_MAX,"force coefficient");
   //  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   //  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   VOCAB_NOLIMIT(ic,"Initial Condition");
-  
-  //  VOCAB(ICvx,0.0,0.0,"Initial condition multiplier for vx");
-  //  VOCAB(ICvy,0.0,0.0,"Initial condition multiplier for vy");
-
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
-  
-  //  VOCAB(xmin,0.0,0.0,"Minimum x value");
-  //  VOCAB(xmax,0.0,0.0,"Maximum x value");
-	
-  //  VOCAB(ymin,0.0,0.0,"Minimum y value");
-  //  VOCAB(ymax,0.0,0.0,"Maximum y value");
-
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
   
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
@@ -245,9 +236,16 @@ void DNS::InitialConditions()
   
   w.Dimension(Nx,my);
   f0.Dimension(Nx,my);
-  f1.Allocate(Nx,my,align);
-  g0.Allocate(Nx,my,align);
-  g1.Allocate(Nx,my,align);
+  
+  unsigned int Nxmy=Nx*my;
+  unsigned int nbuf=3*Nxmy;
+  if(movie)
+    nbuf=max(nbuf,(Nx+xpad)*((Ny+ypad)/2+1));
+
+  block=ComplexAlign(nbuf);
+  f1.Dimension(Nx,my,block);
+  g0.Dimension(Nx,my,block+Nxmy);
+  g1.Dimension(Nx,my,block+2*Nxmy);
   
   F[1]=f1;
   G[0]=g0;
@@ -270,12 +268,13 @@ void DNS::InitialConditions()
   w.Set(Y[OMEGA]);
   
   if(movie) {
-    wr.Dimension(Nx,2*(Ny/2+1),(double *) g0());
-    cr=new crfft2d(Nx,Ny,g0);
+    buffer.Dimension(Nx+xpad,(Ny+ypad)/2+1,block);
+    wr.Dimension(Nx+xpad,2*((Ny+ypad)/2+1),(double *) block);
+    Padded=new ExplicitHConvolution2(Nx+xpad,Ny+ypad,mx,my,block);
   }
   
   InitialCondition->Set(w,NY[OMEGA]);
-
+  w(xorigin,0)=0;
   HermitianSymmetrizeX(mx,my,xorigin,w);
   
   for(unsigned i=0; i < NY[EK]; i++)
@@ -382,13 +381,22 @@ void DNS::Output(int it)
 
 void DNS::OutFrame(int)
 {
-  g0.Load(Y[OMEGA]);
-  cr->fft0(g0);
+  w.Set(Y[OMEGA]);
+  unsigned int offset=(Nx+xpad)/2-mx+1;
+  unsigned int stop=2*mx-1;
+  for(unsigned int i=0; i < stop; ++i) {
+    unsigned int I=i+offset;
+    for(unsigned int j=0; j < my; j++)
+      buffer(I,j)=w(i,j);
+  }
+    
+  Padded->pad(buffer);
+  Padded->backwards(buffer);
 
-  fw << 1 << Ny << Nx;
+  fw << 1 << (Ny+ypad) << (Nx+xpad);
 
-  for(int j=Ny-1; j >= 0; j--) {
-    for(unsigned i=0; i < Nx; i++) {
+  for(int j=Ny+ypad-1; j >= 0; j--) {
+    for(unsigned i=0; i < (Nx+xpad); i++) {
       fw << (float) wr(i,j);
     }
   }
