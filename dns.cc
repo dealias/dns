@@ -16,7 +16,9 @@ const double ProblemVersion=1.0;
 const char *method="DNS";
 const char *integrator="RK5";
 const char *forcing="WhiteNoiseBanded";
-const char *ic="Equilibrium";
+const char *ic="Equipartition";
+Real icalpha=1.0;
+Real icbeta=1.0;
 
 ForcingBase *Forcing;
 InitialConditionBase *InitialCondition;
@@ -147,23 +149,26 @@ public:
   }
 };
 
-class Equilibrium : public InitialConditionBase {
+class Equipartition : public InitialConditionBase {
 public:
-  const char *Name() {return "Equilibrium";}
+  const char *Name() {return "Equipartition";}
   void Set(Var *w0, unsigned) {
     unsigned Nx=DNSProblem->getNx();
-    unsigned mx=DNSProblem->getmx();
     unsigned my=DNSProblem->getmy();
-    array2<Var> w(Nx,my,w0);
     unsigned xorigin=DNSProblem->getxorigin();
     Real kx0=DNSProblem->getkx0();
     Real ky0=DNSProblem->getky0();
+
+    array2<Var> w(Nx,my,w0);
     w(xorigin,0)=0;
     for(unsigned i=0; i < Nx; i++) {
       Real kx=kx0*((int) i-(int) xorigin);
+      Real kx2=kx*kx;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-        wi[j]=pow(1.0/Complex(hypot(kx,ky0*j)+1),2.0); // FIXME
+	Real ky=ky0*j;
+	Real k2=kx2+ky*ky;
+	wi[j]=Complex(1.0,1.0)*sqrt(k2/(icalpha+icbeta*k2));
 //      wi[j]=0.0;
       }
     }
@@ -189,14 +194,16 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
   
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
-  
+  VOCAB(icalpha,-REAL_MAX,REAL_MAX,"initial condition parameter");
+  VOCAB(icbeta,-REAL_MAX,REAL_MAX,"initial condition parameter");
+
 //  ForcingTable=new Table<ForcingBase>("forcing");
   InitialConditionTable=new Table<InitialConditionBase>("initial condition");
   
   METHOD(DNS);
 
   INITIALCONDITION(Zero);
-  INITIALCONDITION(Equilibrium);
+  INITIALCONDITION(Equipartition);
 }
 
 
@@ -310,7 +317,6 @@ void DNS::Initialize()
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
-    vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       unsigned K=(unsigned)(sqrt(I2+j*j)-0.5);
       count[K]++;
@@ -322,11 +328,9 @@ void DNS::Spectrum(vector& S, const vector& y)
 {
   w.Set(y);
   
-  for(unsigned K=0; K < nshells; K++) {
-    count[K]=0;
+  for(unsigned K=0; K < nshells; K++)
     S[K]=0.0;
-  }
-				
+
   // Compute instantaneous angular average over circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
@@ -338,7 +342,7 @@ void DNS::Spectrum(vector& S, const vector& y)
       int J2=j*j;
       unsigned K=(unsigned)(sqrt(I2+J2)-0.5);
       Real ky2=ky0*ky0*J2;
-      S[K] += abs2(wi[j])/sqrt(kx2+ky2);
+      S[K] += abs2(wi[j])/(kx2+ky2);
     }
   }
   
