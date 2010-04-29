@@ -334,9 +334,12 @@ void DNS::Spectrum(vector& S, const vector& y)
     int I=(int) i-(int) xorigin;
     int I2=I*I;
     vector wi=w[i];
+    Real kx2=kx0*kx0*I2;
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      unsigned K=(unsigned)(sqrt(I2+j*j)-0.5);
-      S[K] += abs2(wi[j]);
+      int J2=j*j;
+      unsigned K=(unsigned)(sqrt(I2+J2)-0.5);
+      Real ky2=ky0*ky0*J2;
+      S[K] += abs2(wi[j])/sqrt(kx2+ky2);
     }
   }
   
