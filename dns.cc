@@ -22,19 +22,19 @@ ForcingBase *Forcing;
 InitialConditionBase *InitialCondition;
 
 // Vocabulary
-Real nu=1.0;
-Real rho=1.0;
-Real ICvx=1.0;
-Real ICvy=1.0;
+//Real nu=1.0;
+//Real rho=1.0;
+//Real ICvx=1.0;
+//Real ICvy=1.0;
 unsigned Nx=1;
 unsigned Ny=1;
-Real xmin=0.0;
-Real xmax=1.0;
-Real ymin=0.0;
-Real ymax=1.0;
-Real force=1.0;
-Real kforce=1.0;
-Real deltaf=2.0;
+//Real xmin=0.0;
+//Real xmax=1.0;
+//Real ymin=0.0;
+//Real ymax=1.0;
+//Real force=1.0;
+//Real kforce=1.0;
+//Real deltaf=2.0;
 int movie=0;
 int rezero=0;
 
@@ -104,6 +104,8 @@ public:
   }
   unsigned getNx() {return Nx;}
   unsigned getmy() {return my;}
+  Real getkx0() {return kx0;}
+  Real getky0() {return ky0;}
   unsigned getxorigin() {return xorigin;}
 
 
@@ -153,13 +155,14 @@ public:
     unsigned my=DNSProblem->getmy();
     array2<Var> w(Nx,my,w0);
     unsigned xorigin=DNSProblem->getxorigin();
-    Real kx0=1; // FIXME
-    Real ky0=1; // FIXME
+    Real kx0=DNSProblem->getkx0();
+    Real ky0=DNSProblem->getky0();
     for(unsigned i=0; i < Nx; i++) {
       Real kx=kx0*((int) i-(int) xorigin);
       vector wi=w[i];
-      for(unsigned j=0 ; j < my; ++j)
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
         wi[j]=pow(1.0/Complex(hypot(kx,ky0*j)+1),2.0); // FIXME
+      }
     }
       
 // For movie testing:
@@ -173,24 +176,24 @@ DNSVocabulary::DNSVocabulary()
 {
   Vocabulary=this;
 
-  VOCAB(rho,0.0,REAL_MAX,"density");
-  VOCAB(nu,0.0,REAL_MAX,"Kinematic viscosity");
-  VOCAB(force,0.0,REAL_MAX,"force coefficient");
-  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
-  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
+  //  VOCAB(rho,0.0,REAL_MAX,"density");
+  //  VOCAB(nu,0.0,REAL_MAX,"Kinematic viscosity");
+  //  VOCAB(force,0.0,REAL_MAX,"force coefficient");
+  //  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
+  //  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   VOCAB_NOLIMIT(ic,"Initial Condition");
   
-  VOCAB(ICvx,0.0,0.0,"Initial condition multiplier for vx");
-  VOCAB(ICvy,0.0,0.0,"Initial condition multiplier for vy");
+  //  VOCAB(ICvx,0.0,0.0,"Initial condition multiplier for vx");
+  //  VOCAB(ICvy,0.0,0.0,"Initial condition multiplier for vy");
 
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   
-  VOCAB(xmin,0.0,0.0,"Minimum x value");
-  VOCAB(xmax,0.0,0.0,"Maximum x value");
+  //  VOCAB(xmin,0.0,0.0,"Minimum x value");
+  //  VOCAB(xmax,0.0,0.0,"Maximum x value");
 	
-  VOCAB(ymin,0.0,0.0,"Minimum y value");
-  VOCAB(ymax,0.0,0.0,"Maximum y value");
+  //  VOCAB(ymin,0.0,0.0,"Minimum y value");
+  //  VOCAB(ymax,0.0,0.0,"Maximum y value");
 
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
   
@@ -305,6 +308,15 @@ void DNS::InitialConditions()
 void DNS::Initialize()
 {
   fevt << "#   t\t\t E\t\t\t Z" << endl;
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      unsigned K=(unsigned)(sqrt(I2+j*j)-0.5);
+      count[K]++;
+    }
+  }
 }
 
 void DNS::Spectrum(vector& S, const vector& y)
@@ -324,7 +336,6 @@ void DNS::Spectrum(vector& S, const vector& y)
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       unsigned K=(unsigned)(sqrt(I2+j*j)-0.5);
-      count[K]++; // Move to initialize.
       S[K] += abs2(wi[j]);
     }
   }
