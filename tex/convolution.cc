@@ -860,7 +860,7 @@ void ExplicitHConvolution2::backwards(Complex *f)
 {
   if(prune) {
     xBackwards->fft(f);
-    if(nx % 2) fftw::Shift(f,nx,ny,1);
+    if(nx % 2) fftw::Shift(f,nx,ny,-1);
     yBackwards->fft(f);
   } else
     Backwards->fft(f);
@@ -870,7 +870,7 @@ void ExplicitHConvolution2::forwards(Complex *f)
 {
   if(prune) {
     yForwards->fft(f);
-    fftw::Shift(f,nx,ny,-1);
+    fftw::Shift(f,nx,ny,1);
     xForwards->fft(f);
   } else
     Forwards->fft0(f);
@@ -1402,7 +1402,7 @@ void ExplicitHBiConvolution2::backwards(Complex *f)
 {
   if(prune) {
     xBackwards->fft(f);
-    if(nx % 2) fftw::Shift(f,nx,ny,1);
+    if(nx % 2) fftw::Shift(f,nx,ny,-1);
     yBackwards->fft(f);
   } else
     return Backwards->fft(f);
@@ -1412,7 +1412,7 @@ void ExplicitHBiConvolution2::forwards(Complex *f)
 {
   if(prune) {
     yForwards->fft(f);
-    if(nx % 2) fftw::Shift(f,nx,ny,-1);
+    if(nx % 2) fftw::Shift(f,nx,ny,1);
     xForwards->fft(f);
   } else
     Forwards->fft(f);
