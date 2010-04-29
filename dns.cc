@@ -163,13 +163,13 @@ public:
       Real kx=kx0*((int) i-(int) xorigin);
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-//        wi[j]=pow(1.0/Complex(hypot(kx,ky0*j)+1),2.0); // FIXME
-      wi[j]=0.0;
+        wi[j]=pow(1.0/Complex(hypot(kx,ky0*j)+1),2.0); // FIXME
+//      wi[j]=0.0;
       }
     }
       
 // For movie testing:
- w(xorigin,my-1)=2.0;
+// w(xorigin,my-1)=2.0;
 //    w(mx-1,0)=2.0;
   }
 };
