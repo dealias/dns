@@ -45,16 +45,28 @@ unsigned int BuildZeta(unsigned int n, unsigned int m,
   return s;
 }
 
-void ExplicitConvolution::padBackwards(Complex *f)
+void ExplicitConvolution::pad(Complex *f)
 {
   for(unsigned int k=m; k < n; ++k) f[k]=0.0;
+}
+  
+void ExplicitConvolution::backwards(Complex *f)
+{
   Backwards->fft(f);
+}
+  
+void ExplicitConvolution::forwards(Complex *f)
+{
+  Forwards->fft(f);
 }
   
 void ExplicitConvolution::convolve(Complex *f, Complex *g)
 {
-  padBackwards(f);
-  padBackwards(g);
+  pad(f);
+  backwards(f);
+  
+  pad(g);
+  backwards(g);
       
   double ninv=1.0/n;
 #ifdef __SSE2__      
@@ -67,7 +79,7 @@ void ExplicitConvolution::convolve(Complex *f, Complex *g)
     f[k] *= g[k]*ninv;
 #endif    
 	
-  Forwards->fft(f);
+  forwards(f);
 }
 
 void ImplicitConvolution::convolve(Complex **F, Complex **G,
@@ -175,25 +187,38 @@ void DirectConvolution::convolve(Complex *h, Complex *f, Complex *g)
   }
 }	
 
-void ExplicitHConvolution::padBackwards(Complex *f)
+void ExplicitHConvolution::pad(Complex *f)
 {
   unsigned int n2=n/2;
   for(unsigned int i=m; i <= n2; ++i) f[i]=0.0;
+}
+  
+void ExplicitHConvolution::backwards(Complex *f)
+{
   cr->fft(f);
 }
   
+void ExplicitHConvolution::forwards(Complex *f)
+{
+  rc->fft(f);
+}
+
 void ExplicitHConvolution::convolve(Complex *f, Complex *g)
 {
-  padBackwards(f);
-  padBackwards(g);
-	
+  pad(f);
+  backwards(f);
+  
+  pad(g);
+  backwards(g);
+      
   double *F=(double *) f;
   double *G=(double *) g;
     
   double ninv=1.0/n;
   for(unsigned int k=0; k < n; ++k)
     F[k] *= G[k]*ninv;
-  rc->fft(f);
+  
+  forwards(f);
 }
 
 void ImplicitHConvolution::convolve(Complex **F, Complex **G, 
@@ -736,7 +761,7 @@ void fft0pad::forwards(Complex *f, Complex *u)
     fm1stride[i]=umstride[i];
 }
 
-void ExplicitConvolution2::padBackwards(Complex *f)
+void ExplicitConvolution2::pad(Complex *f)
 {
   for(unsigned int i=0; i < mx; ++i) {
     unsigned int nyi=ny*i;
@@ -751,7 +776,10 @@ void ExplicitConvolution2::padBackwards(Complex *f)
     for(unsigned int j=nyi; j < stop; ++j)
       f[j]=0.0;
   }
-    
+}
+
+void ExplicitConvolution2::backwards(Complex *f)
+{
   if(prune) {
     xBackwards->fft(f);
     yBackwards->fft(f);
@@ -759,11 +787,23 @@ void ExplicitConvolution2::padBackwards(Complex *f)
     Backwards->fft(f);
 }
   
+void ExplicitConvolution2::forwards(Complex *f)
+{
+  if(prune) {
+    yForwards->fft(f);
+    xForwards->fft(f);
+  } else
+    Forwards->fft(f);
+}
+  
 void ExplicitConvolution2::convolve(Complex *f, Complex *g)
 {
-  padBackwards(f);
-  padBackwards(g);
-    
+  pad(f);
+  backwards(f);
+  
+  pad(g);
+  backwards(g);
+      
   unsigned int n=nx*ny;
   double ninv=1.0/n;
 #ifdef __SSE2__      
@@ -776,11 +816,7 @@ void ExplicitConvolution2::convolve(Complex *f, Complex *g)
     f[k] *= g[k]*ninv;
 #endif    
 	
-  if(prune) {
-    yForwards->fft(f);
-    xForwards->fft(f);
-  } else
-    Forwards->fft(f);
+  forwards(f);
 }
 
 void DirectConvolution2::convolve(Complex *h, Complex *f, Complex *g)
@@ -796,7 +832,7 @@ void DirectConvolution2::convolve(Complex *h, Complex *f, Complex *g)
   }
 }	
 
-void ExplicitHConvolution2::padBackwards(Complex *f)
+void ExplicitHConvolution2::pad(Complex *f)
 {
   unsigned int nyp=ny/2+1;
   unsigned int nx2=nx/2;
@@ -807,7 +843,7 @@ void ExplicitHConvolution2::padBackwards(Complex *f)
     f[i]=0.0;
 
   // zero-pad top-middle block
-  unsigned int stop2=2*mx*nyp+stop;
+  unsigned int stop2=stop+2*mx*nyp;
   unsigned int diff=nyp-my;
   for(unsigned int i=stop+nyp; i < stop2; i += nyp) {
     for(unsigned int j=i-diff; j < i; ++j)
@@ -818,7 +854,10 @@ void ExplicitHConvolution2::padBackwards(Complex *f)
   stop=nx*nyp;
   for(unsigned int i=(nx2+mx)*nyp; i < stop; ++i) 
     f[i]=0.0;
-    
+}
+
+void ExplicitHConvolution2::backwards(Complex *f)
+{
   if(prune) {
     xBackwards->fft(f);
     if(nx % 2) fftw::Shift(f,nx,ny,-1);
@@ -827,18 +866,28 @@ void ExplicitHConvolution2::padBackwards(Complex *f)
     Backwards->fft(f);
 }
 
+void ExplicitHConvolution2::forwards(Complex *f)
+{
+  if(prune) {
+    yForwards->fft(f);
+    fftw::Shift(f,nx,ny,1);
+    xForwards->fft(f);
+  } else
+    Forwards->fft0(f);
+}
+
 void ExplicitHConvolution2::convolve(Complex *f, Complex *g, bool symmetrize)
 {
   unsigned int xorigin=nx/2;
   unsigned int nyp=ny/2+1;
     
-  if(symmetrize) {
-    HermitianSymmetrizeX(mx,nyp,xorigin,f);
-    HermitianSymmetrizeX(mx,nyp,xorigin,g);
-  }
-    
-  padBackwards(f);
-  padBackwards(g);
+  if(symmetrize) HermitianSymmetrizeX(mx,nyp,xorigin,f);
+  pad(f);
+  backwards(f);
+  
+  if(symmetrize) HermitianSymmetrizeX(mx,nyp,xorigin,g);
+  pad(g);
+  backwards(g);
     
   double *F=(double *) f;
   double *G=(double *) g;
@@ -853,12 +902,7 @@ void ExplicitHConvolution2::convolve(Complex *f, Complex *g, bool symmetrize)
       F[j] *= G[j]*ninv;
   }
 	
-  if(prune) {
-    yForwards->fft(f);
-    fftw::Shift(f,nx,ny,1);
-    xForwards->fft(f);
-  } else
-    Forwards->fft0(f);
+  forwards(f);
 }
 
 void DirectHConvolution2::convolve(Complex *h, Complex *f, Complex *g,
@@ -897,7 +941,7 @@ void DirectHConvolution2::convolve(Complex *h, Complex *f, Complex *g,
   }	
 }
 
-void ExplicitConvolution3::padBackwards(Complex *f)
+void ExplicitConvolution3::pad(Complex *f)
 {
   for(unsigned int i=0; i < mx; ++i) {
     unsigned int nyi=ny*i;
@@ -929,7 +973,11 @@ void ExplicitConvolution3::padBackwards(Complex *f)
         f[k]=0.0;
     }
   }
-    
+}
+
+void ExplicitConvolution3::backwards(Complex *f)
+{
+  unsigned int nyz=ny*nz;
   if(prune) {
     for(unsigned int i=0; i < mx; ++i)
       yBackwards->fft(f+i*nyz);
@@ -939,10 +987,25 @@ void ExplicitConvolution3::padBackwards(Complex *f)
     Backwards->fft(f);
 }
   
+void ExplicitConvolution3::forwards(Complex *f)
+{
+  if(prune) {
+    zForwards->fft(f);
+    xForwards->fft(f);
+    unsigned int nyz=ny*nz;
+    for(unsigned int i=0; i < mx; ++i)
+      yForwards->fft(f+i*nyz);
+  } else
+    Forwards->fft(f);
+}
+
 void ExplicitConvolution3::convolve(Complex *f, Complex *g)
 {
-  padBackwards(f);
-  padBackwards(g);
+  pad(f);
+  backwards(f);
+  
+  pad(g);
+  backwards(g);
     
   unsigned int n=nx*ny*nz;
   double ninv=1.0/n;
@@ -956,14 +1019,7 @@ void ExplicitConvolution3::convolve(Complex *f, Complex *g)
     f[k] *= g[k]*ninv;
 #endif    
 	
-  if(prune) {
-    zForwards->fft(f);
-    xForwards->fft(f);
-    unsigned int nyz=ny*nz;
-    for(unsigned int i=0; i < mx; ++i)
-      yForwards->fft(f+i*nyz);
-  } else
-    Forwards->fft(f);
+  forwards(f);
 }
 
 void DirectConvolution3::convolve(Complex *h, Complex *f, Complex *g)
@@ -1030,18 +1086,32 @@ void DirectHConvolution3::convolve(Complex *h, Complex *f, Complex *g,
   }	
 }
 
-void ExplicitHBiConvolution::padBackwards(Complex *f)
+void ExplicitHBiConvolution::pad(Complex *f)
 {
     unsigned int n2=n/2;
     for(unsigned int i=m; i <= n2; ++i) f[i]=0.0;
-    cr->fft(f);
+}
+
+void ExplicitHBiConvolution::backwards(Complex *f)
+{
+  cr->fft(f);
+}
+
+void ExplicitHBiConvolution::forwards(Complex *f)
+{
+  rc->fft(f);
 }
 
 void ExplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h)
 {
-  padBackwards(f);
-  padBackwards(g);
-  padBackwards(h);
+  pad(f);
+  backwards(f);
+  
+  pad(g);
+  backwards(g);
+      
+  pad(h);
+  backwards(h);
 	
   double *F=(double *) f;
   double *G=(double *) g;
@@ -1051,7 +1121,7 @@ void ExplicitHBiConvolution::convolve(Complex *f, Complex *g, Complex *h)
   for(unsigned int k=0; k < n; ++k)
     F[k] *= G[k]*H[k]*ninv;
 
-  rc->fft(f);
+  forwards(f);
 }
 
 void ImplicitHBiConvolution::convolve(Complex **F, Complex **G, Complex **H,
@@ -1302,7 +1372,7 @@ void fft0bipad::forwards(Complex *f, Complex *u)
   }
 }
 
-void ExplicitHBiConvolution2::padBackwards(Complex *f)
+void ExplicitHBiConvolution2::pad(Complex *f)
 {
   unsigned int nyp=ny/2+1;
   unsigned int nx2=nx/2;
@@ -1326,7 +1396,10 @@ void ExplicitHBiConvolution2::padBackwards(Complex *f)
     for(unsigned int j=nypi+my; j < stop; ++j)
       f[j]=0.0;
   }
+}
 
+void ExplicitHBiConvolution2::backwards(Complex *f)
+{
   if(prune) {
     xBackwards->fft(f);
     if(nx % 2) fftw::Shift(f,nx,ny,-1);
@@ -1335,22 +1408,34 @@ void ExplicitHBiConvolution2::padBackwards(Complex *f)
     return Backwards->fft(f);
 }
 
+void ExplicitHBiConvolution2::forwards(Complex *f)
+{
+  if(prune) {
+    yForwards->fft(f);
+    if(nx % 2) fftw::Shift(f,nx,ny,1);
+    xForwards->fft(f);
+  } else
+    Forwards->fft(f);
+}
+
 void ExplicitHBiConvolution2::convolve(Complex *f, Complex *g, Complex *h,
                                        bool symmetrize)
 {
   unsigned int xorigin=nx/2;
   unsigned int nyp=ny/2+1;
     
-  if(symmetrize) {
-    HermitianSymmetrizeX(mx,nyp,xorigin,f);
-    HermitianSymmetrizeX(mx,nyp,xorigin,g);
-    HermitianSymmetrizeX(mx,nyp,xorigin,h);
-  }
+  if(symmetrize) HermitianSymmetrizeX(mx,nyp,xorigin,f);
+  pad(f);
+  backwards(f);
   
-  padBackwards(f);
-  padBackwards(g);
-  padBackwards(h);
-    
+  if(symmetrize) HermitianSymmetrizeX(mx,nyp,xorigin,g);
+  pad(g);
+  backwards(g);
+      
+  if(symmetrize) HermitianSymmetrizeX(mx,nyp,xorigin,h);
+  pad(h);
+  backwards(h);
+	
   double *F=(double *) f;
   double *G=(double *) g;
   double *H=(double *) h;
@@ -1365,12 +1450,7 @@ void ExplicitHBiConvolution2::convolve(Complex *f, Complex *g, Complex *h,
       F[j] *= G[j]*H[j]*ninv;
   }
 	
-  if(prune) {
-    yForwards->fft(f);
-    if(nx % 2) fftw::Shift(f,nx,ny,1);
-    xForwards->fft(f);
-  } else
-    Forwards->fft(f);
+  forwards(f);
 }
 
 void DirectHBiConvolution2::convolve(Complex *h, Complex *e, Complex *f,

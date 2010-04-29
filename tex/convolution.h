@@ -39,7 +39,9 @@ public:
     delete Backwards;
   }    
   
-  void padBackwards(Complex *f);
+  void pad(Complex *f);
+  void backwards(Complex *f);
+  void forwards(Complex *f);
   
   // Compute f (*) g. The distinct input arrays f and g are each of size n 
   // (contents not preserved). The output is returned in f.
@@ -400,7 +402,9 @@ public:
     delete rc;
   }
     
-  void padBackwards(Complex *f);
+  void pad(Complex *f);
+  void backwards(Complex *f);
+  void forwards(Complex *f);
   
 // Compute f (*) g, where f and g contain the m non-negative Fourier
 // components of real functions. Dealiasing is internally implemented via
@@ -627,7 +631,9 @@ public:
     }
   }    
   
-  void padBackwards(Complex *f);
+  void pad(Complex *f);
+  void backwards(Complex *f);
+  void forwards(Complex *f);
   void convolve(Complex *f, Complex *g);
 };
 
@@ -818,7 +824,9 @@ public:
     }
   }    
   
-  void padBackwards(Complex *f);
+  void pad(Complex *f);
+  void backwards(Complex *f);
+  void forwards(Complex *f);
   void convolve(Complex *f, Complex *g, bool symmetrize=true);
 };
 
@@ -891,19 +899,22 @@ public:
                 unsigned int offset=0) {
     unsigned int xorigin=mx-1;
     unsigned int nx=2*mx-1;
-    if(symmetrize) {
-      for(unsigned int s=0; s < M; ++s)
-        HermitianSymmetrizeX(mx,my,xorigin,F[s]+offset);
-      for(unsigned int s=0; s < M; ++s)
-        HermitianSymmetrizeX(mx,my,xorigin,G[s]+offset);
+    unsigned int mu=(mx+1)*my;
+    
+    for(unsigned int s=0; s < M; ++s) {
+      Complex *f=F[s]+offset;
+      if(symmetrize)
+        HermitianSymmetrizeX(mx,my,xorigin,f);
+      xfftpad->backwards(f,u2+s*mu);
     }
     
-    unsigned int mu=(mx+1)*my;
-    for(unsigned int s=0; s < M; ++s)
-      xfftpad->backwards(F[s]+offset,u2+s*mu);
-    for(unsigned int s=0; s < M; ++s)
-      xfftpad->backwards(G[s]+offset,v2+s*mu);
-
+    for(unsigned int s=0; s < M; ++s) {
+      Complex *g=G[s]+offset;
+      if(symmetrize)
+        HermitianSymmetrizeX(mx,my,xorigin,g);
+      xfftpad->backwards(g,v2+s*mu);
+    }
+    
     unsigned int mf=nx*my;
     for(unsigned int i=0; i < mf; i += my)
       yconvolve->convolve(F,G,i+offset);
@@ -973,7 +984,9 @@ public:
     }
   }    
   
-  void padBackwards(Complex *f);
+  void pad(Complex *f);
+  void backwards(Complex *f);
+  void forwards(Complex *f);
   void convolve(Complex *f, Complex *g);
 };
 
@@ -1163,21 +1176,23 @@ public:
     unsigned int nx=xorigin+mx;
     unsigned int ny=yorigin+my;
     unsigned int mf=nx*ny*mz;
-    
-    if(symmetrize) {
-      for(unsigned int s=0; s < M; ++s)
-        HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,F[s]+offset);
-      for(unsigned int s=0; s < M; ++s)
-        HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,G[s]+offset);
-    }
-        
     unsigned int mxp1=mx+1;
     unsigned int mu=mxp1*ny*mz;
-    for(unsigned int s=0; s < M; ++s)
-      xfftpad->backwards(F[s]+offset,u3+s*mu);
-    for(unsigned int s=0; s < M; ++s)
-      xfftpad->backwards(G[s]+offset,v3+s*mu);
     
+    for(unsigned int s=0; s < M; ++s) {
+      Complex *f=F[s]+offset;
+      if(symmetrize)
+        HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,f);
+      xfftpad->backwards(f,u3+s*mu);
+    }
+    
+    for(unsigned int s=0; s < M; ++s) {
+      Complex *g=G[s]+offset;
+      if(symmetrize)
+        HermitianSymmetrizeXY(mx,my,mz,ny,xorigin,yorigin,g);
+      xfftpad->backwards(g,v3+s*mu);
+    }
+        
     unsigned int nymz=ny*mz;
     for(unsigned int i=0; i < mf; i += nymz)
       yzconvolve->convolve(F,G,false,i+offset);
@@ -1224,7 +1239,9 @@ public:
     delete rc;
   }
     
-  void padBackwards(Complex *f);
+  void pad(Complex *f);
+  void backwards(Complex *f);
+  void forwards(Complex *f);
   
 // Compute the biconvolution of f, and g, and h, where f, and g, and h
 // contain the m non-negative Fourier components of real
@@ -1407,7 +1424,9 @@ public:
     }
   }    
   
-  void padBackwards(Complex *f);
+  void pad(Complex *f);
+  void backwards(Complex *f);
+  void forwards(Complex *f);
   void convolve(Complex *f, Complex *g, Complex *h, bool symmetrize=true);
 };
 
@@ -1483,22 +1502,28 @@ public:
   void convolve(Complex **F, Complex **G, Complex **H, bool symmetrize=true,
                 unsigned int offset=0) {
     unsigned int my1=my+1;
-    if(symmetrize) {
-      for(unsigned int s=0; s < M; ++s)
-        HermitianSymmetrizeX(mx,my1,mx,F[s]+offset);
-      for(unsigned int s=0; s < M; ++s)
-        HermitianSymmetrizeX(mx,my1,mx,G[s]+offset);
-      for(unsigned int s=0; s < M; ++s)
-        HermitianSymmetrizeX(mx,my1,mx,H[s]+offset);
+    unsigned int mu=2*mx*my1;
+    
+    for(unsigned int s=0; s < M; ++s) {
+      Complex *f=F[s]+offset;
+      if(symmetrize)
+        HermitianSymmetrizeX(mx,my1,mx,f);
+      xfftpad->backwards(f,u2+s*mu);
     }
     
-    unsigned int mu=2*mx*my1;
-    for(unsigned int s=0; s < M; ++s)
-      xfftpad->backwards(F[s]+offset,u2+s*mu);
-    for(unsigned int s=0; s < M; ++s)
-      xfftpad->backwards(G[s]+offset,v2+s*mu);
-    for(unsigned int s=0; s < M; ++s)
-      xfftpad->backwards(H[s]+offset,w2+s*mu);
+    for(unsigned int s=0; s < M; ++s) {
+      Complex *g=G[s]+offset;
+      if(symmetrize)
+        HermitianSymmetrizeX(mx,my1,mx,g);
+      xfftpad->backwards(g,v2+s*mu);
+    }
+    
+    for(unsigned int s=0; s < M; ++s) {
+      Complex *h=H[s]+offset;
+      if(symmetrize)
+        HermitianSymmetrizeX(mx,my1,mx,h);
+      xfftpad->backwards(h,w2+s*mu);
+    }
     
     for(unsigned int i=0; i < mu; i += my1)
       yconvolve->convolve(F,G,H,i+offset);
