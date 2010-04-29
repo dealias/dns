@@ -254,10 +254,9 @@ void DNS::InitialConditions()
 //  ForceMask.Allocate(Nx,my,align);
   //FMk.Dimension(Nx,my,(Complex *) ForceMask());
   
-  cout << endl << "GEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
+  cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
 
-  cout << endl << "ALLOCATING FFT BUFFERS (" << mx << " x " << my
-       << ")" << endl;
+  cout << "\nALLOCATING FFT BUFFERS (" << mx << " x " << my << ")" << endl;
   
   Convolution=new ImplicitHConvolution2(mx,my,2);
 
@@ -269,7 +268,7 @@ void DNS::InitialConditions()
   
   if(movie) {
     wr.Dimension(Nx,2*(Ny/2+1),(double *) g0());
-    cr=new crfft2d(Ny,g0);
+    cr=new crfft2d(Nx,Ny,g0);
   }
   
   InitialCondition->Set(w,NY[OMEGA]);
@@ -372,8 +371,8 @@ void DNS::OutFrame(int)
   g0.Load(Y[OMEGA]);
   cr->fft0(g0);
 
-  fw << 1 << Ny << Nx;  
-  
+  fw << 1 << Ny << Nx;
+
   for(int j=Ny-1; j >= 0; j--) {
     for(unsigned i=0; i < Nx; i++) {
       fw << (float) wr(i,j);
