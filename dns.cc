@@ -63,7 +63,8 @@ class DNS : public ProblemBase {
   unsigned xorigin; // horizontal index of Fourier origin.
 
   Real kx0, ky0; // grid spacing factor
-  array2<Complex> w; // array pointer for vorticity
+  array2<Complex> w; // Vorticity field
+  array2<Real> wr; // Inverse Fourier transform of vorticity field;
   
   int tcount;
   array1<unsigned>::opt count;
@@ -84,6 +85,9 @@ class DNS : public ProblemBase {
   Complex *G[2];
   
   ImplicitHConvolution2 *Convolution;
+  
+  crfft2d *cr;
+  
 public:
   DNS();
   virtual ~DNS() {}
@@ -93,10 +97,8 @@ public:
 		   unsigned& startM, unsigned& stopM) {
     start=Start(OMEGA);
     stop=Stop(OMEGA);
-    /*
-      startT=Start(TRANSFER);
-      stopT=Stop(TRANSFER);
-    */
+    startT=0;//Start(TRANSFER);
+    stopT=0;//Stop(TRANSFER);
     startM=Start(EK);
     stopM=Stop(EK);
   }
@@ -146,23 +148,23 @@ public:
 class Equilibrium : public InitialConditionBase {
 public:
   const char *Name() {return "Equilibrium";}
-  void Set(Var *w, unsigned n) {
+  void Set(Var *w0, unsigned n) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
+    array2<Var> w(Nx,my,w0);
     unsigned xorigin=DNSProblem->getxorigin();
+    Real kx0=1; // FIXME
+    Real ky0=1; // FIXME
     for(unsigned i=0; i < Nx; i++) {
-      unsigned imy=i*my;
+      Real kx=kx0*((int) i-(int) xorigin);
+      vector wi=w[i];
       for(unsigned j=0 ; j < my; ++j)
-	w[imy+j]=pow(1.0/Complex(hypot(i-xorigin,j)+1),2.0);
+        wi[j]=pow(1.0/Complex(hypot(kx,ky0*j)+1),2.0); // FIXME
     }
-  /*
-  for(unsigned i=0; i < Nx; i++) {
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      wi[j]=pow(1.0/Complex(hypot(i-xorigin,j)+1),2.0);
-    }
-  }
-  */
+      
+// For movie testing:
+// w(xorigin,my-1)=2.0;
+//  w(mx-1,0)=2.0;
   }
 };
 
@@ -220,6 +222,8 @@ oxstream fvx,fvy,fw,fekvk;
 
 void DNS::InitialConditions()
 {
+  if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
+  
   kx0=1.0;
   ky0=1.0;
   mx=(Nx+1)/2;
@@ -252,6 +256,9 @@ void DNS::InitialConditions()
   
   cout << endl << "GEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
 
+  cout << endl << "ALLOCATING FFT BUFFERS (" << mx << " x " << my
+       << ")" << endl;
+  
   Convolution=new ImplicitHConvolution2(mx,my,2);
 
   Allocate(count,nshells);
@@ -259,9 +266,14 @@ void DNS::InitialConditions()
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
   // Initialize the vorticity field.
   w.Set(Y[OMEGA]);
-  InitialCondition->Set(w,NY[OMEGA]);
-  w(origin)=0.0;
   
+  if(movie) {
+    wr.Dimension(Nx,2*(Ny/2+1),(double *) g0());
+    cr=new crfft2d(Ny,g0);
+  }
+  
+  InitialCondition->Set(w,NY[OMEGA]);
+
   HermitianSymmetrizeX(mx,my,xorigin,w);
   
   for(unsigned i=0; i < NY[EK]; i++)
@@ -286,11 +298,9 @@ void DNS::InitialConditions()
     
   if(output) 
     open_output(fu,dirsep,"u");
-  if(movie) {
-    open_output(fvx,dirsep,"vx");
-    open_output(fvy,dirsep,"vy");
+  
+  if(movie)
     open_output(fw,dirsep,"w");
-  }
 }
 
 void DNS::Initialize()
@@ -359,17 +369,18 @@ void DNS::Output(int it)
 
 void DNS::OutFrame(int)
 {
-/*
+  g0.Load(Y[OMEGA]);
+  cr->fft0(g0);
+
   fw << 1 << Ny << Nx;  
   
-  for(int j=my-1; j >= 0; j--) {
+  for(int j=Ny-1; j >= 0; j--) {
     for(unsigned i=0; i < Nx; i++) {
-      fw << (float) Vorticity(i,j);
+      fw << (float) wr(i,j);
     }
   }
   
   fw.flush();
-*/
 }	
 
 void DNS::ComputeInvariants(Real& E, Real& Z, Real& P)
