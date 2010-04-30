@@ -149,6 +149,15 @@ public:
   }
 };
 
+class Constant : public InitialConditionBase {
+public:
+  const char *Name() {return "Constant";}
+  void Set(Var *w, unsigned n) {
+    for(unsigned i=0; i < n; i++) 
+      w[i]=Complex(icalpha,icbeta);
+  }
+};
+
 class Equipartition : public InitialConditionBase {
 public:
   const char *Name() {return "Equipartition";}
@@ -168,8 +177,8 @@ public:
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real ky=ky0*j;
 	Real k2=kx2+ky*ky;
-	wi[j]=Complex(1.0,1.0)*sqrt(k2/(icalpha+icbeta*k2));
-//      wi[j]=0.0;
+	wi[j]=Complex(1.0,1.0)*sqrt(sqrt(k2)/(icalpha+icbeta*k2));
+	// FIXME: why the second sqrt?
       }
     }
       
@@ -203,6 +212,7 @@ DNSVocabulary::DNSVocabulary()
   METHOD(DNS);
 
   INITIALCONDITION(Zero);
+  INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
 }
 
@@ -314,6 +324,7 @@ void DNS::InitialConditions()
 void DNS::Initialize()
 {
   fevt << "#   t\t\t E\t\t\t Z" << endl;
+ for(unsigned i=0; i < nshells; i++) count[i]=0;
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -342,7 +353,7 @@ void DNS::Spectrum(vector& S, const vector& y)
       int J2=j*j;
       unsigned K=(unsigned)(sqrt(I2+J2)-0.5);
       Real ky2=ky0*ky0*J2;
-      S[K] += abs2(wi[j])/(kx2+ky2);
+      S[K] += abs2(wi[j])/(kx2+ky2); // FIXME: correct normalization?
     }
   }
   
