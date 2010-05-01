@@ -362,7 +362,7 @@ void DNS::Spectrum(vector& S, const vector& y)
   }
   
   for(unsigned K=0; K < nshells; K++)
-    if(count[K]) S[K] *= twopi*K/count[K]; // TODO: Move twopi to asy.
+    if(count[K]) S[K] *= twopi*K/count[K]; // TODO: Move twopi/count[K] to asy.
 }
 
 void DNS::Output(int it)
