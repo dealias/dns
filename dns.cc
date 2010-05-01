@@ -23,6 +23,7 @@ Real icbeta=1.0;
 ForcingBase *Forcing;
 InitialConditionBase *InitialCondition;
 
+unsigned int nspectrum=1;
 // Vocabulary
 //Real nu=1.0;
 //Real ICvx=1.0;
@@ -119,7 +120,7 @@ public:
   }
   
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
-    Spectrum(Src[EK],Y[OMEGA]);
+    if(nspectrum) Spectrum(Src[EK],Y[OMEGA]);
   }
   
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
@@ -201,7 +202,8 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
-  
+  VOCAB(nspectrum,0,1,"Spectrum flag (0=off, 1=on)");
+
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
   VOCAB(icalpha,-REAL_MAX,REAL_MAX,"initial condition parameter");
   VOCAB(icbeta,-REAL_MAX,REAL_MAX,"initial condition parameter");
@@ -273,7 +275,7 @@ void DNS::InitialConditions()
   
   Convolution=new ImplicitHConvolution2(mx,my,2);
 
-  Allocate(count,nshells);
+  Allocate(count,NY[EK]);
   
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
   // Initialize the vorticity field.
@@ -338,7 +340,7 @@ void DNS::Spectrum(vector& S, const vector& y)
 {
   w.Set(y);
   
-  for(unsigned K=0; K < nshells; K++)
+  for(unsigned K=0; K < NY[EK]; K++)
     S[K]=0.0;
 
   // Compute instantaneous angular sum of vorticity squared over circular shell.
@@ -367,17 +369,19 @@ void DNS::Output(int it)
   
   if(movie) OutFrame(it);
 	
-  ostringstream buf;
-  buf << "ekvk" << dirsep << "t" << tcount;
-  open_output(fekvk,dirsep,buf.str().c_str(),0);
-  out_curve(fekvk,t,"t");
-  Var *y1=Y[EK];
-  fekvk << nshells;
-  for(unsigned K=0; K < nshells; K++)
-    fekvk << y1[K]*twopi/(K*count[K]);
-  fekvk.close();
-  if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
-    
+  if(nspectrum) {
+    ostringstream buf;
+    buf << "ekvk" << dirsep << "t" << tcount;
+    open_output(fekvk,dirsep,buf.str().c_str(),0);
+    out_curve(fekvk,t,"t");
+    Var *y1=Y[EK];
+    fekvk << NY[EK];
+    for(unsigned K=0; K < NY[EK]; K++)
+      fekvk << y1[K]*twopi/(K*count[K]);
+    fekvk.close();
+    if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
+  }    
+
   tcount++;
   ft << t << endl;
   
