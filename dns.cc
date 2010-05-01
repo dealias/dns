@@ -70,15 +70,9 @@ class DNS : public ProblemBase {
   array1<unsigned>::opt count;
   
   unsigned nmode;
-	
-//  array3<Complex> S;
-  
   unsigned nshells;  // Number of spectral shells
   
   rvector spectrum;
-  
-  array3<Real> ForceMask;
-  array3<Complex> FMk;
   
   array2<Complex> f0,f1,g0,g1;
   array2<Complex> buffer;
@@ -123,7 +117,11 @@ public:
     NonLinearSource(Src,Y,t);
     LinearSource(Src,Y,t);
   }
-  void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {}
+  
+  void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
+    Spectrum(Src[EK],Y[OMEGA]);
+  }
+  
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
     NonConservativeSource(Src,Y,t);
@@ -221,7 +219,6 @@ DNSVocabulary::DNSVocabulary()
 
 DNSVocabulary DNS_Vocabulary;
 
-
 DNS::DNS()
 {
   DNSProblem=this;
@@ -270,10 +267,6 @@ void DNS::InitialConditions()
   G[0]=g0;
   G[1]=g1;
     
-  //u.Dimension(Nx,Ny);
-//  ForceMask.Allocate(Nx,my,align);
-  //FMk.Dimension(Nx,my,(Complex *) ForceMask());
-  
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
 
   cout << "\nALLOCATING FFT BUFFERS (" << mx << " x " << my << ")" << endl;
@@ -348,7 +341,7 @@ void DNS::Spectrum(vector& S, const vector& y)
   for(unsigned K=0; K < nshells; K++)
     S[K]=0.0;
 
-  // Compute instantaneous angular average over circular shell.
+  // Compute instantaneous angular sum of vorticity squared over circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
     Real kx=kx0*((int) i-(int) xorigin);
@@ -356,13 +349,9 @@ void DNS::Spectrum(vector& S, const vector& y)
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real ky=ky0*j;
-      Real k2=kx2+ky*ky;
-      S[(unsigned)(sqrt(k2)-0.5)] += abs2(wi[j])/k2;
+      S[(unsigned)(sqrt(kx2+ky*ky)-0.5)] += abs2(wi[j]);
     }
   }
-  
-  for(unsigned K=0; K < nshells; K++)
-    if(count[K]) S[K] *= twopi*K/count[K]; // TODO: Move twopi/count[K] to asy.
 }
 
 void DNS::Output(int it)
@@ -383,7 +372,9 @@ void DNS::Output(int it)
   open_output(fekvk,dirsep,buf.str().c_str(),0);
   out_curve(fekvk,t,"t");
   Var *y1=Y[EK];
-  out_curve(fekvk,y1,"ekvk",nshells);
+  fekvk << nshells;
+  for(unsigned K=0; K < nshells; K++)
+    fekvk << y1[K]*twopi/(K*count[K]);
   fekvk.close();
   if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
     
@@ -502,8 +493,6 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   
   cout << sum << endl;
 #endif  
-  
-  Spectrum(Src[EK],Y[OMEGA]);
 }
 
 void DNS::Stochastic(const vector2&Y, double, double)
