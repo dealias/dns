@@ -177,8 +177,10 @@ public:
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real ky=ky0*j;
 	Real k2=kx2+ky*ky;
-	wi[j]=Complex(1.0,1.0)*sqrt(sqrt(k2)/(icalpha+icbeta*k2));
-	// FIXME: why the second sqrt?
+// Distribute the enstrophy evenly between the real and imaginary components
+        Real v=icalpha+icbeta*k2;
+        v=v ? sqrt(0.5*k2/v) : 0.0;
+	wi[j]=Complex(v,v);
       }
     }
       
@@ -324,13 +326,17 @@ void DNS::InitialConditions()
 void DNS::Initialize()
 {
   fevt << "#   t\t\t E\t\t\t Z" << endl;
- for(unsigned i=0; i < nshells; i++) count[i]=0;
+  
+  for(unsigned i=0; i < nshells; i++)
+    count[i]=0;
+  
   for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
+    Real kx=kx0*((int) i-(int) xorigin);
+    Real kx2=kx*kx;
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      unsigned K=(unsigned)(sqrt(I2+j*j)-0.5);
-      count[K]++;
+      Real ky=ky0*j;
+      Real k2=kx2+ky*ky;
+      count[(unsigned)(sqrt(k2)-0.5)]++;
     }
   }
 }
@@ -345,20 +351,18 @@ void DNS::Spectrum(vector& S, const vector& y)
   // Compute instantaneous angular average over circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
+    Real kx=kx0*((int) i-(int) xorigin);
+    Real kx2=kx*kx;
     vector wi=w[i];
-    Real kx2=kx0*kx0*I2;
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      int J2=j*j;
-      unsigned K=(unsigned)(sqrt(I2+J2)-0.5);
-      Real ky2=ky0*ky0*J2;
-      S[K] += abs2(wi[j])/(kx2+ky2); // FIXME: correct normalization?
+      Real ky=ky0*j;
+      Real k2=kx2+ky*ky;
+      S[(unsigned)(sqrt(k2)-0.5)] += abs2(wi[j])/k2;
     }
   }
   
   for(unsigned K=0; K < nshells; K++)
-    if(count[K]) S[K] *= twopi*K/count[K];
+    if(count[K]) S[K] *= twopi*K/count[K]; // TODO: Move twopi to asy.
 }
 
 void DNS::Output(int it)

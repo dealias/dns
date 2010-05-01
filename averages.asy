@@ -51,11 +51,6 @@ real[][] getintegrals(string dir, real T, real Tmax, real exp, int n=1)
   return integral;
 }
 
-real[] angleint(real [] A) 
-{
-  return 2.0*pi*kc*A;
-}
-
 real[] Ek;
 real[] k;
 real[][] M2;
@@ -63,7 +58,7 @@ real[][] M2;
 void Ekavg()
 {
   M2=getintegrals("ekvk",T,Tmax,2);
-  Ek=0.5*angleint(M2[0]);
+  Ek=0.5*M2[NL];
 
   k=Ek > 0 ? kc : null;
   Ek=Ek > 0 ? Ek : null;
