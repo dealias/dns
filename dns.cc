@@ -23,7 +23,6 @@ Real icbeta=1.0;
 ForcingBase *Forcing;
 InitialConditionBase *InitialCondition;
 
-unsigned int nspectrum=1;
 // Vocabulary
 //Real nu=1.0;
 //Real ICvx=1.0;
@@ -33,11 +32,12 @@ unsigned Ny=1;
 //Real force=1.0;
 //Real kforce=1.0;
 //Real deltaf=2.0;
-int movie=0;
-int rezero=0;
+unsigned movie=0;
+unsigned rezero=0;
+unsigned spectrum=1;
 
-int xpad=0;
-int ypad=0;
+int xpad=1;
+int ypad=1;
 
 enum Field {OMEGA,EK};
 
@@ -72,8 +72,6 @@ class DNS : public ProblemBase {
   
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
-  
-  rvector spectrum;
   
   array2<Complex> f0,f1,g0,g1;
   array2<Complex> buffer;
@@ -120,7 +118,7 @@ public:
   }
   
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
-    if(nspectrum) Spectrum(Src[EK],Y[OMEGA]);
+    if(spectrum) Spectrum(Src[EK],Y[OMEGA]);
   }
   
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
@@ -182,13 +180,8 @@ public:
 	wi[j]=Complex(v,v);
       }
     }
-      
-// For movie testing:
-// w(xorigin,my-1)=2.0;
-//    w(mx-1,0)=2.0;
   }
 };
-
 
 DNSVocabulary::DNSVocabulary()
 {
@@ -202,7 +195,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
-  VOCAB(nspectrum,0,1,"Spectrum flag (0=off, 1=on)");
+  VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
 
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
   VOCAB(icalpha,-REAL_MAX,REAL_MAX,"initial condition parameter");
@@ -257,8 +250,11 @@ void DNS::InitialConditions()
   
   unsigned int Nxmy=Nx*my;
   unsigned int nbuf=3*Nxmy;
+  unsigned int Nx0=Nx+xpad;
+  unsigned int Ny0=Ny+ypad;
+  int my0=Ny0/2+1;
   if(movie)
-    nbuf=max(nbuf,(Nx+xpad)*((Ny+ypad)/2+1));
+    nbuf=max(nbuf,Nx0*my0);
 
   block=ComplexAlign(nbuf);
   f1.Dimension(Nx,my,block);
@@ -275,23 +271,21 @@ void DNS::InitialConditions()
   
   Convolution=new ImplicitHConvolution2(mx,my,2);
 
-  Allocate(count,NY[EK]);
-  
-  InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
-  // Initialize the vorticity field.
-  w.Set(Y[OMEGA]);
+  Allocate(count,nshells);
   
   if(movie) {
-    buffer.Dimension(Nx+xpad,(Ny+ypad)/2+1,block);
-    wr.Dimension(Nx+xpad,2*((Ny+ypad)/2+1),(double *) block);
-    Padded=new ExplicitHConvolution2(Nx+xpad,Ny+ypad,mx,my,block);
+    buffer.Dimension(Nx0,my0,block);
+    wr.Dimension(Nx0,2*my0,(Real *) block);
+    Padded=new ExplicitHConvolution2(Nx0,Ny0,mx,my,block);
   }
   
+  InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
+  w.Set(Y[OMEGA]);
   InitialCondition->Set(w,NY[OMEGA]);
   w(xorigin,0)=0;
   HermitianSymmetrizeX(mx,my,xorigin,w);
   
-  for(unsigned i=0; i < NY[EK]; i++)
+  for(unsigned i=0; i < nshells; i++)
     Y[EK][i]=0.0;
   
   tcount=0;
@@ -340,7 +334,7 @@ void DNS::Spectrum(vector& S, const vector& y)
 {
   w.Set(y);
   
-  for(unsigned K=0; K < NY[EK]; K++)
+  for(unsigned K=0; K < nshells; K++)
     S[K]=0.0;
 
   // Compute instantaneous angular sum of vorticity squared over circular shell.
@@ -369,14 +363,14 @@ void DNS::Output(int it)
   
   if(movie) OutFrame(it);
 	
-  if(nspectrum) {
+  if(spectrum) {
     ostringstream buf;
     buf << "ekvk" << dirsep << "t" << tcount;
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
     Var *y1=Y[EK];
-    fekvk << NY[EK];
-    for(unsigned K=0; K < NY[EK]; K++)
+    fekvk << nshells;
+    for(unsigned K=0; K < nshells; K++)
       fekvk << y1[K]*twopi/(K*count[K]);
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
@@ -388,7 +382,7 @@ void DNS::Output(int it)
   if(rezero && it % rezero == 0) {
     vector2 Y=Integrator->YVector();
     vector T=Y[EK];
-    for(unsigned i=0; i < NY[EK]; i++)
+    for(unsigned i=0; i < nshells; i++)
       T[i]=0.0;
   }
 }
@@ -396,21 +390,22 @@ void DNS::Output(int it)
 void DNS::OutFrame(int)
 {
   w.Set(Y[OMEGA]);
-  unsigned int offset=(Nx+xpad)/2-mx+1;
-  unsigned int stop=2*mx-1;
-  for(unsigned int i=0; i < stop; ++i) {
+  unsigned int Nx0=Nx+xpad;
+  unsigned int Ny0=Ny+ypad;
+  unsigned int offset=Nx0/2-mx+1;
+  for(unsigned int i=0; i < Nx; ++i) {
     unsigned int I=i+offset;
     for(unsigned int j=0; j < my; j++)
       buffer(I,j)=w(i,j);
   }
     
   Padded->pad(buffer);
-  Padded->backwards(buffer);
+  Padded->backwards(buffer,true);
 
-  fw << 1 << (Ny+ypad) << (Nx+xpad);
+  fw << 1 << Ny0 << Nx0;
 
-  for(int j=Ny+ypad-1; j >= 0; j--) {
-    for(unsigned i=0; i < (Nx+xpad); i++) {
+  for(int j=Ny0-1; j >= 0; j--) {
+    for(unsigned i=0; i < Nx0; i++) {
       fw << (float) wr(i,j);
     }
   }
@@ -486,7 +481,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   Convolution->convolve(F,G);
   
 #if 0
-  double sum=0.0;
+  Real sum=0.0;
   for(unsigned i=0; i < Nx; ++i) {
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
