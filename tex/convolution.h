@@ -430,7 +430,6 @@ public:
   Complex *ZetaH,*ZetaL;
   Complex **U;
   bool allocated;
-public:  
   
   void init() {
     if(m % 2) {
@@ -788,6 +787,9 @@ protected:
   mrcfft1d *yForwards;
   crfft2d *Backwards;
   rcfft2d *Forwards;
+  
+  unsigned int s;
+  Complex *ZetaH,*ZetaL;
 public:  
   ExplicitHConvolution2(unsigned int nx, unsigned int ny, 
                         unsigned int mx, unsigned int my, Complex *f,
@@ -799,6 +801,7 @@ public:
     if(nx % 2) {
       if(!prune) My=nyp;
       prune=true;
+      s=BuildZeta(2*nx,nx,ZetaH,ZetaL);
     }
 
     if(prune) {
@@ -825,7 +828,7 @@ public:
   }    
   
   void pad(Complex *f);
-  void backwards(Complex *f);
+  void backwards(Complex *f, bool shift=true);
   void forwards(Complex *f);
   void convolve(Complex *f, Complex *g, bool symmetrize=true);
 };
@@ -1388,6 +1391,9 @@ protected:
   mrcfft1d *yForwards;
   crfft2d *Backwards;
   rcfft2d *Forwards;
+  unsigned int s;
+  Complex *ZetaH,*ZetaL;
+  
 public:  
   ExplicitHBiConvolution2(unsigned int nx, unsigned int ny, 
                           unsigned int mx, unsigned int my, Complex *f,
@@ -1399,6 +1405,7 @@ public:
     if(nx % 2) {
       if(!prune) My=nyp;
       prune=true;
+      s=BuildZeta(2*nx,nx,ZetaH,ZetaL);
     }
     
     if(prune) {
@@ -1425,8 +1432,8 @@ public:
   }    
   
   void pad(Complex *f);
-  void backwards(Complex *f);
-  void forwards(Complex *f);
+  void backwards(Complex *f, bool shift=true);
+  void forwards(Complex *f, bool shift=true);
   void convolve(Complex *f, Complex *g, Complex *h, bool symmetrize=true);
 };
 
