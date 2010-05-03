@@ -289,7 +289,7 @@ void DNS::InitialConditions()
     for(unsigned i=0; i < ny; ++i) 
       errmask[i]=1;
     
-    array2<int> omegamask(Nx,my,errmask+(Y[OMEGA]-y));
+    array2<int> omegamask(Nx,my,(int *) errmask+(Y[OMEGA]-y));
     for(unsigned i=0; i <= xorigin; i++)
       omegamask(i,0)=0;
   }
