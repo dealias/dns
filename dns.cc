@@ -227,6 +227,8 @@ void DNS::InitialConditions()
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   
   k0=1.0;
+  k02=k0*k0;
+  
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
@@ -348,7 +350,8 @@ void DNS::Spectrum(vector& S, const vector& y)
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      S[(unsigned)(sqrt(I2+j*j)-0.5)] += abs2(wi[j]);
+      Real k=sqrt(k02*(I2+j*j));
+      S[(unsigned)(k-0.5)] += abs2(wi[j])/k;
     }
   }
 }
@@ -373,9 +376,8 @@ void DNS::Output(int it)
     out_curve(fekvk,t,"t");
     Complex *y1=Y[EK];
     fekvk << nshells;
-    fekvk << 0.0;
-    for(unsigned K=1; K < nshells; K++)
-      fekvk << (y1[K]*twopi/(K*count[K])).re;
+    for(unsigned K=0; K < nshells; K++)
+      fekvk << (y1[K]*twopi/count[K]).re;
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
   }    
