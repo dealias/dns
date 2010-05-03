@@ -288,7 +288,7 @@ void DNS::InitialConditions()
   for(unsigned i=0; i < nshells; i++)
     Y[EK][i]=0.0;
 
-  if(dynamic) {
+  if(dynamic && false) {
     Allocate(errmask,ny);
     for(unsigned i=0; i < ny; ++i) 
       errmask[i]=1;
@@ -489,6 +489,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   
   F[0]=f0;
   Convolution->convolve(F,G);
+  f0(origin)=0.0;
   
 #if 0
   Real sum=0.0;
