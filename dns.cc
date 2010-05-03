@@ -62,6 +62,7 @@ class DNS : public ProblemBase {
   unsigned mx, my; // size of data arrays
   unsigned origin; // linear index of Fourier origin.
   unsigned xorigin; // horizontal index of Fourier origin.
+  unsigned ny; // total number of evolved modes
 
   Real kx0, ky0; // grid spacing factor
   array2<Complex> w; // Vorticity field
@@ -239,8 +240,10 @@ void DNS::InitialConditions()
   nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
   
   NY[OMEGA]=Nx*my;
+  //  NY[EK]=spectrum ? nshells : 0;
   NY[EK]=nshells;
-  
+  ny=NY[OMEGA]+NY[EK]; //total number of modes
+
   size_t align=sizeof(Complex);  
   
   Allocator(align);
@@ -287,7 +290,29 @@ void DNS::InitialConditions()
   
   for(unsigned i=0; i < nshells; i++)
     Y[EK][i]=0.0;
-  
+
+  if(dynamic) {
+    Allocate(errmask,ny);
+    for(unsigned i=0; i < ny; ++i) 
+      errmask[i]=0.0;
+    //    bool Zero=strcmp(InitialCondition->Name(),"Zero") == 0.0;
+    for(unsigned i=0; i < Nx; i++) {
+      unsigned imy=i*my;
+      if(i <= xorigin) { //set errmask to zero left of origin
+	errmask[imy]=0.0;
+      } else { // set errmask to one right of origin
+	errmask[imy]=1.0;
+      }
+      for(unsigned j=1; j < my; ++j) { // set other errmasks to one
+	errmask[imy+j]=1.0;
+      }
+    }
+
+    // set remaning errmasks to zero
+    for(unsigned int i=Nx*my; i < ny; i++)
+      errmask[i]=0;
+  }
+
   tcount=0;
   if(restart) {
     Real t0;
@@ -304,7 +329,7 @@ void DNS::InitialConditions()
   mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
   
   errno=0;
-    
+
   if(output) 
     open_output(fu,dirsep,"u");
   
