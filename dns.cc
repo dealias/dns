@@ -25,8 +25,6 @@ InitialConditionBase *InitialCondition;
 
 // Vocabulary
 //Real nu=1.0;
-//Real ICvx=1.0;
-//Real ICvy=1.0;
 unsigned Nx=1;
 unsigned Ny=1;
 //Real force=1.0;
@@ -63,7 +61,8 @@ class DNS : public ProblemBase {
   unsigned origin; // linear index of Fourier origin.
   unsigned xorigin; // horizontal index of Fourier origin.
 
-  Real kx0, ky0; // grid spacing factor
+  Real k0; // grid spacing factor
+  Real k02; // k0^2
   array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
   
@@ -99,8 +98,7 @@ public:
   unsigned getNx() {return Nx;}
   unsigned getmx() {return mx;}
   unsigned getmy() {return my;}
-  Real getkx0() {return kx0;}
-  Real getky0() {return ky0;}
+  Real getk0() {return k0;}
   unsigned getxorigin() {return xorigin;}
 
 
@@ -140,7 +138,7 @@ DNS *DNSProblem;
 class Zero : public InitialConditionBase {
 public:
   const char *Name() {return "Zero";}
-  void Set(Var *w, unsigned n) {
+  void Set(Complex *w, unsigned n) {
     for(unsigned i=0; i < n; i++) 
       w[i]=0.0;
   }
@@ -149,7 +147,7 @@ public:
 class Constant : public InitialConditionBase {
 public:
   const char *Name() {return "Constant";}
-  void Set(Var *w, unsigned n) {
+  void Set(Complex *w, unsigned n) {
     for(unsigned i=0; i < n; i++) 
       w[i]=Complex(icalpha,icbeta);
   }
@@ -158,22 +156,21 @@ public:
 class Equipartition : public InitialConditionBase {
 public:
   const char *Name() {return "Equipartition";}
-  void Set(Var *w0, unsigned) {
+  void Set(Complex *w0, unsigned) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
     unsigned xorigin=DNSProblem->getxorigin();
-    Real kx0=DNSProblem->getkx0();
-    Real ky0=DNSProblem->getky0();
+    Real k0=DNSProblem->getk0();
 
-    array2<Var> w(Nx,my,w0);
+    array2<Complex> w(Nx,my,w0);
     w(xorigin,0)=0;
+    Real k02=k0*k0;
     for(unsigned i=0; i < Nx; i++) {
-      Real kx=kx0*((int) i-(int) xorigin);
-      Real kx2=kx*kx;
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	Real ky=ky0*j;
-	Real k2=kx2+ky*ky;
+	Real k2=k02*(I2+j*j);
 // Distribute the enstrophy evenly between the real and imaginary components
         Real v=icalpha+icbeta*k2;
         v=v ? sqrt(0.5*k2/v) : 0.0;
@@ -229,8 +226,7 @@ void DNS::InitialConditions()
 {
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   
-  kx0=1.0;
-  ky0=1.0;
+  k0=1.0;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
@@ -293,7 +289,7 @@ void DNS::InitialConditions()
     for(unsigned i=0; i < ny; ++i) 
       errmask[i]=1;
     
-    array2<int> omegamask(Nx,my,errmask()+(Y[OMEGA]-y));
+    array2<int> omegamask(Nx,my,errmask+(Y[OMEGA]-y));
     for(unsigned i=0; i <= xorigin; i++)
       omegamask(i,0)=0;
   }
@@ -330,12 +326,10 @@ void DNS::Initialize()
     count[i]=0;
   
   for(unsigned i=0; i < Nx; i++) {
-    Real kx=kx0*((int) i-(int) xorigin);
-    Real kx2=kx*kx;
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real ky=ky0*j;
-      Real k2=kx2+ky*ky;
-      count[(unsigned)(sqrt(k2)-0.5)]++;
+      count[(unsigned)(sqrt(I2+j*j)-0.5)]++;
     }
   }
 }
@@ -350,12 +344,11 @@ void DNS::Spectrum(vector& S, const vector& y)
   // Compute instantaneous angular sum of vorticity squared over circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
-    Real kx=kx0*((int) i-(int) xorigin);
-    Real kx2=kx*kx;
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real ky=ky0*j;
-      S[(unsigned)(sqrt(kx2+ky*ky)-0.5)] += abs2(wi[j]);
+      S[(unsigned)(sqrt(I2+j*j)-0.5)] += abs2(wi[j]);
     }
   }
 }
@@ -368,7 +361,7 @@ void DNS::Output(int it)
   ComputeInvariants(E,Z,P);
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
-  Var *y=Y[0];
+  Complex *y=Y[0];
   if(output) out_curve(fu,y,"u",NY[0]);
   
   if(movie) OutFrame(it);
@@ -378,10 +371,11 @@ void DNS::Output(int it)
     buf << "ekvk" << dirsep << "t" << tcount;
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
-    Var *y1=Y[EK];
+    Complex *y1=Y[EK];
     fekvk << nshells;
-    for(unsigned K=0; K < nshells; K++)
-      fekvk << y1[K]*twopi/(K*count[K]);
+    fekvk << 0.0;
+    for(unsigned K=1; K < nshells; K++)
+      fekvk << (y1[K]*twopi/(K*count[K])).re;
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
   }    
@@ -428,14 +422,13 @@ void DNS::ComputeInvariants(Real& E, Real& Z, Real& P)
   E=Z=P=0.0;
   w.Set(Y[OMEGA]);
   for(unsigned i=0; i < Nx; i++) {
-    Real kx=kx0*((int) i-(int) xorigin);
-    Real kx2=kx*kx;
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real w2=abs2(wi[j]);
       Z += w2;
-      Real ky=ky0*j;
-      Real k2=kx2+ky*ky;
+      Real k2=k02*(I2+j*j);
       E += w2/k2;
       P += k2*w2;
     }
@@ -467,7 +460,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   g1(origin)=0.0;
   
   for(unsigned i=0; i < Nx; ++i) {
-    Real kx=kx0*((int) i-(int) xorigin);
+    Real kx=k0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
     vector f0i=f0[i];
@@ -475,7 +468,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
     vector g0i=g0[i];
     vector g1i=g1[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real ky=ky0*j;
+      Real ky=k0*j;
       Complex wij=wi[j];
       Complex kxw=Complex(-kx*wij.im,kx*wij.re);
       Complex kyw=Complex(-ky*wij.im,ky*wij.re);
