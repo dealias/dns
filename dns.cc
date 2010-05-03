@@ -62,7 +62,6 @@ class DNS : public ProblemBase {
   unsigned mx, my; // size of data arrays
   unsigned origin; // linear index of Fourier origin.
   unsigned xorigin; // horizontal index of Fourier origin.
-  unsigned ny; // total number of evolved modes
 
   Real kx0, ky0; // grid spacing factor
   array2<Complex> w; // Vorticity field
@@ -237,12 +236,10 @@ void DNS::InitialConditions()
 
   xorigin=mx-1;
   origin=xorigin*my;
-  nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
+  nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
   
   NY[OMEGA]=Nx*my;
-  //  NY[EK]=spectrum ? nshells : 0;
   NY[EK]=nshells;
-  ny=NY[OMEGA]+NY[EK]; //total number of modes
 
   size_t align=sizeof(Complex);  
   
@@ -270,7 +267,7 @@ void DNS::InitialConditions()
     
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
 
-  cout << "\nALLOCATING FFT BUFFERS (" << mx << " x " << my << ")" << endl;
+  cout << "\nALLOCATING FFT BUFFERS" << endl;
   
   Convolution=new ImplicitHConvolution2(mx,my,2);
 
@@ -294,23 +291,11 @@ void DNS::InitialConditions()
   if(dynamic) {
     Allocate(errmask,ny);
     for(unsigned i=0; i < ny; ++i) 
-      errmask[i]=0.0;
-    //    bool Zero=strcmp(InitialCondition->Name(),"Zero") == 0.0;
-    for(unsigned i=0; i < Nx; i++) {
-      unsigned imy=i*my;
-      if(i <= xorigin) { //set errmask to zero left of origin
-	errmask[imy]=0.0;
-      } else { // set errmask to one right of origin
-	errmask[imy]=1.0;
-      }
-      for(unsigned j=1; j < my; ++j) { // set other errmasks to one
-	errmask[imy+j]=1.0;
-      }
-    }
-
-    // set remaning errmasks to zero
-    for(unsigned int i=Nx*my; i < ny; i++)
-      errmask[i]=0;
+      errmask[i]=1;
+    
+    array2<int> omegamask(Nx,my,errmask()+(Y[OMEGA]-y));
+    for(unsigned i=0; i <= xorigin; i++)
+      omegamask(i,0)=0;
   }
 
   tcount=0;
