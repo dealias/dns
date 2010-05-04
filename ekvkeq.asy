@@ -5,14 +5,19 @@ scale(Log);
 
 pen p=linewidth(1);
 
+
+
 while(nextrun()) {
 //  gettime(n == 0);
+  write(n);
   gettime();
   Ekavg();
   draw(graph(k,Ek),p+Pen(n),texify(run));
   real A=sum(Ek);
   real B=1.0;
-  draw(graph(k,k^2/(A+B*k^2)),p+Pen(n)+dashed);
+  //  draw(graph(k,k^2/(A+B*k^2)),p+Pen(n)+dashed);
+  real equiparition(real k) {  return pi*k/(icalpha+icbeta*k*k);}
+  draw(graph(equiparition,min(kc),max(kc)),p+Pen(n)+dashed);
 }
 
 xaxis("$k$",BottomTop,LeftTicks);
