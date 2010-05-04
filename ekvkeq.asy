@@ -9,7 +9,6 @@ pen p=linewidth(1);
 
 while(nextrun()) {
 //  gettime(n == 0);
-  write(n);
   gettime();
   Ekavg();
   draw(graph(k,Ek),p+Pen(n),texify(run));
