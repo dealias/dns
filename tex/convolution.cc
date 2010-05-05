@@ -873,7 +873,6 @@ void oddShift(unsigned int nx, unsigned int ny, Complex *f, int sign,
       unsigned int stop=j+nyp;
       for(; j < stop; ++j)
         f[j] *= zeta;
-      j=nyp*k;
       Sign=-Sign;
     }
     stop=min(k+s,nx);
