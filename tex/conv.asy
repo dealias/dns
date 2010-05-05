@@ -204,9 +204,9 @@ pair[] convolve0odd(pair[] f, pair[] g, pair[] u, pair[] v)
   pair overlap0=f0[c];
 
   f[c]=A+B;
-  real[] f1=crfft(reverse(conj(f[c:m])),even);
+  real[] f1=crfft(reverse(f[c:m]),even);
   g[c]=C+D;
-  real[] g1=crfft(reverse(conj(g[c:m])),even);
+  real[] g1=crfft(reverse(g[c:m]),even);
   f1 *= g1;
   pair[] f1=rcfft(f1);
 
@@ -223,7 +223,7 @@ pair[] convolve0odd(pair[] f, pair[] g, pair[] u, pair[] v)
 
   for(int k=1; k < c; ++k) {
     pair f0k=f0[k]*ninv;
-    pair f1k=conj(Zetak)*f1[k];
+    pair f1k=conj(Zetak*f1[k]);
     pair f2k=Zetak*f2[k];
     Zetak *= zeta;
     F[k]=f0k+f1k+f2k;
@@ -231,7 +231,7 @@ pair[] convolve0odd(pair[] f, pair[] g, pair[] u, pair[] v)
   }
 
   pair f0k=overlap0*ninv;
-  pair f1k=conj(Zetak)*f1[c];
+  pair f1k=conj(Zetak*f1[c]);
   pair f2k=Zetak*f2[c];
   F[c]=f0k+f1k+f2k;
   F[c+1]=conj(f0k)+conj(zeta3*f1k)+zeta3*conj(f2k);
