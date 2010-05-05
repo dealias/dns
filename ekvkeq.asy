@@ -12,9 +12,11 @@ while(nextrun()) {
   draw(graph(k,Ek),p+Pen(2*n),texify(run));
   real A=sum(Ek);
   real B=1.0;
-  real equiparition(real k) {return pi*k/(icalpha+icbeta*k^2);}
-  draw(graph(equiparition,min(kc),max(kc)),p+Pen(2*n+1)+dashed,
-       "$\displaystyle\frac{\pi k}{\alpha+\beta k^2}$");
+  if(ic=="Equipartition") {
+    real equiparition(real k) {return pi*k/(icalpha+icbeta*k^2);}
+    draw(graph(equiparition,min(kc),max(kc)),p+Pen(2*n+1)+dashed,
+	 "$\displaystyle\frac{\pi k}{\alpha+\beta k^2}$");
+  }
 }
 
 xaxis("$k$",BottomTop,LeftTicks);
