@@ -376,7 +376,7 @@ void DNS::Spectrum(vector& S, const vector& y)
   for(unsigned K=0; K < nshells; K++)
     S[K]=0.0;
 
-  // Compute instantaneous angular sum of vorticity squared over circular shell.
+  // Compute instantaneous angular average over circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
