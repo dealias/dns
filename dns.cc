@@ -6,6 +6,8 @@
 #include "InitialCondition.h"
 #include "convolution.h"
 #include "Conservative.h"
+#include "Linearity.h"
+#include "Exponential.h"
 
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
 
@@ -13,18 +15,26 @@ using namespace Array;
 
 const double ProblemVersion=1.0;
 
+#ifndef DEPEND
+#if !COMPLEX
+#error Navier requires COMPLEX=1 in options.h
+#endif
+#endif
+
 const char *method="DNS";
 const char *integrator="RK5";
-const char *forcing="WhiteNoiseBanded";
 const char *ic="Equipartition";
+const char *linearity="None";
+const char *forcing="WhiteNoiseBanded";
 Real icalpha=1.0;
 Real icbeta=1.0;
 
-ForcingBase *Forcing;
 InitialConditionBase *InitialCondition;
+LinearityBase *Linearity;
+ForcingBase *Forcing;
 
 // Vocabulary
-//Real nu=1.0;
+Real nuH=0.0;
 unsigned Nx=1;
 unsigned Ny=1;
 //Real force=1.0;
@@ -45,14 +55,18 @@ public:
   const char *Abbrev() {return "DNS";}
   DNSVocabulary();
   
-  Table<ForcingBase> *ForcingTable;
   Table<InitialConditionBase> *InitialConditionTable;
-  
+  Table<LinearityBase> *LinearityTable;
+  Table<ForcingBase> *ForcingTable;
+
+  InitialConditionBase *NewInitialCondition(const char *& key) {
+    return InitialConditionTable->Locate(key);
+  }
   ForcingBase *NewForcing(const char *& key) {
     return ForcingTable->Locate(key);
   }
-  InitialConditionBase *NewInitialCondition(const char *& key) {
-    return InitialConditionTable->Locate(key);
+  LinearityBase *NewLinearity(const char *& key) {
+    return LinearityTable->Locate(key);
   }
 };
    
@@ -65,7 +79,7 @@ class DNS : public ProblemBase {
   Real k02; // k0^2
   array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
-  
+    
   int tcount;
   array1<unsigned>::opt count;
   
@@ -127,6 +141,11 @@ public:
     ConservativeSource(Src,Y,t);
     NonConservativeSource(Src,Y,t);
   }
+  Nu LinearCoeff(unsigned int i) {
+    return nuH; //FIXME: this shouldn't always be one.
+  }
+  
+
   void ComputeInvariants(Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
   
@@ -180,32 +199,46 @@ public:
   }
 };
 
+class None : public LinearityBase {
+public:
+  const char *Name() {return "None";}
+};
+
+class Power : public LinearityBase {
+public:
+  const char *Name() {return "Power";}
+};
+
 DNSVocabulary::DNSVocabulary()
 {
   Vocabulary=this;
 
-  //  VOCAB(nu,0.0,REAL_MAX,"Kinematic viscosity");
-  //  VOCAB(force,0.0,REAL_MAX,"force coefficient");
-  //  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
-  //  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   VOCAB_NOLIMIT(ic,"Initial Condition");
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
   VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
-
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
-  VOCAB(icalpha,-REAL_MAX,REAL_MAX,"initial condition parameter");
-  VOCAB(icbeta,-REAL_MAX,REAL_MAX,"initial condition parameter");
-
-//  ForcingTable=new Table<ForcingBase>("forcing");
-  InitialConditionTable=new Table<InitialConditionBase>("initial condition");
   
   METHOD(DNS);
-
+  
+  InitialConditionTable=new Table<InitialConditionBase>("initial condition");
+  VOCAB(icalpha,-REAL_MAX,REAL_MAX,"initial condition parameter");
+  VOCAB(icbeta,-REAL_MAX,REAL_MAX,"initial condition parameter");
   INITIALCONDITION(Zero);
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
+
+  LinearityTable=new Table<LinearityBase>("linearity");
+  VOCAB_NOLIMIT(linearity,"Linear source type");
+  VOCAB(nuH,0.0,REAL_MAX,"Kinematic viscosity");
+  LINEARITY(None);
+  LINEARITY(Power);
+
+  //  ForcingTable=new Table<ForcingBase>("forcing");
+  //  VOCAB(force,0.0,REAL_MAX,"force coefficient");
+  //  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
+  //  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
 }
 
 
@@ -216,6 +249,7 @@ DNS::DNS()
   DNSProblem=this;
   check_compatibility(DEBUG);
   ConservativeIntegrators(DNS_Vocabulary.IntegratorTable,this);
+  ExponentialIntegrators(DNS_Vocabulary.IntegratorTable,this);
 }
 
 ifstream ftin;
@@ -239,6 +273,9 @@ void DNS::InitialConditions()
   NY[OMEGA]=Nx*my;
   NY[EK]=nshells;
 
+  cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
+
+  cout << "\nALLOCATING FFT BUFFERS" << endl;
   size_t align=sizeof(Complex);  
   
   Allocator(align);
@@ -262,10 +299,6 @@ void DNS::InitialConditions()
   F[1]=f1;
   G[0]=g0;
   G[1]=g1;
-    
-  cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
-
-  cout << "\nALLOCATING FFT BUFFERS" << endl;
   
   Convolution=new ImplicitHConvolution2(mx,my,2);
 
@@ -449,6 +482,15 @@ void DNS::FinalOutput()
 
 void DNS::LinearSource(const vector2& Src, const vector2& Y, double)
 {
+  w.Set(Y[OMEGA]);
+  f0.Set(Src[OMEGA]);
+  for(unsigned i=0; i < Nx; i++) {
+    vector f0i=f0[i];
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      f0i[j] -= 1.0*wi[j]; // FIXME: allow to not just be -1
+    }
+  }
 }
 
 void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
