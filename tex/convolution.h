@@ -155,20 +155,22 @@ class Dot {
 protected:
   unsigned int m;
   unsigned int M;
+  bool odd;
   unsigned int stride;
-  
 public:
   Dot(unsigned int m, unsigned int M) : 
-    m(m), M(M), stride(m+2) {} // only even m implemented
+    m(m), M(M), odd(m % 2), stride(odd ? m+1 : m+2) {}
   
   // a[0][k]=sum_i a[i][k]*b[i][k]
   void mult(double *a, double **B, unsigned int offset=0) {
+    unsigned int m1=m-1;
     if(M == 1) { // a[k]=a[k]*b[k]
       double *B0=B[0]+offset;
 #ifdef __SSE2__        
-      unsigned int mm1=m-1;
-      for(unsigned int k=0; k < mm1; k += 2)
+      for(unsigned int k=0; k < m1; k += 2)
         STORE(a+k,LOAD(a+k)*LOAD(B0+k));
+      if(odd)
+        STORE(a+m1,LOAD(a+m1)*LOAD(B0+m1));
 #else        
       for(unsigned int k=0; k < m; ++k)
         a[k] *= B0[k];
@@ -178,9 +180,10 @@ public:
       double *B0=B[0]+offset;
       double *B1=B[1]+offset;
 #ifdef __SSE2__        
-      unsigned int mm1=m-1;
-      for(unsigned int k=0; k < mm1; k += 2)
+      for(unsigned int k=0; k < m1; k += 2)
         STORE(a+k,LOAD(a+k)*LOAD(B0+k)+LOAD(a1+k)*LOAD(B1+k));
+      if(odd)
+        STORE(a+m1,LOAD(a+m1)*LOAD(B0+m1)+LOAD(a1+m1)*LOAD(B1+m1));
 #else        
       for(unsigned int k=0; k < m; ++k)
         a[k]=a[k]*B0[k]+a1[k]*B1[k];
@@ -192,10 +195,12 @@ public:
       double *B1=B[1]+offset;
       double *B2=B[2]+offset;
 #ifdef __SSE2__        
-      unsigned int mm1=m-1;
-      for(unsigned int k=0; k < mm1; k += 2)
+      for(unsigned int k=0; k < m1; k += 2)
         STORE(a+k,LOAD(a+k)*LOAD(B0+k)+LOAD(a1+k)*LOAD(B1+k)+
               LOAD(a2+k)*LOAD(B2+k));
+      if(odd)
+        STORE(a+m1,LOAD(a+m1)*LOAD(B0+m1)+LOAD(a1+m1)*LOAD(B1+m1)+
+              LOAD(a2+m1)*LOAD(B2+m1));
 #else        
       for(unsigned int k=0; k < m; ++k)
         a[k]=a[k]*B0[k]+a1[k]*B1[k]+a2[k]*B2[k];
@@ -203,8 +208,8 @@ public:
     } else {
       double *A=a-offset;
       double *B0=B[0];
+      unsigned int stop=m1+offset;
 #ifdef __SSE2__        
-      unsigned int stop=m+offset-1;
       for(unsigned int k=offset; k < stop; k += 2) {
         double *p=A+k;
         Vec sum=LOAD(p)*LOAD(B0+k);
@@ -212,9 +217,15 @@ public:
           sum += LOAD(p+i*stride)*LOAD(B[i]+k);
         STORE(p,sum);
       }
+      if(odd) {
+        double *p=A+stop;
+        Vec sum=LOAD(p)*LOAD(B0+stop);
+        for(unsigned int i=1; i < M; ++i)
+          sum += LOAD(p+i*stride)*LOAD(B[i]+stop);
+        STORE(p,sum);
+      }
 #else        
-      unsigned int stop=m+offset;
-      for(unsigned int k=offset; k < stop; ++k) {
+      for(unsigned int k=offset; k <= stop; ++k) {
         double *p=A+k;
         double sum=(*p)*B0[k];
         for(unsigned int i=1; i < M; ++i)
@@ -432,14 +443,6 @@ public:
   bool allocated;
   
   void init() {
-    if(m % 2) {
-      std::cerr << "Odd-sized Hermitian convolutions are not implemented;" 
-                << std::endl
-                << "pad the input data with a final zero element."
-                << std::endl;
-      _exit(1);
-    }
-    
     U=new Complex *[M];
     unsigned int cp1=c+1;
     for(unsigned int i=0; i < M; ++i)
@@ -451,7 +454,7 @@ public:
     rco=new rcfft1d(m,(double *) u,v);
     cro=new crfft1d(m,v,(double *) u);
     
-    s=BuildZeta(3*m,c,ZetaH,ZetaL);
+    s=BuildZeta(3*m,2*c == m ? c : cp1,ZetaH,ZetaL);
   }
   
   // m is the number of independent data values.

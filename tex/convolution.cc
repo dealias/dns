@@ -221,9 +221,36 @@ void ExplicitHConvolution::convolve(Complex *f, Complex *g)
   forwards(f);
 }
 
+// Reverse and conjugate an array of length m.
+inline void conjreverse(Complex *f, unsigned int m)
+{
+  unsigned int c=m/2;
+  unsigned int m1=m-1;
+  for(unsigned int k=0; k < c; ++k) {
+    Complex *p=f+k;
+    Complex *q=f+m1-k;
+    double re=p->re;
+    double im=p->im;
+    p->re=q->re;
+    p->im=-q->im;
+    q->re=re;
+    q->im=-im;
+  }
+  if(2*c < m) f[c]=conj(f[c]);
+}
+
 void ImplicitHConvolution::convolve(Complex **F, Complex **G, 
                                     unsigned int offset)
 {
+  if(m == 1) {
+    double sum=0.0;
+    for(unsigned int i=0; i < M; ++i)
+      sum += (F[i]+offset)->re*(G[i]+offset)->re;
+    *(F[0]+offset)=sum;
+    return;
+  }
+
+  bool even=2*c == m;
   unsigned int cp1=c+1;
   
   // 9M-2 of 9M FFTs are out-of-place 
@@ -255,6 +282,7 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
     Complex *ZetaL0=ZetaL;
     
 #ifdef __SSE2__      
+    Vec Zetak;
     Vec Fmk=LOAD(&fmk);
     Vec Gmk=LOAD(&gmk);
     Vec Mhalf=LOAD(&mhalf);
@@ -264,7 +292,7 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
       Vec X=UNPACKL(Zeta,Zeta);
       Vec Y=UNPACKH(CONJ(Zeta),Zeta);
       for(; k < stop; ++k) {
-        Vec Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
+        Zetak=ZMULT(X,Y,LOAD(ZetaL0+k));
         Complex *p=fi+k;
         Complex *q=gi+k;
         Vec A=LOAD(p);
@@ -347,24 +375,50 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
       stop=min(k+s,c);
       ZetaL0=ZetaL-k;
     }
-#endif      
-  
-    Complex *wi=w+3*i;
-    double A=fc.re;
-    double B=sqrt3*fc.im;
-    ui[c]=A+B;
-    wi[0].re=A-B;
-    Complex *fic=fi+c;
-    wi[1]=*fic;
-    *fic=2.0*A;
+#endif
     
-    A=gc.re;
-    B=sqrt3*gc.im;
-    vi[c]=A+B;
-    wi[0].im=A-B;
-    Complex *gic=gi+c;
-    wi[2]=*gic;
-    *gic=2.0*A;
+    Complex *wi=w+3*i;
+    if(even) {
+      double A=fc.re;
+      double B=sqrt3*fc.im;
+      ui[c]=A+B;
+      wi[0].re=A-B;
+      Complex *fic=fi+c;
+      wi[1]=*fic;
+      *fic=2.0*A;
+    
+      A=gc.re;
+      B=sqrt3*gc.im;
+      vi[c]=A+B;
+      wi[0].im=A-B;
+      Complex *gic=gi+c;
+      wi[2]=*gic;
+      *gic=2.0*A;
+    } else {
+      unsigned int a=c/s;
+      Complex Zetak=conj(ZetaH[a]*ZetaL[c-s*a]);
+      Complex *fic=fi+c;
+#ifdef __SSE2__      
+      STORE(&fmk,Fmk);
+      STORE(&gmk,Gmk);
+#else
+      fmk=Complex(fmkre,fmkim);
+      gmk=Complex(gmkre,gmkim);
+#endif      
+      *fic=fc+conj(fmk);
+      Complex A=Zetak*(fc.re+zeta3*fmk.re);
+      static Complex I(0,1);
+      Complex B=I*Zetak*(fc.im-zeta3*fmk.im);
+      ui[c]=A+B;
+      wi[0]=A-B;
+      
+      Complex *gic=gi+c;
+      *gic=gc+conj(gmk);
+      A=Zetak*(gc.re+zeta3*gmk.re);
+      B=I*Zetak*(gc.im-zeta3*gmk.im);
+      vi[c]=A+B;
+      wi[1]=A-B;
+    }
     
     // r=-1:
     if(i+1 < M) {
@@ -375,6 +429,7 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
       cr->fft(vi);
     }
   }
+    
   mult((double *) v,(double **) U);
   rco->fft((double *) v,u); // v is now free
 
@@ -389,24 +444,32 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
   Complex *f=F[0]+offset;
   rco->fft((double *) v,f);
   
-  unsigned int cm1=c-1;
-  Complex *fcm1=f+cm1;
-  Complex S=*fcm1;
-  double T=(fcm1+1)->re;
+  unsigned int start=m-c-1;
+  Complex *fstart=f+start;
+  Complex S=*fstart;
+  double T=(f+c)->re;
 
   // r=1:
-  unsigned int offsetcm1=offset+cm1;
+  unsigned int offsetstart=offset+start;
+  unsigned int offsetcm1=offset+c-1;
   for(unsigned int i=0; i < M; ++i) {
-    Complex *f1=F[i]+offsetcm1;
     Complex *wi=w+3*i;
-    f1[0]=wi[0].re;
-    f1[1]=wi[1];
-    Complex *g1=G[i]+offsetcm1;
-    g1[0]=wi[0].im;
-    g1[1]=wi[2];
+    Complex *f1=F[i]+offsetstart;
+    Complex *g1=G[i]+offsetstart;
+    if(even) {
+      f1[0]=wi[0].re;
+      f1[1]=wi[1];
+      g1[0]=wi[0].im;
+      g1[1]=wi[2];
+    } else {
+      f1[0]=wi[0]; // Optimize
+      g1[0]=wi[1];
+      conjreverse(f1,cp1);
+      conjreverse(g1,cp1);
+    }
     
     cro->fft(g1,(double *) (v+i*cp1));
-    cro->fft(f1,(double *) g1);
+    cro->fft(f1,(double *) (G[i]+offsetcm1));
   }
   mult((double *) v,(double **) G,2*offsetcm1);
   Complex *gcm1=G[0]+offsetcm1;
@@ -422,7 +485,7 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
   Vec Ninv=LOAD(&ninv2);
   Vec Mhalf=LOAD(&mhalf);
   Vec HSqrt3=LOAD(&hSqrt3);
-  for(unsigned int a=0, k=1; k < cm1; ++a) {
+  for(unsigned int a=0, k=1; k < start; ++a) {
     Vec Zeta=Ninv*LOAD(ZetaH+a);
     Vec X=UNPACKL(Zeta,Zeta);
     Vec Y=UNPACKH(CONJ(Zeta),Zeta);
@@ -437,11 +500,11 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
       STORE(p,F0+S);
       STORE(s,CONJ(F0+Mhalf*S)-HSqrt3*FLIP(F1-F2));
     }
-    stop=min(k+s,cm1);
+    stop=min(k+s,start);
     ZetaL0=ZetaL-k;
   }
 #else
-  for(unsigned int a=0, k=1; k < cm1; ++a) {
+  for(unsigned int a=0, k=1; k < start; ++a) {
     Complex *p=ZetaH+a;
     double Hre=ninv*p->re;
     double Him=ninv*p->im;
@@ -466,19 +529,21 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
       s->re=f0re-0.5*sre-hsqrt3*(f1im-f2im);
       s->im=-f0im+0.5*sim-hsqrt3*(f1re-f2re);
     }
-    stop=min(k+s,cm1);
+    stop=min(k+s,start);
     ZetaL0=ZetaL-k;
   }
 #endif    
     
-  unsigned int a=(c-1)/s;
-  Complex Zetak0=ninv*ZetaH[a]*ZetaL[c-1-s*a];
+  unsigned int a=start/s;
+  Complex Zetak0=ninv*ZetaH[a]*ZetaL[start-s*a];
   S *= ninv;
-  Complex f1k=conj(Zetak0)*gcm1[cm1];
-  Complex f2k=Zetak0*u[cm1];
-  f[cm1]=S+f1k+f2k;
-  if(c > 1) f[c+1]=conj(S+zeta3*f1k)+zeta3*conj(f2k);
-  f[c]=(T-gcm1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
+  Complex f1k=conj(Zetak0)*gcm1[start];
+  Complex f2k=Zetak0*u[start];
+  f[start]=S+f1k+f2k;
+  if(c > 1 || !even) f[c+1]=conj(S+zeta3*f1k)+zeta3*conj(f2k);
+  
+  if(even)
+    f[c]=(T-gcm1[c].re*zeta3-u[c].re*conj(zeta3))*ninv;
 }
 
 void DirectHConvolution::convolve(Complex *h, Complex *f, Complex *g)

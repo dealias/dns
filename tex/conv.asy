@@ -144,8 +144,8 @@ pair[] rcfft0padinv(real[] f, bool unscramble=true)
 pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
 {
   int m=f.length;
+  if(m == 1) return new pair[] {f[0]*g[0]};
   int c=quotient(m,2);
-  if(c == 0) return new pair[] {f[0]*g[0]};
   
   bool even=2c == m;
 
@@ -228,8 +228,7 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   f[start]=A;
   if(even)
     f[c]=fc;
-  else
-    f[start:m]=reverse(conj(f[start:m]));
+  else f[start:m]=reverse(conj(f[start:m]));
   real[] f1=crfft(f[start:m],even);
   g[start]=C;
   if(even) g[c]=gc;
