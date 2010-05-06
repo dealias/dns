@@ -149,7 +149,7 @@ public:
     return nuk(i,j);
   }
   Real nuk(unsigned i, unsigned j) {
-    Real k=k0*sqrt(i*i+j*j);
+    Real k=k0*hypot(i,j);
     return nuL*pow(k,pL)+nuH*pow(k,pH);
   }
   
@@ -395,7 +395,7 @@ void DNS::Spectrum(vector& S, const vector& y)
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real k=sqrt(k02*(I2+j*j));
+      Real k=k0*sqrt(I2+j*j);
       S[(unsigned)(k-0.5)] += abs2(wi[j])/k;
     }
   }
