@@ -588,11 +588,10 @@ one output vector, the complete convolution requires a total of nine
 Hermitian Fourier transforms of size $m$, for an overall computational
 scaling of $\fr{9}{2}K m \log_2 m$ operations, in agreement with the
 leading-order scaling of an explicitly padded centered Hermitian convolution.
-For simplicity, in this work we only document the case of practical
-importance, where $m=2c$ (for efficiency reasons one might pad
-odd-length input arrays with an extra zero word anyway). We see in
-Function~{\tt\ref{conv}} that seven out of the nine Fourier transforms can be
-performed out of place using the same amount of memory,
+For simplicity, we document here only the practically important
+case $m=2c$; minor changes are required to implement the case $m=2c+1$.
+We see in Function~{\tt\ref{conv}} that seven out of the nine Fourier
+transforms can be performed out of place using the same amount of memory,
 $2(\floor{N/2}+1)=6c+2$, as would be used to compute a centered Hermitian
 convolution with explicit padding. 
 
