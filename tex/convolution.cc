@@ -407,17 +407,16 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
 #endif      
       *fic=fc+conj(fmk);
       Complex A=Zetak*(fc.re+zeta3*fmk.re);
-      static Complex I(0,1);
-      Complex B=I*Zetak*(fc.im-zeta3*fmk.im);
-      ui[c]=A+B;
-      wi[0]=A-B;
+      Complex B=Zetak*(fc.im-zeta3*fmk.im);
+      ui[c]=Complex(A.re-B.im,A.im+B.re);
+      wi[0]=Complex(A.re+B.im,A.im-B.re);
       
       Complex *gic=gi+c;
       *gic=gc+conj(gmk);
       A=Zetak*(gc.re+zeta3*gmk.re);
-      B=I*Zetak*(gc.im-zeta3*gmk.im);
-      vi[c]=A+B;
-      wi[1]=A-B;
+      B=Zetak*(gc.im-zeta3*gmk.im);
+      vi[c]=Complex(A.re-B.im,A.im+B.re);
+      wi[1]=Complex(A.re+B.im,A.im-B.re);
     }
     
     // r=-1:
