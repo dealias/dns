@@ -186,7 +186,7 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   pair A;
   if(even) {
     A=fc.x;
-    pair B=sqrt(3)*fc.y;
+    real B=sqrt(3)*fc.y;
     fc=f[c];
     f[c]=2.0*A;
     u[c]=A+B;
@@ -204,7 +204,7 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   pair C;
   if(even) {
     C=gc.x;
-    pair B=sqrt(3)*gc.y;
+    real B=sqrt(3)*gc.y;
     gc=g[c];
     g[c]=2.0*C;
     v[c]=C+B;
@@ -261,9 +261,10 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   pair f0k=overlap0*ninv;
   pair f1k=conj(Zetak)*f1[stop];
   pair f2k=Zetak*f2[stop];
-  F[stop]=f0k+f1k+f2k;
-  F[c+1]=conj(f0k)+conj(zeta3*f1k)+zeta3*conj(f2k);
-  
+  if(c > 1) // This conditional is only for the asy version
+    F[stop]=f0k+f1k+f2k;
+  if(c > 1 || !even)
+    F[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
   if(even)
     F[c]=(overlap1-f1[c].x*zeta3-f2[c].x*conj(zeta3))*ninv;
 
@@ -303,9 +304,10 @@ pair[] direct(pair[] F, pair[] G)
   return H;
 }	
 
-pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
+//pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,1),(-3,-1),(1,2),(2,1),(3,1),3};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
+pair[] d={-5};
 
 pair[] f=copy(d);
 pair[] g=copy(d);
