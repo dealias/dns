@@ -9,12 +9,14 @@ real[] crfft(pair[] f, bool even=true, int sign=1)
   int L=even ? 2m-2 : 2m-1;
   pair[] h=new pair[L];
   h[0]=f[0];
-  for(int i=1; i < m-1; ++i) {
-    h[i]=f[i];
-    h[L-i]=conj(f[i]);
+  if(m > 1) {
+    for(int i=1; i < m-1; ++i) {
+      h[i]=f[i];
+      h[L-i]=conj(f[i]);
+    }
+    h[m-1]=f[m-1];
+    if(!even) h[m]=conj(f[m-1]);
   }
-  h[m-1]=f[m-1];
-  if(!even) h[m]=conj(f[m-1]);
   return map(xpart,fft(h,sign));
 }
 
@@ -143,6 +145,8 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
 {
   int m=f.length;
   int c=quotient(m,2);
+  if(c == 0) return new pair[] {f[0]*g[0]};
+  
   bool even=2c == m;
 
   int n=3*m;
@@ -261,10 +265,12 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
   pair f0k=overlap0*ninv;
   pair f1k=conj(Zetak)*f1[stop];
   pair f2k=Zetak*f2[stop];
-  if(c > 1) // This conditional is only for the asy version
+
+  if(c > 1 || !even) {
     F[stop]=f0k+f1k+f2k;
-  if(c > 1 || !even)
     F[c+1]=conj(f0k+zeta3*f1k)+zeta3*conj(f2k);
+  }
+  
   if(even)
     F[c]=(overlap1-f1[c].x*zeta3-f2[c].x*conj(zeta3))*ninv;
 
@@ -274,14 +280,13 @@ pair[] convolve0(pair[] f, pair[] g, pair[] u, pair[] v)
 pair[] convolve(pair[] F, pair[] G)
 {
   int m=F.length;
-  int n=quotient((2*m-1)*q,p);
-  //  n += 2;
-  int np=quotient(n,2)+1;
+  int n=3*m-2;
+  int n2=quotient(n,2);
   
   F=copy(F);
   G=copy(G);
   
-  for(int i=F.length; i < np; ++i) {
+  for(int i=m; i <= n2; ++i) {
     G[i]=0.0;
     F[i]=0.0;
   }
@@ -304,10 +309,10 @@ pair[] direct(pair[] F, pair[] G)
   return H;
 }	
 
-//pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
+pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1),(3,1)};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,1),(-3,-1),(1,2),(2,1),(3,1),3};
 //pair[] d={-5,(3,1),(4,-2),(-3,1),(0,-2),(0,1),(4,0),(-3,-1),(1,2),(2,1)};
-pair[] d={-5};
+// pair[] d={-5};
 
 pair[] f=copy(d);
 pair[] g=copy(d);
