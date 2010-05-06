@@ -35,7 +35,7 @@ ForcingBase *Forcing;
 
 // Vocabulary
 Real nuH=0.0, nuL=0.0;
-Real pH=1.0;
+int pH=1;
 int pL=0;
 unsigned Nx=1;
 unsigned Ny=1;
@@ -241,8 +241,8 @@ DNSVocabulary::DNSVocabulary()
   VOCAB_NOLIMIT(linearity,"Linear source type");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
-  VOCAB(pH,-REAL_MAX,REAL_MAX,"Power of Lapalcian for high-wavenumber viscosity");
-  VOCAB(pL,-INT_MAX,INT_MAX,"Power of Lapalcian for molecular viscosity");
+  VOCAB(pH,-INT_MAX,INT_MAX,"Power of Laplacian for high-wavenumber viscosity");
+  VOCAB(pL,-INT_MAX,INT_MAX,"Power of Laplacian for molecular viscosity");
 
   LINEARITY(None);
   LINEARITY(Power);
