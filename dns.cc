@@ -30,11 +30,13 @@ Real icalpha=1.0;
 Real icbeta=1.0;
 
 InitialConditionBase *InitialCondition;
-LinearityBase *Linearity;
+LinearityBase *Linearity;  // FIXME: remove?
 ForcingBase *Forcing;
 
 // Vocabulary
-Real nuH=0.0;
+Real nuH=0.0, nuL=0.0;
+Real pH=1.0;
+int pL=0;
 unsigned Nx=1;
 unsigned Ny=1;
 //Real force=1.0;
@@ -141,8 +143,14 @@ public:
     ConservativeSource(Src,Y,t);
     NonConservativeSource(Src,Y,t);
   }
-  Nu LinearCoeff(unsigned int i) {
-    return nuH; //FIXME: this shouldn't always be one.
+  Nu LinearCoeff(unsigned k) {
+    unsigned i=k/my;
+    unsigned j=k-my*i;
+    return nuk(i,j);
+  }
+  Real nuk(unsigned i, unsigned j) {
+    Real k=k0*sqrt(i*i+j*j);
+    return nuL*pow(k,pL)+nuH*pow(k,pH);
   }
   
 
@@ -231,7 +239,11 @@ DNSVocabulary::DNSVocabulary()
 
   LinearityTable=new Table<LinearityBase>("linearity");
   VOCAB_NOLIMIT(linearity,"Linear source type");
-  VOCAB(nuH,0.0,REAL_MAX,"Kinematic viscosity");
+  VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
+  VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
+  VOCAB(pH,-REAL_MAX,REAL_MAX,"Power of Lapalcian for high-wavenumber viscosity");
+  VOCAB(pL,-INT_MAX,INT_MAX,"Power of Lapalcian for molecular viscosity");
+
   LINEARITY(None);
   LINEARITY(Power);
 
@@ -488,7 +500,7 @@ void DNS::LinearSource(const vector2& Src, const vector2& Y, double)
     vector f0i=f0[i];
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      f0i[j] -= 1.0*wi[j]; // FIXME: allow to not just be -1
+      f0i[j] -= nuk(i,j)*wi[j];
     }
   }
 }
