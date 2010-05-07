@@ -461,7 +461,7 @@ void ImplicitHConvolution::convolve(Complex **F, Complex **G,
       g1[0]=wi[0].im;
       g1[1]=wi[2];
     } else {
-      f1[0]=wi[0]; // Optimize
+      f1[0]=wi[0];
       g1[0]=wi[1];
       conjreverse(f1,cp1);
       conjreverse(g1,cp1);
