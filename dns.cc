@@ -12,6 +12,7 @@
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
 
 using namespace Array;
+using namespace fftw;
 using std::ostringstream;
 
 const double ProblemVersion=1.0;

@@ -5,7 +5,8 @@ POLL = poll
 include $(TRI)/config/Common
 
 vpath %.cc $(HOME)/nw
-INCL = -I. -I$(TRI) -I$(HOME)/nw
+vpath %.cc $(HOME)/fftw++
+INCL = -I. -I$(TRI) -I$(HOME)/nw -I$(HOME)/fftw++
 
 FILES = dns fftw++ convolution $(CORE) $(UTILS)
 LIB += -lfftw3
