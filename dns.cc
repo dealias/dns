@@ -24,7 +24,7 @@ const double ProblemVersion=1.0;
 const char *method="DNS";
 const char *integrator="RK5";
 const char *ic="Equipartition";
-const char *linearity="None";
+const char *linearity="Power";
 const char *forcing="WhiteNoiseBanded";
 Real icalpha=1.0;
 Real icbeta=1.0;
@@ -64,11 +64,11 @@ public:
   InitialConditionBase *NewInitialCondition(const char *& key) {
     return InitialConditionTable->Locate(key);
   }
-  ForcingBase *NewForcing(const char *& key) {
-    return ForcingTable->Locate(key);
-  }
   LinearityBase *NewLinearity(const char *& key) {
     return LinearityTable->Locate(key);
+  }
+  ForcingBase *NewForcing(const char *& key) {
+    return ForcingTable->Locate(key);
   }
 };
    
@@ -207,15 +207,14 @@ public:
   }
 };
 
-class None : public LinearityBase {
-public:
-  const char *Name() {return "None";}
-};
-
 class Power : public LinearityBase {
 public:
   const char *Name() {return "Power";}
 };
+
+class None : public ForcingBase {
+};
+
 
 DNSVocabulary::DNSVocabulary()
 {
@@ -243,14 +242,13 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
   VOCAB(pH,-INT_MAX,INT_MAX,"Power of Laplacian for high-wavenumber viscosity");
   VOCAB(pL,-INT_MAX,INT_MAX,"Power of Laplacian for molecular viscosity");
-
-  LINEARITY(None);
   LINEARITY(Power);
 
-  //  ForcingTable=new Table<ForcingBase>("forcing");
+  ForcingTable=new Table<ForcingBase>("forcing");
   //  VOCAB(force,0.0,REAL_MAX,"force coefficient");
   //  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   //  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
+  FORCING(None);
 }
 
 
