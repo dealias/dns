@@ -41,9 +41,9 @@ int pH=1;
 int pL=0;
 unsigned Nx=1;
 unsigned Ny=1;
-//Real force=1.0;
-//Real kforce=1.0;
-//Real deltaf=2.0;
+Real force=1.0;
+Real kforce=1.0;
+Real deltaf=2.0;
 unsigned movie=0;
 unsigned rezero=0;
 unsigned spectrum=1;
@@ -217,6 +217,32 @@ public:
 class None : public ForcingBase {
 };
 
+class WhiteNoiseBanded : public ForcingBase {
+public:
+  const char *Name() {return "White-Noise Banded";}
+  void Force(array2<Complex> &w, const Real dt) {
+    unsigned Nx=DNSProblem->getNx();
+    unsigned my=DNSProblem->getmy();
+    unsigned xorigin=DNSProblem->getxorigin();
+    Real k0=DNSProblem->getk0();
+    Real kmin=max(kforce-deltaf,0.0);
+    Real kmax=kforce+deltaf;
+
+    // TODO: only loop over modes with k in (kmin,kmax)
+    Complex factor=force*sqrt(2.0*dt);
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	Real k=k0*sqrt(I2+j*j);
+	if (k > kmin && k < kmax) 
+	  wi[j] += factor*drand_gauss();
+      }
+    }
+  }
+};
+
 
 DNSVocabulary::DNSVocabulary()
 {
@@ -238,19 +264,22 @@ DNSVocabulary::DNSVocabulary()
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
 
-  LinearityTable=new Table<LinearityBase>("linearity");
   VOCAB_NOLIMIT(linearity,"Linear source type");
+  LinearityTable=new Table<LinearityBase>("linearity");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
   VOCAB(pH,-INT_MAX,INT_MAX,"Power of Laplacian for high-wavenumber viscosity");
   VOCAB(pL,-INT_MAX,INT_MAX,"Power of Laplacian for molecular viscosity");
   LINEARITY(Power);
 
+  VOCAB_NOLIMIT(forcing,"Forcing type");
   ForcingTable=new Table<ForcingBase>("forcing");
-  //  VOCAB(force,0.0,REAL_MAX,"force coefficient");
-  //  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
-  //  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
+  
+  VOCAB(force,0.0,REAL_MAX,"force coefficient");
+  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
+  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   FORCING(None);
+  FORCING(WhiteNoiseBanded);
 }
 
 
@@ -330,6 +359,9 @@ void DNS::InitialConditions()
   
   for(unsigned i=0; i < nshells; i++)
     Y[EK][i]=0.0;
+
+  Forcing=DNS_Vocabulary.NewForcing(forcing);
+
 
   if(dynamic && false) {
     Allocate(errmask,ny);
@@ -556,6 +588,9 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
 
 void DNS::Stochastic(const vector2&Y, double, double)
 {
-//  u.Set(Y[OMEGA]);
-//  Real factor=sqrt(2.0*dt)*rand_gauss();
+  w.Set(Y[OMEGA]);
+
+  Forcing->Force(w,dt);
+
+  HermitianSymmetrizeX(mx,my,xorigin,w); // FIXME: necessary?
 }
