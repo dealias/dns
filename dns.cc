@@ -6,7 +6,6 @@
 #include "InitialCondition.h"
 #include "convolution.h"
 #include "Conservative.h"
-#include "Linearity.h"
 #include "Exponential.h"
 
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
@@ -32,7 +31,6 @@ Real icalpha=1.0;
 Real icbeta=1.0;
 
 InitialConditionBase *InitialCondition;
-LinearityBase *Linearity;  // FIXME: remove?
 ForcingBase *Forcing;
 
 // Vocabulary
@@ -43,7 +41,7 @@ unsigned Nx=1;
 unsigned Ny=1;
 Real force=1.0;
 Real kforce=1.0;
-Real deltaf=2.0;
+Real deltaf=1.0;
 unsigned movie=0;
 unsigned rezero=0;
 unsigned spectrum=1;
@@ -60,14 +58,10 @@ public:
   DNSVocabulary();
   
   Table<InitialConditionBase> *InitialConditionTable;
-  Table<LinearityBase> *LinearityTable;
   Table<ForcingBase> *ForcingTable;
 
   InitialConditionBase *NewInitialCondition(const char *& key) {
     return InitialConditionTable->Locate(key);
-  }
-  LinearityBase *NewLinearity(const char *& key) {
-    return LinearityTable->Locate(key);
   }
   ForcingBase *NewForcing(const char *& key) {
     return ForcingTable->Locate(key);
@@ -117,6 +111,7 @@ public:
   unsigned getmx() {return mx;}
   unsigned getmy() {return my;}
   Real getk0() {return k0;}
+  Real getk02() {return k02;}
   unsigned getxorigin() {return xorigin;}
 
 
@@ -125,11 +120,16 @@ public:
   void Output(int it);
   void FinalOutput();
   void OutFrame(int it);
+  
+  void Spectrum(vector& S, const vector& y);
+  void Transfer(const vector2& Src, const vector2& Y);
+  
   void NonLinearSource(const vector2& Src, const vector2& Y, double t);
   void LinearSource(const vector2& Src, const vector2& Y, double t);
   
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
+    Transfer(Src,Y);
     LinearSource(Src,Y,t);
   }
   
@@ -139,6 +139,7 @@ public:
   
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
+    Transfer(Src,Y);
     NonConservativeSource(Src,Y,t);
   }
   void Source(const vector2& Src, const vector2& Y, double t) {
@@ -158,8 +159,6 @@ public:
 
   void ComputeInvariants(Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
-  
-  void Spectrum(vector& S, const vector& y);
 };
 
 DNS *DNSProblem;
@@ -209,38 +208,36 @@ public:
   }
 };
 
-class Power : public LinearityBase {
-public:
-  const char *Name() {return "Power";}
-};
-
 class None : public ForcingBase {
 };
 
 class WhiteNoiseBanded : public ForcingBase {
 public:
   const char *Name() {return "White-Noise Banded";}
-  void Force(array2<Complex> &w, const Real dt) {
+  void Force(array2<Complex> &w, Real factor) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
     unsigned xorigin=DNSProblem->getxorigin();
-    Real k0=DNSProblem->getk0();
-    Real kmin=max(kforce-deltaf,0.0);
-    Real kmax=kforce+deltaf;
-
+    Real k02=DNSProblem->getk02();
+    Real kmin=max(kforce-0.5*deltaf,0.0);
+    Real kmin2=kmin*kmin;
+    Real kmax=kforce+0.5*deltaf;
+    Real kmax2=kmax*kmax;
+    
     // TODO: only loop over modes with k in (kmin,kmax)
-    Complex factor=force*sqrt(2.0*dt);
+    factor *= force; 
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	Real k=k0*sqrt(I2+j*j);
-	if (k > kmin && k < kmax) 
-	  wi[j] += factor*drand_gauss();
+	Real k2=k02*(I2+j*j);
+	if (k2 > kmin2 && k2 < kmax2) 
+	  wi[j] += factor;
       }
     }
   }
+  bool Stochastic() {return true;}
 };
 
 
@@ -264,13 +261,10 @@ DNSVocabulary::DNSVocabulary()
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
 
-  VOCAB_NOLIMIT(linearity,"Linear source type");
-  LinearityTable=new Table<LinearityBase>("linearity");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
   VOCAB(pH,-INT_MAX,INT_MAX,"Power of Laplacian for high-wavenumber viscosity");
   VOCAB(pL,-INT_MAX,INT_MAX,"Power of Laplacian for molecular viscosity");
-  LINEARITY(Power);
 
   VOCAB_NOLIMIT(forcing,"Forcing type");
   ForcingTable=new Table<ForcingBase>("forcing");
@@ -586,11 +580,20 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
 #endif  
 }
 
+void DNS::Transfer(const vector2& Src, const vector2& Y)
+{
+  if(!Forcing->Stochastic()) {
+    f0.Set(Src[OMEGA]);
+    Forcing->Force(f0);
+    HermitianSymmetrizeX(mx,my,xorigin,f0);
+  }
+}
+
 void DNS::Stochastic(const vector2&Y, double, double)
 {
-  w.Set(Y[OMEGA]);
-
-  Forcing->Force(w,dt);
-
-  HermitianSymmetrizeX(mx,my,xorigin,w); // FIXME: necessary?
+  if(Forcing->Stochastic()) {
+    w.Set(Y[OMEGA]);
+    Forcing->Force(w,sqrt(2.0*dt)*drand_gauss());
+    HermitianSymmetrizeX(mx,my,xorigin,w);
+  }
 }
