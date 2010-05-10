@@ -135,6 +135,7 @@ public:
   
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
     if(spectrum) Spectrum(Src[EK],Y[OMEGA]);
+    HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
   }
   
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
@@ -149,13 +150,11 @@ public:
   Nu LinearCoeff(unsigned k) {
     unsigned i=k/my;
     unsigned j=k-my*i;
-    return nuk(i,j);
+    return nuk(k02*(i*i+j*j));
   }
-  Real nuk(unsigned i, unsigned j) {
-    Real k=k0*hypot(i,j);
-    return nuL*pow(k,pL)+nuH*pow(k,pH);
+  Real nuk(Real k2) {
+    return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
-  
 
   void ComputeInvariants(Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
@@ -232,7 +231,7 @@ public:
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real k2=k02*(I2+j*j);
-	if (k2 > kmin2 && k2 < kmax2) 
+	if (k2 >= kmin2 && k2 <= kmax2) 
 	  wi[j] += factor;
       }
     }
@@ -523,11 +522,12 @@ void DNS::LinearSource(const vector2& Src, const vector2& Y, double)
   w.Set(Y[OMEGA]);
   f0.Set(Src[OMEGA]);
   for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
     vector f0i=f0[i];
     vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      f0i[j] -= nuk(i,j)*wi[j];
-    }
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+      f0i[j] -= nuk(k02*(I2+j*j))*wi[j];
   }
 }
 
@@ -585,11 +585,10 @@ void DNS::Transfer(const vector2& Src, const vector2& Y)
   if(!Forcing->Stochastic()) {
     f0.Set(Src[OMEGA]);
     Forcing->Force(f0);
-    HermitianSymmetrizeX(mx,my,xorigin,f0);
   }
 }
 
-void DNS::Stochastic(const vector2&Y, double, double)
+void DNS::Stochastic(const vector2&Y, double, double dt)
 {
   if(Forcing->Stochastic()) {
     w.Set(Y[OMEGA]);
