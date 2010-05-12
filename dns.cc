@@ -40,6 +40,7 @@ int pL=0;
 unsigned Nx=1;
 unsigned Ny=1;
 Real eta=0.0;
+Complex force=0.0;
 Real kforce=1.0;
 Real deltaf=1.0;
 unsigned movie=0;
@@ -49,7 +50,7 @@ unsigned spectrum=1;
 int xpad=1;
 int ypad=1;
 
-enum Field {OMEGA,EK};
+enum Field {OMEGA,TRANSFER,EK};
 
 class DNSVocabulary : public VocabularyBase {
 public:
@@ -77,7 +78,9 @@ class DNS : public ProblemBase {
   Real k02; // k0^2
   array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
-    
+  array2<Complex> S;
+  vector T;
+
   int tcount;
   array1<unsigned>::opt count;
   
@@ -102,8 +105,8 @@ public:
 		   unsigned& startM, unsigned& stopM) {
     start=Start(OMEGA);
     stop=Stop(OMEGA);
-    startT=0;//Start(TRANSFER);
-    stopT=0;//Stop(TRANSFER);
+    startT=Start(TRANSFER);
+    stopT=Stop(TRANSFER);
     startM=Start(EK);
     stopM=Stop(EK);
   }
@@ -152,15 +155,53 @@ public:
     unsigned j=k-my*i;
     return nuk(k02*(i*i+j*j));
   }
+  
+  // TODO: use a 1D lookup table on i^2+j^2.
   Real nuk(Real k2) {
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
 
   void ComputeInvariants(Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
+  
+  Real Spectrum(unsigned int i) {
+    return T[i].re*twopi/count[i];
+  }
+  
+  Real Dissipation(unsigned int i) {
+    return T[i].im;
+  }
+  
+  Real Pi(unsigned int i) {
+    return T[i].re;
+  }
+  Real Eta(unsigned int i) {
+    return T[i].im;
+  }
+
 };
 
 DNS *DNSProblem;
+
+static Real Spectrum(unsigned int i)
+{
+  return DNSProblem->Spectrum(i);
+}
+
+static Real Dissipation(unsigned int i)
+{
+  return DNSProblem->Dissipation(i);
+}
+
+static Real Pi(unsigned int i)
+{
+  return DNSProblem->Pi(i);
+}
+
+static Real Eta(unsigned int i)
+{
+  return DNSProblem->Eta(i);
+}
 
 class Zero : public InitialConditionBase {
 public:
@@ -210,6 +251,35 @@ public:
 class None : public ForcingBase {
 };
 
+class ConstantBanded : public ForcingBase {
+public:
+  const char *Name() {return "Constant Banded";}
+  void Force(array2<Complex> &w, vector& T, const Complex&) {
+    unsigned Nx=DNSProblem->getNx();
+    unsigned my=DNSProblem->getmy();
+    unsigned xorigin=DNSProblem->getxorigin();
+    Real k02=DNSProblem->getk02();
+    Real kmin=max(kforce-0.5*deltaf,0.0);
+    Real kmin2=kmin*kmin;
+    Real kmax=kforce+0.5*deltaf;
+    Real kmax2=kmax*kmax;
+    
+    // TODO: only loop over modes with k in (kmin,kmax)
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	Real k2=k02*(I2+j*j);
+	if(k2 > kmin2 && k2 < kmax2) {
+          T[(unsigned)(sqrt(k2)-0.5)].im += realproduct(force,wi[j]);
+	  wi[j] += force;
+        }
+      }
+    }
+  }
+};
+
 class WhiteNoiseBanded : public ForcingBase {
 public:
   const char *Name() {return "White-Noise Banded";}
@@ -231,12 +301,11 @@ public:
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real k2=k02*(I2+j*j);
-	if (k2 > kmin2 && k2 < kmax2) 
+	if(k2 > kmin2 && k2 < kmax2)
 	  wi[j] += Factor;
       }
     }
   }
-  bool Stochastic() {return true;}
 };
 
 
@@ -254,21 +323,22 @@ DNSVocabulary::DNSVocabulary()
   METHOD(DNS);
   
   InitialConditionTable=new Table<InitialConditionBase>("initial condition");
-  VOCAB(icalpha,-REAL_MAX,REAL_MAX,"initial condition parameter");
-  VOCAB(icbeta,-REAL_MAX,REAL_MAX,"initial condition parameter");
+  VOCAB(icalpha,0.0,0.0,"initial condition parameter");
+  VOCAB(icbeta,0.0,0.0,"initial condition parameter");
   INITIALCONDITION(Zero);
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
 
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
-  VOCAB(pH,-INT_MAX,INT_MAX,"Power of Laplacian for high-wavenumber viscosity");
-  VOCAB(pL,-INT_MAX,INT_MAX,"Power of Laplacian for molecular viscosity");
+  VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
+  VOCAB(pL,0,0,"Power of Laplacian for molecular viscosity");
 
   VOCAB_NOLIMIT(forcing,"Forcing type");
   ForcingTable=new Table<ForcingBase>("forcing");
   
   VOCAB(eta,0.0,REAL_MAX,"vorticity injection rate");
+  VOCAB(force,(Complex) 0.0, (Complex) 0.0,"constant external force");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   FORCING(None);
@@ -287,8 +357,8 @@ DNS::DNS()
 }
 
 ifstream ftin;
-ofstream ft,fevt,fu;
-oxstream fvx,fvy,fw,fekvk;
+oxstream fwk,fw,fekvk,ftransfer;
+ofstream ft,fevt;
 
 void DNS::InitialConditions()
 {
@@ -305,6 +375,7 @@ void DNS::InitialConditions()
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
   
   NY[OMEGA]=Nx*my;
+  NY[TRANSFER]=nshells;
   NY[EK]=nshells;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl; 
@@ -314,7 +385,10 @@ void DNS::InitialConditions()
   
   Allocator(align);
   
+  Dimension(T,nshells);
+  
   w.Dimension(Nx,my);
+  S.Dimension(Nx,my);
   f0.Dimension(Nx,my);
   
   unsigned int Nxmy=Nx*my;
@@ -355,7 +429,6 @@ void DNS::InitialConditions()
 
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
-
   if(dynamic && false) {
     Allocate(errmask,ny);
     for(unsigned i=0; i < ny; ++i) 
@@ -377,14 +450,18 @@ void DNS::InitialConditions()
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
   
-  if(!restart) 
+  if(!restart) {
     remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
+    remove_dir(Vocabulary->FileName(dirsep,"transfer"));
+  }
+  
   mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
+  mkdir(Vocabulary->FileName(dirsep,"transfer"),0xFFFF);
   
   errno=0;
-
+  
   if(output) 
-    open_output(fu,dirsep,"u");
+    open_output(fwk,dirsep,"wk");
   
   if(movie)
     open_output(fw,dirsep,"w");
@@ -413,15 +490,16 @@ void DNS::Spectrum(vector& S, const vector& y)
   for(unsigned K=0; K < nshells; K++)
     S[K]=0.0;
 
-  // Compute instantaneous angular average over circular shell.
+  // Compute instantaneous angular sum over each circular shell.
 		
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real k=k0*sqrt(I2+j*j);
-      S[(unsigned)(k-0.5)] += abs2(wi[j])/k;
+      Real k2=k02*(I2+j*j);
+      Real k=sqrt(k2);
+      S[(unsigned)(k-0.5)] += Complex(abs2(wi[j])/k,nuk(k2)*abs2(wi[j]));
     }
   }
 }
@@ -435,21 +513,30 @@ void DNS::Output(int it)
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
   Complex *y=Y[0];
-  if(output) out_curve(fu,y,"u",NY[0]);
+  if(output) out_curve(fw,y,"w",NY[0]);
   
   if(movie) OutFrame(it);
 	
   if(spectrum) {
     ostringstream buf;
+    Set(T,Y[EK]);
     buf << "ekvk" << dirsep << "t" << tcount;
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
-    Complex *y1=Y[EK];
-    fekvk << nshells;
-    for(unsigned K=0; K < nshells; K++)
-      fekvk << (y1[K]*twopi/count[K]).re;
+    out_curve(fekvk,::Spectrum,"Ek",nshells);
+    out_curve(fekvk,::Dissipation,"nuk*Ek",nshells);
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
+
+    Set(T,Y[TRANSFER]);
+    buf.str("");
+    buf << "transfer" << dirsep << "t" << tcount;
+    open_output(ftransfer,dirsep,buf.str().c_str(),0);
+    out_curve(ftransfer,t,"t");
+    out_curve(ftransfer,::Pi,"Pi",nshells);
+    out_curve(ftransfer,::Eta,"Eta",nshells);
+    ftransfer.close();
+    if(!ftransfer) msg(ERROR,"Cannot write to file transfer");
   }    
 
   tcount++;
@@ -457,9 +544,12 @@ void DNS::Output(int it)
   
   if(rezero && it % rezero == 0) {
     vector2 Y=Integrator->YVector();
-    vector T=Y[EK];
+    vector T=Y[TRANSFER];
     for(unsigned i=0; i < nshells; i++)
       T[i]=0.0;
+    vector S=Y[EK];
+    for(unsigned i=0; i < nshells; i++)
+      S[i]=0.0;
   }
 }
 
@@ -582,16 +672,32 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
 
 void DNS::Transfer(const vector2& Src, const vector2& Y)
 {
-  if(!Forcing->Stochastic()) {
-    f0.Set(Src[OMEGA]);
-    Forcing->Force(f0);
+  w.Set(Y[OMEGA]);
+  S.Set(Src[OMEGA]);
+  Set(T,Src[TRANSFER]);
+  
+  for(unsigned K=0; K < nshells; K++)
+    T[K]=0.0;
+
+  Var factor=sqrt(2.0*dt)*crand_gauss();
+
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    vector Si=S[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      Real k=k0*sqrt(I2+j*j);
+      T[(unsigned)(k-0.5)].re += realproduct(Si[j],wi[j]);
+    }
   }
+  
+  f0.Set(Src[OMEGA]);
+  Forcing->Force(f0,T);
 }
 
 void DNS::Stochastic(const vector2&Y, double, double dt)
 {
-  if(Forcing->Stochastic()) {
-    w.Set(Y[OMEGA]);
-    Forcing->Force(w,sqrt(2.0*dt)*crand_gauss());
-  }
+  w.Set(Y[OMEGA]);
+  Forcing->Force(w,sqrt(2.0*dt)*crand_gauss());
 }

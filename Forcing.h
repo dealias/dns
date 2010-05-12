@@ -11,8 +11,12 @@ class ForcingBase {
   virtual ~ForcingBase() {}
   virtual const char *Name() {return "None";}
   virtual int Type() {return 0;}
+  
+  // For stochastic forcing.
   virtual void Force(Array::array2<Complex> &w, const Complex& factor=1.0) {}
-  virtual bool Stochastic() {return false;}
+  
+  // For deterministic forcing.
+  virtual void Force(Array::array2<Complex> &w, vector &T) {} 
 };
 
 extern ForcingBase *Forcing;

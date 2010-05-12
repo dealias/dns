@@ -6,7 +6,7 @@ include param;
 int NL=0;
 int LIN=1;
 
-real[][] getintegrals(string dir, real T, real Tmax, real exp, int n=1)
+real[][] getintegrals(string dir, real T, real Tmax, int n=1)
 {
   real[][] integral;
   int T0=Tindex(T);
@@ -53,12 +53,20 @@ real[][] getintegrals(string dir, real T, real Tmax, real exp, int n=1)
 
 real[] Ek;
 real[] k;
-real[][] M2;
+
+real[][] moment2()
+{
+  return getintegrals("ekvk",T,Tmax,2);
+}
+
+real[][] transfer() 
+{
+  return getintegrals("transfer",T,Tmax,2);
+}
 
 void Ekavg()
 {
-  M2=getintegrals("ekvk",T,Tmax,2);
-  Ek=0.5*M2[NL];
+  Ek=0.5*moment2()[NL];
 
   k=Ek > 0 ? kc : null;
   Ek=Ek > 0 ? Ek : null;
@@ -80,3 +88,4 @@ bool nextrun()
 
   return true;
 }
+
