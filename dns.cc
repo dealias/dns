@@ -39,7 +39,7 @@ int pH=1;
 int pL=0;
 unsigned Nx=1;
 unsigned Ny=1;
-Real force=1.0;
+Real eta=0.0;
 Real kforce=1.0;
 Real deltaf=1.0;
 unsigned movie=0;
@@ -213,7 +213,7 @@ class None : public ForcingBase {
 class WhiteNoiseBanded : public ForcingBase {
 public:
   const char *Name() {return "White-Noise Banded";}
-  void Force(array2<Complex> &w, Real factor) {
+  void Force(array2<Complex> &w, const Complex& factor) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
     unsigned xorigin=DNSProblem->getxorigin();
@@ -224,7 +224,7 @@ public:
     Real kmax2=kmax*kmax;
     
     // TODO: only loop over modes with k in (kmin,kmax)
-    factor *= force; 
+    Complex Factor=factor*sqrt(2.0*eta);
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
@@ -232,7 +232,7 @@ public:
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real k2=k02*(I2+j*j);
 	if (k2 > kmin2 && k2 < kmax2) 
-	  wi[j] += factor;
+	  wi[j] += Factor;
       }
     }
   }
@@ -268,7 +268,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB_NOLIMIT(forcing,"Forcing type");
   ForcingTable=new Table<ForcingBase>("forcing");
   
-  VOCAB(force,0.0,REAL_MAX,"force coefficient");
+  VOCAB(eta,0.0,REAL_MAX,"vorticity injection rate");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   FORCING(None);
@@ -592,7 +592,6 @@ void DNS::Stochastic(const vector2&Y, double, double dt)
 {
   if(Forcing->Stochastic()) {
     w.Set(Y[OMEGA]);
-    Forcing->Force(w,sqrt(2.0*dt)*drand_gauss());
-    HermitianSymmetrizeX(mx,my,xorigin,w);
+    Forcing->Force(w,sqrt(2.0*dt)*crand_gauss());
   }
 }

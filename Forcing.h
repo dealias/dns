@@ -11,7 +11,7 @@ class ForcingBase {
   virtual ~ForcingBase() {}
   virtual const char *Name() {return "None";}
   virtual int Type() {return 0;}
-  virtual void Force(Array::array2<Complex> &w, const Real factor=1.0) {}
+  virtual void Force(Array::array2<Complex> &w, const Complex& factor=1.0) {}
   virtual bool Stochastic() {return false;}
 };
 
