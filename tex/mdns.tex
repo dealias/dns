@@ -17,18 +17,22 @@ reduction to the Navier--Stokes equations, which will form the crux
 of my thesis.
 
 \section{Two dimensional Navier--Stokes}
-The study of two-dimensional turbulence is an interesting subject of its own
-right, and can, in some cases, provide insight into the higher dimensional
-problem. What is particularly nice about two-dimensional turbulence
-is that the we can represent the velocity by the vorticity, which
-has only one relevant component in two dimensions. The vorticity formulation of
-the 2-D Navier--Stokes equations is
+What is particularly nice about two-dimensional turbulence is that the
+we can represent the velocity by the vorticity, which has only one
+non-zero component in two dimensions. The incompressible 2D Navier--Stokes
+equations are:
+\bec
+\theNS, \quad \v\del\cdot\v{u}=0.
+\eec
+The vorticity is defined as 
+$\v\omega = \del\times\v{u} = (\partial_x u_y - \partial_y u_x )\hat{\v{z}}$
+Taking the Fourier transform, we have the following governing equation:
 \begin{eqnarray}
-  \frac{\partial \omega_{\v k}}{\partial t} 
+  \frac{\partial \omega_{\v k}}{\partial t}
   + \nu_{\v k} \omega_{\v k} 
   &=& \int dp \int dq \frac{\epsilon_{\v{kpq}}}{\v q^2}
   \omega_{\v p}^* \omega_{\v q}^*
-  + \v F_{\v k}
+  + \v F_{\v k},
   \\
   \epsilon_{\v{kpq}} &=& \(\hat{\v z} \dot \v p \times \v q \)
   \delta\(\v k + \v p + \v q \)
@@ -63,14 +67,15 @@ enstrophy from the remaining fine-grid nodes to coarse grid nodes.
 
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{grids.eps}
+    \includegraphics{grids}
     \caption{Grid layout for 2D NWSR. Red dots are for the fine grid, blue
 crosses for the coarse grid. Note that the origin is excluded from both grids.}
     \label{grids}
   \end{center}
 \end{figure}
 
-\subsection{Projection}
+\subsection{Spectrally Reduced Subgrids}
+\subsubsection{Projection}
 Each unmatched fine-grid point is surrounded by a (rotated) square of matched
 coarse-grid points. This square constitutes the boundary of the region onto
 which the energy and enstrophy of the fine-grid node will be distributed, 
@@ -78,7 +83,7 @@ cf: figure \ref{diamond}. Energy conservation is guaranteed if we
 set 
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{diamond.eps}
+    \includegraphics{diamond}
     \caption{Projection diagram.}
     \label{diamond}
   \end{center}
@@ -140,13 +145,13 @@ See figure \ref{projside} for details.
 
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{projside.eps}
+    \includegraphics{projside}
     \caption{Side-view of projection.}
     \label{projside}
   \end{center}
 \end{figure}
 
-\subsection{Prolongation}
+\subsubsection{Prolongation}
 Once we have evolved the system on the coarse grid, 
 we need to repopulate the modes that were evacuated by projection.
 Since every coarse-grid mode has a corresponding fine-grid mode with
@@ -168,7 +173,7 @@ to what modes. The prolongation operator diagram is shown in figure
 in this subsection.
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{prolside.eps}
+    \includegraphics{prolside}
     \caption{Side-view of projection.}
     \label{prolside}
   \end{center}
@@ -178,7 +183,6 @@ in this subsection.
 An ideal solution would be to redistribute energies from the coarse grid
 to the fine grid so that the original ratio of energies in the modes
 of the fine grids is unaffected by the evolution of the coarse grid.
-
 That is, a coarse mode $U_+$ was populated with energy with ratio 
 $E_0:E_+:E_{++}$, with energy from the fine-grid modes $u_0$, $u_+$, 
 and $u_{++}$, respectively, i.e.\ , before projection, we had
@@ -189,9 +193,9 @@ and we would like to ensure that this is the case after prolongation.
 
 However, energy and enstrophy conservation relies on energies being 
 distributed in ratios $\alpha$ and $(1-\alpha)$, which may be impossible if,
-for example, if only one of $U_-$ dand $U_+$ drops to zero.
+for example, if only one of $U_-$ and $U_+$ drops to zero.
 
-\subsubsection{Prolongation choice 1}
+\subsubsection{Prolongation choice 2}
 During projection, the energy of mode $U_-$ is determined by the 
 geometric factors $\alpha_i$ and the energies of the fine-grid modes.
 That is,
@@ -212,8 +216,69 @@ modes than there be present. Any remaining energy is then deposited into
 the fine-grid modes that coincide with coarse-grid modes in Fourier space, 
 which automatically conserves both $E$ and $Z$.
 
-\subsection{Governing equations: Spectral reduction of 2DNS}
+\subsubsection{Spectral Reduction of Governing Equations}
 Now we have to figure out what the hell to do with the coarse grid.
 
+\subsection{Scaled Subgrids}
+Shell models of turbulence spectrally reduce in a special case, since
+the GOY model reduced to the DN model, which is then a fixed point. Id
+est, the nonlinear source term is invariant.  Unsurprisingly, the
+Navier--Stokes equations present a more difficult problem for spectral 
+reduction, because the binning of modes removes the perfectly triadic 
+interaction between wavemodes.  
+
+\subsubsection{The Spectrally-scaled Navier--Stokes equations}
+However, this is not the only map that we may apply to the governing
+equation. Taking the spectral vorticity Navier--Stokes equations, each
+mode $\v\omega_{\v k}$ has $\v{k} \in \{k_0\(i,j\),i,j=1,\dots ,n \}$, where
+$k_0$ is the inverse scale of the $x$-space system, i.e.\ 
+$\v{x}\in (0,\pi/k_0)\times(0,\pi/k_0)$ (in our not-really-applied fashion,
+we typically take $k_0=1$).  
+
+Let $k_0^{(0)}$ be the spacing of the fine 
+grid, and $k_0^{(1)}=2k_0^{(0)}$ be the subgrid spacing, as in 
+figure~\ref{bb_grids}. The subgrid has 
+$\v{k} \in \{2k_0\(i,j\),i,j=1,\dots ,n \}$, which corresponds to 
+$\v{x}\in (0,\pi/(2k_0))\times(0,\pi/(2k_0))$. This is equivalent to 
+the scaling $\v{x} \rightarrow \v{x}/2$.  If we want to simulate a fluid 
+on $\v{x}\in (0,\pi/(k_0))\times(0,\pi/(k_0))$, we simply rescale $\v{x}$ by
+a factor of two. This is equivalent to modifying the Navier--Stokes equations
+from
+\be
+\theNS
+\ee
+to
+\be
+\ppt{\v{u}} +2\v{u}\cdot\grad\v{u} 
+= -\frac{1}{\rho}2\grad P + 4\nu\nabla^2 \v{u}+ \v{F}.
+\ee
+
+
+The primary advantage of this technique is that it leaves the form of the
+governing equation the same.  Thus, all of the computational techniques that 
+we have developped for simulating the undecimated Navier--Stokes equations
+can still be applied.
+
+\begin{figure}[htb]
+  \begin{center}
+    \includegraphics[height=60mm]{bb_grids.jpg}
+    \caption{Scaled Subgrid diagram}
+    \label{bb_grids}
+  \end{center}
+\end{figure}
+
+\subsubsection{Grids}
+However, scaling the grids by a factor introduces a restriction on the geometry
+that we can use. In particular, the imposition of a square latticewill lead
+to a problem with projection/prolongation near the spectral origin: fine-grid 
+modes adjacent to the origin can only project their energy onto coarse modes
+with higher wavenumber, which breaks enstrophy conservation. This may be 
+rectified by reintroducing the spectral origin, which is not evolved by the
+spectral Navier--Stokes equations, as a buffer into which some energy may be
+depositied.  In this case, every fine-grid mode is has at least one adjacent
+coarse-grid mode with higher $k$ and one adjacent coarse-grid mode with lower
+$k$.
+
+TODO: show projections.  Also, what about prolonging the boundary modes?
 
 \end{document}
