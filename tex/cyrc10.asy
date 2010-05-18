@@ -103,10 +103,10 @@ item("For example, if $f=$ FIXME");
 title("Applications");
 item("Out-of-focus images are a convolution:");
 subitem("the acual image is convolved with the aperture openning.");
-item("Image filtering;");
-subitem("exactly how?"); //FIXME
-item("Digital signal processing;");
-subitem("exactly how?"); //FIXME
+item("Image filtering:");
+subitem("Sobel edge detection is a convolution of the image with a gradient stencil.");
+item("Digital signal processing:");
+subitem("e.g.\ for low- and high-pass filters."); //FIXME
 item("Correlation analysis.");
 item("The Lucas--Lehmer primality test uses fast convolutions.");
 subitem("Useful for testing Mersenne primes.");
