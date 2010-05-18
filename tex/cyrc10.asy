@@ -97,8 +97,10 @@ item("Hermitian Convolutions");
 title("Convolutions");
 item("The convolution of the functions $f$ and $g$ is");
 equation("(f*g)(t)=\int_{-\infty}^\infty f(\tau) g(t-\tau)\, d\tau.");
-item("For example, if $f=$ FIXME");
-// TODO: add graph of f, g, and f*g.
+item("For example, if $f=g=\chi_{(-1,1)}(t)$");
+figure("cyrc_f");
+item("Then $f*g$ is");
+figure("cyrc_fg");
 
 title("Applications");
 item("Out-of-focus images are a convolution:");
@@ -106,7 +108,7 @@ subitem("the acual image is convolved with the aperture openning.");
 item("Image filtering:");
 subitem("Sobel edge detection is a convolution of the image with a gradient stencil.");
 item("Digital signal processing:");
-subitem("e.g.\ for low- and high-pass filters."); //FIXME
+subitem("e.g.\ for low- and high-pass filters.");
 item("Correlation analysis.");
 item("The Lucas--Lehmer primality test uses fast convolutions.");
 subitem("Useful for testing Mersenne primes.");
@@ -135,12 +137,15 @@ equation("\sum_{m=0}^{n} f_m g_{n-m} -\sum_{m=0}^{N-1} f_m g_{n-m}=
 remark("are called {\it aliasing errors}.");
 // FIXME: consider Canuto's dealias.pdf, eq 3.4.9
 
-title("Dialiasing via Zero-Pading");
+title("Dialiasing via Explicit Zero-Pading");
 item("If we extend $f_n$ and $g_n$ to be zero for $n\notin (0,\dots N-1)$,
 then the cyclic and linear convolution are equal.");
 item("This requires $\frac{15}{3} N \log N$ operations,");
-item("and $(3/2)^d$ the memory, where $d$ is the dimension.");
-// FIXME: mention von-Neumann bottleneck
+item("and $2^d$ times the memory, where $d$ is the dimension.");
+item("Memory size and CPU speed have increased much faster than memory bandwidth: the resulting {\it von-Neumann bottleneck} padding a worse choice.");
+// FIXME: ref
+// http://userweb.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD692.html ?
+
 
 title("Phase-shift Dealiasing");
 // FIXME: Canuto's dealias.pdf, eq 3.4.17
@@ -148,25 +153,42 @@ item("This requires $15 N \log N$ operations,");
 item("but doesn't take up extra memory.");
 
 title("Implict Padding");
-item("Based on a sum...");
+item("Suppose that we want to take a Fourier transform of");
+equation("f_n, n=0,\dots,2N-1, \text{ with }f_n=0 \text{ if } n\geq N");
+item("The discrete Fourier transform is a sum:");
+equation("\mathcal{F}(f)_k=\sum_{n=0}^{2N-1}\zeta_{2N}^{kn}f_n.");
+item("Since $f_n=0$ if $n\geq N$, this is just");
+equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1}\zeta_{2N}^{kn}f_n.");
+item("Unfortunately, this is not an FFT, and cannot be done in $\O(N\log N)$ operations.");
+
+title("Implicit Padding");
+item("FIXME");
+// so we break it up into even and odd terms
+// equation: even and off terms
+// These are FFTs:
+
+//equation("u_j\doteq\sum_{k=0}^{N-1}\zeta_N^{jk} U_k\qquad j=0,\ldots,N-1");
 // FIXME: the idea is that we can use eq2.1 from dealias.tex
 // And it works great
+// sub-transforms are done using FFTW
 // we can also use out-of-place transforms
-// Since the output is twice as big, there are no memory savings,
+// Since the output is twice as big, there are no memory savings.
 
 title("Implict Padding: speed");
 item("Unfortunately, there are no speed savings either.");
-// FIXME: include timing figure.
+// FIXME: include timing figure. timing1c.eps
+figure("timing1c","height=15cm");
 
 title("Implicit Padding in Higher Dimensions");
 item("There is, however, one advantage: the work buffer is separate from the data buffer.");
-// FIXME: figure
 item("2D fast convolutions involve a series of FFTs, once for each dimension.");
+// FIXME: figure
 item("The first FFT produces a non-sparse (but non-contiguous) array");
 //FIXME: figure
 item("Later convolutions may be performed column-by-column.");
 // FIXME: figure (movie?) (stepped movie?) (stepped figure!)
 item("Doing this with conventional FFTs require copying to a padded buffer.");
+// FIXME: figure
 
 title("Implicit Padding in Higher Dimensions");
 item("The resulting algorithm has half the memory footprint.");
@@ -204,6 +226,8 @@ item("Available under the LGPL at:");
 remark("{\tt http://fftwpp.sourceforge.net/}");
 // uses SIMD routines
 
+
+if(true){
 title("old");
 
 
@@ -412,7 +436,7 @@ item("Highly optimized versions of these routines have been implemented as a sof
 the Lesser GNU Public License.");
 
 item("With the advent of this {\tt FFTW++} library, writing a high-performance dealiased pseudospectral code is now a relatively straightforward exercise.");  
-
+}
 bibliography("refs");
 
 //  LocalWords:  hypercitebracket dotover cdot mathop nolimits Im vl wl sim
