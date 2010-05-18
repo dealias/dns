@@ -131,17 +131,36 @@ item("The difference between the sum,");
 equation("\sum_{m=0}^{n} f_m g_{n-m} -\sum_{m=0}^{N-1} f_m g_{n-m}=
 \sum_{m=n+1}^{N-1} f_m g_{n-m}");
 remark("are called {\it aliasing errors}.");
+// FIXME: consider Canuto's dealias.pdf, eq 3.4.9
 
 title("Zero-pading");
-
 item("If we extend $f_n$ and $g_n$ to be zero for $n\notin (0,\dots N-1)$,
 then the cyclic and linear convolution are equal.");
+item("This requires $15/3 n \log n$ operations");
+item("and $(3/2)^D$ the memory");
 
-item("Phase-shift dealiasing: how does it work?");
+title("Phase-shift dealiasing: how does it work?");
+// FIXME: Canuto's dealias.pdf, eq 3.4.17
+item("This requires $15 n \log n$ operations,");
+item("but doesn't take up extra memory.");
 
 title("Implict Padding");
+// FIXME: the idea is that we can use eq2.1 from dealias.tex
+// And it works great
+// we can also use out-of-place transforms
+// Since the output is 3/2 as big, there are no memory savings,
 
+title("Implict Padding: speed");
+item("Unfortunately, there are no speed savings either.");
+// FIXME: include timing figure.
 
+title("Implicit Padding in Higher Dimensions");
+item("There is, however, one advantage: the work buffer is separate from the data buffer.");
+// FIXME: figure
+item("nD fast convolutions involve a series of FFTs, once for each dimension.");
+item("The first FFT produces a non-sparse (but non-contiguous) array");
+//FIXME: figure
+item("Later convolutions may be performed column-by-column.");
 
 title("old");
 
