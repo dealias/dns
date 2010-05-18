@@ -92,7 +92,7 @@ subitem("Phase-shift dealiasing");
 item("Implicit Padding");
 subitem("In one dimension");
 subitem("In higher dimensions");
-item("Hermitian data");
+item("Hermitian Convolutions");
 
 title("Convolutions");
 item("The convolution of the functions $f$ and $g$ is");
@@ -101,20 +101,21 @@ item("For example, if $f=$ FIXME");
 // TODO: add graph of f, g, and f*g.
 
 title("Applications");
-item("Out-of-focuse images are the a convolution of the image with the aperture shape");
-subitem("exactly how?");
-item("image filtering;");
-subitem("exactly how?");
-item("digital signal processing;");
-subitem("exactly how?");
-item("correlation analysis;");
-subitem("exactly how?");
-item("pseudospectral simulations.");
-subitem("The nonlinear term, $u\cdot\del u$, is a convolution in Fourier space.");
+item("Out-of-focus images are a convolution:");
+subitem("the acual image is convolved with the aperture openning.");
+item("Image filtering;");
+subitem("exactly how?"); //FIXME
+item("Digital signal processing;");
+subitem("exactly how?"); //FIXME
+item("Correlation analysis.");
+item("The Lucas--Lehmer primality test uses fast convolutions.");
+subitem("Useful for testing Mersenne primes.");
+item("pseudospectral simulations:");
+subitem("$(u\cdot\del) u$ is a convolution in Fourier space.");
 
 title("Discrete Convolutions");
 item("Applications typically make use of a discrete convolution:");
-equation("(f*g)_n=\sum_{m=0}^n f_m g_{n-m} ");
+equation("(f*g)_n=\sum_{n=p+q} f_p g_q "); //FIXME: choose form
 item("Calculationg $(f*g)_n, n=0,\dots N-1$ requires $\O(N^2)$ operations.");
 item("The convolution theorem states convolutions are a multitplications in Fourier space:");
 equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
@@ -123,8 +124,9 @@ item("Discrete linear convolution sums based on the fast Fourier transform
 
 
 title("Cyclic and Linear Convolutions");
+item("FIXME: introduce linear convolutions");
 item("Fourier transforms map periodic data to periodic data.");
-item("Thus, $\mathcal{F}^{-1}[\mathcal{F}(f) \, \mathcal{F}(g) ]$ is actually a {\it discrete cyclic convolution}");
+item("Thus, $\mathcal{F}^{-1}[\mathcal{F}(f) \, \mathcal{F}(g) ]$ is a {\it discrete cyclic convolution}");
 equation("\sum_{m=0}^{N-1} f_m g_{n-m},");
 remark("where the vectors $f$ and $g$ have period $N$.");
 item("The difference between the sum,");
@@ -197,8 +199,10 @@ item("Implicit padding is optimal for Mersenne-prime sized problem");
 
 title("Conclusion");
 //FIXME: yay we're great
+//paper in under review
 item("Available under the LGPL at:");
 remark("{\tt http://fftwpp.sourceforge.net/}");
+// uses SIMD routines
 
 title("old");
 
