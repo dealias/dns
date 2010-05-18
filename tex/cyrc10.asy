@@ -85,13 +85,14 @@ subitem("Definition");
 subitem("Applications");
 item("Fast Convolutions");
 subitem("The Convolution Theorem");
-subitem("Cyclic vs.\ Linear");
+//subitem("Cyclic vs.\ Linear");
 item("Aliasing Errors");
 subitem("Zero-padding");
 subitem("Phase-shift dealiasing");
 item("Implicit Padding");
-subitem("In 1D");
+subitem("In one dimension");
 subitem("In higher dimensions");
+item("Hermitian data");
 
 title("Convolutions");
 item("The convolution of the functions $f$ and $g$ is");
@@ -113,13 +114,12 @@ subitem("The nonlinear term, $u\cdot\del u$, is a convolution in Fourier space."
 
 title("Discrete Convolutions");
 item("Applications typically make use of a discrete convolution:");
-equation("f*g_n=\sum_{m=0}^n f_m g_{n-m} ");
-item("Calculationg $f*g_n, n=0,\dots N-1$ requires $\O(n^2)$ operations.");
+equation("(f*g)_n=\sum_{m=0}^n f_m g_{n-m} ");
+item("Calculationg $(f*g)_n, n=0,\dots N-1$ requires $\O(N^2)$ operations.");
 item("The convolution theorem states convolutions are a multitplications in Fourier space:");
-item("Let $\hat{f}$ be the Fourier transform of $f$. Then,");
-equation("\widehat{f*g}=\widehat{f}\widehat{g}");
+equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
 item("Discrete linear convolution sums based on the fast Fourier transform
-(FFT) algorithm~\cite{Gauss1866,Cooley65} require $\O(n\log n)$ operations.");
+(FFT) algorithm~\cite{Gauss1866,Cooley65} require $\O(N\log N)$ operations.");
 
 
 title("Cyclic and Linear Convolutions");
@@ -133,22 +133,24 @@ equation("\sum_{m=0}^{n} f_m g_{n-m} -\sum_{m=0}^{N-1} f_m g_{n-m}=
 remark("are called {\it aliasing errors}.");
 // FIXME: consider Canuto's dealias.pdf, eq 3.4.9
 
-title("Zero-pading");
+title("Dialiasing via Zero-Pading");
 item("If we extend $f_n$ and $g_n$ to be zero for $n\notin (0,\dots N-1)$,
 then the cyclic and linear convolution are equal.");
-item("This requires $15/3 n \log n$ operations");
-item("and $(3/2)^D$ the memory");
+item("This requires $\frac{15}{3} N \log N$ operations,");
+item("and $(3/2)^d$ the memory, where $d$ is the dimension.");
+// FIXME: mention von-Neumann bottleneck
 
-title("Phase-shift dealiasing: how does it work?");
+title("Phase-shift Dealiasing");
 // FIXME: Canuto's dealias.pdf, eq 3.4.17
-item("This requires $15 n \log n$ operations,");
+item("This requires $15 N \log N$ operations,");
 item("but doesn't take up extra memory.");
 
 title("Implict Padding");
+item("Based on a sum...");
 // FIXME: the idea is that we can use eq2.1 from dealias.tex
 // And it works great
 // we can also use out-of-place transforms
-// Since the output is 3/2 as big, there are no memory savings,
+// Since the output is twice as big, there are no memory savings,
 
 title("Implict Padding: speed");
 item("Unfortunately, there are no speed savings either.");
@@ -157,10 +159,46 @@ item("Unfortunately, there are no speed savings either.");
 title("Implicit Padding in Higher Dimensions");
 item("There is, however, one advantage: the work buffer is separate from the data buffer.");
 // FIXME: figure
-item("nD fast convolutions involve a series of FFTs, once for each dimension.");
+item("2D fast convolutions involve a series of FFTs, once for each dimension.");
 item("The first FFT produces a non-sparse (but non-contiguous) array");
 //FIXME: figure
 item("Later convolutions may be performed column-by-column.");
+// FIXME: figure (movie?) (stepped movie?) (stepped figure!)
+item("Doing this with conventional FFTs require copying to a padded buffer.");
+
+title("Implicit Padding in Higher Dimensions");
+item("The resulting algorithm has half the memory footprint.");
+item("The expected scaling is the same.");
+item("However, dut to data locality, it's actually faster:");
+// FIXME: 2D timing graph
+
+title("Implicit Padding in Higher Dimensions");
+// FIXME: 3D timing graph
+
+title("Hermitian Data");
+item("If $f_n=\bar{f}_{N-n}$, the data is {\it Hermitian}"); //FIXME: more like the paper
+item("The Fourier and inverser Fourier transforms of Hermitian data are real-valued.");
+subitem("As in many applications (e.g.\ pseudo-spectral simulations).");
+item("Complex-to-real Fourier transforms scale as $\frac{N}{2}\log\frac{N}{2}$.");
+
+title("Optimal Problem Sizes");
+item("Our main use for this algorithm is pseudo-spectral simulations.");
+item("FFTs are faster for highly composite problem sizes.");
+remark("$N=2^n$, $N=3^n$, etc., with $N=2^n$ optimal.");
+item("2/3 padding: 683, etc"); //FIXME: fill this in
+remark("FFTs have $N=1024$,etc");
+item("Phase-shift dealiasing: $2^n$");
+remark("FFTs are the same size");
+item("Implicit padding: $2^n-1$.");
+remark("sub-transforms are of size $2^{n-1}$");
+item("Implicit padding is optimal for Mersenne-prime sized problem");
+//NB: thank Rem for that one
+
+
+title("Conclusion");
+//FIXME: yay we're great
+item("Available under the LGPL at:");
+remark("{\tt http://fftwpp.sourceforge.net/}");
 
 title("old");
 
@@ -269,7 +307,7 @@ item("An implicitly padded convolution is implemented as in our {\tt FFTW++} lib
 
 item("This in-place convolution requires six out-of-place transforms, thereby avoiding bit reversal at all levels.");  
 
-
+if(false) {
 remark("
 \begin{function}[H]
   \KwIn{vector \xf, vector \xg}
@@ -295,7 +333,7 @@ remark("
   \Return f/(2m)\;
 \end{function}
 ");
-
+}
 title("Implicit Padding in 1D");
 figure("timing1c.eps","height=13cm");
 
