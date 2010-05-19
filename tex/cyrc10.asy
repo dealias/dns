@@ -112,7 +112,7 @@ subitem("e.g.\ for low- and high-pass filters.");
 item("Correlation analysis.");
 item("The Lucas--Lehmer primality test uses fast convolutions.");
 subitem("Useful for testing Mersenne primes.");
-item("pseudospectral simulations:");
+item("Pseudospectral simulations:");
 subitem("$(u\cdot\del) u$ is a convolution in Fourier space.");
 
 title("Discrete Convolutions");
