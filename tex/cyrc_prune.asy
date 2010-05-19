@@ -1,4 +1,4 @@
-size(14cm,0);
+size(10cm,0);
 
 
 //pair center(path g) {return 0.5*(min(g)+max(g));}
@@ -32,11 +32,23 @@ for(int i=0; i < n-1; ++i) {
   draw(shift(z)*g,red);
 }
 
+z=(4,0);
+g=box(a,b);
+filldraw(shift(z)*g,gray);
+int n=10;
+for(int i=0; i < n-1; ++i) {
+  z=(2+i/n,0);
+  g=box(a,(0.1,1));
+  draw(shift(z)*g,blue);
+}
+
 
 real h=0.5;
 //Arrows between boxes
 draw((1,h)..(2,h),EndArrow);
-label("FFTx",(1.5,h),N);
+label("FFTx",(1.5,h),N,red);
+draw((3,h)..(4,h),EndArrow);
+label("FFTy",(3.5,h),N,blue);
 
 
 

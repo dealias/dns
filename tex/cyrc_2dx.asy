@@ -14,12 +14,12 @@ pair b=(1,1), a=(0,0), z=(0,0);
 
 g=box(a,b);
 draw(shift(z)*g);
-label("$f$",z+(0.5,1),N);
+//label("$f$",z+(0.5,1),N);
 int n=10;
 for(int i=0; i < n; ++i) {
   z=(0,i/n);
   g=box(a,(1,0.1));
-  draw(shift(z)*g);
+  draw(shift(z)*g,red);
 }
 
 
@@ -36,6 +36,6 @@ label("$k_x$ odd",z,SE);
 real h=0.5;
 //Arrows between boxes
 draw((1,h)..(2,h),EndArrow);
-label("FFTx",(1.5,h),N);
+label("FFTx",(1.5,h),N,red);
 
 
