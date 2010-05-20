@@ -36,6 +36,6 @@ label("$k_x$ odd",z,SE);
 real h=0.5;
 //Arrows between boxes
 draw((1,h)..(2,h),EndArrow);
-label("FFTx",(1.5,h),N,red);
+label("xFFT",(1.5,h),N,red);
 
 

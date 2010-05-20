@@ -46,9 +46,9 @@ for(int i=0; i < n-1; ++i) {
 real h=0.5;
 //Arrows between boxes
 draw((1,h)..(2,h),EndArrow);
-label("FFTx",(1.5,h),N,red);
+label("xFFT",(1.5,h),N,red);
 draw((3,h)..(4,h),EndArrow);
-label("FFTy",(3.5,h),N,blue);
+label("yFFT",(3.5,h),N,blue);
 
 
 

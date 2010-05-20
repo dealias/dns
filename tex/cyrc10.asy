@@ -112,36 +112,39 @@ subitem("e.g.\ for low- and high-pass filters.");
 item("Correlation analysis.");
 item("The Lucas--Lehmer primality test uses fast convolutions.");
 subitem("Useful for testing Mersenne primes.");
-item("Pseudospectral simulations:");
+item("Pseudospectral simulations of fluids:");
 subitem("$(u\cdot\del) u$ is a convolution in Fourier space.");
 
 title("Discrete Convolutions");
-item("Applications typically make use of a {\it discrete linear convolution}:");
-equation("(f*g)_n=\sum_{m=0}^n f_m g_{n-m}");
-item("Calculating $(f*g)_n, n=0,\dots, N-1$ requires $\O(N^2)$ operations.");
+item("Applications use a {\it discrete linear convolution}:");
+equation("{\color{darkgreen} (f*g)_n}={\color{darkgreen}\sum_{m=0}^n f_m g_{n-m}}");
+item("Calculating $\{(f*g)_n\}_{n=0}^{N-1}$ takes $\O(N^2)$ operations.");
 item("The convolution theorem states that convolutions are a multiplications in Fourier space:");
-equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g).");
+equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
+remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}nk}f_n$ if the Fourier transform of $\{f_n\}$.");
+//remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}\zeta_N^{nk}f_n$, $\zeta_N=e^{2\pi i/N}$, is the Fourier transform of $\{f_n\}$.");
 item("A fast Fourier transform (FFT)  of length $N$ requires $K N \log_2 N$ multiplications~\cite{Gauss1866,Cooley65}.");
-item("Discrete linear convolution sums using FFTs require $3KN\log_2 N$ operations.");
+item("Convoluting using FFTs requires $3KN\log_2 N$ operations.");
+
 
 
 title("Cyclic and Linear Convolutions");
 item("Fourier transforms map periodic data to periodic data.");
 item("Thus, $\mathcal{F}^{-1}[\mathcal{F}(f) \, \mathcal{F}(g) ]$ is a {\it discrete cyclic convolution},");
-equation("\sum_{m=0}^{N-1} f_{m_N} g_{(n-m)_N},");
+equation("f*_{\scriptscriptstyle N}g \doteq \sum_{m=0}^{N-1} f_{m_N} g_{(n-m)_N},");
 remark("where the vectors $f$ and $g$ have period $N$.");
 item("The difference between linear and cyclic convolutions,");
-equation("\sum_{m=0}^{n} f_m g_{n-m} -\sum_{m=0}^{N-1} f_{m_N} g_{(n-m)_N}=
-\sum_{m=n+1}^{N-1} f_m g_{m-n},");
+equation("\sum_{m=0}^{N-1} f_{m_N} g_{(n-m)_N} ={\color{darkgreen}\sum_{m=0}^{n} f_m g_{n-m}} + {\color{red} \sum_{m=n+1}^{N-1} f_m g_{m-n}},");
 remark("is called the {\it aliasing error}.");
 // FIXME: consider Canuto's dealias.pdf, eq 3.4.9
 
 title("Dealiasing via Explicit Zero-Padding");
-item("The cyclic and linear convolutions are equal if we take");
+item("The cyclic and linear convolutions are equal if we pad $f$ with zeros:");
 equation("f=(f_0,f_1,\dots,f_{N-2},f_{N-1},\underbrace{0,\dots,0}_{N})");
 item("Convolving these padded arrays takes $6K N \log_2 2N$ operations,");
 item("and $2^d$ times the memory, where $d$ is the dimension.");
-item("Memory size and CPU speed have increased much faster than memory bandwidth: the resulting {\it von-Neumann bottleneck} can make padding a poor choice.");
+item("Memory size and CPU speed have increased much faster than memory bandwidth;  this is the {\it von-Neumann bottleneck}.");
+item("Explicit zero-padding seems wasteful.");
 // FIXME: ref
 // http://userweb.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD692.html ?
 
@@ -149,86 +152,94 @@ item("Memory size and CPU speed have increased much faster than memory bandwidth
 title("Phase-shift Dealiasing");
 item("Another possibility is to use a phase shift \cite{Canuto06}.");
 item("Define the shifted Fourier transform of $f$ to be");
-equation("F^\Delta \doteq \mathcal{F}_k^\Delta(f)=\sum_{n=0}^{N-1} e^{ik(n+\Delta)}f_n,");
+equation("F^\Delta \doteq \mathcal{F}_k^\Delta(f)=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{N}k(n+\Delta)}f_n,");
 item("Then, setting $\Delta=\pi/2$, one has");
-equation("f*g=\frac{1}{2}\left(\mathcal{F}^{-1}\left(F G \right)+
-{\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right)\right)");
-item("Id est, we can calculate $f*g$ by doing two calculating two periodic convolutions");
+equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{darkgreen}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{m-n}}.");
+//remark("which has a dealiasing error with opposite sign.");
+//equation("f*g=\frac{1}{2}\left(\mathcal{F}^{-1}\left(F G \right)+{\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right)\right)");
+item("We can calculate $f*g$ by from two periodic convolutions.");
 // note: Canuto's dealias.pdf, eq 3.4.17
-item("This requires $6K N \log_2 N$ operations, but not as much memory.");
-item("Padding is faster if we need to add fewer than $N$ zeros.");
+item("This requires $6K N \log_2 N$ operations.");
+//item("Padding is faster if we need to add fewer than $N$ zeros.");
 
 
 title("Implicit Padding");
 item("Suppose that we want to take a Fourier transform of");
-equation("f_n, n=0,\dots,2N-1, \text{ with }f_n=0 \text{ if } n\geq N");
+equation("\{f_n\}_{n=0}^{2N-1}, \text{ with }f_n=0 \text{ if } n\geq N");
 item("The discrete Fourier transform is a sum:");
-equation("\mathcal{F}(f)_k=\sum_{n=0}^{2N-1} e^{\frac{ikn}{2N}}f_n.");
+equation("\mathcal{F}(f)_k=\sum_{n=0}^{2N-1} e^{\frac{2\pi i}{2N}kn}f_n.");
 item("Since $f_n=0$ if $n\geq N$, this is just");
-equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1}e^{\frac{ikn}{2N}}f_n.");
+equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{2N}kn}f_n.");
+//equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1}e^{\frac{ikn}{2N}}f_n.");
 item("This is not a FFT, and cannot be done in $\O(N\log_2 N)$.");
 
 title("Implicit Padding");
 item("However, if we calculate even and odd terms separately, we get");
-equation("\mathcal{F}(f)_{2k}=\sum_{n=0}^{N-1}e^{\frac{ikn}{N}}f_n, \quad\mathcal{F}(f)_{2k+1}=e^{\frac{ik}{2N}}\sum_{n=0}^{N-1}e^{\frac{ikn}{N}}f_n,");
-remark("which are FFTs.");
-item("By swapping arrays, we can use out-of-place transforms.");
-item("The computational complexity is $6 K N log_2 N$.");
+equation("\mathcal{F}(f)_{2k}=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n, \quad\mathcal{F}(f)_{2k+1}=e^{\frac{ik}{2N}}\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n,");
+remark("which {\it are} FFTs.");
+figure("cyrc_1d","height=2cm");
+item("The computational complexity is $6 K N log_2 N/2$.");
+//item("By swapping arrays, we can use out-of-place transforms.");
 item("Since Fourier-transformed data is of length $2N$, there are no memory savings.");
-item("There is one advantage: the work buffer is separate from the data buffer.");
+item("There is one advantage:");
+step();
+remark("\quad the work buffer is separate from the data buffer.");
 
 title("Implicit Padding: speed");
 item("The algorithms are comparable in speed:");
-figure("timing1c","height=15cm"); // FIXME: redo (with N instead of m?)
+figure("timing1c","height=13cm"); // TODO: redo (with N instead of m?)
+item("Ours is much more complicated.");
 
-title("Implicit Padding in Higher Dimensions");
-
+title("Implicit Convolutions in Higher Dimensions");
 item("2D fast convolutions involve a series of FFTs, once for each dimension.");
-item("The first FFT produces a non-sparse (but non-contiguous) array");
+item("The first FFT produces needs a separate (but non-contiguous) array:");
 figure("cyrc_2dx","height=4cm");
 item("$y$-transforms are be performed column-by-column:");
 figure("cyrc_2dy","height=5cm");
 
-title("Implicit Padding in Higher Dimensions");
+title("Implicit Convolutions in Higher Dimensions");
 item("The transformed arrays are multiplied:");
 figure("cyrc_2dm","height=5cm");
-item("Once we have $F_kG_k$, we take the inverse transform to get $f*g$.");
+item("Once we have $F_kG_k$, we take the inverse transform to get $f*g$:");
+figure("cyrc_2dinv","height=4cm");
 item("The resulting algorithm needs half the memory.");
 item("The operation count is $6K N \log N/2$.");
 
-
 title("Alternatives");
 item("The memory savings could be achieved more simply by using conventional padded transforms.");
-item("However, this requires copying more data, which is slow.");
-skip();
-item("Half of the FFTs in the $x$-direction are on zero-data, and can be pruned.");
-figure("cyrc_prune","height=5cm");
-item("This is actually slower for large data sets due to memory-striding issues.");
+step();
+remark("However, this requires copying more data, which is slow.");
+step();
+//skip();
+item("Pruning: note that half of the FFTs in the $x$-direction are on zero-data.");
+figure("cyrc_prune","height=4cm");
+step();
+remark("This is actually slower for large data sets due to memory-striding issues.");
 
 title("Implicit Padding in Higher Dimensions");
-item("Owing to data locality, it's implicitly pruning is faster:");
-figure("timing2c","height=15cm"); // FIXME: redo (with N instead of m?)
+item("Implicitly padding is faster in two dimensions:");
+figure("timing2c","height=15cm"); // TODO: redo (with N instead of m?)
 
 title("Implicit Padding in Higher Dimensions");
 item("The algorithm is easily extended to three dimensions:");
-figure("timing3c","height=15cm"); // FIXME: redo (with N instead of m?)
+figure("timing3c","height=15cm"); // TODO: redo (with N instead of m?)
 
 title("Hermitian Data");
-item("Applications may involve real-valued data.");
-item("The Fourier transform of such data is represented as");
-equation("F= F_{-N/2},\dots,F_0,\dots,F_{N/2}");
-remark("with $F_{-k}=\conj{F}_k$. Such data is called {\it Hermitian}.");
-item("Complex-to-real Fourier transforms scale as $\frac{N}{2}\log\frac{N}{2}$.");
+item("If $\{f_n\}_{n=0}^{N-1}$ is real-valued, then");
+equation("\mathcal{F}(f)=\{F_k\}_{k=-N/2}^{N/2}");
+remark("and $F_{-k}=\conj{F}_k$. Such data is called {\it Hermitian}.");
+item("Real-to-complex Fourier take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
 item("Zero-padding Hermitian data increases the array length by $50\%$ (i.e.\ $2/3$ padding.)");
-item("In such cases, phase-shifting has worse scaling than explicit zero-padding.");
+figure("cyrc_23","height=4cm");
+item("Phase-shifting is slower than explicit padding for Hermitian data.");
 
 title("Hermitian Data");
 item("The 1D implicit convolution is comparable to explicit padding:");
-figure("timing1r","height=15cm"); // FIXME: redo (with N instead of m?)
+figure("timing1r","height=15cm"); // TODO: redo (with N instead of m?)
 
 title("Hermitian Data");
 item("And is faster in higher dimensions:");
-figure("timing2r","height=15cm"); // FIXME: redo (with N instead of m?)
+figure("timing2r","height=15cm"); // TODO: redo (with N instead of m?)
 
 
 title("Optimal Problem Sizes");
@@ -248,12 +259,12 @@ item("Implicit padding is optimal for Mersenne-prime sized problem");
 title("Conclusion");
 item("Implicitly padded fast convolutions eliminate aliasing errors.");
 item("They use less memory and are faster than explicit zero-padding or phase-shift dealiasing.");
-item("Expanding to discontiguous arrays makes for easier programming.");
-item("We have made {\tt C++} versions available at {\tt http://fftwpp.sourceforge.net/}");
-// uses SIMD routines 
-item("Uses the Fastest Fourier Transform in the West {\tt http://fftw.org/} for sub-transforms");
-figure("fftw-logo","height=2cm"); 
-// FIXME: FFTW image
+item("Expanding into discontiguous arrays makes for easier programming.");
+item("A {\tt C++} implementation under the LGPL is available at {\tt http://fftwpp.sourceforge.net/}");
+item("Uses SIMD routines when compiled with the Intel compiler.");
+item("Uses the Fastest Fourier Transform in the West ({\tt http://fftw.org/}) for sub-transforms.");
+figure("fftw-logo-med.eps","height=2cm"); 
+
 
 
 
