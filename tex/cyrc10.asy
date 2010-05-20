@@ -117,7 +117,7 @@ subitem("$(u\cdot\del) u$ is a convolution in Fourier space.");
 
 title("Discrete Convolutions");
 item("Applications use a {\it discrete linear convolution}:");
-equation("{\color{darkgreen} (f*g)_n}={\color{darkgreen}\sum_{m=0}^n f_m g_{n-m}}");
+equation("{\color{green} (f*g)_n}={\color{green}\sum_{m=0}^n f_m g_{n-m}}");
 item("Calculating $\{(f*g)_n\}_{n=0}^{N-1}$ takes $\O(N^2)$ operations.");
 item("The convolution theorem states that convolutions are a multiplications in Fourier space:");
 equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
@@ -134,7 +134,7 @@ item("Thus, $\mathcal{F}^{-1}[\mathcal{F}(f) \, \mathcal{F}(g) ]$ is a {\it disc
 equation("f*_{\scriptscriptstyle N}g \doteq \sum_{m=0}^{N-1} f_{m_N} g_{(n-m)_N},");
 remark("where the vectors $f$ and $g$ have period $N$.");
 item("The difference between linear and cyclic convolutions,");
-equation("\sum_{m=0}^{N-1} f_{m_N} g_{(n-m)_N} ={\color{darkgreen}\sum_{m=0}^{n} f_m g_{n-m}} + {\color{red} \sum_{m=n+1}^{N-1} f_m g_{m-n}},");
+equation("\sum_{m=0}^{N-1} f_{m_N} g_{(n-m)_N} ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} + {\color{red} \sum_{m=n+1}^{N-1} f_m g_{m-n}},");
 remark("is called the {\it aliasing error}.");
 // FIXME: consider Canuto's dealias.pdf, eq 3.4.9
 
@@ -154,7 +154,7 @@ item("Another possibility is to use a phase shift \cite{Canuto06}.");
 item("Define the shifted Fourier transform of $f$ to be");
 equation("F^\Delta \doteq \mathcal{F}_k^\Delta(f)=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{N}k(n+\Delta)}f_n,");
 item("Then, setting $\Delta=\pi/2$, one has");
-equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{darkgreen}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{m-n}}.");
+equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{m-n}}.");
 //remark("which has a dealiasing error with opposite sign.");
 //equation("f*g=\frac{1}{2}\left(\mathcal{F}^{-1}\left(F G \right)+{\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right)\right)");
 item("We can calculate $f*g$ by from two periodic convolutions.");
