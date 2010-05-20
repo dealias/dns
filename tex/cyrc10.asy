@@ -124,7 +124,7 @@ equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
 remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}nk}f_n$ if the Fourier transform of $\{f_n\}$.");
 //remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}\zeta_N^{nk}f_n$, $\zeta_N=e^{2\pi i/N}$, is the Fourier transform of $\{f_n\}$.");
 item("A fast Fourier transform (FFT)  of length $N$ requires $K N \log_2 N$ multiplications~\cite{Gauss1866,Cooley65}.");
-item("Convoluting using FFTs requires $3KN\log_2 N$ operations.");
+item("Convolving using FFTs requires $3KN\log_2 N$ operations.");
 
 
 
@@ -155,9 +155,9 @@ item("Define the shifted Fourier transform of $f$ to be");
 equation("F^\Delta \doteq \mathcal{F}_k^\Delta(f)=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{N}k(n+\Delta)}f_n,");
 item("Then, setting $\Delta=\pi/2$, one has");
 equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{m-n}}.");
-//remark("which has a dealiasing error with opposite sign.");
+remark("which has a dealiasing error with opposite sign.");
 //equation("f*g=\frac{1}{2}\left(\mathcal{F}^{-1}\left(F G \right)+{\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right)\right)");
-item("We can calculate $f*g$ by from two periodic convolutions.");
+item("Thus, we can calculate $f*g$ by from two periodic convolutions.");
 // note: Canuto's dealias.pdf, eq 3.4.17
 item("This requires $6K N \log_2 N$ operations.");
 //item("Padding is faster if we need to add fewer than $N$ zeros.");
@@ -192,9 +192,9 @@ item("Ours is much more complicated.");
 
 title("Implicit Convolutions in Higher Dimensions");
 item("2D fast convolutions involve a series of FFTs, once for each dimension.");
-item("The first FFT produces needs a separate (but non-contiguous) array:");
+item("The first FFT produce needs a separate (but non-contiguous) array:");
 figure("cyrc_2dx","height=4cm");
-item("$y$-transforms are be performed column-by-column:");
+item("$y$-FFTs are done using a 1D work array:");
 figure("cyrc_2dy","height=5cm");
 
 title("Implicit Convolutions in Higher Dimensions");
@@ -212,12 +212,14 @@ remark("However, this requires copying more data, which is slow.");
 step();
 //skip();
 item("Pruning: note that half of the FFTs in the $x$-direction are on zero-data.");
+step();
+remark("We can skip such transforms:");
 figure("cyrc_prune","height=4cm");
 step();
 remark("This is actually slower for large data sets due to memory-striding issues.");
 
 title("Implicit Padding in Higher Dimensions");
-item("Implicitly padding is faster in two dimensions:");
+item("Implicit padding is faster in two dimensions:");
 figure("timing2c","height=15cm"); // TODO: redo (with N instead of m?)
 
 title("Implicit Padding in Higher Dimensions");
@@ -238,7 +240,7 @@ item("The 1D implicit convolution is comparable to explicit padding:");
 figure("timing1r","height=15cm"); // TODO: redo (with N instead of m?)
 
 title("Hermitian Data");
-item("And is faster in higher dimensions:");
+item("And faster in higher dimensions:");
 figure("timing2r","height=15cm"); // TODO: redo (with N instead of m?)
 
 
