@@ -78,7 +78,6 @@ class DNS : public ProblemBase {
   Real k02; // k0^2
   array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
-  array2<Complex> S;
   vector T;
 
   int tcount;
@@ -132,7 +131,7 @@ public:
   
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
-    Transfer(Src,Y);
+    if(spectrum) Transfer(Src,Y);
     LinearSource(Src,Y,t);
   }
   
@@ -143,7 +142,7 @@ public:
   
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
-    Transfer(Src,Y);
+    if(spectrum) Transfer(Src,Y);
     NonConservativeSource(Src,Y,t);
   }
   void Source(const vector2& Src, const vector2& Y, double t) {
@@ -374,6 +373,7 @@ void DNS::InitialConditions()
   origin=xorigin*my;
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
   
+  
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
   NY[EK]=nshells;
@@ -388,7 +388,6 @@ void DNS::InitialConditions()
   Dimension(T,nshells);
   
   w.Dimension(Nx,my);
-  S.Dimension(Nx,my);
   f0.Dimension(Nx,my);
   
   unsigned int Nxmy=Nx*my;
@@ -421,7 +420,6 @@ void DNS::InitialConditions()
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
   w.Set(Y[OMEGA]);
   InitialCondition->Set(w,NY[OMEGA]);
-  w(xorigin,0)=0;
   HermitianSymmetrizeX(mx,my,xorigin,w);
   
   for(unsigned i=0; i < nshells; i++)
@@ -471,14 +469,16 @@ void DNS::Initialize()
 {
   fevt << "#   t\t\t E\t\t\t Z" << endl;
   
-  for(unsigned i=0; i < nshells; i++)
-    count[i]=0;
+  if(spectrum) {
+    for(unsigned i=0; i < nshells; i++)
+      count[i]=0;
   
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      count[(unsigned)(sqrt(I2+j*j)-0.5)]++;
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+        count[(unsigned)(sqrt(I2+j*j)-0.5)]++;
+      }
     }
   }
 }
@@ -542,7 +542,7 @@ void DNS::Output(int it)
   tcount++;
   ft << t << endl;
   
-  if(rezero && it % rezero == 0) {
+  if(rezero && it % rezero == 0 && spectrum) {
     vector2 Y=Integrator->YVector();
     vector T=Y[TRANSFER];
     for(unsigned i=0; i < nshells; i++)
@@ -672,27 +672,26 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
 
 void DNS::Transfer(const vector2& Src, const vector2& Y)
 {
-  w.Set(Y[OMEGA]);
-  S.Set(Src[OMEGA]);
   Set(T,Src[TRANSFER]);
   
   for(unsigned K=0; K < nshells; K++)
     T[K]=0.0;
+  f0.Set(Src[OMEGA]);
 
+  w.Set(Y[OMEGA]);
   Var factor=sqrt(2.0*dt)*crand_gauss();
 
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
     vector wi=w[i];
-    vector Si=S[i];
+    vector Si=f0[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real k=k0*sqrt(I2+j*j);
       T[(unsigned)(k-0.5)].re += realproduct(Si[j],wi[j]);
     }
   }
   
-  f0.Set(Src[OMEGA]);
   Forcing->Force(f0,T);
 }
 
