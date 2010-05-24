@@ -97,7 +97,7 @@ class DNS : public ProblemBase {
   
 public:
   DNS();
-  virtual ~DNS() {}
+  virtual ~DNS();
   
   void IndexLimits(unsigned& start, unsigned& stop,
 		   unsigned& startT, unsigned& stopT,
@@ -353,6 +353,11 @@ DNS::DNS()
   check_compatibility(DEBUG);
   ConservativeIntegrators(DNS_Vocabulary.IntegratorTable,this);
   ExponentialIntegrators(DNS_Vocabulary.IntegratorTable,this);
+}
+
+DNS::~DNS()
+{
+  deleteAlign(block);
 }
 
 ifstream ftin;
