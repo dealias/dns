@@ -1,0 +1,55 @@
+\documentclass{amsart}
+ 
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+
+\title{The Multispectral Method}
+\author{Malcolm Roberts$^1$
+\and
+John C. Bowman$^1$
+\and
+Bruno Eckhardt$^2$
+}
+\address{$^1$Department of Mathematical and Statistical Sciences,
+University of Alberta, Edmonton, Alberta T6G 2G1, Canada
+ ({\tt mroberts@math.ualberta.ca}, {\tt bowman@math.ualberta.ca})}
+\address{$^2$Fachbereich Physik, Philipps-Universit\"at Marburg, 
+D-35032 Marburg, Germany\linebreak[4]
+ ({\tt bruno.eckhardt@physik.uni-marburg.de})}
+\date{}
+
+\keywords{}
+
+\subjclass{}
+
+\begin{document}
+
+\begin{abstract}
+
+Spectral simulations of high Reynolds-number turbulence require a very
+large number of active modes, ranging from the largest scale of the
+system to the dissipation scale. Since there is no intermediate range
+of quiescent modes, numerical techniques cannot rely on a separation
+of scales to reduce the stiffness of the system. 
+
+The \emph{multispectral method} uses spectral reduction 
+[Bowman, Shadwick, and Morrison,  \emph{Phys.\ Rev.\ Lett.\ }{\bf 83}, 
+5491 (1999)] to evolve time-dependent PDEs on a hierarchy of decimated
+grids in Fourier space.  We can choose to decimate the grids keeping
+all low-wavenumber modes intact, allowing us to simulate very small scales 
+with far fewer degrees of freedom than an equivalent pseudo-spectral 
+simulation.
+
+In [Roberts, M.\ 2006.\ \emph{A Multi-Spectral Decimation Scheme for 
+Turbulence Simulations}.\ Master's thesis, University of Alberta],
+we demonstrated this technique using shell models of
+turbulence.  Here, we apply this technique to two-dimensional Navier--Stokes 
+turbulence, taking care that projection and prolongation between grids
+conserve important quadratic invariants.
+
+\end{abstract}
+
+\maketitle
+
+\end{document}
