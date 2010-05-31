@@ -33,23 +33,28 @@ system to the dissipation scale. Since there is no intermediate range
 of quiescent modes, numerical techniques cannot rely on a separation
 of scales to reduce the stiffness of the system. 
 
-The \emph{multispectral method} uses spectral reduction 
+The \emph{multispectral method} generalizes spectral reduction 
 [Bowman, Shadwick, and Morrison,  \emph{Phys.\ Rev.\ Lett.\ }{\bf 83}, 
 5491 (1999)] to evolve time-dependent PDEs on a hierarchy of decimated
-grids in Fourier space.  We can choose to decimate the grids keeping
-all low-wavenumber modes intact, allowing us to simulate very small scales 
-with far fewer degrees of freedom than an equivalent pseudo-spectral 
+grids in Fourier space.  The grids can be decimated so that low-wavenumber
+modes are preserved. High-Reynolds number turbulence can then be simulated
+using far fewer degrees of freedom than required for a full pseudospectral
 simulation.
 
-In [Roberts, M.\ 2006.\ \emph{A Multi-Spectral Decimation Scheme for 
-Turbulence Simulations}.\ Master's thesis, University of Alberta],
-we demonstrated this technique using shell models of
-turbulence.  Here, we apply this technique to two-dimensional Navier--Stokes 
-turbulence, taking care that projection and prolongation between grids
-conserve important quadratic invariants.
+In previous work [Roberts, \emph{A Multi-Spectral Decimation Scheme for
+  Turbulence Simulations}, Master's thesis, University of Alberta (2006)],
+the multispectral technique was demonstrated for shell models. 
+Here, we apply the technique to the two-dimensional incompressible
+Navier--Stokes equation, taking care that the projection and prolongation
+operators between the grids conserve both energy and enstrophy. 
+The nonlinear advection term is handled using efficient algorithms 
+that we have recently developed for computing implicitly dealiased
+convolutions ({\tt http://fftwpp.sourceforge.net}).
 
 \end{abstract}
 
 \maketitle
 
 \end{document}
+
+% LocalWords:  Multi dealiasing
