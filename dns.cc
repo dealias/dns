@@ -11,7 +11,6 @@
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
 
 using namespace Array;
-using namespace fftwpp;
 using std::ostringstream;
 
 const double ProblemVersion=1.0;
@@ -93,8 +92,8 @@ class DNS : public ProblemBase {
   Complex *F[2];
   Complex *G[2];
   
-  ImplicitHConvolution2 *Convolution;
-  ExplicitHConvolution2 *Padded;
+  fftwpp::ImplicitHConvolution2 *Convolution;
+  fftwpp::ExplicitHConvolution2 *Padded;
   
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;
@@ -142,7 +141,7 @@ public:
   
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
     if(spectrum) Spectrum(Src[EK],Y[OMEGA]);
-    HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
+    fftwpp::HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
   }
   
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
@@ -366,7 +365,7 @@ DNS::DNS()
 
 DNS::~DNS()
 {
-  deleteAlign(block);
+  fftwpp::deleteAlign(block);
 }
 
 
@@ -409,7 +408,7 @@ void DNS::InitialConditions()
   if(movie)
     nbuf=max(nbuf,Nx0*my0);
 
-  block=ComplexAlign(nbuf);
+  block=fftwpp::ComplexAlign(nbuf);
   f1.Dimension(Nx,my,block);
   g0.Dimension(Nx,my,block+Nxmy);
   g1.Dimension(Nx,my,block+2*Nxmy);
@@ -418,20 +417,20 @@ void DNS::InitialConditions()
   G[0]=g0;
   G[1]=g1;
   
-  Convolution=new ImplicitHConvolution2(mx,my,2);
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
 
   Allocate(count,nshells);
   
   if(movie) {
     buffer.Dimension(Nx0,my0,block);
     wr.Dimension(Nx0,2*my0,(Real *) block);
-    Padded=new ExplicitHConvolution2(Nx0,Ny0,mx,my,block);
+    Padded=new fftwpp::ExplicitHConvolution2(Nx0,Ny0,mx,my,block);
   }
   
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
   w.Set(Y[OMEGA]);
   InitialCondition->Set(w,NY[OMEGA]);
-  HermitianSymmetrizeX(mx,my,xorigin,w);
+  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
   
   for(unsigned i=0; i < nshells; i++)
     Y[EK][i]=0.0;
