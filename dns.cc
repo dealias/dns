@@ -37,8 +37,8 @@ ForcingBase *Forcing;
 Real nuH=0.0, nuL=0.0;
 int pH=1;
 int pL=0;
-unsigned Nx=1;
-unsigned Ny=1;
+unsigned Nx=15;
+unsigned Ny=15;
 Real eta=0.0;
 Complex force=0.0;
 Real kforce=1.0;
@@ -50,7 +50,7 @@ unsigned spectrum=1;
 int xpad=1;
 int ypad=1;
 
-enum Field {OMEGA,TRANSFER,EK};
+
 
 class DNSVocabulary : public VocabularyBase {
 public:
@@ -70,6 +70,7 @@ public:
 };
    
 class DNS : public ProblemBase {
+  enum Field {OMEGA,TRANSFER,EK};
   unsigned mx, my; // size of data arrays
   unsigned origin; // linear index of Fourier origin.
   unsigned xorigin; // horizontal index of Fourier origin.
@@ -95,6 +96,10 @@ class DNS : public ProblemBase {
   ImplicitHConvolution2 *Convolution;
   ExplicitHConvolution2 *Padded;
   
+  ifstream ftin;
+  oxstream fwk,fw,fekvk,ftransfer;
+  ofstream ft,fevt;
+
 public:
   DNS();
   virtual ~DNS();
@@ -360,9 +365,6 @@ DNS::~DNS()
   deleteAlign(block);
 }
 
-ifstream ftin;
-oxstream fwk,fw,fekvk,ftransfer;
-ofstream ft,fevt;
 
 void DNS::InitialConditions()
 {
