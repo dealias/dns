@@ -187,25 +187,29 @@ public:
 
 DNS *DNSProblem;
 
-static Real Spectrum(unsigned int i)
-{
-  return DNSProblem->Spectrum(i);
-}
+class cwrap{
+public:
+  static Real Spectrum(unsigned int i)
+  {
+    return DNSProblem->Spectrum(i);
+  }
 
-static Real Dissipation(unsigned int i)
-{
-  return DNSProblem->Dissipation(i);
-}
-
-static Real Pi(unsigned int i)
-{
-  return DNSProblem->Pi(i);
-}
-
-static Real Eta(unsigned int i)
-{
-  return DNSProblem->Eta(i);
-}
+  static Real Dissipation(unsigned int i)
+  {
+    return DNSProblem->Dissipation(i);
+  }
+  
+  static Real Pi(unsigned int i)
+  {
+    return DNSProblem->Pi(i);
+  }
+  
+  static Real Eta(unsigned int i)
+  {
+    return DNSProblem->Eta(i);
+  }
+};
+  
 
 class Zero : public InitialConditionBase {
 public:
@@ -530,8 +534,8 @@ void DNS::Output(int it)
     buf << "ekvk" << dirsep << "t" << tcount;
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
-    out_curve(fekvk,::Spectrum,"Ek",nshells);
-    out_curve(fekvk,::Dissipation,"nuk*Ek",nshells);
+    out_curve(fekvk,cwrap::Spectrum,"Ek",nshells);
+    out_curve(fekvk,cwrap::Dissipation,"nuk*Ek",nshells);
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
 
@@ -540,8 +544,8 @@ void DNS::Output(int it)
     buf << "transfer" << dirsep << "t" << tcount;
     open_output(ftransfer,dirsep,buf.str().c_str(),0);
     out_curve(ftransfer,t,"t");
-    out_curve(ftransfer,::Pi,"Pi",nshells);
-    out_curve(ftransfer,::Eta,"Eta",nshells);
+    out_curve(ftransfer,cwrap::Pi,"Pi",nshells);
+    out_curve(ftransfer,cwrap::Eta,"Eta",nshells);
     ftransfer.close();
     if(!ftransfer) msg(ERROR,"Cannot write to file transfer");
   }    
