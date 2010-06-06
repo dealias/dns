@@ -121,7 +121,7 @@ equation("{\color{green} (f*g)_n}={\color{green}\sum_{m=0}^n f_m g_{n-m}}");
 item("Calculating $\{(f*g)_n\}_{n=0}^{N-1}$ takes $\O(N^2)$ operations.");
 item("The convolution theorem states that convolutions are a multiplications in Fourier space:");
 equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
-remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n$ is the Fourier transform of $\{f_n\}$.");
+remark("where $\{\mathcal{F}(f)\}_k=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n$ is the Fourier transform of $\{f_n\}$.");
 //remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}\zeta_N^{nk}f_n$, $\zeta_N=e^{2\pi i/N}$, is the Fourier transform of $\{f_n\}$.");
 item("A fast Fourier transform (FFT)  of length $N$ requires $K N \log_2 N$ multiplications~\cite{Gauss1866,Cooley65}.");
 item("Convolving using FFTs requires $3KN\log_2 N$ operations.");
@@ -131,7 +131,7 @@ item("Convolving using FFTs requires $3KN\log_2 N$ operations.");
 title("Cyclic and Linear Convolutions");
 item("Fourier transforms map periodic data to periodic data.");
 item("Thus, $\mathcal{F}^{-1}[\mathcal{F}(f) \, \mathcal{F}(g) ]$ is a {\it discrete cyclic convolution},");
-equation("(f*_{\scriptscriptstyle N}g)_n \doteq \sum_{m=0}^{N-1} f_{m_N} g_{(n-m)_N},");
+equation("(f*_{\scriptscriptstyle N}g)_n \doteq \sum_{m=0}^{N-1} f_{m} g_{n-m},");
 remark("where the vectors $f$ and $g$ have period $N$.");
 item("The difference between linear and cyclic convolutions,");
 equation("\sum_{m=0}^{N-1} f_{m} g_{n-m} ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} + {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}},");
@@ -141,12 +141,19 @@ remark("is called the {\it aliasing error}.");
 title("Dealiasing via Explicit Zero-Padding");
 item("The cyclic and linear convolutions are equal if we pad $f$ with zeros:");
 equation("f=(f_0,f_1,\dots,f_{N-2},f_{N-1},\underbrace{0,\dots,0}_{N})");
-item("Convolving these padded arrays takes $6K N \log_2 2N$ operations,");
-item("and $2^d$ times the memory, where $d$ is the dimension.");
+item("FIXME: how does this work, Malcolm?");
+skip();
 item("Memory size and CPU speed have increased much faster than memory bandwidth;  this is the {\it von-Neumann bottleneck}.");
+skip();
 item("Explicit zero-padding seems wasteful.");
-// FIXME: ref
-// http://userweb.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD692.html ?
+
+title("Dealiasing via Explicit Zero-Padding");
+indexedfigure("cyrc_1exp",0,5,"width=22cm");
+item("Convolving these padded arrays takes $6K N \log_2 2N$ operations,");
+skip();
+item("and twice times the memory of a circular convolution.");
+
+// ref: http://userweb.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD692.html
 
 
 title("Phase-shift Dealiasing");
