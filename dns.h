@@ -271,9 +271,11 @@ public:
 
 // Vocabulary
 
+extern const char* problem;
+
 class DNSVocabulary : public VocabularyBase {
 public:
-  const char *Name() {return "Direct Numerical Simulation of Turbulence";}
+  const char *Name() {return problem;}
   const char *Abbrev() {return "DNS";}
   DNSVocabulary();
 

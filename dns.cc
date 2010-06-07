@@ -9,6 +9,8 @@ const double ProblemVersion=1.0;
 #endif
 #endif
 
+const char *problem="Direct Numerical Simulation of Turbulence";
+
 const char *method="DNS";
 const char *integrator="RK5";
 const char *ic="Equipartition";
