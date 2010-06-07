@@ -152,8 +152,7 @@ equation("= {\color{green} \sum_{m=0}^{n} f_{m} g_{n-m}}.");
 title("Dealiasing via Explicit Zero-Padding");
 indexedfigure("cyrc_1exp",0,5,"width=22cm");
 item("Convolving these padded arrays takes $6K N \log_2 2N$ operations,");
-skip();
-item("and twice times the memory of a circular convolution.");
+item("and twice the memory of a circular convolution.");
 item("CPU speed and memory size have increased much faster than memory bandwidth;  this is the {\it von-Neumann bottleneck}.");
 //item("Explicit zero-padding seems wasteful.");
 // ref: http://userweb.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD692.html
@@ -189,6 +188,7 @@ step();
 remark("which {\it are} FFTs.");
 step();
 figure("cyrc_1d","width=22cm");
+skip();
 item("Since Fourier-transformed data is of length $2N$, there are no memory savings.");
 
 title("Implicit Padding");
@@ -198,6 +198,7 @@ remark("\quad the work buffer is separate from the data buffer.");
 step();
 indexedfigure("cyrc_1imp",0,3,"width=22cm");
 item("The computational complexity is $6 K N log_2 N/2$.");
+item("By swapping arrays, we can use out-of-place transforms.");
 item("By swapping arrays, we can use out-of-place transforms.");
 
 
@@ -210,7 +211,6 @@ title("Convolutions in Higher Dimensions");
 item("An explicitly padded convolution in 2 dimensions requires $12N$ padded FFTs, and 4 times the memory of a cyclic convolution.");
 indexedfigure("cyrc_2exp",0,5,"width=14cm");
 
-// FIXME: redo this section
 title("Implicit Convolutions in Higher Dimensions");
 item("Implicitly padded 2-dimensional convolutions are done by first doing impliclty padded FFTs in the $x$ direction:");
 figure("cyrc_2dx","width=12cm");
@@ -226,13 +226,13 @@ figure("cyrc_2dxinv","width=6cm");
 
 //item("$y$-FFTs are done using a 1D work array:");
 //figure("cyrc_2dy","height=5cm");
-item("The resulting algorithm needs half the memory."); // FIXME: of what?
+item("An implictly padded convolution in 2 dimensions requires $9N$ padded FFTs, and twice the memory of a cyclic convolution.");
 skip();
-item("The operation count is $6K N \log N/2$."); // FIXME: express as relative to cyclic convolution.
+item("The operation count is $6K N \log N/2$.");
+skip();
+item("Implicit padding uses half the memory of explicit padding in higher dimensions as well.");
 
-
-// FIXME: redo this section
-title("Implicit Convolutions in Higher Dimensions");
+//title("Implicit Convolutions in Higher Dimensions");
 //item("The transformed arrays are multiplied:");
 //figure("cyrc_2dm","height=5cm");
 //item("Once we have $F_kG_k$, we take the inverse transform to get $f*g$:");
@@ -261,13 +261,14 @@ item("The algorithm is easily extended to three dimensions:");
 figure("timing3c","height=15cm"); // TODO: redo (with N instead of m?)
 
 title("Hermitian Data");
+// FIXME: define centered data first!
 item("If $\{f_n\}_{n=0}^{N-1}$ is real-valued, then");
 equation("\mathcal{F}(f)=\{F_k\}_{k=-N/2}^{N/2}");
 remark("and $F_{-k}=\conj{F}_k$. Such data is called {\it Hermitian}.");
-item("Real-to-complex Fourier take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
-item("Zero-padding Hermitian data increases the array length by $50\%$ (i.e.\ $2/3$ padding.)");
+item("Real-to-complex FFTs take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
+item("Zero-padding Hermitian data increases the array length by $50\%$ (i.e.\ $2/3$ padding):");
 figure("cyrc_23","height=4cm");
-item("Phase-shifting is slower than explicit padding for Hermitian data.");
+item("Phase-shifting uses more operations than explicit padding for Hermitian data.");
 
 title("Hermitian Data");
 item("The 1D implicit convolution is comparable to explicit padding:");
@@ -409,8 +410,8 @@ NF_k&=&\sum_{j=0}^{N-1}\zeta_N^{-kj} f_j
 item("No bit reversal is required at the highest level.");
 
 item("An implicitly padded convolution is implemented as in our {\tt FFTW++} library (version 1.05) as {\tt cconv}({\sf f},{\sf g},{\sf u},{\sf v}) computes an in-place implicitly dealiased convolution of two complex vectors {\sf f} and {\sf g} using two temporary vectors {\sf u} and {\sf v}, each of length~$m$.");
+item("This in-place convolution requires six out-of-place transforms, thereby avoiding bit reversal at all levels.");
 
-item("This in-place convolution requires six out-of-place transforms, thereby avoiding bit reversal at all levels.");  
 
 if(false) {
 remark("
