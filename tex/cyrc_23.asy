@@ -18,4 +18,4 @@ draw(shift(z)*g);
 
 g=box(a,2/3*b);
 z=(1/6,0);
-filldraw(shift(z)*g,grey);
+filldraw(shift(z)*g,yellow);

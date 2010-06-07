@@ -44,12 +44,11 @@ for(int i=0; i<6; ++i){
 
   h=dh;
   g=box(a,(wx,w));
-  z=(mx,h);
+  z=(0,h);
   filldraw(pic,shift(z)*g,datapen);
   label(pic,"$\{f_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
 
-  
-  z=(mx+d,h);
+  z=(d,h);
   filldraw(pic,shift(z)*g,datapen);
   label(pic,"$\{g_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
 
@@ -63,16 +62,15 @@ for(int i=0; i<6; ++i){
   filldraw(pic,shift(z)*g,datapen);
   label(pic,"$\{f_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
   label(pic,"$\{0\}_{n=0}^{N-1}$",z+(wx+mx,w/2),labelpen);
-  draw(pic,z+(wwx/2,dh)..z+(wwx/2,0)+(0,w),EndArrow);
-  // draw(pic,z+(wwx/2,0)..z+(wwx/2,0)+(0,w-dh),EndArrow);
+  draw(pic,z+(wx/2,dh)..z+(wx/2,0)+(0,w),EndArrow);
 
   z=(d,h);
   draw(pic,shift(z)*wg);
   filldraw(pic,shift(z)*g,datapen);
   label(pic,"$\{g_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
   label(pic,"$\{0\}_{n=0}^{N-1}$",z+(wx+mx,w/2),labelpen);
-  draw(pic,z+(wwx/2,dh)..z+(wwx/2,0)+(0,w),EndArrow);
-  //  draw(pic,z+(wwx/2,0)..z+(wwx/2,0)+(0,w-dh),EndArrow);
+  draw(pic,z+(wx/2,dh)..z+(wx/2,0)+(0,w),EndArrow);
+
 
   iframe(i);
   h-=dh;
@@ -80,7 +78,6 @@ for(int i=0; i<6; ++i){
   filldraw(pic,shift(z)*wg,datapen);
   label(pic,"$\{F_k\}_{k=0}^{N-1}$",z+(wwx/2,w/2),labelpen);
   draw(pic,z+(wwx/2,dh)..z+(wwx/2,0)+(0,w),EndArrow);
-
   
   z=(d,h);
   filldraw(pic,shift(z)*wg,datapen);
@@ -111,12 +108,11 @@ for(int i=0; i<6; ++i){
   label(pic,"$\{f*g_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
   label(pic,"$\{0\}_{n=0}^{N-1}$",z+(wx+mx,w/2),labelpen);
 
-
   iframe(i);
-  draw(pic,z+(wx/2,0)..z+(wwx/2,0)+(0,w-dh),EndArrow);
+  draw(pic,z+(wx/2,0)..z+(wx/2,0)+(0,w-dh),EndArrow);
   h-=dh;
-  z=(wwx+dd/2-wx/2,h);
-  //z=(mx,h);
+  //z=(wwx+dd/2-wx/2,h);
+  z=(wx+dd/2,h);
   filldraw(pic,shift(z)*g,convpen);
   label(pic,"$\{f*g_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
 

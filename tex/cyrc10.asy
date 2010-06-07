@@ -131,30 +131,32 @@ item("Convolving using FFTs requires $3KN\log_2 N$ operations.");
 title("Cyclic and Linear Convolutions");
 item("Fourier transforms map periodic data to periodic data.");
 item("Thus, $\mathcal{F}^{-1}[\mathcal{F}(f) \, \mathcal{F}(g) ]$ is a {\it discrete cyclic convolution},");
-equation("(f*_{\scriptscriptstyle N}g)_n \doteq \sum_{m=0}^{N-1} f_{m} g_{n-m},");
-remark("where the vectors $f$ and $g$ have period $N$.");
-item("The difference between linear and cyclic convolutions,");
-equation("\sum_{m=0}^{N-1} f_{m} g_{n-m} ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} + {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}},");
-remark("is called the {\it aliasing error}.");
+equation("(f*_{\scriptscriptstyle N}g)_n \doteq \sum_{m=0}^{N-1} f_{m(\mod N)} g_{(n-m) (\mod N)}.");
+//remark("where the vectors $f$ and $g$ have period $N$.");
+item("The difference between {\color{green} linear} and cyclic convolutions,");
+equation("(f*_{\scriptscriptstyle N}g)_n ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} + {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}},");
+step();
+remark("is called the {\color{red} \it aliasing error}.");
 // FIXME: consider Canuto's dealias.pdf, eq 3.4.9
 
 title("Dealiasing via Explicit Zero-Padding");
 item("The cyclic and linear convolutions are equal if we pad $f$ with zeros:");
-equation("f=(f_0,f_1,\dots,f_{N-2},f_{N-1},\underbrace{0,\dots,0}_{N})");
-item("FIXME: how does this work, Malcolm?");
-skip();
-item("Memory size and CPU speed have increased much faster than memory bandwidth;  this is the {\it von-Neumann bottleneck}.");
-skip();
-item("Explicit zero-padding seems wasteful.");
+equation("\{\widetilde f_n\}_{n=0}^{2N-1}=(f_0,f_1,\dots,f_{N-2},f_{N-1},\underbrace{0,\dots,0}_{N})");
+item("Then,");
+equation("(\widetilde f *_{\scriptscriptstyle 2N}\widetilde g)_n= \sum_{m=0}^{2N-1} \widetilde f_{m (\mod 2N)} \widetilde g_{(n-m) (\mod 2N)},");
+step();
+equation("= \sum_{m=0}^{N-1} f_{m} \widetilde g_{(n-m) (\mod 2N)},");
+step();
+equation("= {\color{green} \sum_{m=0}^{n} f_{m} g_{n-m}}.");
 
 title("Dealiasing via Explicit Zero-Padding");
 indexedfigure("cyrc_1exp",0,5,"width=22cm");
 item("Convolving these padded arrays takes $6K N \log_2 2N$ operations,");
 skip();
 item("and twice times the memory of a circular convolution.");
-
+item("CPU speed and memory size have increased much faster than memory bandwidth;  this is the {\it von-Neumann bottleneck}.");
+//item("Explicit zero-padding seems wasteful.");
 // ref: http://userweb.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD692.html
-
 
 title("Phase-shift Dealiasing");
 item("Another possibility is to use a phase shift \cite{Canuto06}.");
@@ -183,45 +185,70 @@ item("This is not a FFT, and cannot be done in $\O(N\log_2 N)$.");
 title("Implicit Padding");
 item("However, if we calculate even and odd terms separately, we get");
 equation("\mathcal{F}(f)_{2k}=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n, \quad\mathcal{F}(f)_{2k+1}=e^{\frac{ik}{2N}}\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n,");
+step();
 remark("which {\it are} FFTs.");
-item("The computational complexity is $6 K N log_2 N/2$.");
-//item("By swapping arrays, we can use out-of-place transforms.");
+step();
+figure("cyrc_1d","width=22cm");
 item("Since Fourier-transformed data is of length $2N$, there are no memory savings.");
-figure("cyrc_1d","height=3cm");
+
+title("Implicit Padding");
 item("There is one advantage:");
 step();
 remark("\quad the work buffer is separate from the data buffer.");
+step();
+indexedfigure("cyrc_1imp",0,3,"width=22cm");
+item("The computational complexity is $6 K N log_2 N/2$.");
+item("By swapping arrays, we can use out-of-place transforms.");
+
 
 title("Implicit Padding: speed");
 item("The algorithms are comparable in speed:");
 figure("timing1c","height=13cm"); // TODO: redo (with N instead of m?)
 item("Ours is much more complicated.");
 
+title("Convolutions in Higher Dimensions");
+item("An explicitly padded convolution in 2 dimensions requires $12N$ padded FFTs, and 4 times the memory of a cyclic convolution.");
+indexedfigure("cyrc_2exp",0,5,"width=14cm");
+
+// FIXME: redo this section
 title("Implicit Convolutions in Higher Dimensions");
-item("2D fast convolutions involve a series of FFTs, once for each dimension.");
-item("The first FFT produce needs a separate (but non-contiguous) array:");
-figure("cyrc_2dx","height=4cm");
-item("$y$-FFTs are done using a 1D work array:");
-figure("cyrc_2dy","height=5cm");
+item("Implicitly padded 2-dimensional convolutions are done by first doing impliclty padded FFTs in the $x$ direction:");
+figure("cyrc_2dx","width=12cm");
+item("And then $2N$ one-dimensional convolutions in the $y$-direction:");
+figure("cyrc_2dc","width=12cm");
 
 title("Implicit Convolutions in Higher Dimensions");
-item("The transformed arrays are multiplied:");
-figure("cyrc_2dm","height=5cm");
-item("Once we have $F_kG_k$, we take the inverse transform to get $f*g$:");
-figure("cyrc_2dinv","height=4cm");
-item("The resulting algorithm needs half the memory.");
-item("The operation count is $6K N \log N/2$.");
+item("We recover $f*g$ by taking an inverse padded FFT:");
+figure("cyrc_2dxinv","width=6cm");
+//newslide();
+//item("2D fast convolutions involve a series of FFTs, once for each dimension.");
+//item("The first FFT produce needs a separate (but non-contiguous) array:");
 
+//item("$y$-FFTs are done using a 1D work array:");
+//figure("cyrc_2dy","height=5cm");
+item("The resulting algorithm needs half the memory."); // FIXME: of what?
+skip();
+item("The operation count is $6K N \log N/2$."); // FIXME: express as relative to cyclic convolution.
+
+
+// FIXME: redo this section
+title("Implicit Convolutions in Higher Dimensions");
+//item("The transformed arrays are multiplied:");
+//figure("cyrc_2dm","height=5cm");
+//item("Once we have $F_kG_k$, we take the inverse transform to get $f*g$:");
+//figure("cyrc_2dinv","height=4cm");
+
+// FIXME: redo this section
 title("Alternatives");
 item("The memory savings could be achieved more simply by using conventional padded transforms.");
 step();
-remark("However, this requires copying more data, which is slow.");
+remark("This requires copying data, which is slow.");
 step();
 //skip();
 item("Pruning: note that half of the FFTs in the $x$-direction are on zero-data.");
 step();
 remark("We can skip such transforms:");
-figure("cyrc_prune","height=4cm");
+figure("cyrc_prune","height=4cm"); // FIXME: figure should be yellow, less shitty
 step();
 remark("This is actually slower for large data sets due to memory-striding issues.");
 
