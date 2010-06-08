@@ -16,6 +16,8 @@ LIB += -lfftw3
 
 include $(TRI)/config/Rules
 
+all: dns mdns
+
 dns: 	dependencies
 	+make -f $(TRI)/config/Compile FILES="dns $(EXTRA)" NAME=dns
 
