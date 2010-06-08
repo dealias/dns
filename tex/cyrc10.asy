@@ -92,7 +92,7 @@ subitem("Phase-shift dealiasing");
 item("Implicit Padding");
 subitem("In one dimension");
 subitem("In higher dimensions");
-item("Hermitian Convolutions");
+item("Centered Hermitian Convolutions");
 
 title("Convolutions");
 item("The convolution of the functions $f$ and $g$ is");
@@ -187,7 +187,7 @@ equation("\mathcal{F}(f)_{2k}=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n, \quad\m
 step();
 remark("which {\it are} FFTs.");
 step();
-figure("cyrc_1d","width=22cm");
+indexedfigure("cyrc_1d",0,2,"width=10cm");
 skip();
 item("Since Fourier-transformed data is of length $2N$, there are no memory savings.");
 
@@ -198,7 +198,6 @@ remark("\quad the work buffer is separate from the data buffer.");
 step();
 indexedfigure("cyrc_1imp",0,3,"width=22cm");
 item("The computational complexity is $6 K N log_2 N/2$.");
-item("By swapping arrays, we can use out-of-place transforms.");
 item("By swapping arrays, we can use out-of-place transforms.");
 
 
@@ -213,13 +212,17 @@ indexedfigure("cyrc_2exp",0,5,"width=14cm");
 
 title("Implicit Convolutions in Higher Dimensions");
 item("Implicitly padded 2-dimensional convolutions are done by first doing impliclty padded FFTs in the $x$ direction:");
-figure("cyrc_2dx","width=12cm");
+indexedfigure("cyrc_2dx",0,1,"width=11cm");
 item("And then $2N$ one-dimensional convolutions in the $y$-direction:");
-figure("cyrc_2dc","width=12cm");
+step();
+indexedfigure("cyrc_2dc",0,1,"width=11cm");
+
 
 title("Implicit Convolutions in Higher Dimensions");
-item("We recover $f*g$ by taking an inverse padded FFT:");
-figure("cyrc_2dxinv","width=6cm");
+item("We recover $f*g$ by taking an inverse padded $x$-FFT:");
+//figure("cyrc_2dxinv","width=6cm"); // FIXME: indexedfigure
+indexedfigure("cyrc_2dxinv",0,1,"width=6cm");
+
 //newslide();
 //item("2D fast convolutions involve a series of FFTs, once for each dimension.");
 //item("The first FFT produce needs a separate (but non-contiguous) array:");
@@ -238,17 +241,14 @@ item("Implicit padding uses half the memory of explicit padding in higher dimens
 //item("Once we have $F_kG_k$, we take the inverse transform to get $f*g$:");
 //figure("cyrc_2dinv","height=4cm");
 
-// FIXME: redo this section
 title("Alternatives");
 item("The memory savings could be achieved more simply by using conventional padded transforms.");
-step();
-remark("This requires copying data, which is slow.");
+item("This requires copying data, which is slow.");
 step();
 //skip();
 item("Pruning: note that half of the FFTs in the $x$-direction are on zero-data.");
-step();
-remark("We can skip such transforms:");
-figure("cyrc_prune","height=4cm"); // FIXME: figure should be yellow, less shitty
+item("We can skip such transforms:");
+figure("cyrc_prune","height=4cm");  // FIXME: indexedfigure
 step();
 remark("This is actually slower for large data sets due to memory-striding issues.");
 
@@ -260,15 +260,16 @@ title("Implicit Padding in Higher Dimensions");
 item("The algorithm is easily extended to three dimensions:");
 figure("timing3c","height=15cm"); // TODO: redo (with N instead of m?)
 
-title("Hermitian Data");
-// FIXME: define centered data first!
-item("If $\{f_n\}_{n=0}^{N-1}$ is real-valued, then");
-equation("\mathcal{F}(f)=\{F_k\}_{k=-N/2}^{N/2}");
-remark("and $F_{-k}=\conj{F}_k$. Such data is called {\it Hermitian}.");
-item("Real-to-complex FFTs take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
-item("Zero-padding Hermitian data increases the array length by $50\%$ (i.e.\ $2/3$ padding):");
+title("Centered Hermitian Data");
+item("The Fourier transform of $f$ is \emph{centered} if ");
+equation("\mathcal{F}(f)=\{F_k\}_{k=-N/2}^{N/2}.");
+item("If $\{f_n\}_{n=0}^{N-1}$ is real-valued, then $\mathcal{F}(f)$ is \emph{Hermitian}:");
+equation("F_{-k}=\conj{F}_k");
+//item("Real-to-complex FFTs take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
+item("Padding centered data increases the array length by $50\%$");
 figure("cyrc_23","height=4cm");
-item("Phase-shifting uses more operations than explicit padding for Hermitian data.");
+item("Phase-shifting is slower than explicit padding for centered data.");
+item("Implicit padding uses 2/3 the memory of explicit padding.");
 
 title("Hermitian Data");
 item("The 1D implicit convolution is comparable to explicit padding:");
@@ -295,13 +296,13 @@ item("Implicit padding is optimal for Mersenne-prime sized problem");
 
 title("Conclusion");
 item("Implicitly padded fast convolutions eliminate aliasing errors.");
-item("They use less memory and are faster than explicit zero-padding or phase-shift dealiasing.");
+item("They use less memory and are faster than explicit zero-padding or phase-shift dealiasing."); // FIXME: check this!
 item("Expanding into discontiguous arrays makes for easier programming.");
+item("``Efficient Dealiased Convolutions without Padding\" submitted to SIAM Journal on Scientific Computing.");
 item("A {\tt C++} implementation under the LGPL is available at {\tt http://fftwpp.sourceforge.net/}");
 item("Uses SIMD routines when compiled with the Intel compiler.");
 item("Uses the Fastest Fourier Transform in the West ({\tt http://fftw.org/}) for sub-transforms.");
-figure("fftw-logo-med.eps","height=2cm"); 
-
+figure("fftw-logo-med.eps","height=1.4cm"); 
 
 
 

@@ -1,7 +1,9 @@
 size(16cm,0);
 
 
-//pair center(path g) {return 0.5*(min(g)+max(g));}
+pair center(path g) {return 0.5*(min(g)+max(g));}
+pair bottom(path g) {return (center(g).x,min(g).y);}
+pair top(path g) {return (center(g).x,max(g).y);}
 
 
 void drawboxes(pair z=(0,0), pair p=(1,1))
@@ -9,7 +11,7 @@ void drawboxes(pair z=(0,0), pair p=(1,1))
   path g=box((0,0),p);
   draw(shift(z)*g);
 }
-path g, wg;
+
 pair b=(1,1), a=(0,0), z=(0,0);
 real dh=0.25;
 real dd=0.1;1.6;
@@ -18,6 +20,8 @@ real dd=0.1;
 real w=0.12;
 real d=wwx+dd, mx=(wwx-wx)/2, h=dh;
 pen datapen=yellow, convpen=lightgreen, labelpen=black;
+path g, wg, p;
+pair p1, p2, q1, q2;
 
 
 int here=0;
@@ -42,79 +46,109 @@ for(int i=0; i<6; ++i){
   labelpen=black;
   currentpen=black;
 
-  h=dh;
-  g=box(a,(wx,w));
-  z=(0,h);
-  filldraw(pic,shift(z)*g,datapen);
-  label(pic,"$\{f_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
-
-  z=(d,h);
-  filldraw(pic,shift(z)*g,datapen);
-  label(pic,"$\{g_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
-
-
-  iframe(i);
-  h-=dh;
   wg=box(a,(wwx,w));
-  z=(0,h);
+  g=box(a,(wx,w));
   
-  draw(pic,shift(z)*wg);
-  filldraw(pic,shift(z)*g,datapen);
-  label(pic,"$\{f_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
-  label(pic,"$\{0\}_{n=0}^{N-1}$",z+(wx+mx,w/2),labelpen);
-  draw(pic,z+(wx/2,dh)..z+(wx/2,0)+(0,w),EndArrow);
-
-  z=(d,h);
-  draw(pic,shift(z)*wg);
-  filldraw(pic,shift(z)*g,datapen);
-  label(pic,"$\{g_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
-  label(pic,"$\{0\}_{n=0}^{N-1}$",z+(wx+mx,w/2),labelpen);
-  draw(pic,z+(wx/2,dh)..z+(wx/2,0)+(0,w),EndArrow);
-
-
-  iframe(i);
-  h-=dh;
+  h=dh;
   z=(0,h);
-  filldraw(pic,shift(z)*wg,datapen);
-  label(pic,"$\{F_k\}_{k=0}^{N-1}$",z+(wwx/2,w/2),labelpen);
-  draw(pic,z+(wwx/2,dh)..z+(wwx/2,0)+(0,w),EndArrow);
+  p=shift(z)*g;
+  filldraw(pic,p,datapen);
+  label(pic,"$\{f_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  p1=bottom(p);
   
   z=(d,h);
-  filldraw(pic,shift(z)*wg,datapen);
-  label(pic,"$\{G_k\}_{k=0}^{2N-1}$",z+(wwx/2,w/2),labelpen);
-  draw(pic,z+(wwx/2,dh)..z+(wwx/2,0)+(0,w),EndArrow);
+  p=shift(z)*g;
+  filldraw(pic,p,datapen);
+  label(pic,"$\{g_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  p2=bottom(p);
+  
+  iframe(i);
+  h-=dh;
+
+  z=(0,h);
+  p=shift(z)*g;
+  filldraw(pic,p,datapen);
+  label(pic,"$\{f_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  q1=top(p);
+  draw(pic,p1..q1,EndArrow);
+  z+=(wx,0);
+  p=shift(z)*g;
+  draw(pic,p);
+  label(pic,"$\{0\}_{n=0}^{N-1}$",center(p),labelpen);
+  p1=bottom(p)-(wx/2,0);
+  
+  z=(d,h);
+  p=shift(z)*g;
+  filldraw(pic,p,datapen);
+  label(pic,"$\{g_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  q2=top(p);
+  draw(pic,p2..q2,EndArrow);
+  z+=(wx,0);
+  p=shift(z)*g;
+  draw(pic,p);
+  label(pic,"$\{0\}_{n=0}^{N-1}$",center(p),labelpen);
+  p2=bottom(p)-(wx/2,0);
+  
+
+  iframe(i);
+  h-=dh;
+
+  z=(0,h);
+  p=shift(z)*wg;
+  filldraw(pic,p,datapen);
+  label(pic,"$\{F_k\}_{n=0}^{2N-1}$",center(p),labelpen);
+  q1=top(p);
+  draw(pic,p1..q1,EndArrow);
+  p1=bottom(p);
+  
+  z=(d,h);
+  p=shift(z)*wg;
+  filldraw(pic,p,datapen);
+  label(pic,"$\{G_k\}_{n=0}^{2N-1}$",center(p),labelpen);
+  q2=top(p);
+  draw(pic,p2..q2,EndArrow);
+  p2=bottom(p);
   
   
   iframe(i);
   h-=dh;
-  z=((wwx+dd)/2,h);
 
-  pair dest=(wwx+dd/2,w+h);
-  draw(pic,(wwx/2,h+dh)..dest,EndArrow);
-  draw(pic,(1.5*wwx+dd,h+dh)..dest,EndArrow);
+  z=(0,h);
+  p=shift(z)*wg;
+  filldraw(pic,p,convpen);
+  label(pic,"$\{F_kG_k\}_{n=0}^{2N-1}$",center(p),labelpen);
+  q1=top(p);
+  draw(pic,p1..q1,EndArrow);
+  draw(pic,p2..q1,EndArrow);
+  p1=bottom(p);
 
-
-  //z=(0,h);
-  filldraw(pic,shift(z)*wg,convpen);
-  label(pic,"$\{F_kG_k\}_{k=0}^{2N-1}$",z+(wwx/2,w/2),labelpen);
-
+  
   iframe(i);
-  draw(pic,z+(wwx/2,0)..z+(wwx/2,0)+(0,w-dh),EndArrow);
   h-=dh;
-  z=((wwx+dd)/2,h);
-  //z=(0,h);
-  draw(pic,shift(z)*wg);
-  filldraw(pic,shift(z)*g,convpen);
-  label(pic,"$\{f*g_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
-  label(pic,"$\{0\}_{n=0}^{N-1}$",z+(wx+mx,w/2),labelpen);
 
+  z=(0,h);
+  p=shift(z)*g;
+  filldraw(pic,p,convpen);
+  label(pic,"$\{(f_*g)_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  q1=top(p)+(wx/2,0);
+  draw(pic,p1..q1,EndArrow);
+  p1=bottom(p);
+
+  z+=(wx,0);
+  p=shift(z)*g;
+  draw(pic,p);
+  label(pic,"$\{0\}_{n=0}^{N-1}$",center(p),labelpen);
+  
+  
   iframe(i);
-  draw(pic,z+(wx/2,0)..z+(wx/2,0)+(0,w-dh),EndArrow);
   h-=dh;
-  //z=(wwx+dd/2-wx/2,h);
-  z=(wx+dd/2,h);
-  filldraw(pic,shift(z)*g,convpen);
-  label(pic,"$\{f*g_n\}_{n=0}^{N-1}$",z+(wx/2,w/2),labelpen);
-
+  z=(0,h);
+  p=shift(z)*g;
+  filldraw(pic,p,convpen);
+  label(pic,"$\{(f_*g)_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  q1=top(p);
+  draw(pic,p1..q1,EndArrow);
+  
+  
   shipout("cyrc_1exp"+(string) i,pic);
 }
