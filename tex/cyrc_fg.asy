@@ -16,7 +16,7 @@ draw((-1,1)..(1,1),blue);
 draw((1,0)..(1,1),blue);
 draw((1,0)..(6,0),blue);
 */
-axes();
+//axes();
 
 //xaxis("$t$",BottomTop,LeftTicks);
 //yaxis("$y(t)$",LeftRight,RightTicks);

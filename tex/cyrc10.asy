@@ -99,7 +99,7 @@ item("The convolution of the functions $f$ and $g$ is");
 equation("(f*g)(t)=\int_{-\infty}^\infty f(\tau) g(t-\tau)\, d\tau.");
 item("For example, if $f=g=\chi_{(-1,1)}(t)$");
 figure("cyrc_f");
-item("Then $f*g$ is");
+item("Then $f*g$ is:");
 figure("cyrc_fg");
 
 title("Applications");
@@ -163,9 +163,11 @@ item("Define the shifted Fourier transform of $f$ to be");
 equation("F^\Delta \doteq \mathcal{F}_k^\Delta(f)=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{N}k(n+\Delta)}f_n,");
 item("Then, setting $\Delta=\pi/2$, one has");
 equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}}.");
-remark("which has a dealiasing error with opposite sign.");
+remark("which has a dealiasing error with opposite sign:");
+step();
 //equation("f*g=\frac{1}{2}\left(\mathcal{F}^{-1}\left(F G \right)+{\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right)\right)");
-item("Thus, we can calculate $f*g$ by from two periodic convolutions.");
+//item("Thus, we can calculate $f*g$ by from two periodic convolutions.");
+equation("{\color{green} f*g}=\frac{1}{2}\left(f*_{\scriptscriptstyle N}g +f*_{\scriptscriptstyle\Delta}g\right)");
 // note: Canuto's dealias.pdf, eq 3.4.17
 item("This requires $6K N \log_2 N$ operations.");
 //item("Padding is faster if we need to add fewer than $N$ zeros.");
@@ -300,7 +302,7 @@ item("They use less memory and are faster than explicit zero-padding or phase-sh
 item("Expanding into discontiguous arrays makes for easier programming.");
 item("``Efficient Dealiased Convolutions without Padding\" submitted to SIAM Journal on Scientific Computing.");
 item("A {\tt C++} implementation under the LGPL is available at {\tt http://fftwpp.sourceforge.net/}");
-item("Uses SIMD routines when compiled with the Intel compiler.");
+//item("Uses SIMD routines when compiled with the Intel compiler.");
 item("Uses the Fastest Fourier Transform in the West ({\tt http://fftw.org/}) for sub-transforms.");
 figure("fftw-logo-med.eps","height=1.4cm"); 
 
