@@ -74,8 +74,8 @@ bibliographystyle("rmp2");
 titlepen += darkgreen;
 
 titlepage("The Fastest Convolution in the West",
-	  "Malcolm Roberts (University of Alberta)","\Blue{Acknowledgements: John Bowman}",
-	  date="May 20, 2010",
+	  "John Bowman and Malcolm Roberts","\Blue{University of Alberta}",
+	  date="June 16, 2010",
 	  url="www.math.ualberta.ca/$\sim$mroberts");
 
 newslide(stepping=false);
@@ -117,9 +117,9 @@ subitem("$(u\cdot\del) u$ is a convolution in Fourier space.");
 
 title("Discrete Convolutions");
 item("Applications use a {\it discrete linear convolution}:");
-equation("{\color{green} (f*g)_n}={\color{green}\sum_{m=0}^n f_m g_{n-m}}");
+equation("{\color{green} (f*g)_n}={\color{green}\sum_{m=0}^n f_m g_{n-m}}.");
 item("Calculating $\{(f*g)_n\}_{n=0}^{N-1}$ takes $\O(N^2)$ operations.");
-item("The convolution theorem states that convolutions are a multiplications in Fourier space:");
+item("The convolution theorem states that convolutions are a multiplications in Fourier space:"); // FIXME: ref?
 equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
 remark("where $\{\mathcal{F}(f)\}_k=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n$ is the Fourier transform of $\{f_n\}$.");
 //remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}\zeta_N^{nk}f_n$, $\zeta_N=e^{2\pi i/N}$, is the Fourier transform of $\{f_n\}$.");
@@ -160,9 +160,9 @@ item("CPU speed and memory size have increased much faster than memory bandwidth
 title("Phase-shift Dealiasing");
 item("Another possibility is to use a phase shift \cite{Canuto06}.");
 item("Define the shifted Fourier transform of $f$ to be");
-equation("F^\Delta \doteq \mathcal{F}_k^\Delta(f)=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{N}k(n+\Delta)}f_n,");
+equation("F^\Delta \doteq \mathcal{F}_k^\Delta(f)=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{N}k(n+\Delta)}f_n.");
 item("Then, setting $\Delta=\pi/2$, one has");
-equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}}.");
+equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}},");
 remark("which has a dealiasing error with opposite sign:");
 step();
 //equation("f*g=\frac{1}{2}\left(\mathcal{F}^{-1}\left(F G \right)+{\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right)\right)");
@@ -216,7 +216,6 @@ title("Implicit Convolutions in Higher Dimensions");
 item("Implicitly padded 2-dimensional convolutions are done by first doing impliclty padded FFTs in the $x$ direction:");
 indexedfigure("cyrc_2dx",0,1,"width=11cm");
 item("And then $2N$ one-dimensional convolutions in the $y$-direction:");
-step();
 indexedfigure("cyrc_2dc",0,1,"width=11cm");
 
 
@@ -231,10 +230,9 @@ indexedfigure("cyrc_2dxinv",0,1,"width=6cm");
 
 //item("$y$-FFTs are done using a 1D work array:");
 //figure("cyrc_2dy","height=5cm");
-item("An implictly padded convolution in 2 dimensions requires $9N$ padded FFTs, and twice the memory of a cyclic convolution.");
-skip();
+item("An implictly padded convolution in 2 dimensions requires only $9N$ padded FFTs,");
+item("and only twice the memory of a cyclic convolution.");
 item("The operation count is $6K N \log N/2$.");
-skip();
 item("Implicit padding uses half the memory of explicit padding in higher dimensions as well.");
 
 //title("Implicit Convolutions in Higher Dimensions");
@@ -247,12 +245,11 @@ title("Alternatives");
 item("The memory savings could be achieved more simply by using conventional padded transforms.");
 item("This requires copying data, which is slow.");
 step();
-//skip();
-item("Pruning: note that half of the FFTs in the $x$-direction are on zero-data.");
-item("We can skip such transforms:");
+skip();
+item("Half of the FFTs in the $x$-direction are on zero-data.");
+item("We can skip (``prune\") such transforms:");
 figure("cyrc_prune","height=4cm");  // FIXME: indexedfigure
-step();
-remark("This is actually slower for large data sets due to memory-striding issues.");
+item("This is actually slower for large data sets due to memory-striding issues.");
 
 title("Implicit Padding in Higher Dimensions");
 item("Implicit padding is faster in two dimensions:");

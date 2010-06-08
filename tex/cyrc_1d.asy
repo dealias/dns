@@ -53,13 +53,6 @@ for(int i=0; i<3; ++i){
 
   
   h-=dh;
-  iframe(i);
-  
-  z=(wx+dd,h);
-  filldraw(pic,shift(z)*g,datapen);
-  pair p1o=z+(wx/2,0)+(0,w);
-  label(pic,"$\{F_k\}_{n=0}^{N-1}, k\, \rm{odd}$",p1o-(0,w/2),labelpen);
-  draw(pic,p1..p1o,EndArrow);
 
   iframe(i);
 
@@ -69,6 +62,13 @@ for(int i=0; i<3; ++i){
   label(pic,"$\{F_k\}_{n=0}^{N-1}, k\, \rm{even}$",p1e-(0,w/2),labelpen);
   draw(pic,p1..p1e,EndArrow);
 
+  iframe(i);
+  
+  z=(wx+dd,h);
+  filldraw(pic,shift(z)*g,datapen);
+  pair p1o=z+(wx/2,0)+(0,w);
+  label(pic,"$\{F_k\}_{n=0}^{N-1}, k\, \rm{odd}$",p1o-(0,w/2),labelpen);
+  draw(pic,p1..p1o,EndArrow);
   
   
   
