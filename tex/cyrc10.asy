@@ -61,7 +61,7 @@ title("Discrete Convolutions");
 item("Applications use a {\it discrete linear convolution}:");
 equation("{\color{green} (f*g)_n}={\color{green}\sum_{m=0}^n f_m g_{n-m}}.");
 item("Calculating $\{(f*g)_n\}_{n=0}^{N-1}$ takes $\O(N^2)$ operations.");
-item("The convolution theorem states that convolutions are a multiplications in Fourier space:"); // FIXME: ref?
+item("The convolution theorem states that convolutions are multiplications when Fourier-transformed:"); // FIXME: ref?
 equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
 remark("where $\{\mathcal{F}(f)\}_k=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n$ is the Fourier transform of $\{f_n\}$.");
 //remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}\zeta_N^{nk}f_n$, $\zeta_N=e^{2\pi i/N}$, is the Fourier transform of $\{f_n\}$.");
@@ -156,7 +156,7 @@ item("An explicitly padded convolution in 2 dimensions requires $12N$ padded FFT
 indexedfigure("cyrc_2exp",0,5,"width=14cm");
 
 title("Implicit Convolutions in Higher Dimensions");
-item("Implicitly padded 2-dimensional convolutions are done by first doing impliclty padded FFTs in the $x$ direction:");
+item("Implicitly padded 2-dimensional convolutions are done by first doing implicitly padded FFTs in the $x$ direction:");
 indexedfigure("cyrc_2dx",0,1,"width=11cm");
 item("And then $2N$ one-dimensional convolutions in the $y$-direction:");
 indexedfigure("cyrc_2dc",0,1,"width=11cm");
@@ -172,7 +172,7 @@ indexedfigure("cyrc_2dxinv",0,1,"width=6cm");
 
 //item("$y$-FFTs are done using a 1D work array:");
 //figure("cyrc_2dy","height=5cm");
-item("An implictly padded convolution in 2 dimensions requires only $9N$ padded FFTs,");
+item("An implicitly padded convolution in 2 dimensions requires only $9N$ padded FFTs,");
 item("and only twice the memory of a cyclic convolution.");
 item("The operation count is $6K N \log N/2$.");
 //item("Implicit padding uses half the memory of explicit padding in higher dimensions as well.");
@@ -191,7 +191,7 @@ skip();
 item("Half of the FFTs in the $x$-direction are on zero-data.");
 item("We can skip (``prune\") such transforms:");
 figure("cyrc_prune","height=4cm");
-item("This is actually slower for large data sets due to memory-striding issues.");
+item("This is slower with large data sets due to memory-striding issues.");
 
 title("Implicit Padding in 2D");
 item("Implicit padding is faster in two dimensions:");
@@ -211,7 +211,7 @@ equation("F_{-k}=\conj{F}_k");
 //item("Real-to-complex FFTs take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
 item("The convolution of the centered arrays $f$ and $g$ is");
 equation("(f*g)_n = \sum_{p=n-N/2+1}^{N/2-1}f_p g_{n-p}.");
-item("Padding centered data increases the array length by $50\%$:");
+item("Padding centered data use a ''$2/3$\" rule::");
 //figure("cyrc_23","height=4cm"); // FIXME: use this somewhere?
 equation("\{\widetilde f_n\}_{n=-N/2+1}^{N-1}
 =(f_{-N/2+1},\dots,f_0,\dots,f_{N/2-1},\underbrace{0,\dots,0}_{N/2}).");
@@ -233,11 +233,14 @@ item("And uses $(2/3)^{d-1}$ the memory in $d$ dimensions.");
 // NB: explicit and pruned code not done.
 
 title("Optimal Problem Sizes");
-item("Our main use for this algorithm is pseudo-spectral simulations.");
+item("We use convolutions in pseudo-spectral simulations:");
+//item("The input data is centered and real-valued.");
+equation("\partial_t u + u\cdot\del u = -\del P +\nu \del^2 u");
+remark("is advanced in Fourier space, with $u\cdot\del u$ calculated in $x$-space.");
 item("FFTs are faster for highly composite problem sizes:");
 subitem("$N=2^n$, $N=3^n$, etc., with $N=2^n$ optimal.");
-item("2/3 padding: 341, 683, 1365 etc");
-subitem("FFTs have $N=$ 512, 1024, 2048, etc.");
+item("``$2/3$\" padding: 341, 683, 1365 etc");
+subitem("FFTs are of size $N=$ 512, 1024, 2048, etc.");
 item("Phase-shift dealiasing: $2^n$");
 subitem("FFTs are the same size.");
 item("Implicit padding: $2^n-1$.");
@@ -246,13 +249,14 @@ subitem("sub-transforms are of size $2^{n-1}$.");
 
 title("Ternary Convolutions");
 item("The {\it ternary convolution\/} of three vectors $f$, $g$, and $h$ is");
-equation("\left[f,g,h \right]_* =\sum_{m=0}^{N-1} \sum_{p=0}^{N-1} f_m g_p h_{n-m-p}.");
+equation("\left[f,g,h \right]_* =
+\sum_{a,b,c\in\{0,\dots,N-1\}}f_a\, g_b\, h_c\,\d_{a+b+c,n}.");
+//equation("\left[f,g,h \right]_* =\sum_{m=0}^{N-1} \sum_{p=0}^{N-1} f_m g_p h_{n-m-p}.");
 item("Computing the transfer function for $Z_4=N^3\sum_\vj \w^4(x_\vj)$ requires
 computing the Fourier transform of the $\w^3$.");
 item("This requires a centered Hermitian ternary convolution:");
-equation("\left[f,g,h \right]_* =
-\sum_{a,b,c\in\{-\frac{N}{2}+1,\dots,\frac{N}{2}-1\}}f_a g_b h_c\d_{a+b+c,n}.");
-item("Correctly dealiasing requires a $2/4$ zero padding rule.");
+equation("\left[f,g,h \right]_* =\sum_{a,b,c\in\{-\frac{N}{2}+1,\dots,\frac{N}{2}-1\}}f_a\, g_b\, h_c\,\d_{a+b+c,n}.");
+item("Correctly dealiasing requires a ``$2/4$\" padding rule.");
 item("Computing $Z_4$ using $2048\times 2048$ pseudospectral modes simulation retains a maximum physical wavenumber of only $512$.");
 
 title("Centered Hermitian Ternary Convolutions: 1D");
@@ -260,22 +264,22 @@ item("The 1D implicit ternary convolution is as fast as explicit padding:");
 figure("ctiming1b","height=13cm");
 item("And has a comparable memory footprint.");
 
-title("Centered Hermitian Teranary Convolutions: 2D");
+title("Centered Hermitian Ternary Convolutions: 2D");
 item("Implicit centered ternary convolutions are faster in higher 2D:");
 figure("ctiming2b","height=13cm");
 item("And use $(1/2)^{d-1}$ the memory in $d$ dimensions.");
 
 title("Conclusion");
-item("Implicitly padded fast convolutions eliminate aliasing errors.");
-item("Implicit padding uses $1/2^{d-1}$ the memory of explicit padding in $d$ dimensions.");
-item("Computational speedup due to increased data locality and effective pruning.");
+item("Implictly padded fast convolutions eliminate aliasing errors.");
+item("Implicit padding uses $(p/q)^{d-1}$ the memory of explicit \mbox{$d$-dimensional} ``$p/q$\" padding.");
+item("Computational speedup from increased data locality and pruning FFTs.");
 //"They use less memory and are faster than explicit zero-padding or phase-shift dealiasing."); // FIXME: check this!
-item("Expanding discontiguously easier to program.");
+item("Expanding discontiguously is easier to program.");
 item("``Efficient Dealiased Convolutions without Padding\" submitted to SIAM Journal on Scientific Computing.");
-item("A {\tt C++} implementation under the LGPL is available at {\tt http://fftwpp.sourceforge.net/}");
+item("A {\tt C++} implementation under the LGPL is available at {\tt http://fftwpp.sourceforge.net/}.");
 //item("Uses SIMD routines when compiled with the Intel compiler.");
-item("Uses the Fastest Fourier Transform in the West ({\tt http://fftw.org/}) for sub-transforms.");
-figure("fftw-logo-med.eps","height=1.4cm"); 
+item("Fastest Fourier Transform in the West ({\tt http://fftw.org/}) provides sub-transforms.");
+figure("fftw-logo-med.eps","height=1.2cm"); 
 
 //item("Memory savings: in $d$ dimensions implicit padding asymptotically uses $1/2^{d-1}$ of the memory require by conventional explicit padding.");
 
