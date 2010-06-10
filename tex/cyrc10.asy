@@ -27,14 +27,14 @@ subitem("Definition");
 subitem("Applications");
 item("Fast Convolutions");
 subitem("The Convolution Theorem");
-//subitem("Cyclic vs.\ Linear");
 item("Aliasing Errors");
 subitem("Zero-padding");
 subitem("Phase-shift dealiasing");
-item("Implicit Padding");
-subitem("In one dimension");
-subitem("In higher dimensions");
+subitem("Implicit Padding");
+//subitem("In one dimension");
+//subitem("In higher dimensions");
 item("Centered Hermitian Convolutions");
+item("Ternary Convolutions");
 
 title("Convolutions");
 item("The convolution of the functions $f$ and $g$ is");
@@ -232,23 +232,6 @@ item("And uses $(2/3)^{d-1}$ the memory in $d$ dimensions.");
 //figure("ctiming2r","height=13cm");
 // NB: explicit and pruned code not done.
 
-// FIXME:
-title("Biconvolutions");
-item("The {\it biconvolution\/} of three vectors $F$, $G$, and $H$ is");
-equation("\sum_{p=0}^{N-1} \sum_{q=0}^{N-1} F_p G_q H_{k-p-q}.");
-item("Computing the transfer function for $Z_4=N^3\sum_\vj \w^4(x_\vj)$ requires
-computing the Fourier transform of the cubic quantity~$\w^3$.");
-item("This requires a centered Hermitian biconvolution:");
-equation("\sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1}
-F_p G_q H_r\d_{p+q+r,k}.");
-item("Correctly dealiasing requires a $2/4$ zero padding rule (instead of the usual $2/3$ rule for a single convolution).");
-
-// FIXME
-title("2/4 Padding Rule");
-item("Computing the transfer function for $Z_4$ with a $2/4$ padding rule means that in a $2048\times 2048$ pseudospectral simulation, the maximum physical wavenumber retained in each direction is only $512$.");
-item("For a centered Hermitian biconvolution, implicit padding is twice as fast and uses half of the memory required by conventional explicit padding.");
-
-
 title("Optimal Problem Sizes");
 item("Our main use for this algorithm is pseudo-spectral simulations.");
 item("FFTs are faster for highly composite problem sizes:");
@@ -259,9 +242,28 @@ item("Phase-shift dealiasing: $2^n$");
 subitem("FFTs are the same size.");
 item("Implicit padding: $2^n-1$.");
 subitem("sub-transforms are of size $2^{n-1}$.");
-item("Implicit padding is optimal for Mersenne-prime sized problem");
-//NB: thank Rem for that one
+//item("Implicit padding is optimal for Mersenne-prime sized problem");
 
+title("Ternary Convolutions");
+item("The {\it ternary convolution\/} of three vectors $f$, $g$, and $h$ is");
+equation("\left[f,g,h \right]_* =\sum_{m=0}^{N-1} \sum_{p=0}^{N-1} f_m g_p h_{n-m-p}.");
+item("Computing the transfer function for $Z_4=N^3\sum_\vj \w^4(x_\vj)$ requires
+computing the Fourier transform of the $\w^3$.");
+item("This requires a centered Hermitian ternary convolution:");
+equation("\left[f,g,h \right]_* =
+\sum_{a,b,c\in\{-\frac{N}{2}+1,\dots,\frac{N}{2}-1\}}f_a g_b h_c\d_{a+b+c,n}.");
+item("Correctly dealiasing requires a $2/4$ zero padding rule.");
+item("Computing $Z_4$ using $2048\times 2048$ pseudospectral modes simulation retains a maximum physical wavenumber of only $512$.");
+
+title("Centered Hermitian Ternary Convolutions: 1D");
+item("The 1D implicit ternary convolution is as fast as explicit padding:");
+figure("ctiming1b","height=13cm");
+item("And has a comparable memory footprint.");
+
+title("Centered Hermitian Teranary Convolutions: 2D");
+item("Implicit centered ternary convolutions are faster in higher 2D:");
+figure("ctiming2b","height=13cm");
+item("And use $(1/2)^{d-1}$ the memory in $d$ dimensions.");
 
 title("Conclusion");
 item("Implicitly padded fast convolutions eliminate aliasing errors.");
