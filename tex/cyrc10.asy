@@ -62,8 +62,8 @@ item("Applications use a {\it discrete linear convolution}:");
 equation("{\color{green} (f*g)_n}={\color{green}\sum_{m=0}^n f_m g_{n-m}}.");
 item("Calculating $\{(f*g)_n\}_{n=0}^{N-1}$ takes $\O(N^2)$ operations.");
 item("The convolution theorem states that convolutions are multiplications when Fourier-transformed:"); // FIXME: ref?
-equation("\mathcal{F}(f*g)=\mathcal{F}(f)\, \mathcal{F}(g)");
-remark("where $\{\mathcal{F}(f)\}_k=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n$ is the Fourier transform of $\{f_n\}$.");
+equation("\mathcal{F}[f*g]=\mathcal{F}[f]\, \mathcal{F}[g]");
+remark("where $\{\mathcal{F}[f]\}_k=\sum_{n=0}^{N-1}e^{\frac{-2\pi i}{N}kn}f_n$ is the Fourier transform of $f$.");
 //remark("where $\mathcal{F}(f)_k=\sum_{n=0}^{N-1}\zeta_N^{nk}f_n$, $\zeta_N=e^{2\pi i/N}$, is the Fourier transform of $\{f_n\}$.");
 item("A fast Fourier transform (FFT)  of length $N$ requires $K N \log_2 N$ multiplications~\cite{Gauss1866,Cooley65}.");
 item("Convolving using FFTs requires $3KN\log_2 N$ operations.");
@@ -72,7 +72,7 @@ item("Convolving using FFTs requires $3KN\log_2 N$ operations.");
 
 title("Cyclic and Linear Convolutions");
 item("Fourier transforms map periodic data to periodic data.");
-item("Thus, $\mathcal{F}^{-1}[\mathcal{F}(f) \, \mathcal{F}(g) ]$ is a {\it discrete cyclic convolution},");
+item("Thus, $\mathcal{F}^{-1}[\mathcal{F}[f] \, \mathcal{F}[g] ]$ is a {\it discrete cyclic convolution},");
 equation("(f*_{\scriptscriptstyle N}g)_n \doteq \sum_{m=0}^{N-1} f_{m(\mod N)} g_{(n-m) (\mod N)}.");
 item("The difference between {\color{green} linear} and cyclic convolutions,");
 equation("(f*_{\scriptscriptstyle N}g)_n ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} + {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}},");
@@ -101,19 +101,27 @@ item("CPU speed and memory size have increased much faster than memory bandwidth
 // ref: http://userweb.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD692.html
 
 title("Phase-shift Dealiasing");
-item("Another possibility is to use a phase shift \cite{Canuto06}.");
-item("Define the shifted Fourier transform of $f$ to be");
-equation("F^\Delta \doteq \mathcal{F}_k^\Delta(f)=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{N}k(n+\Delta)}f_n.");
-item("Then, setting $\Delta=\pi/2$, one has");
+item("The shifted Fourier transform \cite{Patterson71} is");
+// NB: 
+equation("F^\Delta \doteq \{\mathcal{F}^\Delta[f]\}_k=\sum_{n=0}^{N-1} e^{\frac{-2\pi i}{N}(k+\Delta)n}f_n.");
+item("Then, setting $\Delta=1/2$, one has");
 equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}},");
+step();
 remark("which has a dealiasing error with opposite sign:");
 step();
-//equation("f*g=\frac{1}{2}\left(\mathcal{F}^{-1}\left(F G \right)+{\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right)\right)");
-//item("Thus, we can calculate $f*g$ by from two periodic convolutions.");
 equation("{\color{green} f*g}=\frac{1}{2}\left(f*_{\scriptscriptstyle N}g +f*_{\scriptscriptstyle\Delta}g\right)");
-// note: Canuto's dealias.pdf, eq 3.4.17
-item("This requires $6K N \log_2 N$ operations.");
-//item("Padding is faster if we need to add fewer than $N$ zeros.");
+step();
+item("We recover $f*g$ from two periodic convolutions.");
+
+title("Phase-shift Dealiasing");
+indexedfigure("cyrc_1ph",0,4,"width=22cm");
+item("We don't need to copy data to a larger buffer first.");
+skip();
+item("Convolving these padded arrays takes $6K N \log_2 N$ operations,");
+skip();
+item("The memory footprint is the same as explicit padding.");
+skip();
+item("Padding is better if we need to add fewer than $N$ zeros.");
 
 
 title("Implicit Padding");
@@ -211,7 +219,7 @@ equation("F_{-k}=\conj{F}_k");
 //item("Real-to-complex FFTs take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
 item("The convolution of the centered arrays $f$ and $g$ is");
 equation("(f*g)_n = \sum_{p=n-N/2+1}^{N/2-1}f_p g_{n-p}.");
-item("Padding centered data use a ''$2/3$\" rule::");
+item("Padding centered data use a ``$2/3$\" rule::");
 //figure("cyrc_23","height=4cm"); // FIXME: use this somewhere?
 equation("\{\widetilde f_n\}_{n=-N/2+1}^{N-1}
 =(f_{-N/2+1},\dots,f_0,\dots,f_{N/2-1},\underbrace{0,\dots,0}_{N/2}).");
@@ -253,7 +261,7 @@ equation("\left[f,g,h \right]_* =
 \sum_{a,b,c\in\{0,\dots,N-1\}}f_a\, g_b\, h_c\,\d_{a+b+c,n}.");
 //equation("\left[f,g,h \right]_* =\sum_{m=0}^{N-1} \sum_{p=0}^{N-1} f_m g_p h_{n-m-p}.");
 item("Computing the transfer function for $Z_4=N^3\sum_\vj \w^4(x_\vj)$ requires
-computing the Fourier transform of the $\w^3$.");
+computing the Fourier transform of $\w^3$.");
 item("This requires a centered Hermitian ternary convolution:");
 equation("\left[f,g,h \right]_* =\sum_{a,b,c\in\{-\frac{N}{2}+1,\dots,\frac{N}{2}-1\}}f_a\, g_b\, h_c\,\d_{a+b+c,n}.");
 item("Correctly dealiasing requires a ``$2/4$\" padding rule.");
@@ -270,7 +278,7 @@ figure("ctiming2b","height=13cm");
 item("And use $(1/2)^{d-1}$ the memory in $d$ dimensions.");
 
 title("Conclusion");
-item("Implictly padded fast convolutions eliminate aliasing errors.");
+item("Implicitly padded fast convolutions eliminate aliasing errors.");
 item("Implicit padding uses $(p/q)^{d-1}$ the memory of explicit \mbox{$d$-dimensional} ``$p/q$\" padding.");
 item("Computational speedup from increased data locality and pruning FFTs.");
 //"They use less memory and are faster than explicit zero-padding or phase-shift dealiasing."); // FIXME: check this!
