@@ -152,6 +152,7 @@ step();
 indexedfigure("cyrc_1imp",0,3,"width=22cm");
 item("The computational complexity is $6 K N log_2 N/2$.");
 item("By swapping arrays, we can use out-of-place transforms.");
+item("The numerical error is similar to explicit padding.");
 
 
 title("Implicit Padding: speed");
@@ -194,12 +195,12 @@ item("The operation count is $6K N \log N/2$.");
 title("Alternatives");
 item("The memory savings could be achieved more simply by using conventional padded transforms.");
 item("This requires copying data, which is slow.");
-step();
 skip();
 item("Half of the FFTs in the $x$-direction are on zero-data.");
 item("We can skip (``prune\") such transforms:");
 figure("cyrc_prune","height=4cm");
 item("This is slower with large data sets due to memory-striding issues.");
+item("Phase-shift dealiasing has the same memory footprint as ``1/2\" explcit padding.");
 
 title("Implicit Padding in 2D");
 item("Implicit padding is faster in two dimensions:");
