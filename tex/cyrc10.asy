@@ -258,13 +258,13 @@ subitem("sub-transforms are of size $2^{n-1}$.");
 
 title("Ternary Convolutions");
 item("The {\it ternary convolution\/} of three vectors $f$, $g$, and $h$ is");
-equation("\left[f,g,h \right]_* =
+equation("*\left(f,g,h \right)_{n} =
 \sum_{a,b,c\in\{0,\dots,N-1\}}f_a\, g_b\, h_c\,\d_{a+b+c,n}.");
 //equation("\left[f,g,h \right]_* =\sum_{m=0}^{N-1} \sum_{p=0}^{N-1} f_m g_p h_{n-m-p}.");
 item("Computing the transfer function for $Z_4=N^3\sum_\vj \w^4(x_\vj)$ requires
 computing the Fourier transform of $\w^3$.");
 item("This requires a centered Hermitian ternary convolution:");
-equation("\left[f,g,h \right]_* =\sum_{a,b,c\in\{-\frac{N}{2}+1,\dots,\frac{N}{2}-1\}}f_a\, g_b\, h_c\,\d_{a+b+c,n}.");
+equation("*\left(f,g,h \right)_n =\sum_{a,b,c\in\{-\frac{N}{2}+1,\dots,\frac{N}{2}-1\}}f_a\, g_b\, h_c\,\d_{a+b+c,n}.");
 item("Correctly dealiasing requires a ``$2/4$\" padding rule.");
 item("Computing $Z_4$ using $2048\times 2048$ pseudospectral modes simulation retains a maximum physical wavenumber of only $512$.");
 
