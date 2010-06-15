@@ -28,7 +28,7 @@ p=shift(z)*g;
 filldraw(shift(z)*g,yellow);
 pair p2=(min(p).x,center(p).y);
 draw(p1..p2,EndArrow);
-label("x-FFT",(p1+p2)/2,N);
+label("$x$-FFT",(p1+p2)/2,N);
 g=box(a,b);
 p=shift(z)*g;
 draw(p);
@@ -42,7 +42,7 @@ filldraw(p,yellow);
 pair p2=(min(p).x,center(p).y);
 draw(p1..p2,EndArrow);
 
-label("y-FFT",(p1+p2)/2,N);
+label("$y$-FFT",(p1+p2)/2,N);
 
 /*
 int n=10;
