@@ -208,11 +208,13 @@ title("Implicit Padding");
 item("If $f_k=0$ for $k \ge m$, one can easily avoid looping over the
 unwanted zero Fourier modes by decimating in wavenumber");
 
-equation("
+equations("
 f_{2\ell}
+&=&\ds\sum_{k=0}^{m-1}\zeta_{2m}^{2\ell k} F_k
 =\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} F_k,
-\qquad
+\endl
 f_{2\ell+1}
+&=&\ds\sum_{k=0}^{m-1}\zeta_{2m}^{(2\ell+1) k} F_k
 =\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \zeta_N^kF_k
 \qquad
 \ell=0,1,\ldots m-1.
@@ -227,12 +229,12 @@ item("Odd and even terms of the convolution can then be computed separately,
 multiplied term-by-term, and transformed again to Fourier space:");
 
 equations("
-NF_k&=&\sum_{j=0}^{N-1}\zeta_N^{-kj} f_j
-=\sum_{\ell=0}^{m-1}\zeta_N^{-k2\ell} f_{2\ell}
-+\sum_{\ell=0}^{m-1}\zeta_N^{-k(2\ell+1)} f_{2\ell+1}\endl
+2mF_k&=&\sum_{j=0}^{2m-1}\zeta_{2m}^{-kj} f_j
+=\sum_{\ell=0}^{m-1}\zeta_{2m}^{-k2\ell} f_{2\ell}
++\sum_{\ell=0}^{m-1}\zeta_{2m}^{-k(2\ell+1)} f_{2\ell+1}\endl
 &=&\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} f_{2\ell}
-+\zeta_N^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} f_{2\ell+1}
-\qquad k=0,\ldots,\fr{N}{2}-1.
++\zeta_{2m}^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} f_{2\ell+1}
+\qquad k=0,\ldots,m-1.
 ");
 
 item("No bit reversal is required at the highest level.");
