@@ -44,21 +44,21 @@ for(int i=0; i<2; ++i){
   z=(0,0);
   p=shift(z)*g;
   filldraw(pic,p,datapen);
-  label(pic,"${\rm FFT_x}\{f\}$",center(p),N,labelpen);
+  label(pic,"${\rm FFT}_x\{f\}$",center(p),N,labelpen);
   label(pic,"$k_x$ \rm{even}",center(p),S,labelpen);
   pair ff1=(center(p).x,min(p).y);
   
   z=(dh,0);
   p=shift(z)*g;
   filldraw(pic,p,datapen);
-  label(pic,"${\rm FFT_x}\{f\}$",center(p),N,labelpen);
+  label(pic,"${\rm FFT}_x\{f\}$",center(p),N,labelpen);
   label(pic,"$k_x$ \rm{odd}",center(p),S,labelpen);
   pair ff2=(center(p).x,min(p).y);
   
   z=(ddh,0);
   p=shift(z)*g;
   filldraw(pic,p,datapen);
-  label(pic,"${\rm FFT_x}\{g\}$",center(p),N,labelpen);
+  label(pic,"${\rm FFT}_x\{g\}$",center(p),N,labelpen);
   label(pic,"$k_x$ \rm{even}",center(p),S,labelpen);
   pair gg1=(center(p).x,min(p).y);
   
@@ -66,7 +66,7 @@ for(int i=0; i<2; ++i){
   z=(ddh+dh,0);
   p=shift(z)*g;
   filldraw(pic,p,datapen);
-  label(pic,"${\rm FFT_x}\{g\}$",center(p),N,labelpen);
+  label(pic,"${\rm FFT}_x\{g\}$",center(p),N,labelpen);
   label(pic,"$k_x$ \rm{odd}",center(p),S,labelpen);
   pair gg2=(center(p).x,min(p).y);
 
@@ -75,7 +75,7 @@ for(int i=0; i<2; ++i){
   z=(0,-dd);
   p=shift(z)*g;
   filldraw(pic,p,convpen);
-  label(pic,"${\rm FFT_x}\{f*g\}$",center(p),N,labelpen);
+  label(pic,"${\rm FFT}_x\{f*g\}$",center(p),N,labelpen);
   label(pic,"$k_x$ \rm{even}",center(p),S,labelpen);
   pair f1=(center(p).x,max(p).y);
   draw(pic,ff1..f1,EndArrow);
@@ -84,7 +84,7 @@ for(int i=0; i<2; ++i){
   z=(dh,-dd);
   p=shift(z)*g;
   filldraw(pic,p,convpen);
-  label(pic,"${\rm FFT_x}\{f*g\}$",center(p),N,labelpen);
+  label(pic,"${\rm FFT}_x\{f*g\}$",center(p),N,labelpen);
   label(pic,"$k_x$ \rm{odd}",center(p),S,labelpen);
   pair g1=(center(p).x,max(p).y);
   draw(pic,ff2..g1,EndArrow);

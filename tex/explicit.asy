@@ -53,13 +53,13 @@ for(int i=0; i<6; ++i){
   z=(0,h);
   p=shift(z)*g;
   filldraw(pic,p,datapen);
-  label(pic,"$\{f_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  label(pic,"$\{F_k\}_{k=0}^{m-1}$",center(p),labelpen);
   p1=bottom(p);
   
   z=(d,h);
   p=shift(z)*g;
   filldraw(pic,p,datapen);
-  label(pic,"$\{g_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  label(pic,"$\{G_k\}_{k=0}^{m-1}$",center(p),labelpen);
   p2=bottom(p);
   
   iframe(i);
@@ -68,25 +68,25 @@ for(int i=0; i<6; ++i){
   z=(0,h);
   p=shift(z)*g;
   filldraw(pic,p,datapen);
-  label(pic,"$\{f_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  label(pic,"$\{F_k\}_{k=0}^{m-1}$",center(p),labelpen);
   q1=top(p);
   draw(pic,p1..q1,EndArrow);
   z+=(wx,0);
   p=shift(z)*g;
   draw(pic,p);
-  label(pic,"$\{0\}_{n=0}^{N-1}$",center(p),labelpen);
+  label(pic,"$\{0\}_{k=0}^{m-1}$",center(p),labelpen);
   p1=bottom(p)-(wx/2,0);
   
   z=(d,h);
   p=shift(z)*g;
   filldraw(pic,p,datapen);
-  label(pic,"$\{g_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  label(pic,"$\{G_k\}_{k=0}^{m-1}$",center(p),labelpen);
   q2=top(p);
   draw(pic,p2..q2,EndArrow);
   z+=(wx,0);
   p=shift(z)*g;
   draw(pic,p);
-  label(pic,"$\{0\}_{n=0}^{N-1}$",center(p),labelpen);
+  label(pic,"$\{0\}_{k=0}^{m-1}$",center(p),labelpen);
   p2=bottom(p)-(wx/2,0);
   
 
@@ -96,17 +96,17 @@ for(int i=0; i<6; ++i){
   z=(0,h);
   p=shift(z)*wg;
   filldraw(pic,p,datapen);
-  label(pic,"$\{F_k\}_{k=0}^{2N-1}$",center(p),labelpen);
+  label(pic,"$\{f_j\}_{j=0}^{2m-1}$",center(p),labelpen);
   q1=top(p);
-  draw(pic,p1..q1,EndArrow);
+  draw(pic,"FFT$^{-1}$",p1..q1,EndArrow);
   p1=bottom(p);
   
   z=(d,h);
   p=shift(z)*wg;
   filldraw(pic,p,datapen);
-  label(pic,"$\{G_k\}_{k=0}^{2N-1}$",center(p),labelpen);
+  label(pic,"$\{g_j\}_{j=0}^{2m-1}$",center(p),labelpen);
   q2=top(p);
-  draw(pic,p2..q2,EndArrow);
+  draw(pic,"FFT$^{-1}$",p2..q2,EndArrow);
   p2=bottom(p);
   
   
@@ -116,7 +116,7 @@ for(int i=0; i<6; ++i){
   z=(0,h);
   p=shift(z)*wg;
   filldraw(pic,p,convpen);
-  label(pic,"$\{F_kG_k\}_{k=0}^{2N-1}$",center(p),labelpen);
+  label(pic,"$\{f_jg_j\}_{j=0}^{2m-1}$",center(p),labelpen);
   q1=top(p);
   draw(pic,p1..q1,EndArrow);
   p1=bottom(p);
@@ -129,9 +129,9 @@ for(int i=0; i<6; ++i){
   z=(0,h);
   p=shift(z)*g;
   filldraw(pic,p,convpen);
-  label(pic,"$\{(f*g)_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  label(pic,"$\{F*G\}_{k=0}^{m-1}$",center(p),labelpen);
   q1=top(p)+(wx/2,0);
-  draw(pic,p1..q1,EndArrow);
+  draw(pic,"FFT",p1..q1,EndArrow);
   p1=bottom(p);
 
   z+=(wx,0);
@@ -144,10 +144,9 @@ for(int i=0; i<6; ++i){
   z=(0,h);
   p=shift(z)*g;
   filldraw(pic,p,convpen);
-  label(pic,"$\{(f*g)_n\}_{n=0}^{N-1}$",center(p),labelpen);
+  label(pic,"F*G",center(p),labelpen);
   q1=top(p);
   draw(pic,p1..q1,EndArrow);
   
-  
-  shipout("cyrc_1exp"+(string) i,pic);
+  shipout("explicit"+(string) i,pic);
 }

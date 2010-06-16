@@ -43,7 +43,7 @@ add(rotate(90)*f2,z+(0,0.5),E);
 //Arrows between boxes
 
 draw((-0.15,1){NE}..{SE}(0.05,1),EndArrow);
-label("${\rm yFFT}^{-1}$",(-0.075,1.05),N,blue);
+label("FFT${}_y^{-1}$",(-0.075,1.05),N,blue);
 
 
 g=box(a,b);
@@ -51,6 +51,6 @@ z=(3,0);
 draw(shift(z)*g);
 //label("$k_x$ odd",z,SE);
 draw((2.25,h)..(3,h),EndArrow);
-label("xFFT${}^{-1}$",(0.5(2.25+3),h),N,red);
+label("FFT${}_x^{-1}$",(0.5(2.25+3),h),N,red);
 
 label("$f*g$",z+(0.5,h),darkgreen);

@@ -73,9 +73,9 @@ bibliographystyle("rmp2");
 
 titlepen += darkgreen;
 
-titlepage("The Fastest Convolution in the West",
+titlepage("Dealiased Convolutions\\ without the Padding",
 	  "John C. Bowman and Malcolm Roberts (University of Alberta)",
-          date="April 13, 2010",
+	  date="June 15, 2010",
 	  url="www.math.ualberta.ca/$\sim$bowman/talks");
 
 /* Abstract:
@@ -83,25 +83,20 @@ titlepage("The Fastest Convolution in the West",
                          John C. Bowman
                       University of Alberta
 
-Efficient algorithms have recently been developed for calculating dealiased
-linear convolution sums without the expense of conventional zero-padding or
-phase-shift techniques. For one-dimensional in-place convolutions, the
-memory requirements are identical with the zero-padding technique, with the
+An algorithm is described for calculating dealiased linear convolution sums
+without the expense of conventional zero-padding or phase-shift
+techniques. For one-dimensional in-place convolutions, the memory
+requirements are identical with the zero-padding technique, with the
 important distinction that the additional work memory need not be
-contiguous with the input data. This decoupling of data and work arrays
+contiguous with the data. This decoupling of the data and work arrays
 dramatically reduces the memory and computation time required to evaluate
-higher-dimensional in-place convolutions. The memory savings is achieved by
-computing the in-place Fourier transform of the data set in blocks, rather than
-all at once. The technique also allows one to dealias the hyperconvolutions
-that arise on Fourier transforming cubic and higher powers.
-
-Implicitly dealiased convolutions can be built on top of state-of-the-art
-adaptive fast Fourier transform libraries like FFTW. Vectorized
-multidimensional implementations for the complex and centered Hermitian
-(pseudospectral) cases have already been implemented in the open-source
-software FFTW++. With the advent of this library, writing a high-performance
-dealiased pseudospectral code for solving nonlinear partial differential
-equations has now become a relatively straightforward exercise.
+higher-dimensional in-place convolutions. The technique also allows one to
+efficiently dealias the hyperconvolutions that arise on Fourier
+transforming cubic and higher powers.  Implicitly dealiased convolutions
+can be built on top of state-of-the-art fast Fourier transform libraries:
+vectorized multidimensional implementations for the complex and centered
+Hermitian (pseudospectral) cases have now been implemented in the open-source
+software {\tt FFTW++}.
 
 */
 
@@ -117,7 +112,7 @@ subitem("Phase-shift dealiasing");
 item("Implicit Padding in 1D, 2D, and 3D:");
 subitem("Standard Complex");
 subitem("Centered Hermitian");
-subitem("Biconvolution");
+subitem("Ternary Convolutions");
 item("Conclusions");
 
 title("Discrete Convolutions");
@@ -142,13 +137,15 @@ equation("\zeta_N=\exp\(\fr{2 \pi i}{N}\).");
 item("The fast Fourier transform method exploits the properties that
 $\zeta_N^r=\zeta_{N/r}$ and $\zeta_N^N=1$.");
 
+newslide();
+
 item("The unnormalized backwards discrete Fourier transform of\\
-$\{f_k: k=0,\ldots,N\}$ is");
+$\{F_k: k=0,\ldots,N\}$ is");
 
 equation("f_j\doteq\sum_{k=0}^{N-1}\zeta_N^{jk} F_k\qquad j=0,\ldots,N-1,");
 
 item("The corresponding forward transform is");
-equation("F_k\doteq \fr{1}{N}\sum_{j=0}^{N-1}\zeta_N^{-kj} f_j\qquad j=0,\ldots,N-1.");
+equation("F_k\doteq \fr{1}{N}\sum_{j=0}^{N-1}\zeta_N^{-kj} f_j\qquad k=0,\ldots,N-1.");
 
 item("The orthogonality of this transform pair follows from");
 equation(
@@ -180,12 +177,15 @@ for positive $s$.");
 
 item("This can be achieved by choosing $N \ge 2m-1$.");
 
-item("That is, one must {\it zero pad} input data vectors of length~$m$ to length $N\ge 2m-1$.");
+item("That is, one must {\it zero pad} input data vectors of length~$m$ to length $N\ge 2m-1$:");
 
-item("Physically, {\it explicit zero padding} prevents mode $m-1$ from beating with itself, wrapping around to contaminate mode~$N=0\mod N$");
+indexedfigure("explicit",0,5,"width=22cm");
+
+item("Physically, {\it explicit zero padding} prevents mode $m-1$ from beating with itself, wrapping around to contaminate mode~$N=0\mod N$.");
 
 item("Since FFT sizes with small prime factors in practice yield the most efficient implementations, the padding is normally extended to $N=2m$.");
 
+/*
 title("Pruned FFTs");
 
 item("Although explicit padding seems like an obvious waste of memory and computation, the conventional wisdom on avoiding this waste is well summed up
@@ -201,6 +201,7 @@ pruned FFT is \Blue{hardly worth thinking about}, at least in one dimension.
 two or so simply by skipping 1d sub-transforms that are zero).}
 }
 \end{quotation}");
+*/
 
 title("Implicit Padding");
 
@@ -236,7 +237,7 @@ NF_k&=&\sum_{j=0}^{N-1}\zeta_N^{-kj} f_j
 
 item("No bit reversal is required at the highest level.");
 
-item("An implicitly padded convolution is implemented as in our {\tt FFTW++} library (version 1.05) as {\tt cconv}({\sf f},{\sf g},{\sf u},{\sf v}) computes an in-place implicitly dealiased convolution of two complex vectors {\sf f} and {\sf g} using two temporary vectors {\sf u} and {\sf v}, each of length~$m$.");
+item("An implicitly padded convolution is implemented as in our {\tt FFTW++} library (version 1.07) as {\tt cconv}({\sf f},{\sf g},{\sf u},{\sf v}) computes an in-place implicitly dealiased convolution of two complex vectors {\sf f} and {\sf g} using two temporary vectors {\sf u} and {\sf v}, each of length~$m$.");
 
 item("This in-place convolution requires six out-of-place transforms, thereby avoiding bit reversal at all levels.");  
 
@@ -268,13 +269,13 @@ remark("
 ");
 
 title("Implicit Padding in 1D");
-figure("timing1c.eps","height=13cm");
+figure("timing1c.eps","height=15cm");
 
 title("Implicit Padding in 2D");
-figure("timing2c.eps","height=13cm");
+figure("timing2c.eps","height=15cm");
 
 title("Implicit Padding in 3D");
-figure("timing3c.eps","height=13cm");
+figure("timing3c.eps","height=15cm");
 
 title("Hermitian Convolutions");
 
@@ -284,7 +285,7 @@ Fourier transforms of real data:");
 equation("f_{N-k}=\conj{f_k}.");
 
 title("Centered Convolutions");
-item("For a {\it centered convolution}, the Fourier origin is at wavenumber zero:");
+item("For a {\it centered convolution}, the Fourier origin ($k=0$) is centered in the domain:");
 
 equation("\sum_{p=k-m+1}^{m-1} f_p g_{k-p}");
 
@@ -299,21 +300,21 @@ item("The Hermiticity condition then appears as");
 equation("f_{-k}=\conj{f_k}.");
 
 title("Implicit Hermitician Centered Padding in 1D");
-figure("timing1r.eps","height=13cm");
+figure("timing1r.eps","height=15cm");
 
 title("Implicit Hermitician Centered Padding in 2D");
-figure("timing2r.eps","height=13cm");
+figure("timing2r.eps","height=15cm");
 
-title("Biconvolutions");
+title("Ternary convolution");
 
-item("The {\it biconvolution\/} of three vectors $F$, $G$, and $H$ is");
+item("The {\it ternary convolution\/} of three vectors $F$, $G$, and $H$ is");
 
 equation("\sum_{p=0}^{N-1} \sum_{q=0}^{N-1} F_p G_q H_{k-p-q}.");
 
 item("Computing the transfer function for $Z_4=N^3\sum_\vj \w^4(x_\vj)$ requires
 computing the Fourier transform of the cubic quantity~$\w^3$.");
 
-item("This requires a centered Hermitian biconvolution:");
+item("This requires a centered Hermitian ternary convolution:");
 
 equation("\sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1}
 F_p G_q H_r\d_{p+q+r,k}.");
@@ -323,13 +324,13 @@ item("Correctly dealiasing requires a $2/4$ zero padding rule (instead of the us
 title("2/4 Padding Rule");
 item("Computing the transfer function for $Z_4$ with a $2/4$ padding rule means that in a $2048\times 2048$ pseudospectral simulation, the maximum physical wavenumber retained in each direction is only $512$.");
 
-item("For a centered Hermitian biconvolution, implicit padding is twice as fast and uses half of the memory required by conventional explicit padding.");
+item("For a centered Hermitian ternary convolution, implicit padding is twice as fast and uses half of the memory required by conventional explicit padding.");
 
-title("Implicit Biconvolution in 1D");
-figure("timing1b.eps","height=13cm");
+title("Implicit Ternary Convolution in 1D");
+figure("timing1b.eps","height=15cm");
 
-title("Implicit Biconvolution in 2D");
-figure("timing2b.eps","height=13cm");
+title("Implicit Ternary Convolution in 2D");
+figure("timing2b.eps","height=15cm");
 
 title("Conclusions");
 

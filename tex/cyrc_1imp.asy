@@ -64,25 +64,25 @@ for(int i=0; i<4; ++i){
   z=(0,h);
   filldraw(pic,shift(z)*g,datapen);
   pair p1e=z+(wx/2,0)+(0,w);
-  label(pic,"$\{F_k\}_{n=0}^{N-1}, k\, \rm{even}$",p1e-(0,w/2),labelpen);
+  label(pic,"$\{F_k\}_{k=0}^{N-1}, k\, \rm{even}$",p1e-(0,w/2),labelpen);
   draw(pic,p1..p1e,EndArrow);
   
   z=(wx+dd,h);
   filldraw(pic,shift(z)*g,datapen);
   pair p1o=z+(wx/2,0)+(0,w);
-  label(pic,"$\{F_k\}_{n=0}^{N-1}, k\, \rm{odd}$",p1o-(0,w/2),labelpen);
+  label(pic,"$\{F_k\}_{k=0}^{N-1}, k\, \rm{odd}$",p1o-(0,w/2),labelpen);
   draw(pic,p1..p1o,EndArrow);
   
   z=(2wx+2dd,h);
   filldraw(pic,shift(z)*g,datapen);
   pair p2e=z+(wx/2,0)+(0,w);
-  label(pic,"$\{G_k\}_{n=0}^{N-1}, k\, \rm{even}$",p2e-(0,w/2),labelpen);
+  label(pic,"$\{G_k\}_{k=0}^{N-1}, k\, \rm{even}$",p2e-(0,w/2),labelpen);
   draw(pic,p2..p2e,EndArrow);
   
   z=(3wx+3dd,h);
   filldraw(pic,shift(z)*g,datapen);
   pair p2o=z+(wx/2,0)+(0,w);
-  label(pic,"$\{G_k\}_{n=0}^{N-1}, k\, \rm{odd}$",p2o-(0,w/2),labelpen);
+  label(pic,"$\{G_k\}_{k=0}^{N-1}, k\, \rm{odd}$",p2o-(0,w/2),labelpen);
   draw(pic,p2..p2o,EndArrow);
 
   
@@ -93,7 +93,7 @@ for(int i=0; i<4; ++i){
   z=(0,h);
   filldraw(pic,shift(z)*g,convpen);
   pair Pe=z+(wx/2,0)+(0,w);
-  label(pic,"$\{F_kG_k\}_{n=0}^{N-1}, k\, \rm{even}$",Pe-(0,w/2),labelpen);
+  label(pic,"$\{F_kG_k\}_{k=0}^{N-1}, k\, \rm{even}$",Pe-(0,w/2),labelpen);
   draw(pic,p2e-(0,w)..Pe,EndArrow);
   draw(pic,p1e-(0,w)..Pe,EndArrow);
   
@@ -101,7 +101,7 @@ for(int i=0; i<4; ++i){
   z=(wx+dd,h);
   filldraw(pic,shift(z)*g,convpen);
   pair Po=z+(wx/2,0)+(0,w);
-  label(pic,"$\{F_kG_k\}_{n=0}^{N-1}, k\, \rm{odd}$",Po-(0,w/2),labelpen);
+  label(pic,"$\{F_kG_k\}_{k=0}^{N-1}, k\, \rm{odd}$",Po-(0,w/2),labelpen);
   draw(pic,p2o-(0,w)..Po,EndArrow);
   draw(pic,p1o-(0,w)..Po,EndArrow);
     
