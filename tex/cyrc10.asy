@@ -136,14 +136,14 @@ item("This is not a Fourier transform: the FFT algorithm does not apply.");
 
 title("Implicit Padding");
 item("However, if we calculate even and odd terms separately, we get");
-equation("F_{2k}=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}\,f_n, \quad F_{2k+1}=\sum_{n=0}^{N-1}e^{-\frac{2\pi i}{N}kn}\,f_n e^{-\frac{2\pi i}{N}n},");
+equation("F_{2k}=\sum_{n=0}^{N-1}e^{-\frac{2\pi i}{N}kn}\,f_n, \quad F_{2k+1}=\sum_{n=0}^{N-1}e^{-\frac{2\pi i}{N}kn}\,f_n e^{-\frac{2\pi i}{N}n},");
 step();
 remark("which {\it are} Fourier transforms.");
 step();
 indexedfigure("cyrc_1d",0,2,"width=10cm");
 //skip();
 item("The inverse is the sum of two Fourier transforms:");
-equation("f_n=\sum_{k=0}^{N-1}e^{\frac{2\pi i}{N}kn}F_{2k}+e^{\frac{\pi i}{N}n}\sum_{k=0}^{N-1}e^{\frac{2\pi i}{N}kn}F_{2k+1}.");
+equation("f_n=\frac{1}{N}\(\sum_{k=0}^{N-1}e^{\frac{2\pi i}{N}kn}F_{2k}+e^{\frac{\pi i}{N}n}\sum_{k=0}^{N-1}e^{\frac{2\pi i}{N}kn}F_{2k+1}\).");
 item("Since Fourier-transformed data is of length $2N$, there are no memory savings.");
 
 title("Implicit Padding");
