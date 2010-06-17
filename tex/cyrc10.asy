@@ -103,15 +103,15 @@ item("CPU speed and memory size have increased much faster than memory bandwidth
 title("Phase-shift Dealiasing");
 item("The shifted Fourier transform \cite{Patterson71} is");
 // NB: 
-equation("F^\Delta \doteq \{\mathcal{F}^\Delta[f]\}_k=\sum_{n=0}^{N-1} e^{\frac{-2\pi i}{N}(k+\Delta)n}f_n.");
+equation("F^\Delta \doteq \{\mathcal{F}^\Delta[f]\}_k=\sum_{n=0}^{N-1} e^{-\frac{2\pi i}{N}(k+\Delta)n}f_n.");
 item("Then, setting $\Delta=1/2$, one has");
 equation("f*_{\scriptscriptstyle\Delta}g\doteq {\mathcal{F}^\Delta}^{-1}\left(F^\Delta G^\Delta\right) ={\color{green}\sum_{m=0}^{n} f_m g_{n-m}} - {\color{red} \sum_{m=n+1}^{N-1} f_m g_{n-m+N}},");
 step();
-remark("which has a dealiasing error with opposite sign:");
+remark("which has a dealiasing error with opposite sign.");
 step();
-equation("{\color{green} f*g}=\frac{1}{2}\left(f*_{\scriptscriptstyle N}g +f*_{\scriptscriptstyle\Delta}g\right)");
-step();
-item("We recover $f*g$ from two periodic convolutions.");
+item("We recover $f*g$ from two periodic convolutions:");
+equation("{\color{green} f*g}=\frac{1}{2}\left(f*_{\scriptscriptstyle N}g +f*_{\scriptscriptstyle\Delta}g\right).");
+
 
 title("Phase-shift Dealiasing");
 indexedfigure("cyrc_1ph",0,4,"width=22cm");
@@ -121,24 +121,24 @@ item("Convolving these padded arrays takes $6K N \log_2 N$ operations,");
 skip();
 item("The memory footprint is the same as explicit padding.");
 skip();
-item("Padding is better if we need to add fewer than $N$ zeros.");
+item("Explicit padding is better if we need to add fewer than $N$ zeros.");
 
 
 title("Implicit Padding");
 item("Suppose that we want to take a Fourier transform of");
-equation("\{f_n\}_{n=0}^{2N-1}, \text{ with }f_n=0 \text{ if } n\geq N");
+equation("\{f_n\}_{n=0}^{2N-1}, \text{ with }f_n=0 \text{ if } n\geq N.");
 item("The discrete Fourier transform is a sum:");
 equation("\mathcal{F}(f)_k=\sum_{n=0}^{2N-1} e^{\frac{2\pi i}{2N}kn}f_n.");
 item("Since $f_n=0$ if $n\geq N$, this is just");
 equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{2N}kn}f_n.");
 //equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1}e^{\frac{ikn}{2N}}f_n.");
-item("This is not a FFT, and cannot be done in $\O(N\log_2 N)$.");
+item("This is not a Fourier transform: the FFT algorithm does not apply.");
 
 title("Implicit Padding");
 item("However, if we calculate even and odd terms separately, we get");
 equation("\mathcal{F}(f)_{2k}=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n, \quad\mathcal{F}(f)_{2k+1}=e^{\frac{ik}{2N}}\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n,");
 step();
-remark("which {\it are} FFTs.");
+remark("which {\it are} Fourier transforms.");
 step();
 indexedfigure("cyrc_1d",0,2,"width=10cm");
 skip();
@@ -220,7 +220,7 @@ equation("F_{-k}=\conj{F}_k");
 //item("Real-to-complex FFTs take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
 item("The convolution of the centered arrays $f$ and $g$ is");
 equation("(f*g)_n = \sum_{p=n-N/2+1}^{N/2-1}f_p g_{n-p}.");
-item("Padding centered data use a ``$2/3$\" rule::");
+item("Padding centered data use a ``$2/3$\" rule:");
 //figure("cyrc_23","height=4cm"); // FIXME: use this somewhere?
 equation("\{\widetilde f_n\}_{n=-N/2+1}^{N-1}
 =(f_{-N/2+1},\dots,f_0,\dots,f_{N/2-1},\underbrace{0,\dots,0}_{N/2}).");
