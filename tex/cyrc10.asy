@@ -128,20 +128,22 @@ title("Implicit Padding");
 item("Suppose that we want to take a Fourier transform of");
 equation("\{f_n\}_{n=0}^{2N-1}, \text{ with }f_n=0 \text{ if } n\geq N.");
 item("The discrete Fourier transform is a sum:");
-equation("\mathcal{F}(f)_k=\sum_{n=0}^{2N-1} e^{\frac{2\pi i}{2N}kn}f_n.");
+equation("\mathcal{F}(f)_k=\sum_{n=0}^{2N-1} e^{-\frac{2\pi i}{2N}kn}f_n.");
 item("Since $f_n=0$ if $n\geq N$, this is just");
-equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1} e^{\frac{2\pi i}{2N}kn}f_n.");
+equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1} e^{-\frac{2\pi i}{2N}kn}f_n.");
 //equation("\mathcal{F}(f)_k=\sum_{n=0}^{N-1}e^{\frac{ikn}{2N}}f_n.");
 item("This is not a Fourier transform: the FFT algorithm does not apply.");
 
 title("Implicit Padding");
 item("However, if we calculate even and odd terms separately, we get");
-equation("\mathcal{F}(f)_{2k}=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n, \quad\mathcal{F}(f)_{2k+1}=e^{\frac{ik}{2N}}\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}f_n,");
+equation("F_{2k}=\sum_{n=0}^{N-1}e^{\frac{2\pi i}{N}kn}\,f_n, \quad F_{2k+1}=\sum_{n=0}^{N-1}e^{-\frac{2\pi i}{N}kn}\,f_n e^{-\frac{2\pi i}{N}n},");
 step();
 remark("which {\it are} Fourier transforms.");
 step();
 indexedfigure("cyrc_1d",0,2,"width=10cm");
-skip();
+//skip();
+item("The inverse is the sum of two Fourier transforms:");
+equation("f_n=\sum_{k=0}^{N-1}e^{\frac{2\pi i}{N}kn}F_{2k}+e^{\frac{\pi i}{N}n}\sum_{k=0}^{N-1}e^{\frac{2\pi i}{N}kn}F_{2k+1}.");
 item("Since Fourier-transformed data is of length $2N$, there are no memory savings.");
 
 title("Implicit Padding");
