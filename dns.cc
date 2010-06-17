@@ -41,6 +41,102 @@ DNS *DNSProblem;
 InitialConditionBase *InitialCondition;
 ForcingBase *Forcing;
 
+class Constant : public InitialConditionBase {
+public:
+  const char *Name() {return "Constant";}
+  void Set(Complex *w, unsigned n) {
+    for(unsigned i=0; i < n; i++)
+      w[i]=Complex(icalpha,icbeta);
+  }
+};
+
+class Equipartition : public InitialConditionBase {
+public:
+  const char *Name() {return "Equipartition";}
+  void Set(Complex *w0, unsigned) {
+    unsigned Nx=DNSProblem->getNx();
+    unsigned my=DNSProblem->getmy();
+    unsigned xorigin=DNSProblem->getxorigin();
+    Real k0=DNSProblem->getk0();
+
+    array2<Complex> w(Nx,my,w0);
+    w(xorigin,0)=0;
+    Real k02=k0*k0;
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	Real k2=k02*(I2+j*j);
+// Distribute the enstrophy evenly between the real and imaginary components
+        Real v=icalpha+icbeta*k2;
+        v=v ? sqrt(0.5*k2/v) : 0.0;
+	wi[j]=Complex(v,v);
+      }
+    }
+  }
+};
+
+class ConstantBanded : public ForcingBase {
+public:
+  const char *Name() {return "Constant Banded";}
+  void Force(array2<Complex> &w, vector& T, const Complex&) {
+    unsigned Nx=DNSProblem->getNx();
+    unsigned my=DNSProblem->getmy();
+    unsigned xorigin=DNSProblem->getxorigin();
+    Real k02=DNSProblem->getk02();
+    Real kmin=max(kforce-0.5*deltaf,0.0);
+    Real kmin2=kmin*kmin;
+    Real kmax=kforce+0.5*deltaf;
+    Real kmax2=kmax*kmax;
+
+    // TODO: only loop over modes with k in (kmin,kmax)
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	Real k2=k02*(I2+j*j);
+	if(k2 > kmin2 && k2 < kmax2) {
+          T[(unsigned)(sqrt(k2)-0.5)].im += realproduct(force,wi[j]);
+	  wi[j] += force;
+        }
+      }
+    }
+  }
+};
+
+
+class WhiteNoiseBanded : public ForcingBase {
+public:
+  const char *Name() {return "White-Noise Banded";}
+  void Force(array2<Complex> &w, const Complex& factor) {
+    unsigned Nx=DNSProblem->getNx();
+    unsigned my=DNSProblem->getmy();
+    unsigned xorigin=DNSProblem->getxorigin();
+    Real k02=DNSProblem->getk02();
+    Real kmin=max(kforce-0.5*deltaf,0.0);
+    Real kmin2=kmin*kmin;
+    Real kmax=kforce+0.5*deltaf;
+    Real kmax2=kmax*kmax;
+
+    // TODO: only loop over modes with k in (kmin,kmax)
+    Complex Factor=factor*sqrt(2.0*eta);
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	Real k2=k02*(I2+j*j);
+	if(k2 > kmin2 && k2 < kmax2)
+	  wi[j] += Factor;
+      }
+    }
+  }
+};
+
+
+
 class DNSVocabulary : public VocabularyBase {
 public:
   const char *Name() {return problem;}
@@ -216,5 +312,65 @@ void DNS::InitialConditions()
 
   if(movie)
     open_output(fw,dirsep,"w");
+}
+
+// wrapper for outcurve routines
+class cwrap{
+public:
+  static Real Spectrum(unsigned int i) {return DNSProblem->Spectrum(i);}
+  static Real Dissipation(unsigned int i) {return DNSProblem->Dissipation(i);}
+  static Real Pi(unsigned int i) {return DNSProblem->Pi(i);}
+  static Real Eta(unsigned int i) {return DNSProblem->Eta(i);}
+};
+
+
+
+void DNS::Output(int it)
+{
+  Real E,Z,P;
+
+  w.Set(y);
+  ComputeInvariants(E,Z,P);
+  fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
+
+  Complex *y=Y[0];
+  if(output) out_curve(fw,y,"w",NY[0]);
+
+  if(movie) OutFrame(it);
+
+  if(spectrum) {
+    ostringstream buf;
+    Set(T,Y[EK]);
+    buf << "ekvk" << dirsep << "t" << tcount;
+    open_output(fekvk,dirsep,buf.str().c_str(),0);
+    out_curve(fekvk,t,"t");
+    out_curve(fekvk,cwrap::Spectrum,"Ek",nshells);
+    out_curve(fekvk,cwrap::Dissipation,"nuk*Ek",nshells);
+    fekvk.close();
+    if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
+
+    Set(T,Y[TRANSFER]);
+    buf.str("");
+    buf << "transfer" << dirsep << "t" << tcount;
+    open_output(ftransfer,dirsep,buf.str().c_str(),0);
+    out_curve(ftransfer,t,"t");
+    out_curve(ftransfer,cwrap::Pi,"Pi",nshells);
+    out_curve(ftransfer,cwrap::Eta,"Eta",nshells);
+    ftransfer.close();
+    if(!ftransfer) msg(ERROR,"Cannot write to file transfer");
+  }
+
+  tcount++;
+  ft << t << endl;
+
+  if(rezero && it % rezero == 0 && spectrum) {
+    vector2 Y=Integrator->YVector();
+    vector T=Y[TRANSFER];
+    for(unsigned i=0; i < nshells; i++)
+      T[i]=0.0;
+    vector S=Y[EK];
+    for(unsigned i=0; i < nshells; i++)
+      S[i]=0.0;
+  }
 }
 

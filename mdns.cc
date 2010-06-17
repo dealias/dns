@@ -1,6 +1,6 @@
 #include "options.h"
 #include "dns.h"
-//#include "MultiIntegrator.h"
+#include "MultiIntegrator.h"
 
 const double ProblemVersion=1.0;
 
@@ -37,10 +37,12 @@ Real icbeta=1.0;
 // global variables for dns.h
 int xpad=1;
 int ypad=1;
-DNS *DNSProblem;
+//DNS *DNSProblem; // FIXME: this ends up creating the method!
 // DNS setup routines
 DNS::DNS()
 {
+  cout << "DNS::DNS()" << endl;
+  //  exit(1);
 }
 
 DNS::~DNS()
@@ -49,16 +51,18 @@ DNS::~DNS()
 
 void DNS::InitialConditions()
 {
+  cout << "DNS::InitialConditions()" << endl;
+  exit(1);
 }
 
 
 InitialConditionBase *InitialCondition;
 ForcingBase *Forcing;
 
-// Global variables for MultiIntegrator.h
-//MultiProblem *GMProblem; 
-//unsigned Ngrids;
-//const char *subintegrator; 
+//Global variables for MultiIntegrator.h
+MultiProblem *MProblem; // FIXME: change the name of this
+unsigned Ngrids=1;
+const char *subintegrator; 
 
 class MDNSVocabulary : public VocabularyBase {
 public:
@@ -79,7 +83,8 @@ public:
 
 MDNSVocabulary MDNS_Vocabulary;
 
-class MDNS : public DNS {
+class MDNS : public DNS, public MultiProblem {
+  //class MDNS : public DNS {
 public:
   MDNS();
   ~MDNS();
@@ -98,15 +103,64 @@ public:
   //};
   //array1<Grid *> G;
 
-  //  void Output(int it);
+  void Output(int it);
   
 };
 
 MDNS *MDNSProblem;
 
+
+/****** Vocabulary *****/
+
+MDNSVocabulary::MDNSVocabulary()
+{
+  cout << "MDNSVocabulary::MDNSVocabulary()"<<endl;
+  //exit(1);
+  Vocabulary=this;
+
+  VOCAB_NOLIMIT(ic,"Initial Condition");
+  VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
+  VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
+  //  VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
+  // VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
+  VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
+
+  InitialConditionTable=new Table<InitialConditionBase>("initial condition");
+  VOCAB(icalpha,0.0,0.0,"initial condition parameter");
+  VOCAB(icbeta,0.0,0.0,"initial condition parameter");
+  INITIALCONDITION(Zero);
+  //  INITIALCONDITION(Constant);
+  //  INITIALCONDITION(Equipartition); 
+  // FIXME: dns.h calls DNSProblem, not MDNSProblem
+
+  VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
+  VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
+  VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
+  VOCAB(pL,0,0,"Power of Laplacian for molecular viscosity");
+
+  VOCAB_NOLIMIT(forcing,"Forcing type");
+  ForcingTable=new Table<ForcingBase>("forcing");
+
+  VOCAB(eta,0.0,REAL_MAX,"vorticity injection rate");
+  VOCAB(force,(Complex) 0.0, (Complex) 0.0,"constant external force");
+  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
+  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
+  FORCING(None);
+  //FORCING(WhiteNoiseBanded);
+
+// FIXME: creation of DNS for dns.h already sets method fia Param.h!
+  //  METHOD(MDNS); 
+
+  INTEGRATOR(MultiIntegrator);
+  VOCAB(Ngrids,1,INT_MAX,"Number of multispectral grids");
+  cout << "... done MDNSVocabulary::MDNSVocabulary()"<<endl;
+}
+
+
 MDNS::MDNS() 
 {
   MDNSProblem=this;
+  //  MProblem=this;
   check_compatibility(DEBUG);
   ConservativeIntegrators(MDNS_Vocabulary.IntegratorTable,this);
   ExponentialIntegrators(MDNS_Vocabulary.IntegratorTable,this);
@@ -118,7 +172,10 @@ MDNS::~MDNS()
 //void MDNS::InitialConditions(unsigned Ngrids0) {
 void MDNS::InitialConditions()
 {
-  if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
+  cout << "MDNS::InitialConditions()" << endl;
+  //  exit(1);
+
+  //if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
   k0=1.0;
   k02=k0*k0;
@@ -131,16 +188,16 @@ void MDNS::InitialConditions()
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
 
-  NY[OMEGA]=Nx*my;
-  NY[TRANSFER]=nshells;
-  NY[EK]=nshells;
+  //NY[OMEGA]=Nx*my;
+  //NY[TRANSFER]=nshells;
+  //NY[EK]=nshells;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
 
   cout << "\nALLOCATING FFT BUFFERS" << endl;
-  size_t align=sizeof(Complex);
+  //size_t align=sizeof(Complex);
 
-  Allocator(align);
+  //Allocator(align); //FIXME: ambiguous
 
   Dimension(T,nshells);
 
@@ -168,22 +225,16 @@ void MDNS::InitialConditions()
 
   Allocate(count,nshells);
 
-  if(movie) {
-    buffer.Dimension(Nx0,my0,block);
-    wr.Dimension(Nx0,2*my0,(Real *) block);
-    Padded=new fftwpp::ExplicitHConvolution2(Nx0,Ny0,mx,my,block);
-  }
+  //  InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
+  //  w.Set(Y[OMEGA]);
+  //InitialCondition->Set(w,NY[OMEGA]);
+  //fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 
-  InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
-  w.Set(Y[OMEGA]);
-  InitialCondition->Set(w,NY[OMEGA]);
-  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
-
-  for(unsigned i=0; i < nshells; i++)
-    Y[EK][i]=0.0;
+  //  for(unsigned i=0; i < nshells; i++) Y[EK][i]=0.0;
 
   Forcing=MDNS_Vocabulary.NewForcing(forcing);
 
+  /*
   if(dynamic && false) {
     Allocate(errmask,ny);
     for(unsigned i=0; i < ny; ++i)
@@ -193,7 +244,7 @@ void MDNS::InitialConditions()
     for(unsigned i=0; i <= xorigin; i++)
       omegamask(i,0)=0;
   }
-
+  */
   tcount=0;
   if(restart) {
     Real t0;
@@ -220,6 +271,7 @@ void MDNS::InitialConditions()
 
   if(movie)
     open_output(fw,dirsep,"w");
+
 }
 void MDNS::Project(unsigned g) 
 {
@@ -231,42 +283,10 @@ void MDNS::Prolong(unsigned g)
 }
 
 
-
-/****** Vocabulary *****/
-
-MDNSVocabulary::MDNSVocabulary()
+void MDNS::Output(int it)
 {
-  Vocabulary=this;
-
-  VOCAB_NOLIMIT(ic,"Initial Condition");
-  VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
-  VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
-  VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
-  VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
-  VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
-
-  METHOD(MDNS);
-
-  InitialConditionTable=new Table<InitialConditionBase>("initial condition");
-  VOCAB(icalpha,0.0,0.0,"initial condition parameter");
-  VOCAB(icbeta,0.0,0.0,"initial condition parameter");
-  INITIALCONDITION(Zero);
-  INITIALCONDITION(Constant);
-  //  INITIALCONDITION(Equipartition); 
-  // FIXME: dns.h calls DNSProblem, not MDNSProblem
-
-  VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
-  VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
-  VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
-  VOCAB(pL,0,0,"Power of Laplacian for molecular viscosity");
-
-  VOCAB_NOLIMIT(forcing,"Forcing type");
-  ForcingTable=new Table<ForcingBase>("forcing");
-
-  VOCAB(eta,0.0,REAL_MAX,"vorticity injection rate");
-  VOCAB(force,(Complex) 0.0, (Complex) 0.0,"constant external force");
-  VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
-  VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
-  FORCING(None);
-  //FORCING(WhiteNoiseBanded);
+  // FIXME
 }
+
+
+
