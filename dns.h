@@ -9,38 +9,23 @@
 #include "InitialCondition.h"
 #include "Conservative.h"
 #include "Exponential.h"
-
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
 
 using namespace Array;
 using std::ostringstream;
 
-extern const char *ic;
-//extern char *linearity="Power";
-extern const char *forcing;
-
-// Vocabulary
-extern Real nuH, nuL;
-extern int pH;
-extern int pL;
-extern unsigned Nx;
-extern unsigned Ny;
-extern Real eta;
-extern Complex force;
-extern Real kforce;
-extern Real deltaf;
-extern unsigned movie;
-extern unsigned rezero;
-extern unsigned spectrum;
-extern Real icalpha;
-extern Real icbeta;
-
-extern int xpad;
-extern int ypad;
-
 class DNS : public ProblemBase {
- private:
  protected:
+  // Vocabulary:
+  int xpad, ypad; // these are always one.
+  Real nuH, nuL;
+  int pH;
+  int pL;
+  unsigned Nx;
+  unsigned Ny;
+  unsigned spectrum;
+ 
+  // derived variables:
   enum Field {OMEGA,TRANSFER,EK};
   unsigned mx, my; // size of data arrays
   unsigned origin; // linear index of Fourier origin.
@@ -169,11 +154,6 @@ public:
 };
 
 
-// forcing
-extern ForcingBase *Forcing;
-
-class None : public ForcingBase {
-};
 
 
 // Source routines
@@ -296,7 +276,6 @@ void DNS::Stochastic(const vector2&Y, double, double dt)
   Forcing->Force(w,sqrt(2.0*dt)*crand_gauss());
 }
 
-
 // DNS Output routines
 
 void DNS::Initialize()
@@ -342,8 +321,6 @@ void DNS::OutFrame(int)
 
   fw.flush();
 }
-
-
 
 void DNS::ComputeInvariants(Real& E, Real& Z, Real& P)
 {

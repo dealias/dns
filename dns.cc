@@ -5,7 +5,7 @@ const double ProblemVersion=1.0;
 
 #ifndef DEPEND
 #if !COMPLEX
-#error Navier requires COMPLEX=1 in options.h
+#error DNS requires COMPLEX=1 in options.h
 #endif
 #endif
 
@@ -37,7 +37,6 @@ Real icbeta=1.0;
 int xpad=1;
 int ypad=1;
 DNS *DNSProblem;
-
 InitialConditionBase *InitialCondition;
 ForcingBase *Forcing;
 
@@ -75,6 +74,10 @@ public:
       }
     }
   }
+};
+
+// forcing
+class None : public ForcingBase {
 };
 
 class ConstantBanded : public ForcingBase {
@@ -134,8 +137,6 @@ public:
     }
   }
 };
-
-
 
 class DNSVocabulary : public VocabularyBase {
 public:
@@ -210,6 +211,17 @@ DNS::~DNS()
 
 void DNS::InitialConditions()
 {
+  // load vocabulary from global variables
+  xpad=::xpad;
+  ypad=::ypad;
+  nuH=::nuH;
+  nuL=::nuL;
+  pH=::pH;
+  pL=::pL;
+  Nx=::Nx;
+  Ny=::Ny;
+  spectrum=::spectrum;
+  
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
   k0=1.0;
@@ -323,8 +335,6 @@ public:
   static Real Eta(unsigned int i) {return DNSProblem->Eta(i);}
 };
 
-
-
 void DNS::Output(int it)
 {
   Real E,Z,P;
@@ -373,4 +383,3 @@ void DNS::Output(int it)
       S[i]=0.0;
   }
 }
-

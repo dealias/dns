@@ -37,7 +37,7 @@ Real icbeta=1.0;
 // global variables for dns.h
 int xpad=1;
 int ypad=1;
-//DNS *DNSProblem; // FIXME: this ends up creating the method!
+
 // DNS setup routines
 DNS::DNS()
 {
@@ -60,7 +60,7 @@ InitialConditionBase *InitialCondition;
 ForcingBase *Forcing;
 
 //Global variables for MultiIntegrator.h
-MultiProblem *MProblem; // FIXME: change the name of this
+MultiProblem *MProblem;
 unsigned Ngrids=1;
 const char *subintegrator; 
 
@@ -83,11 +83,22 @@ public:
 
 MDNSVocabulary MDNS_Vocabulary;
 
-class MDNS : public DNS, public MultiProblem {
-  //class MDNS : public DNS {
+// define the Grid class:
+class Grid {
+  // FIXME: flesh this out
+};
+
+//class MDNS : public DNS, public MultiProblem {
+//class MDNS : public DNS {
+class MDNS : public MultiProblem {
+private:
+  unsigned mx, my; // size of data arrays
+  array1<Grid *> G;
 public:
   MDNS();
   ~MDNS();
+  //  enum Field {OMEGA,TRANSFER,EK,Nfields};
+  enum Field {OMEGA,Nfields};
 
   Table<InitialConditionBase> *InitialConditionTable;
   //void Initialize();
@@ -104,7 +115,9 @@ public:
   //array1<Grid *> G;
 
   void Output(int it);
-  
+  virtual void Source(const vector2&, const vector2&, double);
+
+
 };
 
 MDNS *MDNSProblem;
@@ -131,7 +144,6 @@ MDNSVocabulary::MDNSVocabulary()
   INITIALCONDITION(Zero);
   //  INITIALCONDITION(Constant);
   //  INITIALCONDITION(Equipartition); 
-  // FIXME: dns.h calls DNSProblem, not MDNSProblem
 
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
@@ -145,12 +157,13 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(force,(Complex) 0.0, (Complex) 0.0,"constant external force");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
-  FORCING(None);
+  //FORCING(None);
   //FORCING(WhiteNoiseBanded);
 
-// FIXME: creation of DNS for dns.h already sets method fia Param.h!
-  //  METHOD(MDNS); 
+  METHOD(MDNS); 
 
+  subintegrator="rk5";
+  VOCAB_NOLIMIT(subintegrator,"subintegrator for multi-integrator");
   INTEGRATOR(MultiIntegrator);
   VOCAB(Ngrids,1,INT_MAX,"Number of multispectral grids");
   cout << "... done MDNSVocabulary::MDNSVocabulary()"<<endl;
@@ -160,119 +173,47 @@ MDNSVocabulary::MDNSVocabulary()
 MDNS::MDNS() 
 {
   MDNSProblem=this;
-  //  MProblem=this;
+  MProblem=this;
   check_compatibility(DEBUG);
-  ConservativeIntegrators(MDNS_Vocabulary.IntegratorTable,this);
-  ExponentialIntegrators(MDNS_Vocabulary.IntegratorTable,this);
+  //ConservativeIntegrators(MDNS_Vocabulary.IntegratorTable,this);
+  //ExponentialIntegrators(MDNS_Vocabulary.IntegratorTable,this);
 }
 MDNS::~MDNS() 
 {
-  fftwpp::deleteAlign(block);
+  //fftwpp::deleteAlign(block);
 }
 //void MDNS::InitialConditions(unsigned Ngrids0) {
 void MDNS::InitialConditions()
 {
   cout << "MDNS::InitialConditions()" << endl;
-  //  exit(1);
-
-  //if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
-
-  k0=1.0;
-  k02=k0*k0;
+  nfields=Nfields;
+  // Vocabulary
+  Ngrids=::Ngrids;
+  MultiProblem::InitialConditions(Ngrids);
 
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
-
-  xorigin=mx-1;
-  origin=xorigin*my;
-  nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
-
-
-  //NY[OMEGA]=Nx*my;
-  //NY[TRANSFER]=nshells;
-  //NY[EK]=nshells;
-
-  cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
-
-  cout << "\nALLOCATING FFT BUFFERS" << endl;
-  //size_t align=sizeof(Complex);
-
-  //Allocator(align); //FIXME: ambiguous
-
-  Dimension(T,nshells);
-
-  w.Dimension(Nx,my);
-  f0.Dimension(Nx,my);
-
-  unsigned int Nxmy=Nx*my;
-  unsigned int nbuf=3*Nxmy;
-  unsigned int Nx0=Nx+xpad;
-  unsigned int Ny0=Ny+ypad;
-  int my0=Ny0/2+1;
-  if(movie)
-    nbuf=max(nbuf,Nx0*my0);
-
-  block=fftwpp::ComplexAlign(nbuf);
-  f1.Dimension(Nx,my,block);
-  g0.Dimension(Nx,my,block+Nxmy);
-  g1.Dimension(Nx,my,block+2*Nxmy);
-
-  F[1]=f1;
-  G[0]=g0;
-  G[1]=g1;
-
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
-
-  Allocate(count,nshells);
-
-  //  InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
-  //  w.Set(Y[OMEGA]);
-  //InitialCondition->Set(w,NY[OMEGA]);
-  //fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
-
-  //  for(unsigned i=0; i < nshells; i++) Y[EK][i]=0.0;
-
-  Forcing=MDNS_Vocabulary.NewForcing(forcing);
-
-  /*
-  if(dynamic && false) {
-    Allocate(errmask,ny);
-    for(unsigned i=0; i < ny; ++i)
-      errmask[i]=1;
-
-    array2<int> omegamask(Nx,my,(int *) errmask+(Y[OMEGA]-y));
-    for(unsigned i=0; i <= xorigin; i++)
-      omegamask(i,0)=0;
+  for(unsigned i=0; i < Ngrids; ++i) {
+    NY[Nfields*i+OMEGA]=Nx*my;
+    //NY[Nfields*i+TRANSFER]=
+    //NY[Nfields*i+MOMENT]=
   }
-  */
-  tcount=0;
-  if(restart) {
-    Real t0;
-    ftin.open(Vocabulary->FileName(dirsep,"t"));
-    while(ftin >> t0, ftin.good()) tcount++;
-    ftin.close();
+  
+  Allocator(); // FIXME: what is this?
+
+  G.Allocate(Ngrids);
+  for(unsigned int i=0; i < Ngrids; ++i) {
+    vector y,m,T;
+    Dimension(y,Y[Nfields*i+OMEGA]);
+    //Dimension(T,Y[Nfields*i+TRANSFER]);
+    //Dimension(m,Y[Nfields*i+MOMENT]);
+    G[i]=new Grid; // FIXME: must pass data
   }
-
-  open_output(ft,dirsep,"t");
-  open_output(fevt,dirsep,"evt");
-
-  if(!restart) {
-    remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
-    remove_dir(Vocabulary->FileName(dirsep,"transfer"));
-  }
-
-  mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
-  mkdir(Vocabulary->FileName(dirsep,"transfer"),0xFFFF);
-
-  errno=0;
-
-  if(output)
-    open_output(fwk,dirsep,"wk");
-
-  if(movie)
-    open_output(fw,dirsep,"w");
-
+  
+  //for(unsigned int i=0; i < Ngrids; ++i) G[i]->initialspectrum();
+  
 }
+
 void MDNS::Project(unsigned g) 
 {
   // FIXME
@@ -287,6 +228,15 @@ void MDNS::Output(int it)
 {
   // FIXME
 }
+void DNS::Output(int it)
+{
+  // FIXME
+  // This is just to get some random table thing working.
+}
 
+void MDNS::Source(const vector2&, const vector2&, double)
+{
+  // FIXME
+}
 
 
