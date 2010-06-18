@@ -107,19 +107,14 @@ public:
 
   void Project(unsigned g);
   void Prolong(unsigned g);
-
-  // class Grid : public DNS {
-    // allocate only what we need
-    // allocator(?);
-  //};
-  //array1<Grid *> G;
-
+  
   void Output(int it);
   virtual void Source(const vector2&, const vector2&, double);
 
 
 };
 
+// Global problem.
 MDNS *MDNSProblem;
 
 
@@ -175,13 +170,12 @@ MDNS::MDNS()
   MDNSProblem=this;
   MProblem=this;
   check_compatibility(DEBUG);
-  //ConservativeIntegrators(MDNS_Vocabulary.IntegratorTable,this);
-  //ExponentialIntegrators(MDNS_Vocabulary.IntegratorTable,this);
 }
+
 MDNS::~MDNS() 
 {
-  //fftwpp::deleteAlign(block);
 }
+
 //void MDNS::InitialConditions(unsigned Ngrids0) {
 void MDNS::InitialConditions()
 {
