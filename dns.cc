@@ -221,26 +221,21 @@ void DNS::InitialConditions()
   Nx=::Nx;
   Ny=::Ny;
   spectrum=::spectrum;
-  
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
   k0=1.0;
   k02=k0*k0;
-
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
-
   xorigin=mx-1;
   origin=xorigin*my;
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
-
 
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
   NY[EK]=nshells;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
-
   cout << "\nALLOCATING FFT BUFFERS" << endl;
   size_t align=sizeof(Complex);
 

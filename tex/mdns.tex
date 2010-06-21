@@ -260,13 +260,13 @@ governing equation the same.  Thus, all of the computational techniques that
 we have developped for simulating the undecimated Navier--Stokes equations
 can still be applied.
 
-\begin{figure}[htb]
-  \begin{center}
-    \includegraphics[height=60mm]{bb_grids.jpg}
-    \caption{Scaled Subgrid diagram}
-    \label{bb_grids}
-  \end{center}
-\end{figure}
+%\begin{figure}[htb]
+%  \begin{center}
+%    \includegraphics[height=60mm]{bb_grids.jpg}
+%    \caption{Scaled Subgrid diagram}
+%    \label{bb_grids}
+%  \end{center}
+%\end{figure}
 
 \subsubsection{Grids}
 However, scaling the grids by a factor introduces a restriction on the geometry
@@ -280,6 +280,20 @@ depositied.  In this case, every fine-grid mode is has at least one adjacent
 coarse-grid mode with higher $k$ and one adjacent coarse-grid mode with lower
 $k$.
 
+\subsubsubsection{Projection and Prolongation on scaled grids}
 TODO: show projections.  Also, what about prolonging the boundary modes?
+
+\subsubsubsection{Calculating the nonlinearity on scaled grids}
+Since the grids are just scaled versions of a fully resolved simulation,
+the nonlinearity may be calculated by simply changing the parameters
+in the spectral (spectrally bounded, discrete) Navier--Stokes equations.
+However, there is one important difference: we must avoid double-counting
+interactions which appear in both the fully-resolved and high-wavenumber grids.
+Preferring to keep as many interactions from the fully-resolved grid as 
+possible, this amounts to removing low-low-low interactions from the decimated
+grid.  Fortunately, (I think) the low-low-low interactions are just the 
+scaled interactions for a subset of the decimated grid.  Thus, they are a 
+convolution if the normal nonlinearity is a convolution, and are amenable
+to calculation using so-called fast convolutions.  w00t. 
 
 \end{document}

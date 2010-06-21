@@ -48,7 +48,6 @@ class DNS : public ProblemBase {
   Complex *F[2];
   Complex *G[2];
   Complex *block;
-
   fftwpp::ImplicitHConvolution2 *Convolution;
   fftwpp::ExplicitHConvolution2 *Padded;
 
@@ -77,7 +76,6 @@ class DNS : public ProblemBase {
   Real getk02() {return k02;}
   unsigned getxorigin() {return xorigin;}
 
-
   void InitialConditions();
   void Initialize();
   virtual void Output(int it);
@@ -86,7 +84,6 @@ class DNS : public ProblemBase {
 
   void Spectrum(vector& S, const vector& y);
   void Transfer(const vector2& Src, const vector2& Y);
-
   void NonLinearSource(const vector2& Src, const vector2& Y, double t);
   void LinearSource(const vector2& Src, const vector2& Y, double t);
 
@@ -138,11 +135,10 @@ class DNS : public ProblemBase {
   Real Eta(unsigned int i) {
     return T[i].im;
   }
-
 };
 
+//***** initial conditions *****//
 
-// initial conditions
 extern InitialConditionBase *InitialCondition;
 class Zero : public InitialConditionBase {
 public:
@@ -153,10 +149,7 @@ public:
   }
 };
 
-
-
-
-// Source routines
+//***** Source routines *****//
 
 void DNS::LinearSource(const vector2& Src, const vector2& Y, double)
 {
@@ -176,7 +169,6 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
 {
   w.Set(Y[OMEGA]);
   f0.Set(Src[OMEGA]);
-
   f0(origin)=0.0;
   f1(origin)=0.0;
   g0(origin)=0.0;
@@ -216,11 +208,9 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
       sum += (f0[i][j]*conj(wij)).re;
     }
   }
-
   cout << sum << endl;
 #endif
 }
-
 
 void DNS::Transfer(const vector2& Src, const vector2& Y)
 {
@@ -247,16 +237,13 @@ void DNS::Transfer(const vector2& Src, const vector2& Y)
   Forcing->Force(f0,T);
 }
 
-
 void DNS::Spectrum(vector& S, const vector& y)
 {
   w.Set(y);
-
   for(unsigned K=0; K < nshells; K++)
     S[K]=0.0;
 
   // Compute instantaneous angular sum over each circular shell.
-
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -269,23 +256,20 @@ void DNS::Spectrum(vector& S, const vector& y)
   }
 }
 
-
 void DNS::Stochastic(const vector2&Y, double, double dt)
 {
   w.Set(Y[OMEGA]);
   Forcing->Force(w,sqrt(2.0*dt)*crand_gauss());
 }
 
-// DNS Output routines
+//***** DNS Output routines *****//
 
 void DNS::Initialize()
 {
   fevt << "#   t\t\t E\t\t\t Z" << endl;
-
   if(spectrum) {
     for(unsigned i=0; i < nshells; i++)
       count[i]=0;
-
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
@@ -312,13 +296,11 @@ void DNS::OutFrame(int)
   Padded->backwards(buffer,true);
 
   fw << 1 << Ny0 << Nx0;
-
   for(int j=Ny0-1; j >= 0; j--) {
     for(unsigned i=0; i < Nx0; i++) {
       fw << (float) wr(i,j);
     }
   }
-
   fw.flush();
 }
 
@@ -349,6 +331,5 @@ void DNS::FinalOutput()
   cout << "Enstrophy = " << Z << newl;
   cout << "Palenstrophy = " << P << newl;
 }
-
 
 #endif
