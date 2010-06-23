@@ -41,8 +41,6 @@ int ypad=1;
 // DNS setup routines
 DNS::DNS()
 {
-  cout << "DNS::DNS()" << endl;
-  //  exit(1);
 }
 
 DNS::~DNS()
@@ -51,8 +49,6 @@ DNS::~DNS()
 
 void DNS::InitialConditions()
 {
-  cout << "DNS::InitialConditions()" << endl;
-  exit(1);
 }
 
 //***** Initial Conditions *****//
@@ -75,6 +71,7 @@ MultiProblem *MProblem;
 unsigned Ngrids=1;
 const char *subintegrator; 
 
+// ***** Vocabulary ***** //
 class MDNSVocabulary : public VocabularyBase {
 public:
   const char *Name() {return "MDNS";}
@@ -94,49 +91,32 @@ public:
 
 MDNSVocabulary MDNS_Vocabulary;
 
-// The Grid class contains all the information for calculating source
-// terms on a subgrid.
+
+// ***** Grid class based on DNS *****//
 class Grid : public DNS {
-private:
-  //MDNS *parent;
-  //protected:
 public:
   Grid();
-  //  Grid() {}
   ~Grid();
-  void InitialConditions();
-
+  void InitialConditions(unsigned g);
   void  NonLinearSource(const vector2& Src, const vector2& Y, double t);
-  
-  // FIXME: flesh this out
+  // FIXME: add other souces as well
 };
 
 
-//class MDNS : public DNS, public MultiProblem {
-//class MDNS : public DNS {
+//***** MDSN derived from MultiProblem *****//
 class MDNS : public MultiProblem {
 private:
-  //  array2<Complex> w; // Vorticity field
-  //array2<Complex> s;
-  //vector2 w,s;
   unsigned mx, my; // size of data arrays
   array1<Grid *> G;
+  void ComputeInvariants(Real& E, Real& Z, Real& P);
 public:
   friend class Grid;
   MDNS();
   ~MDNS();
-  //  enum Field {OMEGA,TRANSFER,EK,Nfields};
-  enum Field {OMEGA,Nfields};
-  
-  Table<InitialConditionBase> *InitialConditionTable;
-  //void Initialize();
-  //void InitialConditions(unsigned Ngrids0);
-  void InitialConditions();
+  enum Field {OMEGA,Nfields}; // TODO: include TRANSFER and EK as well
 
-  void Project(unsigned g);
-  void Prolong(unsigned g);
-  
-  void Output(int it);
+  Table<InitialConditionBase> *InitialConditionTable;
+  void InitialConditions();
 
   // Source functions
   void Source(const vector2&, const vector2&, double);
@@ -145,27 +125,31 @@ public:
   void LinearSource(const vector2& Src, const vector2& Y, double t);
   void NonLinearSource(const vector2& Src, const vector2& Y, double t);
   void ExponentialSource(const vector2& Src, const vector2& Y, double t);
+  void Stochastic(const vector2& Y, double t, double dt);
+  
+  void Project(unsigned g);
+  void Prolong(unsigned g);
+  
+  void FinalOutput();
+  void Output(int it);
 };
 
-// Global problem.
+//***** Global problem *****//
 MDNS *MDNSProblem;
 
+// ***** Grid functions *****//
 Grid::Grid()
 {
-  cout << MDNSProblem->nfields << endl;
-  cout << MDNSProblem->mx;
-  Nx=2;
-  cout << "grid " << endl;
 }
 
 Grid::~Grid()
 {
-  cout << "no grid!"<<endl;
+  fftwpp::deleteAlign(block);
 }
 
-void Grid::InitialConditions()
+void Grid::InitialConditions(unsigned g)
 {
-    // load vocabulary from global variables
+  // load vocabulary from global variables
   xpad=::xpad;
   ypad=::ypad;
   nuH=::nuH;
@@ -177,7 +161,7 @@ void Grid::InitialConditions()
   //  spectrum=::spectrum;
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
-  k0=1.0;
+  k0=1.0*pow(2.0,g);
   k02=k0*k0;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
@@ -196,13 +180,10 @@ void Grid::InitialConditions()
 
   //Dimension(T,nshells);
 
-  // TODO: block could be used as work arrays for more than one grid
-
-  
-  unsigned int Nxmy=Nx*my;
-  unsigned int nbuf=3*Nxmy;
-  unsigned int Nx0=Nx+xpad;
-  unsigned int Ny0=Ny+ypad;
+  unsigned Nxmy=Nx*my;
+  unsigned nbuf=3*Nxmy;
+  unsigned Nx0=Nx+xpad;
+  unsigned Ny0=Ny+ypad;
   int my0=Ny0/2+1;
   xorigin=mx-1;
 
@@ -217,8 +198,6 @@ void Grid::InitialConditions()
   G[0]=g0;
   G[1]=g1;
 
-
-
   // FIXME: ic=<whatever> at command line hangs program, but fine if in p file.
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
   w.Set(Y[OMEGA]);
@@ -227,8 +206,6 @@ void Grid::InitialConditions()
 
   for(unsigned i=0; i < nshells; i++)
     Y[EK][i]=0.0;
-
-  // TODO: more initialization, etc!
 }
 
 void Grid::NonLinearSource(const vector2& Src, const vector2& Y, double t)
@@ -237,11 +214,8 @@ void Grid::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 }
 
 /****** Vocabulary *****/
-
 MDNSVocabulary::MDNSVocabulary()
 {
-  cout << "MDNSVocabulary::MDNSVocabulary()"<<endl;
-  //exit(1);
   Vocabulary=this;
 
   VOCAB_NOLIMIT(ic,"Initial Condition");
@@ -279,7 +253,6 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB_NOLIMIT(subintegrator,"subintegrator for multi-integrator");
   INTEGRATOR(MultiIntegrator);
   VOCAB(Ngrids,1,INT_MAX,"Number of multispectral grids");
-  cout << "... done MDNSVocabulary::MDNSVocabulary()"<<endl;
 }
 
 MDNS::MDNS() 
@@ -294,12 +267,11 @@ MDNS::~MDNS()
 {
 }
 
-//void MDNS::InitialConditions(unsigned Ngrids0) {
 void MDNS::InitialConditions()
 {
-  cout << "MDNS::InitialConditions()" << endl;
   nfields=Nfields;
-  // Vocabulary
+
+  //***** Vocabulary *****//
   Ngrids=::Ngrids;
   MultiProblem::InitialConditions(Ngrids);
 
@@ -311,19 +283,18 @@ void MDNS::InitialConditions()
     //NY[Nfields*i+MOMENT]=
   }
   
-  Allocator(align); // FIXME: what is this?
+  Allocator(align); //what is this?
 
   G.Allocate(Ngrids);
-  for(unsigned int i=0; i < Ngrids; ++i) {
+  for(unsigned g=0; g < Ngrids; ++g) {
     vector y,m,T;
-    Dimension(y,Y[Nfields*i+OMEGA]);
+    Dimension(y,Y[Nfields*g+OMEGA]);
     //Dimension(T,Y[Nfields*i+TRANSFER]);
     //Dimension(m,Y[Nfields*i+MOMENT]);
-    G[i]=new Grid; // FIXME: must pass data as well
+    G[g]=new Grid();
   }
-  for(unsigned int i=0; i < Ngrids; ++i) 
-    G[i]->InitialConditions();
-  //for(unsigned int i=0; i < Ngrids; ++i) G[i]->initialspectrum();
+  for(unsigned g=0; g < Ngrids; ++g) 
+    G[g]->InitialConditions(g);
 }
 
 void MDNS::Project(unsigned g) 
@@ -341,25 +312,47 @@ void MDNS::Output(int it)
   // FIXME
 }
 
-void DNS::Output(int it)
+void MDNS::ComputeInvariants(Real& E, Real& Z, Real& P)
 {
-  // This is just to get some random table thing working.
+  E=Z=P=0.0;
+
+  Real tempE=0.0, tempZ=0.0, tempP=0.0;
+  for(unsigned g=0; g < Ngrids; ++g) {
+    // add up the individual invariants
+    G[g]->ComputeInvariants(tempE,tempZ,tempP);
+    // FIXME: only visible modes should be counted.
+    // FIXME: scale contribution from decimated grids 
+    E += tempE;
+    Z += tempZ;
+    P += tempP;
+  }
+}
+
+void MDNS::FinalOutput()
+{
+  Real E,Z,P;
+  ComputeInvariants(E,Z,P);
+  cout << endl;
+  cout << "Energy = " << E << newl;
+  cout << "Enstrophy = " << Z << newl;
+  cout << "Palenstrophy = " << P << newl;
+}
+
+void DNS::Output(int it) // Necessary for a table in triad somewhere
+{
 }
 
 void MDNS::Source(const vector2& Src, const vector2& Y, double t)
 {
-  cout << "Grid " << grid <<endl;
   ConservativeSource(Src,Y,t);
-  //NonConservativeSource(Src,Y,t);
-  // FIXME
-  // Calculate source routines for all of the grids.
+  NonConservativeSource(Src,Y,t);
 }
 
 void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t) 
 {
   NonLinearSource(Src,Y,t);
   //Transfer(Src,Y);
-  //LinearSource(Src,Y,t);
+  LinearSource(Src,Y,t); // FIXME: is this really a conservative source?
 }
 
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
@@ -367,57 +360,36 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
   //Moments(Src,Y,t);
 }
 
-void MDNS::LinearSource(const vector2& Src, const vector2& Y, double t) 
+void MDNS::ExponentialSource(const vector2& Src, const vector2& Y, double t) 
 {
-  //vector y,source;
-  //Dimension(y,Y[OMEGA]);
-  //Dimension(source,Src[OMEGA]);
-  //G[grid]->LinearSource(source,y,t);
+  NonLinearSource(Src,Y,t);
+  //Transfer(Src,Y);
+  NonConservativeSource(Src,Y,t);
 }
 
-void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double) 
+void MDNS::LinearSource(const vector2& Src, const vector2& Y, double t) 
+{
+  G[grid]->LinearSource(Src,Y,t);
+}
+
+void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double t) 
 {
   G[grid]->NonLinearSource(Src,Y,t);
 }
 
-void MDNS::ExponentialSource(const vector2& Src, const vector2& Y, double t) 
+void MDNS::Stochastic(const vector2& Y, double t, double dt) 
 {
-  //NonLinearSource(Src,Y,t);
-  //Transfer(Src,Y);
-  //NonConservativeSource(Src,Y,t);
+  //G[grid]->Stochastic(T,y,t,dt);
 }
 
-//void MDNS::Stochastic(const vector2& Y, double t, double dt) 
-//{
-  /*
-  vector y,T;
-  Dimension(y,Y[OMEGA]);
-  Dimension(T,Y[TRANSFER]);
-  G[grid]->Stochastic(T,y,t,dt);
-  Sigma();
-  */
-//}
-
-//void MDNS::Moments(const vector2& Src, const vector2& Y, double t) 
-//{
-  /*
-  vector y;
-  array2<Var> moment;
-  Dimension(y,Y[OMEGA]);
-  moment.Dimension(Nmoments,Nshells,Src[MOMENT]);
-  G[grid]->Moments(moment,y,t);
-  */
-//}
+/*
+void MDNS::Moments(const vector2& Src, const vector2& Y, double t) 
+{
+  G[grid]->Moments(Src,Y,t);
+}
   
-//void MDNS::Transfer(const vector2& Src, const vector2& Y) 
-//{
-  /*
-  vector y,source,T;
-  Dimension(y,Y[OMEGA]);
-  Dimension(source,Src[OMEGA]);
-  Dimension(T,Src[TRANSFER]);
-  G[grid]->Transfer(T,source,y);
-  */
-//}
-
-
+void MDNS::Transfer(const vector2& Src, const vector2& Y) 
+{
+  G[grid]->Transfer(Src,Y,t);
+}
+*/

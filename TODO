@@ -1,0 +1,19 @@
+general:
+mdns and dns should use different "test" directories.
+set svn ignore on linked header files in ~/dns
+
+dns:
+memory leak in transfer?
+
+
+mdns:
+mdns Nx=15 doesn't work, but 31 and 64 do. (??)
+implement project and prolong
+nonlinearity double-counts when grids overlap
+MDNS::Output
+computeinvariants should only look at visible modes
+forcing
+spectrum
+moments, transfer
+Grid::block could be used as work arrays for more than one grid
+
