@@ -92,16 +92,63 @@ public:
 MDNSVocabulary MDNS_Vocabulary;
 
 
-// ***** Grid class based on DNS *****//
+//***** Grid class based on DNS *****//
+
+//***** Base class for functionoids used by Grid class *****//
+class FunctRR {
+ public:
+  virtual void f(const Real w2, const Real k2, int n,va_list args) = 0;
+
+ };
+typedef FunctRR* FunctRRPtr;
+
 class Grid : public DNS {
+private:
+  int Invisible;
+
 public:
   Grid();
   ~Grid();
   void InitialConditions(unsigned g);
-  void  NonLinearSource(const vector2& Src, const vector2& Y, double t);
-  // FIXME: add other souces as well
+
+  void NonLinearSource(const vector2& Src, const vector2& Y, double t);
+
+  void ComputeInvariants(Real& E, Real& Z, Real& P);
+
+  void loopwF(const FunctRRPtr,int n,...);
+  class Invariants : public FunctRR {
+    void f(const Real w2, const Real k02, int n,va_list args) {
+      double * Z=va_arg(args,double *);
+      double * E=va_arg(args,double *);
+      double * P=va_arg(args,double *);
+      *Z += w2;
+      *E += w2/k02;
+      *P += w2*k02;
+    }
+  };
 };
 
+void Grid::loopwF(const FunctRRPtr F,int n,...)
+{
+  va_list args;
+  va_start(args,n);
+  w.Set(Y[OMEGA]);
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    //    if (I > Invisible) {
+    int I2=I*I;
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      //	if(j > (unsigned) Invisible) {
+      Real w2=abs2(wi[j]);
+      Real k2=k02*(I2+j*j);
+      F->f(w2,k2,n,args);
+      //	}
+    }
+    //}
+  }
+  va_end(args);
+};
 
 //***** MDSN derived from MultiProblem *****//
 class MDNS : public MultiProblem {
@@ -182,9 +229,9 @@ void Grid::InitialConditions(unsigned g)
 
   unsigned Nxmy=Nx*my;
   unsigned nbuf=3*Nxmy;
-  unsigned Nx0=Nx+xpad;
-  unsigned Ny0=Ny+ypad;
-  int my0=Ny0/2+1;
+  //  unsigned Nx0=Nx+xpad;//unused so far...
+  //  unsigned Ny0=Ny+ypad; //unused so far...
+  //  int my0=Ny0/2+1; //unused so far...
   xorigin=mx-1;
 
   w.Dimension(Nx,my);
@@ -198,7 +245,6 @@ void Grid::InitialConditions(unsigned g)
   G[0]=g0;
   G[1]=g1;
 
-  // FIXME: ic=<whatever> at command line hangs program, but fine if in p file.
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
   w.Set(Y[OMEGA]);
   InitialCondition->Set(w,NY[OMEGA]);
@@ -211,6 +257,12 @@ void Grid::InitialConditions(unsigned g)
 void Grid::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 {
   DNS::NonLinearSource(Src,Y,t);
+}
+
+void Grid::ComputeInvariants(Real& E, Real& Z, Real& P)
+{
+  FunctRRPtr F = new Invariants;
+  loopwF(F,3,&Z,&E,&P);
 }
 
 /****** Vocabulary *****/

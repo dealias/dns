@@ -118,7 +118,7 @@ class DNS : public ProblemBase {
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
 
-  void ComputeInvariants(Real& E, Real& Z, Real& P);
+  virtual void ComputeInvariants(Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
 
   Real Spectrum(unsigned int i) {
@@ -251,7 +251,8 @@ void DNS::Spectrum(vector& S, const vector& y)
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real k2=k02*(I2+j*j);
       Real k=sqrt(k2);
-      S[(unsigned)(k-0.5)] += Complex(abs2(wi[j])/k,nuk(k2)*abs2(wi[j]));
+      Real w2=abs2(wi[j]);
+      S[(unsigned)(k-0.5)] += Complex(w2/k,nuk(k2)*w2);
     }
   }
 }

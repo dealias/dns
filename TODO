@@ -17,3 +17,13 @@ spectrum
 moments, transfer
 Grid::block could be used as work arrays for more than one grid
 
+timing test on ComputeInvariants
+
+//void Grid::loopw(void pFun(Real,int,va_list),int n,...)
+// as well (for functions that don't need k2)
+
+//void Grid::hiddenloopw(void p(???),int n,...)
+// just like visible loop, but the other part.
+
+
+// FIXME: ic=<whatever> at command line hangs program, but fine if in p file.
