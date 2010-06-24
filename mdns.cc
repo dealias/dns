@@ -104,7 +104,8 @@ typedef FunctRR* FunctRRPtr;
 
 class Grid : public DNS {
 private:
-  int Invisible;
+  unsigned Invisible;
+  int Invisible2;
 
 public:
   Grid();
@@ -135,17 +136,15 @@ void Grid::loopwF(const FunctRRPtr F,int n,...)
   w.Set(Y[OMEGA]);
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
-    //    if (I > Invisible) {
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      //	if(j > (unsigned) Invisible) {
-      Real w2=abs2(wi[j]);
-      Real k2=k02*(I2+j*j);
-      F->f(w2,k2,n,args);
-      //	}
+      if(j > Invisible || I2 > Invisible2) {
+	Real w2=abs2(wi[j]);
+	Real k2=k02*(I2+j*j);
+	F->f(w2,k2,n,args);
+      }
     }
-    //}
   }
   va_end(args);
 };
@@ -213,6 +212,14 @@ void Grid::InitialConditions(unsigned g)
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   xorigin=mx-1;
+
+  if(g == 0) {
+    Invisible=0;
+    Invisible2=0;
+  } else {
+    Invisible=mx/2;
+    Invisible2=Invisible*Invisible;
+  }
 
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
@@ -372,11 +379,10 @@ void MDNS::ComputeInvariants(Real& E, Real& Z, Real& P)
   for(unsigned g=0; g < Ngrids; ++g) {
     // add up the individual invariants
     G[g]->ComputeInvariants(tempE,tempZ,tempP);
-    // FIXME: only visible modes should be counted.
-    // FIXME: scale contribution from decimated grids 
-    E += tempE;
-    Z += tempZ;
-    P += tempP;
+    Real scale=pow(2.0,g);
+    E += scale*tempE;
+    Z += scale*tempZ;
+    P += scale*tempP;
   }
 }
 

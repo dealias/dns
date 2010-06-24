@@ -7,23 +7,22 @@ memory leak in transfer?
 
 
 mdns:
-mdns Nx=15 doesn't work, but 31 and 64 do. (??)
+
 implement project and prolong
 nonlinearity double-counts when grids overlap
 MDNS::Output
-computeinvariants should only look at visible modes
 forcing
+mdns Nx=15 doesn't work, but 31 and 64 do. (??)
 spectrum
 moments, transfer
 Grid::block could be used as work arrays for more than one grid
+FIXME: ic=<whatever> at command line hangs program, but fine if in p file.
 
-timing test on ComputeInvariants
+add void Grid::loopw(void pFun(Real,int,va_list),int n,...) for functions 
+that don't need k2)
 
-//void Grid::loopw(void pFun(Real,int,va_list),int n,...)
-// as well (for functions that don't need k2)
-
-//void Grid::hiddenloopw(void p(???),int n,...)
-// just like visible loop, but the other part.
+add void Grid::hiddenloopw(void p(???),int n,...),  just like visible loop, 
+but the other part (maybe?)
 
 
-// FIXME: ic=<whatever> at command line hangs program, but fine if in p file.
+
