@@ -133,6 +133,55 @@ they are decimated uniformly.  Thus, we have a limited number of options in
 what type of subgrid we choose to use.  We present two here: a radix-2 scheme
 and a radix-4 scheme.
 
+\subsection{Radix-1 Decimated Grid}
+The radix-1 decimated grid is just the original grid; each gridpoint
+matches exactly one gridpoint on the undecimated grid (see
+Fig.\ ~\ref{lambda1}).  While this is not a practically useful method,
+it helps us understand the effect that the multispectral method has on
+the accuracy of the simulation.
+
+For this method to be non-trivial, we must have a different fewer
+modes on the large-scale grid than on the small-scale grid. The
+projection and prolongation operators are simply copying the data from
+one gridpoint to the corresponding gridpoint at the same location in
+Fourier space.  The nonlinearity is only slightly complicated by the
+fact that we must remove low-low-low interactions from the
+high-wavenumber grid. This is done by calculating the nonlinear
+interaction of all modes on the high grid, which we denote
+$\text{NL}_{\text{high}}$, which can be done with a fast convolution
+over all modes.  Then calculatethe nonlinearity on the subset of modes
+from the high-wavenumber grid that are in the low-wavenumber grid,
+denoted $\text{NL}_{<,\text{high}}$ by doing a fast convolution over
+the subset of modes which match modes on the low grid.  The nonlinear
+source term for the high grid is then
+$\text{NL}_{>,\text{high}} = \text{NL}_{\text{high}} - \text{NL}_{<,\text{high}}$.
+
+
+Consider the integration method given in (REF: MSc) single-step
+numerical integrators such as a Runge-Kutta method of order $n$.
+Using a radix-1 decimated high grid, and an undecimated low grid, we
+would evolve the low grid forward in time, project onto the high grid,
+move this forward in time, and then prolong onto the low grid.  The
+goal is to have the decimated system behave like a full-resolution
+undecimated system.  In this case, the full-resolution undecimated
+system is just the high-wavenumber grid!  Were we to ignore the low
+grid and not high-pass filter the high-grid nonlinearity, we would
+have the original system, with the important disctinction that all
+source terms would be calculated at each stage of the Runge-Kutta
+integrator.  With two grids, the high grid is affected by low-low-low
+interactions only at the end of the time step; as such, we expect that,
+while the sub-integrators have error $\O\tau^{n+1},$ the low-low-low
+interactions are only $\O\tau^1$.
+
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{lambda1}
+    \caption{Radix-1 Decimated Grid.}
+    \label{lambda1}
+  \end{center}
+\end{figure}
+
+
 \subsection{Radix-2 Decimated Grid}
 The radix-2 decimated grid has half the number of modes per unit area
 in Fourier space as does the undecimated grid.  In order to decimate uniformly,
