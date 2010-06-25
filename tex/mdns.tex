@@ -17,7 +17,10 @@ This document contains notes for the application of multi-spectral
 reduction to the Navier--Stokes equations, which will form the crux
 of my thesis.
 
-\section{Two dimensional Navier--Stokes}
+\section{Introduction}
+
+We begin with the two dimensional Navier--Stokes equations.
+
 What is particularly nice about two-dimensional turbulence is that the
 we can represent the velocity by the vorticity, which has only one
 non-zero component in two dimensions. The incompressible 2D Navier--Stokes
@@ -51,31 +54,113 @@ and the enstrophy,
   \label{Z}
   Z = \sum_i k_i^2|u_i|^2,
 \end{eqnarray}
-with appropriate weighting factors added for decimated grids.
-We will see that enstrophy conservation, which involes the geometric 
-quantity $\vk_i$, imposes a restriction on what types of grids we may use
-and how we project between them.
+with appropriate weighting factors added for decimated grids.  We will
+see that enstrophy conservation, which involes the geometric quantity
+$\vk_i$, imposes a restriction on what types of grids we may use and
+how we project between them.
 
-One possible arrangement for the grids, wherein the coarse grid is 
-twice as sparse and rotated by $45^\circ$,  
-is given in figure \ref{grids}. In
-the case where a coarse- and fine- grid point share the same location
-in Fourier space, equation \eqref{Z} is automtically satisfied whenever
-equation \eqref{E} is satisfied. In the arrangement given in figure \ref{grids},
-half of the fine-grid nodes satisfy the property. For the projection operator to
-conserve $E$ and $Z$, we thus need to transfer all of the energy and
-enstrophy from the remaining fine-grid nodes to coarse grid nodes. 
+% FIXME: out of date paragraph?
+One possible arrangement for the grids, wherein the coarse grid is
+twice as sparse and rotated by $45^\circ$, is given in figure
+\ref{lambdar2}. In the case where a coarse- and fine- grid point share
+the same location in Fourier space, equation \eqref{Z} is automtically
+satisfied whenever equation \eqref{E} is satisfied. In the arrangement
+given in figure \ref{lambdar2}, half of the fine-grid nodes satisfy
+the property. For the projection operator to conserve $E$ and $Z$, we
+thus need to transfer all of the energy and enstrophy from the
+remaining fine-grid nodes to coarse grid nodes.
 
-\begin{figure}[htb]
+
+\section{Decimated Evolution Equation}
+We wish to evolve the vorticity field forward in time.  As such, we
+need a differential equation that specifies the time-derivative of the
+vorticity based upon the vorticity as defined on the desimated grid.
+There are two basic choices for this: we either spectrally reduce the
+Navier--Stokes equation, or we simply treat the small-scale vorticity
+field as periodic in $x$-space and scale the Navier--Stokes equation
+by a factor determined by the period we have assumed.
+
+
+\subsection{Spectrally Reduced Navier--Stokes Equation}
+
+Shell models of turbulence spectrally reduce in a special case, since
+the GOY model reduced to the DN model, which is then a fixed point. Id
+est, the nonlinear source term is invariant.  Unsurprisingly, the
+Navier--Stokes equations present a more difficult problem for spectral
+reduction, because the binning of modes removes the perfectly triadic
+interaction between wavemodes.
+
+TODO: isn't there something written up about this already?
+
+\subsection{High-Pass Periodic Navier--Stokes Equation}
+However, this is not the only map that we may apply to the governing
+equation. Taking the spectral vorticity Navier--Stokes equations, each
+mode $\v\omega_{\v k}$ has $\v{k} \in \{k_0\(i,j\),i,j=1,\dots ,n \}$, where
+$k_0$ is the inverse scale of the $x$-space system, i.e.\ 
+$\v{x}\in (0,\pi/k_0)\times(0,\pi/k_0)$ (in our not-really-applied fashion,
+we typically take $k_0=1$).  
+
+Let $k_0^{(0)}$ be the spacing of the fine 
+grid, and $k_0^{(1)}=\lambda k_0^{(0)}$ be the subgrid spacing, as in 
+figure~\ref{lambda2}. The subgrid has 
+$\v{k} \in \{2k_0\(i,j\),i,j=1,\dots ,n \}$, which corresponds to 
+$\v{x}\in (0,\pi/(2k_0))\times(0,\pi/(2k_0))$. This is equivalent to 
+the scaling $\v{x} \rightarrow \v{x}/2$.  If we want to simulate a fluid 
+on $\v{x}\in (0,\pi/(k_0))\times(0,\pi/(k_0))$, we simply rescale $\v{x}$ by
+a factor of two. This is equivalent to modifying the Navier--Stokes equations
+from
+\be
+\theNS
+\ee
+to
+\be
+\ppt{\v{u}} +\v{u}\cdot\lambda\grad\v{u} 
+= -\frac{1}{\rho}\lambda\grad P + \nu\lambda^2\nabla^2 \v{u}+ \v{F}.
+\ee
+
+The primary advantage of this technique is that it leaves the form of the
+governing equation the same.  Thus, all of the computational techniques that 
+we have developped for simulating the undecimated Navier--Stokes equations
+can still be applied, so long as the grid remains a rectangular lattice in 
+Fourier space.
+
+\section{Decimated Grid Geometry}
+
+The undecimated grid geometry is provided to us: it is a rectangular lattice
+in Fourier space. The Liouville theorem for the Navier--Stokes equations
+implies that decimated grids will only reach the correct equipartition if 
+they are decimated uniformly.  Thus, we have a limited number of options in
+what type of subgrid we choose to use.  We present two here: a radix-2 scheme
+and a radix-4 scheme.
+
+\subsection{Radix-2 Decimated Grid}
+The radix-2 decimated grid has half the number of modes per unit area
+in Fourier space as does the undecimated grid.  In order to decimate uniformly,
+we remove every mode with two odd indices, as shown in Fig.\ ~\ref{lambdar2rot}.
+If the undecimated grid is a square lattice, then the decimated grid is also
+a square lattice, as can be seen in Fig.\ \ref{lambdar2}; it has been
+stretched by a factor of $\sqrt{2}$ and rotated by $45\ensuremath{^\circ}$.
+Given the same number of modes on the undecimated grid and the decimated
+subgrid, a radix-2 decimation scheme extends the maximum wavenumber to 
+$\sqrt{2}$ times that of the undecimated grid alone. As such, it seems wise
+to use a larger number of modes in the subgrid than in the undecimated grid.
+
+
+\begin{figure}[htbp]
   \begin{center}
-    \includegraphics{grids}
-    \caption{Grid layout for 2D NWSR. Red dots are for the fine grid, blue
-crosses for the coarse grid. Note that the origin is excluded from both grids.}
-    \label{grids}
+    \includegraphics{lambdar2rot}
+    \caption{Radix-2 Decimated Grid.}
+    \label{lambdar2rot}
+  \end{center}
+\end{figure}
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{lambdar2}
+    \caption{Rotated Radix-2 Decimated Grid.}
+    \label{lambdar2}
   \end{center}
 \end{figure}
 
-\subsection{Spectrally Reduced Subgrids}
 \subsubsection{Projection}
 Each unmatched fine-grid point is surrounded by a (rotated) square of matched
 coarse-grid points. This square constitutes the boundary of the region onto
@@ -217,58 +302,17 @@ modes than there be present. Any remaining energy is then deposited into
 the fine-grid modes that coincide with coarse-grid modes in Fourier space, 
 which automatically conserves both $E$ and $Z$.
 
-\subsubsection{Spectral Reduction of Governing Equations}
-Now we have to figure out what the hell to do with the coarse grid.
 
-\subsection{Scaled Subgrids}
-Shell models of turbulence spectrally reduce in a special case, since
-the GOY model reduced to the DN model, which is then a fixed point. Id
-est, the nonlinear source term is invariant.  Unsurprisingly, the
-Navier--Stokes equations present a more difficult problem for spectral 
-reduction, because the binning of modes removes the perfectly triadic 
-interaction between wavemodes.  
+\subsection{Radix-4 Decimated Grid}
 
-\subsubsection{The Spectrally-scaled Navier--Stokes equations}
-However, this is not the only map that we may apply to the governing
-equation. Taking the spectral vorticity Navier--Stokes equations, each
-mode $\v\omega_{\v k}$ has $\v{k} \in \{k_0\(i,j\),i,j=1,\dots ,n \}$, where
-$k_0$ is the inverse scale of the $x$-space system, i.e.\ 
-$\v{x}\in (0,\pi/k_0)\times(0,\pi/k_0)$ (in our not-really-applied fashion,
-we typically take $k_0=1$).  
+\begin{figure}[htb]
+  \begin{center}
+    \includegraphics{lambda2}
+    \caption{Radix-4 Decimated Grid.}
+    \label{lambda2}
+  \end{center}
+\end{figure}
 
-Let $k_0^{(0)}$ be the spacing of the fine 
-grid, and $k_0^{(1)}=2k_0^{(0)}$ be the subgrid spacing, as in 
-figure~\ref{bb_grids}. The subgrid has 
-$\v{k} \in \{2k_0\(i,j\),i,j=1,\dots ,n \}$, which corresponds to 
-$\v{x}\in (0,\pi/(2k_0))\times(0,\pi/(2k_0))$. This is equivalent to 
-the scaling $\v{x} \rightarrow \v{x}/2$.  If we want to simulate a fluid 
-on $\v{x}\in (0,\pi/(k_0))\times(0,\pi/(k_0))$, we simply rescale $\v{x}$ by
-a factor of two. This is equivalent to modifying the Navier--Stokes equations
-from
-\be
-\theNS
-\ee
-to
-\be
-\ppt{\v{u}} +2\v{u}\cdot\grad\v{u} 
-= -\frac{1}{\rho}2\grad P + 4\nu\nabla^2 \v{u}+ \v{F}.
-\ee
-
-
-The primary advantage of this technique is that it leaves the form of the
-governing equation the same.  Thus, all of the computational techniques that 
-we have developped for simulating the undecimated Navier--Stokes equations
-can still be applied.
-
-%\begin{figure}[htb]
-%  \begin{center}
-%    \includegraphics[height=60mm]{bb_grids.jpg}
-%    \caption{Scaled Subgrid diagram}
-%    \label{bb_grids}
-%  \end{center}
-%\end{figure}
-
-\subsubsection{Grids}
 However, scaling the grids by a factor introduces a restriction on the geometry
 that we can use. In particular, the imposition of a square latticewill lead
 to a problem with projection/prolongation near the spectral origin: fine-grid 
@@ -280,20 +324,34 @@ depositied.  In this case, every fine-grid mode is has at least one adjacent
 coarse-grid mode with higher $k$ and one adjacent coarse-grid mode with lower
 $k$.
 
-\subsubsubsection{Projection and Prolongation on scaled grids}
+\subsubsection{Projection and Prolongation}
 TODO: show projections.  Also, what about prolonging the boundary modes?
 
-\subsubsubsection{Calculating the nonlinearity on scaled grids}
-Since the grids are just scaled versions of a fully resolved simulation,
-the nonlinearity may be calculated by simply changing the parameters
-in the spectral (spectrally bounded, discrete) Navier--Stokes equations.
-However, there is one important difference: we must avoid double-counting
-interactions which appear in both the fully-resolved and high-wavenumber grids.
-Preferring to keep as many interactions from the fully-resolved grid as 
-possible, this amounts to removing low-low-low interactions from the decimated
-grid.  Fortunately, (I think) the low-low-low interactions are just the 
-scaled interactions for a subset of the decimated grid.  Thus, they are a 
-convolution if the normal nonlinearity is a convolution, and are amenable
-to calculation using so-called fast convolutions.  w00t. 
+Also, see note 2010-06-24 re: 
+
+\subsection{Calculating the Nonlinear Source Term on Decimated Grids}
+
+\subsubsection{Using Spectral Reduction}
+
+TODO: How would you use spectral reduction here?  Just bin things?
+Does one end up with a convolution, or just some nasty $\O(n^2)$ sum?
+
+\subsubsection{Using High-Pass Periodicity}
+
+Since the grids are just scaled square lattices, the nonlinearity may
+be calculated by simply changing the parameters in the spectral
+(spectrally bounded, discrete) Navier--Stokes equations.  However,
+there is one important difference: we must avoid double-counting
+interactions which appear in both the fully-resolved and
+high-wavenumber grids.  Preferring to keep as many interactions from
+the fully-resolved grid as possible, this amounts to removing
+low-low-low interactions from the decimated grid.  Fortunately, (I
+think) the low-low-low interactions are just the scaled interactions
+for a subset of the decimated grid.  Thus, they are a convolution if
+the normal nonlinearity is a convolution, and are amenable to
+calculation using so-called fast convolutions.  w00t.
+
+
+
 
 \end{document}
