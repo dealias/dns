@@ -24,6 +24,7 @@ int pH=1;
 int pL=0;
 unsigned Nx=15;
 unsigned Ny=15;
+unsigned radix=4;
 Real eta=0.0;
 Complex force=0.0;
 Real kforce=1.0;
@@ -92,25 +93,34 @@ public:
 MDNSVocabulary MDNS_Vocabulary;
 
 
-//***** Grid class based on DNS *****//
-
-//***** Base class for functionoids used by Grid class *****//
+//***** Base class for functionoids *****//
 class FunctRR {
  public:
   virtual void f(const Real w2, const Real k2, int n,va_list args) = 0;
-
  };
 typedef FunctRR* FunctRRPtr;
 
+unsigned gN(unsigned N, unsigned g) {
+  return radix == 1 ? pow(2,(int) g)*(N+1)-1 : N;
+};
+unsigned gm(unsigned m, unsigned g) {
+  return radix == 1 ? pow(2,(int) g)*m : m;
+};
+
+
+//***** Grid class based on DNS *****//
 class Grid : public DNS {
 private:
   unsigned Invisible;
   int Invisible2;
+  unsigned myg;
 
 public:
   Grid();
   ~Grid();
+
   void InitialConditions(unsigned g);
+  Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
 
   void NonLinearSource(const vector2& Src, const vector2& Y, double t);
 
@@ -161,6 +171,7 @@ public:
   ~MDNS();
   enum Field {OMEGA,Nfields}; // TODO: include TRANSFER and EK as well
 
+
   Table<InitialConditionBase> *InitialConditionTable;
   void InitialConditions();
 
@@ -196,28 +207,32 @@ Grid::~Grid()
 void Grid::InitialConditions(unsigned g)
 {
   // load vocabulary from global variables
+  myg=g;
   xpad=::xpad;
   ypad=::ypad;
   nuH=::nuH;
   nuL=::nuL;
   pH=::pH;
   pL=::pL;
-  Nx=::Nx;
-  Ny=::Ny;
+  Nx=gN(::Nx,g);
+  Ny=gN(::Ny,g);
   //  spectrum=::spectrum;
-  if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
-  k0=1.0*pow(2.0,g);
+  if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
+  if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
+  if(radix != 1 && radix != 4) 
+    msg(ERROR,"only radix 1 (trivial) or 4 decimations enabled");
+
+  k0=gk(1.0,myg);
   k02=k0*k0;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   xorigin=mx-1;
 
   if(g == 0) {
-    Invisible=0;
-    Invisible2=0;
+    Invisible=Invisible2=0;
   } else {
-    Invisible=mx/2;
+    Invisible=gm(::Nx,g-1)*gk(1.0,myg-1)/gk(1.0,myg);
     Invisible2=Invisible*Invisible;
   }
 
@@ -312,6 +327,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB_NOLIMIT(subintegrator,"subintegrator for multi-integrator");
   INTEGRATOR(MultiIntegrator);
   VOCAB(Ngrids,1,INT_MAX,"Number of multispectral grids");
+  VOCAB(radix,1,INT_MAX,"Radix number for grid decimation");
 }
 
 MDNS::MDNS() 
@@ -336,34 +352,41 @@ void MDNS::InitialConditions()
 
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
-  for(unsigned i=0; i < Ngrids; ++i) {
-    NY[Nfields*i+OMEGA]=Nx*my;
-    //NY[Nfields*i+TRANSFER]=
-    //NY[Nfields*i+MOMENT]=
+  for(unsigned g=0; g < Ngrids; ++g) {
+    NY[Nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
+    //NY[Nfields*g+TRANSFER]=
+    //NY[Nfields*g+MOMENT]=
   }
-  
-  Allocator(align); //what is this?
+
+
+  Allocator(align); // allocates MultiIntegrator
 
   G.Allocate(Ngrids);
-  for(unsigned g=0; g < Ngrids; ++g) {
-    vector y,m,T;
-    Dimension(y,Y[Nfields*g+OMEGA]);
-    //Dimension(T,Y[Nfields*i+TRANSFER]);
-    //Dimension(m,Y[Nfields*i+MOMENT]);
+  for(unsigned g=0; g < Ngrids; ++g) 
     G[g]=new Grid();
-  }
   for(unsigned g=0; g < Ngrids; ++g) 
     G[g]->InitialConditions(g);
+
 }
 
 void MDNS::Project(unsigned g) 
 {
-  // FIXME
+  if(radix == 1) {
+    // FIXME
+  } 
+  if(radix == 4) {
+    // FIXME
+  }
 }
 
 void MDNS::Prolong(unsigned g) 
 {
-  // FIXME
+  if(radix == 1) {
+    // FIXME
+  } 
+  if(radix == 4) {
+    // FIXME
+  }
 }
 
 void MDNS::Output(int it)
@@ -379,7 +402,8 @@ void MDNS::ComputeInvariants(Real& E, Real& Z, Real& P)
   for(unsigned g=0; g < Ngrids; ++g) {
     // add up the individual invariants
     G[g]->ComputeInvariants(tempE,tempZ,tempP);
-    Real scale=pow(2.0,g);
+    Real scale=pow(radix,g);
+    scale=1; // FIXME: temporary
     E += scale*tempE;
     Z += scale*tempZ;
     P += scale*tempP;
