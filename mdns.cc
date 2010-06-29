@@ -119,20 +119,23 @@ private:
   array2<Complex> wS, SrcwS;
   unsigned sNx, smy, sxorigin;
   void NLDimension();
-
+  
 public:
   Grid();
   ~Grid();
   unsigned myg;
+
   array1<Complex> * getw() {return &Y[OMEGA];};
   unsigned getNx() {return Nx;};
   unsigned getmy() {return my;};
   unsigned getInvisible() {return Invisible;};
 
+
   void InitialConditions(unsigned g);
   Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
 
   void NonLinearSource(const vector2 & Src, const vector2 & Y, double t);
+  void Transfer(const vector2 & Src, const vector2 & Y);
 
   void ComputeInvariants(Real& E, Real& Z, Real& P);
 
@@ -180,8 +183,12 @@ public:
   friend class Grid;
   MDNS();
   ~MDNS();
-  enum Field {OMEGA,Nfields}; // TODO: include TRANSFER and EK as well
 
+  enum Field {OMEGA,TRANSFER,Nfields}; // TODO: include EK
+  unsigned getnfields(unsigned g) {
+    return (g == 0 && spectrum) ? Nfields : Nfields-1;
+  };
+  unsigned getNfields() {return Nfields;};
 
   Table<InitialConditionBase> *InitialConditionTable;
   void InitialConditions();
@@ -192,6 +199,7 @@ public:
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t);
   void LinearSource(const vector2& Src, const vector2& Y, double t);
   void NonLinearSource(const vector2& Src, const vector2& Y, double t);
+  void Transfer(const vector2& Src, const vector2& Y);
   void ExponentialSource(const vector2& Src, const vector2& Y, double t);
   void Stochastic(const vector2& Y, double t, double dt);
   
@@ -231,12 +239,14 @@ void Grid::InitialConditions(unsigned g)
   pL=::pL;
   Nx=gN(::Nx,g);
   Ny=gN(::Ny,g);
-  //  spectrum=::spectrum;
+  spectrum=::spectrum;
+
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
   if(radix != 1 && radix != 4) 
     msg(ERROR,"only radix 1 (trivial) or 4 decimations enabled");
+
 
   k0=gk(1.0,myg);
   k02=k0*k0;
@@ -284,9 +294,7 @@ void Grid::InitialConditions(unsigned g)
     SrcwSblock=fftwpp::ComplexAlign(nS);
     wS.Dimension(sNx,smy,wSblock);
     SrcwS.Dimension(sNx,smy,SrcwSblock);
-    
   }
-
 
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
   w.Set(Y[OMEGA]);
@@ -359,6 +367,11 @@ void Grid::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   }
 }
 
+void Grid::Transfer(const vector2 & Src, const vector2 & Y)
+{
+  // FIXME
+}
+
 void Grid::ComputeInvariants(Real& E, Real& Z, Real& P)
 {
   FunctRRPtr F = new Invariants;
@@ -374,7 +387,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   //  VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
-  // VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
+  VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
   InitialConditionTable=new Table<InitialConditionBase>("initial condition");
@@ -422,8 +435,6 @@ MDNS::~MDNS()
 
 void MDNS::InitialConditions()
 {
-  nfields=Nfields;
-
   //***** Vocabulary *****//
   Ngrids=::Ngrids;
   MultiProblem::InitialConditions(Ngrids);
@@ -431,9 +442,16 @@ void MDNS::InitialConditions()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   for(unsigned g=0; g < Ngrids; ++g) {
-    NY[Nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
-    //NY[Nfields*g+TRANSFER]=
-    //NY[Nfields*g+MOMENT]=
+    nfields=getNfields();
+    if(g > 0 || spectrum==0) 
+      nfields -= 1; // TRANSFER only on the first grid
+
+
+    NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
+    if(g==0 && spectrum) {
+      NY[nfields*g+TRANSFER]=1; // FIXME: actually calculate this
+    }
+    //NY[nfields*g+MOMENT]=??
   }
 
 
@@ -557,7 +575,7 @@ void MDNS::Source(const vector2& Src, const vector2& Y, double t)
 void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t) 
 {
   NonLinearSource(Src,Y,t);
-  //Transfer(Src,Y);
+  Transfer(Src,Y);
   LinearSource(Src,Y,t); // FIXME: is this really a conservative source?
 }
 
@@ -569,7 +587,7 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 void MDNS::ExponentialSource(const vector2& Src, const vector2& Y, double t) 
 {
   NonLinearSource(Src,Y,t);
-  //Transfer(Src,Y);
+  Transfer(Src,Y);
   NonConservativeSource(Src,Y,t);
 }
 
@@ -593,9 +611,10 @@ void MDNS::Moments(const vector2& Src, const vector2& Y, double t)
 {
   G[grid]->Moments(Src,Y,t);
 }
+*/
   
 void MDNS::Transfer(const vector2& Src, const vector2& Y) 
 {
-  G[grid]->Transfer(Src,Y,t);
+  G[grid]->Transfer(Src,Y);
 }
-*/
+
