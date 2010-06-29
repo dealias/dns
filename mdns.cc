@@ -69,7 +69,7 @@ ForcingBase *Forcing;
 
 //***** Global variables for MultiIntegrator.h *****//
 MultiProblem *MProblem;
-unsigned Ngrids=1;
+unsigned Ngrids=2;
 const char *subintegrator; 
 
 // ***** Vocabulary ***** //
@@ -109,50 +109,103 @@ unsigned gm(unsigned m, unsigned g) {
 };
 
 
-//***** Grid class based on DNS *****//
-class Grid : public DNS {
+//***** MDNS derived from MultiProblem *****//
+class MDNS : public MultiProblem {
 private:
-  unsigned Invisible;
-  int Invisible2;
-  Complex *wSblock;
-  Complex *SrcwSblock;
-  array2<Complex> wS, SrcwS;
-  unsigned sNx, smy, sxorigin;
-  void NLDimension();
+  unsigned mx, my; // size of data arrays
+
+  unsigned glast;
+  void ComputeInvariants(Real& E, Real& Z, Real& P);
+  array2<Complex> wa, wb; // Vorticity field for projection/prolongation
+  unsigned nshells;
+  vector spectra;
+
+  ofstream Mfevt;
+//***** Grid class based on DNS *****//
+  class Grid : public DNS {
+  private:
+    unsigned Invisible;
+    int Invisible2;
+    Complex *wSblock;
+    Complex *SrcwSblock;
+    array2<Complex> wS, SrcwS;
+    unsigned sNx, smy, sxorigin;
+    void NLDimension();
+    MDNS * parent;
+
+  public:
+    Grid();
+    Grid(MDNS *prob, unsigned g, const vector2& Y0);
+    ~Grid();
+    unsigned myg;
+    
+    array1<Complex> * getw() {return &Y[OMEGA];};
+    unsigned getNx() {return Nx;};
+    unsigned getmy() {return my;};
+    unsigned getInvisible() {return Invisible;};
+    
+    void InitialConditions(unsigned g);
+    Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
+    
+    void NonLinearSource(const vector & Src, const vector & Y, double t);
+    void Transfer(const vector2 & Src, const vector2 & Y);
+    //  void Spectrum(vector& S, const vector& y);
+    
+    void ComputeInvariants(Real& E, Real& Z, Real& P);
+    
+    void loopwF(const FunctRRPtr,int n,...);
+    class Invariants : public FunctRR {
+      void f(const Real w2, const Real k02, int n,va_list args) {
+	double * Z=va_arg(args,double *);
+	double * E=va_arg(args,double *);
+	double * P=va_arg(args,double *);
+	*Z += w2;
+	*E += w2/k02;
+	*P += w2*k02;
+      }
+    };
+  };
+  array1<Grid *> G;
   
 public:
-  Grid();
-  ~Grid();
-  unsigned myg;
+  friend class Grid;
+  MDNS();
+  ~MDNS();
 
-  array1<Complex> * getw() {return &Y[OMEGA];};
-  unsigned getNx() {return Nx;};
-  unsigned getmy() {return my;};
-  unsigned getInvisible() {return Invisible;};
-
-
-  void InitialConditions(unsigned g);
-  Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
-
-  void NonLinearSource(const vector2 & Src, const vector2 & Y, double t);
-  void Transfer(const vector2 & Src, const vector2 & Y);
-
-  void ComputeInvariants(Real& E, Real& Z, Real& P);
-
-  void loopwF(const FunctRRPtr,int n,...);
-  class Invariants : public FunctRR {
-    void f(const Real w2, const Real k02, int n,va_list args) {
-      double * Z=va_arg(args,double *);
-      double * E=va_arg(args,double *);
-      double * P=va_arg(args,double *);
-      *Z += w2;
-      *E += w2/k02;
-      *P += w2*k02;
-    }
+  enum Field {OMEGA,TRANSFER,EK,Nfields};
+  unsigned getnfields(unsigned g) {
+    return Nfields;
+    //return (g == glast && spectrum) ? Nfields : 1;
   };
+  //  unsigned getNfields() {return Nfields;};
+  unsigned getnshells(unsigned g) {return g == glast ? nshells : 0;};
+
+  Table<InitialConditionBase> *InitialConditionTable;
+  void InitialConditions();
+
+  // Source functions
+  void Source(const vector2&, const vector2&, double);
+  void ConservativeSource(const vector2& Src, const vector2& Y, double t);
+  void NonConservativeSource(const vector2& Src, const vector2& Y, double t);
+  void LinearSource(const vector2& Src, const vector2& Y, double t);
+  void NonLinearSource(const vector2& Src, const vector2& Y, double t);
+  void Transfer(const vector2& Src, const vector2& Y);
+  void ExponentialSource(const vector2& Src, const vector2& Y, double t);
+  void Stochastic(const vector2& Y, double t, double dt);
+  
+  void Project(unsigned ga);
+  void Prolong(unsigned gb);
+  
+  void FinalOutput();
+  void Initialize();
+  void Output(int it);
 };
 
-void Grid::loopwF(const FunctRRPtr F,int n,...)
+//***** Global problem *****//
+MDNS *MDNSProblem;
+
+// ***** Grid functions *****//
+void MDNS::Grid::loopwF(const FunctRRPtr F,int n,...)
 {
   va_list args;
   va_start(args,n);
@@ -172,53 +225,18 @@ void Grid::loopwF(const FunctRRPtr F,int n,...)
   va_end(args);
 };
 
-//***** MDSN derived from MultiProblem *****//
-class MDNS : public MultiProblem {
-private:
-  unsigned mx, my; // size of data arrays
-  array1<Grid *> G;
-  void ComputeInvariants(Real& E, Real& Z, Real& P);
-  array2<Complex> wa, wb; // Vorticity field for projection/prolongation
-public:
-  friend class Grid;
-  MDNS();
-  ~MDNS();
 
-  enum Field {OMEGA,TRANSFER,Nfields}; // TODO: include EK
-  unsigned getnfields(unsigned g) {
-    return (g == 0 && spectrum) ? Nfields : Nfields-1;
-  };
-  unsigned getNfields() {return Nfields;};
-
-  Table<InitialConditionBase> *InitialConditionTable;
-  void InitialConditions();
-
-  // Source functions
-  void Source(const vector2&, const vector2&, double);
-  void ConservativeSource(const vector2& Src, const vector2& Y, double t);
-  void NonConservativeSource(const vector2& Src, const vector2& Y, double t);
-  void LinearSource(const vector2& Src, const vector2& Y, double t);
-  void NonLinearSource(const vector2& Src, const vector2& Y, double t);
-  void Transfer(const vector2& Src, const vector2& Y);
-  void ExponentialSource(const vector2& Src, const vector2& Y, double t);
-  void Stochastic(const vector2& Y, double t, double dt);
-  
-  void Project(unsigned ga);
-  void Prolong(unsigned gb);
-  
-  void FinalOutput();
-  void Output(int it);
-};
-
-//***** Global problem *****//
-MDNS *MDNSProblem;
-
-// ***** Grid functions *****//
-Grid::Grid()
+MDNS::Grid::Grid()
 {
 }
 
-Grid::~Grid()
+MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y0) 
+{
+  parent=prob;
+  Dimension(Y,Y0);
+}
+
+MDNS::Grid::~Grid()
 {
   fftwpp::deleteAlign(block);
   if(myg > 0) {
@@ -227,7 +245,7 @@ Grid::~Grid()
   }
 }
 
-void Grid::InitialConditions(unsigned g)
+void MDNS::Grid::InitialConditions(unsigned g)
 {
   // load vocabulary from global variables
   myg=g;
@@ -247,6 +265,7 @@ void Grid::InitialConditions(unsigned g)
   if(radix != 1 && radix != 4) 
     msg(ERROR,"only radix 1 (trivial) or 4 decimations enabled");
 
+  nshells=MDNSProblem->getnshells(myg);
 
   k0=gk(1.0,myg);
   k02=k0*k0;
@@ -261,19 +280,18 @@ void Grid::InitialConditions(unsigned g)
     Invisible2=Invisible*Invisible;
   }
 
-
   NY[OMEGA]=Nx*my;
-  NY[TRANSFER]=nshells;
-  NY[EK]=nshells;
+  NY[TRANSFER]=0; // MDNSProblem->getnshells(g); FIXME
+  NY[EK]=MDNSProblem->getnshells(g);
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
 
   cout << "\nALLOCATING FFT BUFFERS" << endl;
   align=sizeof(Complex);
 
-  Allocator(align);  // FIXME: refers to kernel.h, but should go somewhere else?
+  Allocator(align);
 
-  //Dimension(T,nshells);
+  Dimension(T,nshells);
 
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
@@ -301,11 +319,14 @@ void Grid::InitialConditions(unsigned g)
   InitialCondition->Set(w,NY[OMEGA]);
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 
-  for(unsigned i=0; i < nshells; i++)
+  for(unsigned i=0; i < NY[EK]; i++)
     Y[EK][i]=0.0;
+  for(unsigned i=0; i < NY[TRANSFER]; i++)
+    Y[TRANSFER][i]=0.0;
+  
 }
 
-void Grid::NLDimension()
+void MDNS::Grid::NLDimension()
 {
   w.Dimension(Nx,my);
   f0.Dimension(Nx,my);
@@ -317,10 +338,16 @@ void Grid::NLDimension()
   G[1]=g1;
 }
 
-void Grid::NonLinearSource(const vector2& Src, const vector2& Y, double t)
+void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0, double t)
 {
-  DNS::NonLinearSource(Src[OMEGA],Y[OMEGA],t);
-
+  DNS::NonLinearSource(source,w0,t);
+  //  vector source;
+  //Dimension(source,Src[OMEGA]);
+  //  DNS::NonLinearSource(source,Y[OMEGA],t);
+  //cout << Src[OMEGA] << endl;
+  //  exit(1);
+  
+    /*
   if(myg > 0) {
     w.Set(Y[OMEGA]);
     f0.Set(Src[OMEGA]);
@@ -328,7 +355,6 @@ void Grid::NonLinearSource(const vector2& Src, const vector2& Y, double t)
     unsigned xdiff=xorigin-sxorigin;
 
     //copy overlapping modes to wS
-
     for(unsigned i=0; i < sNx; ++i) {
       vector wi=w[i+xdiff];
       vector wSi=wS[i];
@@ -365,14 +391,15 @@ void Grid::NonLinearSource(const vector2& Src, const vector2& Y, double t)
     }
     fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
   }
+    */
 }
 
-void Grid::Transfer(const vector2 & Src, const vector2 & Y)
+void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 {
   // FIXME
 }
 
-void Grid::ComputeInvariants(Real& E, Real& Z, Real& P)
+void MDNS::Grid::ComputeInvariants(Real& E, Real& Z, Real& P)
 {
   FunctRRPtr F = new Invariants;
   loopwF(F,3,&Z,&E,&P);
@@ -423,6 +450,7 @@ MDNSVocabulary::MDNSVocabulary()
 
 MDNS::MDNS() 
 {
+  nfields = Nfields;
   MDNSProblem=this;
   MProblem=this;
   check_compatibility(DEBUG);
@@ -437,31 +465,49 @@ void MDNS::InitialConditions()
 {
   //***** Vocabulary *****//
   Ngrids=::Ngrids;
+  glast=Ngrids-1;
+  saveF=OMEGA;
   MultiProblem::InitialConditions(Ngrids);
+  MProblem=this;
 
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
+
+  if(spectrum) {
+    if(radix == 1)
+      nshells=(unsigned) (hypot(gm(mx,glast)-1,gm(my,glast)-1)+0.5);
+    if(radix==4)
+      nshells=0; // TODO: radix-4
+  } else nshells=0;
+
+  Allocate(spectra,nshells);
+  for (unsigned i=0; i < nshells; ++i) 
+    spectra[i]=0.0;
+
   for(unsigned g=0; g < Ngrids; ++g) {
     nfields=getNfields();
-    if(g > 0 || spectrum==0) 
-      nfields -= 1; // TRANSFER only on the first grid
-
-
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
-    if(g==0 && spectrum) {
-      NY[nfields*g+TRANSFER]=1; // FIXME: actually calculate this
-    }
-    //NY[nfields*g+MOMENT]=??
+    NY[nfields*g+TRANSFER]=0; // getnshells(g); FIXME 
+    NY[nfields*g+EK]=getnshells(g);
   }
-
 
   Allocator(align); // allocates MultiIntegrator
 
   G.Allocate(Ngrids);
-  for(unsigned g=0; g < Ngrids; ++g) 
-    G[g]=new Grid();
+  for(unsigned int g=0; g < Ngrids; ++g) {
+    vector w,m,T;
+    Dimension(w,Y[Nfields*g+OMEGA]);
+    Dimension(T,Y[Nfields*g+TRANSFER]);
+    Dimension(m,Y[Nfields*g+EK]);
+    G[g]=new Grid(this,g,Y);
+  }
+
   for(unsigned g=0; g < Ngrids; ++g) 
     G[g]->InitialConditions(g);
+
+  //***** output *****//
+  open_output(Mfevt,dirsep,"evt");
+  
 }
 
 void MDNS::Project(unsigned gb) 
@@ -491,7 +537,7 @@ void MDNS::Project(unsigned gb)
     }
   }
   if(radix == 4) {
-    // FIXME
+    // TODO: radix-4
   }
 
   fftwpp::HermitianSymmetrizeX(G[gb]->getmx(),G[gb]->getmy(),bxorigin,wb);
@@ -524,15 +570,26 @@ void MDNS::Prolong(unsigned ga)
     }
   }
   if(radix == 4) {
-    // FIXME
+    // TODO: radix-4
   }
 
   fftwpp::HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa);
   // maybe only on the overlapping modes?
 }
 
+void MDNS::Initialize()
+{
+  Mfevt << "#   t\t\t E\t\t\t Z" << endl;
+}
+
 void MDNS::Output(int it)
 {
+  Real E,Z,P;
+
+  ComputeInvariants(E,Z,P);
+  Mfevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
+    
+  //  if(spectrum) out_curve(fekvk,cwrap::Spectrum,"Ek",nshells);
   // FIXME
 }
 
@@ -545,7 +602,6 @@ void MDNS::ComputeInvariants(Real& E, Real& Z, Real& P)
     // add up the individual invariants
     G[g]->ComputeInvariants(tempE,tempZ,tempP);
     Real scale=pow(radix,g);
-    scale=1; // FIXME: temporary
     E += scale*tempE;
     Z += scale*tempZ;
     P += scale*tempP;
@@ -576,11 +632,18 @@ void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t)
 {
   NonLinearSource(Src,Y,t);
   Transfer(Src,Y);
-  LinearSource(Src,Y,t); // FIXME: is this really a conservative source?
+  LinearSource(Src,Y,t); // is this really a conservative source?
 }
 
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 {
+  if(spectrum) G[grid]->Spectrum(spectra,Y[OMEGA]);
+  if(grid==glast) {
+    for (unsigned i=0; i < nshells; ++i) 
+      //Src[EK]=spectra[i]; // might this instead be a swap?
+    G[grid]->Spectrum(Src[EK],Y[OMEGA]);
+  }
+    
   //Moments(Src,Y,t);
 }
 
@@ -593,12 +656,16 @@ void MDNS::ExponentialSource(const vector2& Src, const vector2& Y, double t)
 
 void MDNS::LinearSource(const vector2& Src, const vector2& Y, double t) 
 {
+  // FIXME: over-counts?
   G[grid]->LinearSource(Src,Y,t);
 }
 
 void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double t) 
 {
-  G[grid]->NonLinearSource(Src,Y,t);
+  vector w0,source;
+  Dimension(w0,Y[OMEGA]);
+  Dimension(source,Src[OMEGA]);
+  G[grid]->NonLinearSource(source,w0,t);
 }
 
 void MDNS::Stochastic(const vector2& Y, double t, double dt) 

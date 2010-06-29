@@ -8,12 +8,17 @@ memory leak in transfer?
 
 mdns:
 
+does anything actually evolve?
+
 spectrum
+
 radix=4
 radix=2
-nonlinearity double-counts when grids overlap
+
 MDNS::Output
+
 forcing
+
 mdns Nx=15 doesn't work, but 31 and 64 do. (??)
 
 moments, transfer

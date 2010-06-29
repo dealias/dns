@@ -194,9 +194,9 @@ void DNS::NonLinearSource(const vector& wSrc, const vector& wY, double)
       g1i[j]=-k2inv*kxw;
     }
   }
-
+  
   F[0]=f0;
-  //  Convolution->convolve(F,G);
+  Convolution->convolve(F,G);
   f0(origin)=0.0;
 
 #if 0
