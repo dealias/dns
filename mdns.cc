@@ -96,13 +96,14 @@ MDNSVocabulary MDNS_Vocabulary;
 //***** Base class for functionoids *****//
 class FunctRR {
  public:
-  virtual void f(const Real w2, const Real k2, int n,va_list args) = 0;
- };
+  virtual void f(Real w2,Real k2, int n,va_list args) = 0;
+};
 typedef FunctRR* FunctRRPtr;
 
 unsigned gN(unsigned N, unsigned g) {
   return radix == 1 ? pow(2,(int) g)*(N+1)-1 : N;
 };
+
 unsigned gm(unsigned m, unsigned g) {
   return radix == 1 ? pow(2,(int) g)*m : m;
 };
@@ -113,16 +114,25 @@ class Grid : public DNS {
 private:
   unsigned Invisible;
   int Invisible2;
-  unsigned myg;
+  Complex *wSblock;
+  Complex *SrcwSblock;
+  array2<Complex> wS, SrcwS;
+  unsigned sNx, smy, sxorigin;
+  void NLDimension();
 
 public:
   Grid();
   ~Grid();
+  unsigned myg;
+  array1<Complex> * getw() {return &Y[OMEGA];};
+  unsigned getNx() {return Nx;};
+  unsigned getmy() {return my;};
+  unsigned getInvisible() {return Invisible;};
 
   void InitialConditions(unsigned g);
   Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
 
-  void NonLinearSource(const vector2& Src, const vector2& Y, double t);
+  void NonLinearSource(const vector2 & Src, const vector2 & Y, double t);
 
   void ComputeInvariants(Real& E, Real& Z, Real& P);
 
@@ -165,6 +175,7 @@ private:
   unsigned mx, my; // size of data arrays
   array1<Grid *> G;
   void ComputeInvariants(Real& E, Real& Z, Real& P);
+  array2<Complex> wa, wb; // Vorticity field for projection/prolongation
 public:
   friend class Grid;
   MDNS();
@@ -184,8 +195,8 @@ public:
   void ExponentialSource(const vector2& Src, const vector2& Y, double t);
   void Stochastic(const vector2& Y, double t, double dt);
   
-  void Project(unsigned g);
-  void Prolong(unsigned g);
+  void Project(unsigned ga);
+  void Prolong(unsigned gb);
   
   void FinalOutput();
   void Output(int it);
@@ -202,6 +213,10 @@ Grid::Grid()
 Grid::~Grid()
 {
   fftwpp::deleteAlign(block);
+  if(myg > 0) {
+    fftwpp::deleteAlign(wSblock);
+    fftwpp::deleteAlign(SrcwSblock);
+  }
 }
 
 void Grid::InitialConditions(unsigned g)
@@ -236,6 +251,7 @@ void Grid::InitialConditions(unsigned g)
     Invisible2=Invisible*Invisible;
   }
 
+
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
   NY[EK]=nshells;
@@ -249,23 +265,28 @@ void Grid::InitialConditions(unsigned g)
 
   //Dimension(T,nshells);
 
-  unsigned Nxmy=Nx*my;
-  unsigned nbuf=3*Nxmy;
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
   xorigin=mx-1;
 
-  w.Dimension(Nx,my);
-  f0.Dimension(Nx,my);
-  block=fftwpp::ComplexAlign(nbuf);
-  f1.Dimension(Nx,my,block);
-  g0.Dimension(Nx,my,block+Nxmy);
-  g1.Dimension(Nx,my,block+2*Nxmy);
+  block=fftwpp::ComplexAlign(3*Nx*my);
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
-  F[1]=f1;
-  G[0]=g0;
-  G[1]=g1;
+  NLDimension();
+
+  if(myg > 0) { // buffer for calculating small-small-small calculations
+    sNx=Invisible;
+    smy=(Invisible+1)/2;
+    sxorigin=(sNx+1)/2-1;
+    unsigned nS=sNx*smy;
+
+    wSblock=fftwpp::ComplexAlign(nS);
+    SrcwSblock=fftwpp::ComplexAlign(nS);
+    wS.Dimension(sNx,smy,wSblock);
+    SrcwS.Dimension(sNx,smy,SrcwSblock);
+    
+  }
+
 
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
   w.Set(Y[OMEGA]);
@@ -276,9 +297,66 @@ void Grid::InitialConditions(unsigned g)
     Y[EK][i]=0.0;
 }
 
+void Grid::NLDimension()
+{
+  w.Dimension(Nx,my);
+  f0.Dimension(Nx,my);
+  f1.Dimension(Nx,my,block);
+  g0.Dimension(Nx,my,block+Nx*my);
+  g1.Dimension(Nx,my,block+2*Nx*my);
+  F[1]=f1;
+  G[0]=g0;
+  G[1]=g1;
+}
+
 void Grid::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 {
-  DNS::NonLinearSource(Src,Y,t);
+  DNS::NonLinearSource(Src[OMEGA],Y[OMEGA],t);
+
+  if(myg > 0) {
+    w.Set(Y[OMEGA]);
+    f0.Set(Src[OMEGA]);
+
+    unsigned xdiff=xorigin-sxorigin;
+
+    //copy overlapping modes to wS
+
+    for(unsigned i=0; i < sNx; ++i) {
+      vector wi=w[i+xdiff];
+      vector wSi=wS[i];
+      for(unsigned j=i <= sxorigin ? 1 : 0; j < smy; ++j) {
+	wSi[j]=wi[j];
+      }
+    }
+
+    // pretend that we're only small-small-small
+    unsigned NxSave=Nx;
+    unsigned mySave=my;
+    unsigned xoriginSave=xorigin;
+    Nx=sNx;
+    my=smy;
+    xorigin=sxorigin;
+    NLDimension();
+
+    // find the nonlinear interaction for small-small-small
+    DNS::NonLinearSource(SrcwS,wS,t);
+ 
+    // go back to being the full grid
+    Nx=NxSave;
+    my=mySave;
+    xorigin=xoriginSave;
+    NLDimension();
+    
+    // subtract small-small-small source
+    for(unsigned i=0; i < sNx; ++i) {
+      vector f0i=f0[i+xdiff];
+      vector SrcwSi=SrcwS[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < smy; ++j) {
+	f0i[j] -= SrcwSi[j];
+      }
+    }
+    fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
+  }
 }
 
 void Grid::ComputeInvariants(Real& E, Real& Z, Real& P)
@@ -366,27 +444,73 @@ void MDNS::InitialConditions()
     G[g]=new Grid();
   for(unsigned g=0; g < Ngrids; ++g) 
     G[g]->InitialConditions(g);
-
 }
 
-void MDNS::Project(unsigned g) 
+void MDNS::Project(unsigned gb) 
 {
+  //  cout << "project onto " << G[gb]->myg << endl;
+  unsigned ga=gb-1;
+  wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
+  wa.Set(*G[ga]->getw());
+  wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
+  wb.Set(*G[gb]->getw());
+  
+  int aInvisible=(int) G[ga]->getInvisible();
+  int axorigin=(int) G[ga]->getxorigin();
+  int bxorigin=(int) G[gb]->getxorigin();
+  int amx=(int) G[ga]->getmx();
+  int dx=(int) bxorigin-axorigin;
+
   if(radix == 1) {
-    // FIXME
-  } 
+    const int xstart=amx-aInvisible;
+    const int xstop=amx-aInvisible;
+    for(int i=xstart; i < xstop; i++) {
+      vector wai=wa[i];
+      vector wbi=wb[i+dx];
+      for(int j=i <= axorigin ? 1 : 0; j < aInvisible; ++j) {
+	wbi[j]=wai[j];
+      }
+    }
+  }
   if(radix == 4) {
     // FIXME
   }
+
+  fftwpp::HermitianSymmetrizeX(G[gb]->getmx(),G[gb]->getmy(),bxorigin,wb);
+  // maybe only on the overlapping modes?
 }
 
-void MDNS::Prolong(unsigned g) 
+void MDNS::Prolong(unsigned ga)
 {
+  //  cout << "prolong onto " << G[ga]->myg << endl;
+  unsigned gb=ga+1;
+  wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
+  wa.Set(*G[ga]->getw());
+  wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
+  wb.Set(*G[gb]->getw());
+  
+  int aInvisible=(int) G[ga]->getInvisible();
+  int axorigin=(int) G[ga]->getxorigin();
+  int amx=(int) G[ga]->getmx();
+  int dx=(int) G[gb]->getxorigin()-axorigin;
+
   if(radix == 1) {
-    // FIXME
-  } 
+    const int xstart=amx-aInvisible;
+    const int xstop=amx-aInvisible;
+    for(int i=xstart; i < xstop; i++) {
+      vector wai=wa[i];
+      vector wbi=wb[i+dx];
+      for(int j=i <= axorigin ? 1 : 0; j < aInvisible; ++j) {
+	wai[j]=wbi[j];
+      }
+    }
+  }
   if(radix == 4) {
     // FIXME
   }
+
+  fftwpp::HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa);
+  // maybe only on the overlapping modes?
 }
 
 void MDNS::Output(int it)

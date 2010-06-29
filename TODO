@@ -8,21 +8,27 @@ memory leak in transfer?
 
 mdns:
 
-implement project and prolong
+spectrum
+radix=4
+radix=2
 nonlinearity double-counts when grids overlap
 MDNS::Output
 forcing
 mdns Nx=15 doesn't work, but 31 and 64 do. (??)
-spectrum
+
 moments, transfer
-Grid::block could be used as work arrays for more than one grid
+
 FIXME: ic=<whatever> at command line hangs program, but fine if in p file.
+
+Grid::block could be used as work arrays for more than one grid
+
+make mdns and Grid classes friends?
 
 add void Grid::loopw(void pFun(Real,int,va_list),int n,...) for functions 
 that don't need k2)
 
 add void Grid::hiddenloopw(void p(???),int n,...),  just like visible loop, 
-but the other part (maybe?)
+but the other part (maybe)
 
 
 

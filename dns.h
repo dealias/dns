@@ -84,11 +84,11 @@ class DNS : public ProblemBase {
 
   void Spectrum(vector& S, const vector& y);
   void Transfer(const vector2& Src, const vector2& Y);
-  void NonLinearSource(const vector2& Src, const vector2& Y, double t);
+  void NonLinearSource(const vector& Src, const vector& Y, double t);
   void LinearSource(const vector2& Src, const vector2& Y, double t);
 
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
-    NonLinearSource(Src,Y,t);
+    NonLinearSource(Src[OMEGA],Y[OMEGA],t);
     if(spectrum) Transfer(Src,Y);
     LinearSource(Src,Y,t);
   }
@@ -99,7 +99,7 @@ class DNS : public ProblemBase {
   }
 
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
-    NonLinearSource(Src,Y,t);
+    NonLinearSource(Src[OMEGA],Y[OMEGA],t);
     if(spectrum) Transfer(Src,Y);
     NonConservativeSource(Src,Y,t);
   }
@@ -165,10 +165,10 @@ void DNS::LinearSource(const vector2& Src, const vector2& Y, double)
   }
 }
 
-void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
+void DNS::NonLinearSource(const vector& wSrc, const vector& wY, double)
 {
-  w.Set(Y[OMEGA]);
-  f0.Set(Src[OMEGA]);
+  w.Set(wY);
+  f0.Set(wSrc);
   f0(origin)=0.0;
   f1(origin)=0.0;
   g0(origin)=0.0;
@@ -196,7 +196,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   }
 
   F[0]=f0;
-  Convolution->convolve(F,G);
+  //  Convolution->convolve(F,G);
   f0(origin)=0.0;
 
 #if 0
@@ -210,6 +210,7 @@ void DNS::NonLinearSource(const vector2& Src, const vector2& Y, double)
   }
   cout << sum << endl;
 #endif
+
 }
 
 void DNS::Transfer(const vector2& Src, const vector2& Y)
