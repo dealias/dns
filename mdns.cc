@@ -610,9 +610,7 @@ void MDNS::Project(unsigned gb)
       vector wbi=wb[i];
       
       for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
-	// FIXME: work out boundary conditions.
-	
-	const int aJ=2*j;
+ 	const int aJ=2*j;
 	const int aJp=aJ+1;
 	const int aJm=aJ==0? aJp : aJ-1;
 
@@ -657,11 +655,6 @@ void MDNS::Project(unsigned gb)
   
 
   fftwpp::HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
-  // FIXME: overlap of  wa and wb???
-  cout << wa << endl;
-  exit(1);
-  
-  // maybe only on the overlapping modes?
 }
 
 void MDNS::Prolong(unsigned ga)

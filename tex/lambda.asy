@@ -4,6 +4,7 @@ string[] outnames={"lambda1","lambdar2","lambdar2rot","lambda2"};
 real[] lambda={1,sqrt(2),sqrt(2),2};
 pair[] R={(1,0),(1,0),exp(-pi*I/4),(1,0)};
 
+int n0=7;
 int n;
 path g;
 picture pic;
@@ -26,7 +27,7 @@ void drawdots() {
 for(int i=0; i < lambda.length; ++i) {
   pic = new picture;
   size(pic,10cm,0);
-  n=4;
+  n=n0;
   p=black;
   fillpen=black;
   F=Fill;
@@ -35,7 +36,7 @@ for(int i=0; i < lambda.length; ++i) {
   s=0.1;
   drawdots();
 
-  if(i==0) n=8;
+  if(i==0) n=2*n0-1;
   p=blue;
   fillpen=invisible;
   F=NoFill;
