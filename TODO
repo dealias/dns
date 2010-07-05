@@ -1,16 +1,21 @@
-general:
+
+***** general: *****
+
+ekvkeq.asy doesn't seem to work on either dns or mdns
+
 mdns and dns should use different "test" directories.
+
 set svn ignore on linked header files in ~/dns
 
-dns:
+
+***** dns.cc: *****
 memory leak in transfer?
 
 
-mdns:
 
-does anything actually evolve?
+***** mdns.cc: *****
 
-spectrum
+subint=RK2 won't evolve but subint=RK{1,3,4,5} will. ?!
 
 radix=4
 radix=2
@@ -23,17 +28,10 @@ mdns Nx=15 doesn't work, but 31 and 64 do. (??)
 
 moments, transfer
 
-FIXME: ic=<whatever> at command line hangs program, but fine if in p file.
-
 Grid::block could be used as work arrays for more than one grid
-
-make mdns and Grid classes friends?
 
 add void Grid::loopw(void pFun(Real,int,va_list),int n,...) for functions 
 that don't need k2)
 
 add void Grid::hiddenloopw(void p(???),int n,...),  just like visible loop, 
 but the other part (maybe)
-
-
-

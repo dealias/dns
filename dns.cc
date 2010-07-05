@@ -1,6 +1,9 @@
 #include "options.h"
 #include "dns.h"
 
+
+
+
 const double ProblemVersion=1.0;
 
 #ifndef DEPEND
@@ -36,7 +39,35 @@ Real icbeta=1.0;
 // other global variables:
 int xpad=1;
 int ypad=1;
+
+
+class DNS : public DNSBase, public ProblemBase {
+public:
+  DNS();
+  ~DNS();
+  void InitialConditions();
+  void Output(int);
+
+  void IndexLimits(unsigned& start, unsigned& stop,
+		   unsigned& startT, unsigned& stopT,
+		   unsigned& startM, unsigned& stopM) {
+    start=Start(OMEGA);
+    stop=Stop(OMEGA);
+    startT=Start(TRANSFER);
+    stopT=Stop(TRANSFER);
+    startM=Start(EK);
+    stopM=Stop(EK);
+  }
+  void Source(const vector2& Src, const vector2& Y, double t) {
+    ConservativeSource(Src,Y,t);
+    NonConservativeSource(Src,Y,t);
+  }
+
+};
+
 DNS *DNSProblem;
+
+
 InitialConditionBase *InitialCondition;
 ForcingBase *Forcing;
 
@@ -193,8 +224,7 @@ DNSVocabulary::DNSVocabulary()
   FORCING(WhiteNoiseBanded);
 }
 
-
-// DNS setup routines
+// DNSBase setup routines
 DNS::DNS()
 {
   DNSProblem=this;
@@ -335,7 +365,7 @@ void DNS::Output(int it)
   Real E,Z,P;
 
   w.Set(y);
-  ComputeInvariants(E,Z,P);
+  ComputeInvariants(w,E,Z,P);
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
   Complex *y=Y[0];

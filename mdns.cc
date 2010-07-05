@@ -40,15 +40,15 @@ int xpad=1;
 int ypad=1;
 
 // DNS setup routines
-DNS::DNS()
+DNSBase::DNSBase()
 {
 }
 
-DNS::~DNS()
+DNSBase::~DNSBase()
 {
 }
 
-void DNS::InitialConditions()
+void DNSBase::InitialConditions()
 {
 }
 
@@ -115,23 +115,33 @@ private:
   unsigned mx, my; // size of data arrays
 
   unsigned glast;
-  void ComputeInvariants(Real& E, Real& Z, Real& P);
+  void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
   array2<Complex> wa, wb; // Vorticity field for projection/prolongation
   unsigned nshells;
   vector spectra;
-
   ofstream Mfevt;
+  oxstream fekvk;
+  ofstream ft;
+  oxstream fprolog;
+  int tcount;
+public:
+
 //***** Grid class based on DNS *****//
-  class Grid : public DNS {
+  class Grid : public DNSBase {
   private:
     unsigned Invisible;
     int Invisible2;
     Complex *wSblock;
     Complex *SrcwSblock;
     array2<Complex> wS, SrcwS;
-    unsigned sNx, smy, sxorigin;
+    unsigned sNx, smx, smy, sxorigin, xdiff;
     void NLDimension();
     MDNS * parent;
+
+    // for projections
+    DNSBase * smallDNSBase;
+    
+    
 
   public:
     Grid();
@@ -139,7 +149,7 @@ private:
     ~Grid();
     unsigned myg;
     
-    array1<Complex> * getw() {return &Y[OMEGA];};
+    unsigned getnshells() {return nshells;};
     unsigned getNx() {return Nx;};
     unsigned getmy() {return my;};
     unsigned getInvisible() {return Invisible;};
@@ -148,10 +158,11 @@ private:
     Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
     
     void NonLinearSource(const vector & Src, const vector & Y, double t);
+    void LinearSource(const vector & Src, const vector & Y, double t);
     void Transfer(const vector2 & Src, const vector2 & Y);
-    //  void Spectrum(vector& S, const vector& y);
+    void Spectrum(vector& S, const vector& y);
     
-    void ComputeInvariants(Real& E, Real& Z, Real& P);
+    void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
     
     void loopwF(const FunctRRPtr,int n,...);
     class Invariants : public FunctRR {
@@ -167,8 +178,6 @@ private:
   };
   array1<Grid *> G;
   
-public:
-  friend class Grid;
   MDNS();
   ~MDNS();
 
@@ -196,6 +205,9 @@ public:
   void Project(unsigned ga);
   void Prolong(unsigned gb);
   
+  // Output functions
+  Real getSpectrum(unsigned i) {return mY[glast][EK][i].re;};
+
   void FinalOutput();
   void Initialize();
   void Output(int it);
@@ -209,7 +221,6 @@ void MDNS::Grid::loopwF(const FunctRRPtr F,int n,...)
 {
   va_list args;
   va_start(args,n);
-  w.Set(Y[OMEGA]);
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -230,10 +241,10 @@ MDNS::Grid::Grid()
 {
 }
 
-MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y0) 
+MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y) 
 {
   parent=prob;
-  Dimension(Y,Y0);
+  Dimension(w,Y[OMEGA]);
 }
 
 MDNS::Grid::~Grid()
@@ -255,10 +266,9 @@ void MDNS::Grid::InitialConditions(unsigned g)
   nuL=::nuL;
   pH=::pH;
   pL=::pL;
-  Nx=gN(::Nx,g);
-  Ny=gN(::Ny,g);
+  Nx=gN(::Nx,myg);
+  Ny=gN(::Ny,myg);
   spectrum=::spectrum;
-
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
@@ -272,6 +282,10 @@ void MDNS::Grid::InitialConditions(unsigned g)
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   xorigin=mx-1;
+  w.Dimension(Nx,my);
+  origin=xorigin*my;
+
+
 
   if(g == 0) {
     Invisible=Invisible2=0;
@@ -280,16 +294,14 @@ void MDNS::Grid::InitialConditions(unsigned g)
     Invisible2=Invisible*Invisible;
   }
 
-  NY[OMEGA]=Nx*my;
-  NY[TRANSFER]=0; // MDNSProblem->getnshells(g); FIXME
-  NY[EK]=MDNSProblem->getnshells(g);
+// FIXME
+  //  NY[OMEGA]=Nx*my;
+  //NY[TRANSFER]=0; // MDNSProblem->getnshells(g); // FIXME
+  //NY[EK]=MDNSProblem->getnshells(g);
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
 
   cout << "\nALLOCATING FFT BUFFERS" << endl;
-  align=sizeof(Complex);
-
-  Allocator(align);
 
   Dimension(T,nshells);
 
@@ -302,28 +314,29 @@ void MDNS::Grid::InitialConditions(unsigned g)
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
   NLDimension();
 
-  if(myg > 0) { // buffer for calculating small-small-small calculations
+  if(myg > 0) { 
+    // buffer for calculating small-small-small calculations
     sNx=Invisible;
-    smy=(Invisible+1)/2;
+    smx=smy=(Invisible+1)/2;
     sxorigin=(sNx+1)/2-1;
     unsigned nS=sNx*smy;
+    xdiff=xorigin-sxorigin;
 
     wSblock=fftwpp::ComplexAlign(nS);
     SrcwSblock=fftwpp::ComplexAlign(nS);
     wS.Dimension(sNx,smy,wSblock);
     SrcwS.Dimension(sNx,smy,SrcwSblock);
+    smallDNSBase=new DNSBase(sNx,smy,k0); // TODO: share memory block
   }
 
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
-  w.Set(Y[OMEGA]);
-  InitialCondition->Set(w,NY[OMEGA]);
+  InitialCondition->Set(w,Nx*my);
+
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 
-  for(unsigned i=0; i < NY[EK]; i++)
-    Y[EK][i]=0.0;
-  for(unsigned i=0; i < NY[TRANSFER]; i++)
-    Y[TRANSFER][i]=0.0;
-  
+  //for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0; // FIXME
+  //for(unsigned i=0; i < NY[TRANSFER]; i++)  Y[TRANSFER][i]=0.0; // FIXME
+
 }
 
 void MDNS::Grid::NLDimension()
@@ -333,65 +346,48 @@ void MDNS::Grid::NLDimension()
   f1.Dimension(Nx,my,block);
   g0.Dimension(Nx,my,block+Nx*my);
   g1.Dimension(Nx,my,block+2*Nx*my);
+  F[0]=f0;
   F[1]=f1;
   G[0]=g0;
   G[1]=g1;
 }
 
-void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0, double t)
+void MDNS::Grid::LinearSource(const vector& source, const vector& w0, double t)
 {
-  DNS::NonLinearSource(source,w0,t);
-  //  vector source;
-  //Dimension(source,Src[OMEGA]);
-  //  DNS::NonLinearSource(source,Y[OMEGA],t);
-  //cout << Src[OMEGA] << endl;
-  //  exit(1);
-  
-    /*
+  // FIXME: overcounts
+  DNSBase::LinearSource(source,w0,t);
+}
+
+void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
+				 double t)
+{
+  w.Set(w0);
+  f0.Set(source);
+
+  DNSBase::NonLinearSource(source,w0,t);
+
   if(myg > 0) {
-    w.Set(Y[OMEGA]);
-    f0.Set(Src[OMEGA]);
-
-    unsigned xdiff=xorigin-sxorigin;
-
     //copy overlapping modes to wS
     for(unsigned i=0; i < sNx; ++i) {
       vector wi=w[i+xdiff];
       vector wSi=wS[i];
-      for(unsigned j=i <= sxorigin ? 1 : 0; j < smy; ++j) {
+      for(unsigned j=0; j < smy; ++j)
 	wSi[j]=wi[j];
-      }
     }
-
-    // pretend that we're only small-small-small
-    unsigned NxSave=Nx;
-    unsigned mySave=my;
-    unsigned xoriginSave=xorigin;
-    Nx=sNx;
-    my=smy;
-    xorigin=sxorigin;
-    NLDimension();
+    fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
 
     // find the nonlinear interaction for small-small-small
-    DNS::NonLinearSource(SrcwS,wS,t);
+    smallDNSBase->NonLinearSource(SrcwS,wS,t); 
  
-    // go back to being the full grid
-    Nx=NxSave;
-    my=mySave;
-    xorigin=xoriginSave;
-    NLDimension();
-    
     // subtract small-small-small source
     for(unsigned i=0; i < sNx; ++i) {
       vector f0i=f0[i+xdiff];
       vector SrcwSi=SrcwS[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < smy; ++j) {
+      for(unsigned j=i <= xorigin ? 1 : 0; j < smy; ++j)
 	f0i[j] -= SrcwSi[j];
-      }
     }
     fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
   }
-    */
 }
 
 void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
@@ -399,8 +395,28 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
   // FIXME
 }
 
-void MDNS::Grid::ComputeInvariants(Real& E, Real& Z, Real& P)
+void MDNS::Grid:: Spectrum(vector& S, const vector& y)
 {
+  w.Set(y);
+  
+  // Compute instantaneous angular sum over each circular shell.
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      Real k2=k02*(I2+j*j);
+      Real k=sqrt(k2);
+      Real w2=abs2(wi[j]);
+      S[(unsigned)(k-0.5)] += Complex(w2/k,nuk(k2)*w2); //nuk set?
+    }
+  }
+}
+
+void MDNS::Grid::ComputeInvariants(const vector2 & Y, 
+				   Real& E, Real& Z, Real& P)
+{
+  Dimension(w,Y[OMEGA]);
   FunctRRPtr F = new Invariants;
   loopwF(F,3,&Z,&E,&P);
 }
@@ -461,6 +477,14 @@ MDNS::~MDNS()
 {
 }
 
+Real lamek(unsigned i) {
+  if(radix==1)
+    return 1.0*i; // FIXME: add k0, radix-4
+  //if(radix==4)
+  return i;
+}
+
+
 void MDNS::InitialConditions()
 {
   //***** Vocabulary *****//
@@ -495,36 +519,47 @@ void MDNS::InitialConditions()
 
   G.Allocate(Ngrids);
   for(unsigned int g=0; g < Ngrids; ++g) {
-    vector w,m,T;
-    Dimension(w,Y[Nfields*g+OMEGA]);
-    Dimension(T,Y[Nfields*g+TRANSFER]);
-    Dimension(m,Y[Nfields*g+EK]);
+    //    vector w,m,T;
+    //Dimension(w,Y[Nfields*g+OMEGA]);
+    //Dimension(T,Y[Nfields*g+TRANSFER]);
+    //Dimension(m,Y[Nfields*g+EK]);
     G[g]=new Grid(this,g,Y);
   }
 
-  for(unsigned g=0; g < Ngrids; ++g) 
+  for(unsigned g=0; g < Ngrids; ++g) {
     G[g]->InitialConditions(g);
+  }
 
   //***** output *****//
+  tcount=0;
   open_output(Mfevt,dirsep,"evt");
+  open_output(ft,dirsep,"t");
+  if(!restart)
+    remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
   
+  mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
+  open_output(fprolog,dirsep,"prolog",0);
+  out_curve(fprolog,lamek,"k",G[glast]->getnshells());
 }
 
 void MDNS::Project(unsigned gb) 
 {
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
-  wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
-  wa.Set(*G[ga]->getw());
-  wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
-  wb.Set(*G[gb]->getw());
-  
+
   int aInvisible=(int) G[ga]->getInvisible();
   int axorigin=(int) G[ga]->getxorigin();
   int bxorigin=(int) G[gb]->getxorigin();
   int amx=(int) G[ga]->getmx();
   int dx=(int) bxorigin-axorigin;
 
+  array1<array1<Complex> > va=mY[ga];
+  Set(wa,va[OMEGA]);
+  array1<array1<Complex> > vb=mY[ga];
+  Set(wb,vb[OMEGA]);
+  wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
+  wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
+  
   if(radix == 1) {
     const int xstart=amx-aInvisible;
     const int xstop=amx-aInvisible;
@@ -540,7 +575,7 @@ void MDNS::Project(unsigned gb)
     // TODO: radix-4
   }
 
-  fftwpp::HermitianSymmetrizeX(G[gb]->getmx(),G[gb]->getmy(),bxorigin,wb);
+  //  fftwpp::HermitianSymmetrizeX(G[gb]->getmx(),G[gb]->getmy(),bxorigin,wb);
   // maybe only on the overlapping modes?
 }
 
@@ -548,15 +583,18 @@ void MDNS::Prolong(unsigned ga)
 {
   //  cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
-  wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
-  wa.Set(*G[ga]->getw());
-  wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
-  wb.Set(*G[gb]->getw());
   
   int aInvisible=(int) G[ga]->getInvisible();
   int axorigin=(int) G[ga]->getxorigin();
   int amx=(int) G[ga]->getmx();
   int dx=(int) G[gb]->getxorigin()-axorigin;
+
+  array1<array1<Complex> > va=mY[ga];
+  Set(wa,va[OMEGA]);
+  array1<array1<Complex> > vb=mY[ga];
+  Set(wb,vb[OMEGA]);
+  wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
+  wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
 
   if(radix == 1) {
     const int xstart=amx-aInvisible;
@@ -582,26 +620,38 @@ void MDNS::Initialize()
   Mfevt << "#   t\t\t E\t\t\t Z" << endl;
 }
 
+Real lameSpectrum(unsigned i) {
+  return MDNSProblem->getSpectrum(i);
+}
+
 void MDNS::Output(int it)
 {
   Real E,Z,P;
 
-  ComputeInvariants(E,Z,P);
+  ComputeInvariants(Y,E,Z,P);
   Mfevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
     
-  //  if(spectrum) out_curve(fekvk,cwrap::Spectrum,"Ek",nshells);
-  // FIXME
+  if(spectrum) {
+    ostringstream buf;
+    buf << "ekvk" << dirsep << "t" << tcount;
+    open_output(fekvk,dirsep,buf.str().c_str(),0);
+    out_curve(fekvk,lameSpectrum,"Ek",G[glast]->getnshells());    // FIXME
+    fekvk.close();
+    if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
+  }
+  tcount++;
+  ft << t << endl;
 }
 
-void MDNS::ComputeInvariants(Real& E, Real& Z, Real& P)
+void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 {
   E=Z=P=0.0;
 
   Real tempE=0.0, tempZ=0.0, tempP=0.0;
   for(unsigned g=0; g < Ngrids; ++g) {
     // add up the individual invariants
-    G[g]->ComputeInvariants(tempE,tempZ,tempP);
-    Real scale=pow(radix,g);
+    G[g]->ComputeInvariants(Y,tempE,tempZ,tempP);
+    Real scale=pow((double) radix,(double) g);
     E += scale*tempE;
     Z += scale*tempZ;
     P += scale*tempP;
@@ -611,14 +661,14 @@ void MDNS::ComputeInvariants(Real& E, Real& Z, Real& P)
 void MDNS::FinalOutput()
 {
   Real E,Z,P;
-  ComputeInvariants(E,Z,P);
+  ComputeInvariants(Y,E,Z,P);
   cout << endl;
   cout << "Energy = " << E << newl;
   cout << "Enstrophy = " << Z << newl;
   cout << "Palenstrophy = " << P << newl;
 }
 
-void DNS::Output(int it) // Necessary for a table in triad somewhere
+void DNSBase::Output(int it) // Necessary for a table in triad somewhere
 {
 }
 
@@ -637,13 +687,20 @@ void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t)
 
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 {
-  if(spectrum) G[grid]->Spectrum(spectra,Y[OMEGA]);
-  if(grid==glast) {
-    for (unsigned i=0; i < nshells; ++i) 
-      //Src[EK]=spectra[i]; // might this instead be a swap?
-    G[grid]->Spectrum(Src[EK],Y[OMEGA]);
-  }
+  if(spectrum) {
+    if(grid==0) {       // zero spectrum
+      unsigned gnshells=G[glast]->getnshells();
+      for(unsigned i=0; i < gnshells; ++i)
+	spectra[i]=0;
+    }
     
+    G[grid]->Spectrum(spectra,Y[OMEGA]);
+
+    if(grid==glast) {
+      for (unsigned i=0; i < nshells; ++i) 
+	Src[EK]=spectra[i];       // might this instead be a swap?
+    }
+  }
   //Moments(Src,Y,t);
 }
 
@@ -656,8 +713,11 @@ void MDNS::ExponentialSource(const vector2& Src, const vector2& Y, double t)
 
 void MDNS::LinearSource(const vector2& Src, const vector2& Y, double t) 
 {
-  // FIXME: over-counts?
-  G[grid]->LinearSource(Src,Y,t);
+  vector w0,source;
+  Dimension(w0,Y[OMEGA]);
+  Dimension(source,Src[OMEGA]);
+  // FIXME: over-counts
+  G[grid]->LinearSource(source,w0,t);
 }
 
 void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double t) 

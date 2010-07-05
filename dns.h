@@ -14,7 +14,8 @@
 using namespace Array;
 using std::ostringstream;
 
-class DNS : public ProblemBase {
+//class DNS : public ProblemBase {
+class DNSBase {
  protected:
   // Vocabulary:
   int xpad, ypad; // these are always one.
@@ -56,19 +57,25 @@ class DNS : public ProblemBase {
   ofstream ft,fevt;
   
  public:
-  DNS();
-  ~DNS();
-
-  void IndexLimits(unsigned& start, unsigned& stop,
-		   unsigned& startT, unsigned& stopT,
-		   unsigned& startM, unsigned& stopM) {
-    start=Start(OMEGA);
-    stop=Stop(OMEGA);
-    startT=Start(TRANSFER);
-    stopT=Stop(TRANSFER);
-    startM=Start(EK);
-    stopM=Stop(EK);
+  DNSBase() {}
+  DNSBase(unsigned Nx, unsigned my, Real k0): Nx(Nx), my(my), k0(k0) {
+    block=fftwpp::ComplexAlign(3*Nx*my);
+    mx=(Nx+1)/2;
+    xorigin=mx-1;
+    origin=xorigin*my;
+    w.Dimension(Nx,my);
+    f0.Dimension(Nx,my);
+    f1.Dimension(Nx,my,block);
+    g0.Dimension(Nx,my,block+Nx*my);
+    g1.Dimension(Nx,my,block+2*Nx*my);
+    F[0]=f0;
+    F[1]=f1;
+    G[0]=g0;
+    G[1]=g1;
+    Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
   }
+  ~DNSBase() {}
+
   unsigned getNx() {return Nx;}
   unsigned getmx() {return mx;}
   unsigned getmy() {return my;}
@@ -78,19 +85,19 @@ class DNS : public ProblemBase {
 
   void InitialConditions();
   void Initialize();
-  virtual void Output(int it);
+  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);
 
   void Spectrum(vector& S, const vector& y);
   void Transfer(const vector2& Src, const vector2& Y);
   void NonLinearSource(const vector& Src, const vector& Y, double t);
-  void LinearSource(const vector2& Src, const vector2& Y, double t);
+  void LinearSource(const vector& Src, const vector& Y, double t);
 
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src[OMEGA],Y[OMEGA],t);
     if(spectrum) Transfer(Src,Y);
-    LinearSource(Src,Y,t);
+    LinearSource(Src[OMEGA],Y[OMEGA],t);
   }
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
@@ -118,7 +125,7 @@ class DNS : public ProblemBase {
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
 
-  virtual void ComputeInvariants(Real& E, Real& Z, Real& P);
+  void ComputeInvariants(array2<Complex> &w,Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
 
   Real Spectrum(unsigned int i) {
@@ -151,10 +158,10 @@ public:
 
 //***** Source routines *****//
 
-void DNS::LinearSource(const vector2& Src, const vector2& Y, double)
+void DNSBase::LinearSource(const vector& wSrc, const vector& w0, double)
 {
-  w.Set(Y[OMEGA]);
-  f0.Set(Src[OMEGA]);
+  w.Set(w0);
+  f0.Set(wSrc);
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -165,10 +172,11 @@ void DNS::LinearSource(const vector2& Src, const vector2& Y, double)
   }
 }
 
-void DNS::NonLinearSource(const vector& wSrc, const vector& wY, double)
+void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
 {
   w.Set(wY);
   f0.Set(wSrc);
+
   f0(origin)=0.0;
   f1(origin)=0.0;
   g0(origin)=0.0;
@@ -194,7 +202,6 @@ void DNS::NonLinearSource(const vector& wSrc, const vector& wY, double)
       g1i[j]=-k2inv*kxw;
     }
   }
-  
   F[0]=f0;
   Convolution->convolve(F,G);
   f0(origin)=0.0;
@@ -213,7 +220,7 @@ void DNS::NonLinearSource(const vector& wSrc, const vector& wY, double)
 
 }
 
-void DNS::Transfer(const vector2& Src, const vector2& Y)
+void DNSBase::Transfer(const vector2& Src, const vector2& Y)
 {
   Set(T,Src[TRANSFER]);
 
@@ -238,7 +245,7 @@ void DNS::Transfer(const vector2& Src, const vector2& Y)
   Forcing->Force(f0,T);
 }
 
-void DNS::Spectrum(vector& S, const vector& y)
+void DNSBase::Spectrum(vector& S, const vector& y)
 {
   w.Set(y);
   for(unsigned K=0; K < nshells; K++)
@@ -258,15 +265,15 @@ void DNS::Spectrum(vector& S, const vector& y)
   }
 }
 
-void DNS::Stochastic(const vector2&Y, double, double dt)
+void DNSBase::Stochastic(const vector2&Y, double, double dt)
 {
   w.Set(Y[OMEGA]);
   Forcing->Force(w,sqrt(2.0*dt)*crand_gauss());
 }
 
-//***** DNS Output routines *****//
+//***** DNSBase Output routines *****//
 
-void DNS::Initialize()
+void DNSBase::Initialize()
 {
   fevt << "#   t\t\t E\t\t\t Z" << endl;
   if(spectrum) {
@@ -282,9 +289,9 @@ void DNS::Initialize()
   }
 }
 
-void DNS::OutFrame(int)
+void DNSBase::OutFrame(int)
 {
-  w.Set(Y[OMEGA]);
+  //  w.Set(Y[OMEGA]); // FIXME
   unsigned int Nx0=Nx+xpad;
   unsigned int Ny0=Ny+ypad;
   unsigned int offset=Nx0/2-mx+1;
@@ -306,10 +313,10 @@ void DNS::OutFrame(int)
   fw.flush();
 }
 
-void DNS::ComputeInvariants(Real& E, Real& Z, Real& P)
+void DNSBase::ComputeInvariants(array2<Complex> & w,Real& E, Real& Z, Real& P)
 {
   E=Z=P=0.0;
-  w.Set(Y[OMEGA]);
+  // w.Set(Y[OMEGA]); // FIXME
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -324,10 +331,10 @@ void DNS::ComputeInvariants(Real& E, Real& Z, Real& P)
   }
 }
 
-void DNS::FinalOutput()
+void DNSBase::FinalOutput()
 {
   Real E,Z,P;
-  ComputeInvariants(E,Z,P);
+  ComputeInvariants(w,E,Z,P);
   cout << endl;
   cout << "Energy = " << E << newl;
   cout << "Enstrophy = " << Z << newl;
