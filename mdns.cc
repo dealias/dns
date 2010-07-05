@@ -111,6 +111,7 @@ private:
   ofstream ft;
   oxstream fprolog;
   int tcount;
+  DynVector<unsigned> kvals;
 public:
 
 //***** Grid class based on DNS *****//
@@ -125,17 +126,18 @@ public:
     void NLDimension();
     MDNS * parent;
 
-    // for projections
+    // for subgrid non-linearity calculation:
     DNSBase * smallDNSBase;
-    
-    
 
   public:
     Grid();
+    Grid(unsigned);
     Grid(MDNS *prob, unsigned g, const vector2& Y0);
     ~Grid();
+    void AttachTo(MDNS *prob, const vector2 & Y);
+    void SetParams();
     unsigned myg;
-    
+  
     unsigned getnshells() {return nshells;};
     unsigned getNx() {return Nx;};
     unsigned getmy() {return my;};
@@ -150,6 +152,7 @@ public:
     void Spectrum(vector& S, const vector& y);
     
     void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
+    void Computek(DynVector<unsigned> & kvals);
     
     void loopwF(const FunctRRPtr,int n,...);
     class Invariants : public FunctRR {
@@ -194,6 +197,8 @@ public:
   
   // Output functions
   Real getSpectrum(unsigned i) {return mY[glast][EK][i].re;};
+  void Computek(DynVector<unsigned>&);
+  Real getk(unsigned i) {return kvals[i];}
 
   void FinalOutput();
   void Initialize();
@@ -228,6 +233,12 @@ MDNS::Grid::Grid()
 {
 }
 
+MDNS::Grid::Grid(unsigned g) 
+{
+  myg=g;
+  SetParams();
+}
+
 MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y) 
 {
   parent=prob;
@@ -243,6 +254,30 @@ MDNS::Grid::~Grid()
   }
 }
 
+void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y) 
+{
+  parent=prob;
+  Dimension(w,Y[OMEGA]);
+  
+  // FIXME: temp;
+  for(unsigned i=0; i < Nx; ++i)
+    for(unsigned j=0; j < my; ++j)
+      w[i][j]=Complex(0,0);
+}
+
+void MDNS::Grid::SetParams()
+{
+  Nx=gN(::Nx,myg);
+  Ny=gN(::Ny,myg);
+  k0=gk(1.0,myg); // assumes k0 is set to one for undecimated grid
+  k02=k0*k0;
+  mx=(Nx+1)/2;
+  my=(Ny+1)/2;
+  xorigin=mx-1;
+  w.Dimension(Nx,my);
+  origin=xorigin*my;
+}
+
 void MDNS::Grid::InitialConditions(unsigned g)
 {
   // load vocabulary from global variables
@@ -253,9 +288,8 @@ void MDNS::Grid::InitialConditions(unsigned g)
   nuL=::nuL;
   pH=::pH;
   pL=::pL;
-  Nx=gN(::Nx,myg);
-  Ny=gN(::Ny,myg);
   spectrum=::spectrum;
+  SetParams();
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
@@ -264,13 +298,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   nshells=MDNSProblem->getnshells(myg);
 
-  k0=gk(1.0,myg);
-  k02=k0*k0;
-  mx=(Nx+1)/2;
-  my=(Ny+1)/2;
-  xorigin=mx-1;
-  w.Dimension(Nx,my);
-  origin=xorigin*my;
 
 
 
@@ -382,7 +409,7 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
   // FIXME
 }
 
-void MDNS::Grid:: Spectrum(vector& S, const vector& y)
+void MDNS::Grid::Spectrum(vector& S, const vector& y)
 {
   w.Set(y);
   
@@ -400,8 +427,27 @@ void MDNS::Grid:: Spectrum(vector& S, const vector& y)
   }
 }
 
-void MDNS::Grid::ComputeInvariants(const vector2 & Y, 
-				   Real& E, Real& Z, Real& P)
+void MDNS::Grid::Computek(DynVector<unsigned> & kvals)
+{
+  for(unsigned i=xorigin; i < Nx; ++i) {
+    int I2=(int) (i - xorigin)*(i - xorigin);
+    for(unsigned j=0; j < my; ++j) { // FIXME: include origin?
+      unsigned k=(unsigned) sqrt(k02*(I2+j*j));
+      bool set=false;
+      for(unsigned a=0; a < kvals.Size(); ++a) {
+	set=false;
+	if(k==kvals[a]) {
+	  a=kvals.Size();
+	  set=true;
+	}
+      }
+      if(!set)
+	kvals[kvals.Size()]=k;
+    }
+  }
+}
+
+void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 {
   Dimension(w,Y[OMEGA]);
   FunctRRPtr F = new Invariants;
@@ -464,13 +510,9 @@ MDNS::~MDNS()
 {
 }
 
-Real curve_k(unsigned i) {
-  if(radix==1)
-    return 1.0*i; // FIXME: add k0, radix-4
-  //if(radix==4)
-  return i;
-}
-
+//***** wrappers for output curves *****//
+Real curve_Spectrum(unsigned i) {return MDNSProblem->getSpectrum(i);}
+Real curve_k(unsigned i) {return MDNSProblem->getk(i);}
 
 void MDNS::InitialConditions()
 {
@@ -484,14 +526,18 @@ void MDNS::InitialConditions()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
-  if(spectrum) {
-    if(radix == 1)
-      nshells=(unsigned) (hypot(gm(mx,glast)-1,gm(my,glast)-1)+0.5);
-    if(radix==4)
-      nshells=0; // TODO: radix-4
-  } else nshells=0;
+  G.Allocate(Ngrids);
+  for(unsigned int g=0; g < Ngrids; ++g) {
+    G[g]=new Grid(g);
+  }
 
-  Allocate(spectra,nshells);
+  if(spectrum) { 
+    Computek(kvals);
+    nshells=kvals.Size();
+  } else 
+    nshells=0;
+
+  Allocate(spectra,kvals.Size());
   for (unsigned i=0; i < nshells; ++i) 
     spectra[i]=0.0;
 
@@ -499,34 +545,26 @@ void MDNS::InitialConditions()
     nfields=getNfields();
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
     NY[nfields*g+TRANSFER]=0; // getnshells(g); FIXME 
-    NY[nfields*g+EK]=getnshells(g);
+    NY[nfields*g+EK]=kvals.Size(); //getnshells(g);
   }
 
-  Allocator(align); // allocates MultiIntegrator
+  Allocator(align); // allocate MultiIntegrator
 
-  G.Allocate(Ngrids);
-  for(unsigned int g=0; g < Ngrids; ++g) {
-    //    vector w,m,T;
-    //Dimension(w,Y[Nfields*g+OMEGA]);
-    //Dimension(T,Y[Nfields*g+TRANSFER]);
-    //Dimension(m,Y[Nfields*g+EK]);
-    G[g]=new Grid(this,g,Y);
-  }
+  for(unsigned int g=0; g < Ngrids; ++g)
+    G[g]->AttachTo(this,Y);
 
-  for(unsigned g=0; g < Ngrids; ++g) {
+  for(unsigned g=0; g < Ngrids; ++g)
     G[g]->InitialConditions(g);
-  }
-
+  
   //***** output *****//
+  open_output(fprolog,dirsep,"prolog",0);
+  out_curve(fprolog,curve_k,"k",G[glast]->getnshells());
+  // delete kvals here to save memory?
   tcount=0;
   open_output(Mfevt,dirsep,"evt");
   open_output(ft,dirsep,"t");
-  if(!restart)
-    remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
-  
+  if(!restart) remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
   mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
-  open_output(fprolog,dirsep,"prolog",0);
-  out_curve(fprolog,curve_k,"k",G[glast]->getnshells());
 }
 
 void MDNS::Project(unsigned gb) 
@@ -607,10 +645,6 @@ void MDNS::Initialize()
   Mfevt << "#   t\t\t E\t\t\t Z" << endl;
 }
 
-Real curve_Spectrum(unsigned i) {
-  return MDNSProblem->getSpectrum(i);
-}
-
 void MDNS::Output(int it)
 {
   Real E,Z,P;
@@ -643,6 +677,29 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
     Z += scale*tempZ;
     P += scale*tempP;
   }
+}
+
+void MDNS::Computek(DynVector<unsigned> & kvals) 
+{
+  for(unsigned g=0; g < Ngrids; ++g)
+    G[g]->Computek(kvals);
+
+  // sort kvals with quick-'n'-dirty bubble sort:
+  bool flag=1;
+  unsigned temp;
+  unsigned n=kvals.Size();
+  for(unsigned i=1; (i < n) && flag; i++) {
+    flag=0;
+    for(unsigned j=0; j < (n-1); j++) {
+      if(kvals[j+1] < kvals[j]) { 
+	temp= kvals[j];    
+	kvals[j] = kvals[j+1];
+	kvals[j+1] = temp;
+	flag=1;
+      }
+    }
+  }
+  cout << kvals << endl;
 }
 
 void MDNS::FinalOutput()

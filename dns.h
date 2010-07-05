@@ -89,7 +89,7 @@ class DNSBase {
   void FinalOutput();
   void OutFrame(int it);
 
-  void Spectrum(vector& S, const vector& y);
+  virtual void Spectrum(vector& S, const vector& y);
   void Transfer(const vector2& Src, const vector2& Y);
   void NonLinearSource(const vector& Src, const vector& Y, double t);
   void LinearSource(const vector& Src, const vector& Y, double t);

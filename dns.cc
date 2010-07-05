@@ -259,7 +259,7 @@ void DNS::InitialConditions()
   my=(Ny+1)/2;
   xorigin=mx-1;
   origin=xorigin*my;
-  nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
+  nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0; // k0??
 
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
