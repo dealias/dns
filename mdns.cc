@@ -258,11 +258,6 @@ void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
 {
   parent=prob;
   Dimension(w,Y[OMEGA]);
-  
-  // FIXME: temp;
-  for(unsigned i=0; i < Nx; ++i)
-    for(unsigned j=0; j < my; ++j)
-      w[i][j]=Complex(0,0);
 }
 
 void MDNS::Grid::SetParams()
@@ -274,8 +269,16 @@ void MDNS::Grid::SetParams()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   xorigin=mx-1;
+
   w.Dimension(Nx,my);
   origin=xorigin*my;
+  
+  if(myg == 0) {
+    Invisible=Invisible2=0;
+  } else {
+    Invisible=(gm(::Nx,myg-1)/2)*gk(1.0,myg-1)/gk(1.0,myg);
+    Invisible2=Invisible*Invisible;
+  }
 }
 
 void MDNS::Grid::InitialConditions(unsigned g)
@@ -289,7 +292,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
   pH=::pH;
   pL=::pL;
   spectrum=::spectrum;
-  SetParams();
+  //  SetParams();
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
@@ -298,15 +301,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   nshells=MDNSProblem->getnshells(myg);
 
-
-
-
-  if(g == 0) {
-    Invisible=Invisible2=0;
-  } else {
-    Invisible=gm(::Nx,g-1)*gk(1.0,myg-1)/gk(1.0,myg);
-    Invisible2=Invisible*Invisible;
-  }
 
 // FIXME
   //  NY[OMEGA]=Nx*my;
@@ -322,7 +316,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
-  xorigin=mx-1;
+
 
   block=fftwpp::ComplexAlign(3*Nx*my);
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
@@ -573,34 +567,100 @@ void MDNS::Project(unsigned gb)
   unsigned ga=gb-1;
 
   int aInvisible=(int) G[ga]->getInvisible();
+  int bInvisible=(int) G[gb]->getInvisible();
   int axorigin=(int) G[ga]->getxorigin();
   int bxorigin=(int) G[gb]->getxorigin();
+  unsigned aNx=G[ga]->getNx();
+  unsigned amy=G[ga]->getmy();
   int amx=(int) G[ga]->getmx();
+  int bmx=(int) G[gb]->getmx();
+  unsigned bNx=G[gb]->getNx();
+  unsigned bmy=G[gb]->getmy();
   int dx=(int) bxorigin-axorigin;
+  Real ak02=G[ga]->getk02();
+  Real bk02=G[gb]->getk02();
 
   array1<array1<Complex> > va=mY[ga];
   Set(wa,va[OMEGA]);
   array1<array1<Complex> > vb=mY[ga];
   Set(wb,vb[OMEGA]);
-  wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
-  wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
+
+  wa.Dimension(aNx,amy);
+
+  wb.Dimension(bNx,bmy);
   
+  const int xstart=bxorigin-bInvisible;
+  const int xstop=bxorigin+bInvisible;
   if(radix == 1) {
-    const int xstart=amx-aInvisible;
-    const int xstop=amx-aInvisible;
-    for(int i=xstart; i < xstop; i++) {
-      vector wai=wa[i];
-      vector wbi=wb[i+dx];
-      for(int j=i <= axorigin ? 1 : 0; j < aInvisible; ++j) {
-	wbi[j]=wai[j];
+    for(int i=xstart; i <= xstop; i++) {
+      vector wai=wa[i-dx];
+      vector wbi=wb[i];
+      for(int j=i <= bxorigin ? 1 : 0; j <= bInvisible; ++j) {
+  	wbi[j]=wai[j];
       }
     }
   }
+
   if(radix == 4) {
-    // TODO: radix-4
+    for(unsigned i=xstart; i <= xstop; ++ i) {
+      int I=(int)i - (int)bxorigin;
+      vector wai=wa[2*I+axorigin];
+      vector waim=wa[2*I+axorigin-1];;
+      vector waip=wa[2*I+axorigin+1];
+      vector wbi=wb[i];
+      
+      for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
+	// FIXME: work out boundary conditions.
+	
+	const int aJ=2*j;
+	const int aJp=aJ+1;
+	const int aJm=aJ==0? aJp : aJ-1;
+
+	// project co-incident point
+	wai[aJ]=Complex(2*I,aJ);
+	
+	//project points on same row/column
+	waim[aJ]=Complex(2*I-1,aJ);
+	waip[aJ]=Complex(2*I+1,aJ);
+	if(aJ) {// Hermiticity case. 
+	  wai[aJm]=Complex(2*I,aJm); 
+	} else {
+	  wa[axorigin-2*I][aJp]=Complex(-2*I,aJm); //--
+	}
+	wai[aJp]=Complex(2*I,aJp);
+	
+	//project points on diagnols.
+	waim[aJp]=Complex(2*I-1,aJp); // -+
+	waip[aJp]=Complex(2*I+1,aJp); // ++
+	if(aJ) {// Hermiticity case.
+	  waim[aJm]=Complex(2*I-1,aJm);
+	  waip[aJm]=Complex(2*I+1,aJm);
+	} else {
+	  wa[axorigin-2*I+1][aJm]=Complex(-2*I+1,aJm); // --
+	  wa[axorigin-2*I-1][aJm]=Complex(-2*I-1,aJm); // +-
+	}
+	
+      }
+    }
+
+    for(unsigned i=0; i < aNx; i += 2) {
+      int I= (int) i - (int) bxorigin;
+      int bI=I/2;
+      unsigned bi=bI + bxorigin;
+      for(unsigned j= i < axorigin? 2 : 0; j <  amy; j +=2) {
+	unsigned bj=j/2;
+	Real bZ=abs2(wb[bi][bj]);
+      }
+    }
   }
 
-  //  fftwpp::HermitianSymmetrizeX(G[gb]->getmx(),G[gb]->getmy(),bxorigin,wb);
+  
+
+  fftwpp::HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
+  // FIXME: overlap of  wa and wb???
+  cout << wa << endl;
+  exit(1);
+  
   // maybe only on the overlapping modes?
 }
 
@@ -633,7 +693,7 @@ void MDNS::Prolong(unsigned ga)
     }
   }
   if(radix == 4) {
-    // TODO: radix-4
+    // TODO: radix4
   }
 
   fftwpp::HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa);
@@ -699,7 +759,6 @@ void MDNS::Computek(DynVector<unsigned> & kvals)
       }
     }
   }
-  cout << kvals << endl;
 }
 
 void MDNS::FinalOutput()
