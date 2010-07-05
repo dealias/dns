@@ -39,19 +39,6 @@ Real icbeta=1.0;
 int xpad=1;
 int ypad=1;
 
-// DNS setup routines
-DNSBase::DNSBase()
-{
-}
-
-DNSBase::~DNSBase()
-{
-}
-
-void DNSBase::InitialConditions()
-{
-}
-
 //***** Initial Conditions *****//
 InitialConditionBase *InitialCondition;
 class Constant : public InitialConditionBase {
@@ -477,7 +464,7 @@ MDNS::~MDNS()
 {
 }
 
-Real lamek(unsigned i) {
+Real curve_k(unsigned i) {
   if(radix==1)
     return 1.0*i; // FIXME: add k0, radix-4
   //if(radix==4)
@@ -539,7 +526,7 @@ void MDNS::InitialConditions()
   
   mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
   open_output(fprolog,dirsep,"prolog",0);
-  out_curve(fprolog,lamek,"k",G[glast]->getnshells());
+  out_curve(fprolog,curve_k,"k",G[glast]->getnshells());
 }
 
 void MDNS::Project(unsigned gb) 
@@ -620,7 +607,7 @@ void MDNS::Initialize()
   Mfevt << "#   t\t\t E\t\t\t Z" << endl;
 }
 
-Real lameSpectrum(unsigned i) {
+Real curve_Spectrum(unsigned i) {
   return MDNSProblem->getSpectrum(i);
 }
 
@@ -635,7 +622,7 @@ void MDNS::Output(int it)
     ostringstream buf;
     buf << "ekvk" << dirsep << "t" << tcount;
     open_output(fekvk,dirsep,buf.str().c_str(),0);
-    out_curve(fekvk,lameSpectrum,"Ek",G[glast]->getnshells());    // FIXME
+    out_curve(fekvk,curve_Spectrum,"Ek",G[glast]->getnshells());    // FIXME
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
   }
@@ -666,10 +653,6 @@ void MDNS::FinalOutput()
   cout << "Energy = " << E << newl;
   cout << "Enstrophy = " << Z << newl;
   cout << "Palenstrophy = " << P << newl;
-}
-
-void DNSBase::Output(int it) // Necessary for a table in triad somewhere
-{
 }
 
 void MDNS::Source(const vector2& Src, const vector2& Y, double t)

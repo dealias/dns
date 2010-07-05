@@ -85,7 +85,7 @@ class DNSBase {
 
   void InitialConditions();
   void Initialize();
-  virtual void Output(int it)=0;
+  //  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);
 
