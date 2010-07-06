@@ -301,12 +301,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   nshells=MDNSProblem->getnshells(myg);
 
-
-// FIXME
-  //  NY[OMEGA]=Nx*my;
-  //NY[TRANSFER]=0; // MDNSProblem->getnshells(g); // FIXME
-  //NY[EK]=MDNSProblem->getnshells(g);
-
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
 
   cout << "\nALLOCATING FFT BUFFERS" << endl;
@@ -341,10 +335,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
   InitialCondition->Set(w,Nx*my);
 
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
-
-  //for(unsigned i=0; i < NY[EK]; i++) Y[EK][i]=0.0; // FIXME
-  //for(unsigned i=0; i < NY[TRANSFER]; i++)  Y[TRANSFER][i]=0.0; // FIXME
-
 }
 
 void MDNS::Grid::NLDimension()
@@ -580,17 +570,14 @@ void MDNS::Project(unsigned gb)
   Real ak02=G[ga]->getk02();
   Real bk02=G[gb]->getk02();
 
-  array1<array1<Complex> > va=mY[ga];
-  Set(wa,va[OMEGA]);
-  array1<array1<Complex> > vb=mY[ga];
-  Set(wb,vb[OMEGA]);
-
   wa.Dimension(aNx,amy);
-
   wb.Dimension(bNx,bmy);
+  Set(wa,mY[ga][OMEGA]);
+  Set(wb,mY[gb][OMEGA]);
   
   const int xstart=bxorigin-bInvisible;
   const int xstop=bxorigin+bInvisible;
+
   if(radix == 1) {
     for(int i=xstart; i <= xstop; i++) {
       vector wai=wa[i-dx];
@@ -610,6 +597,7 @@ void MDNS::Project(unsigned gb)
       vector wbi=wb[i];
       
       for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
+	
  	const int aJ=2*j;
 	const int aJp=aJ+1;
 	const int aJm=aJ==0? aJp : aJ-1;
@@ -709,7 +697,7 @@ void MDNS::Output(int it)
     ostringstream buf;
     buf << "ekvk" << dirsep << "t" << tcount;
     open_output(fekvk,dirsep,buf.str().c_str(),0);
-    out_curve(fekvk,curve_Spectrum,"Ek",G[glast]->getnshells());    // FIXME
+    out_curve(fekvk,curve_Spectrum,"Ek",G[glast]->getnshells());
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
   }
@@ -808,7 +796,6 @@ void MDNS::LinearSource(const vector2& Src, const vector2& Y, double t)
   vector w0,source;
   Dimension(w0,Y[OMEGA]);
   Dimension(source,Src[OMEGA]);
-  // FIXME: over-counts
   G[grid]->LinearSource(source,w0,t);
 }
 
