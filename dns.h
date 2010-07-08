@@ -129,7 +129,8 @@ class DNSBase {
   void Stochastic(const vector2& Y, double, double);
 
   Real Spectrum(unsigned int i) {
-    return T[i].re*twopi/count[i];
+    double c=count[i];
+    return c > 0 ? T[i].re*twopi/c : 0.0;
   }
 
   Real Dissipation(unsigned int i) {
@@ -275,7 +276,7 @@ void DNSBase::Stochastic(const vector2&Y, double, double dt)
 
 void DNSBase::Initialize()
 {
-  fevt << "#   t\t\t E\t\t\t Z" << endl;
+  fevt << "# t\tE\tZ\tP" << endl;
   if(spectrum) {
     for(unsigned i=0; i < nshells; i++)
       count[i]=0;
@@ -313,10 +314,9 @@ void DNSBase::OutFrame(int)
   fw.flush();
 }
 
-void DNSBase::ComputeInvariants(array2<Complex> & w,Real& E, Real& Z, Real& P)
+void DNSBase::ComputeInvariants(array2<Complex> &w, Real& E, Real& Z, Real& P)
 {
   E=Z=P=0.0;
-  // w.Set(Y[OMEGA]); // FIXME
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;

@@ -176,7 +176,7 @@ public:
     return Nfields;
     //return (g == glast && spectrum) ? Nfields : 1;
   };
-  //  unsigned getNfields() {return Nfields;};
+  unsigned getNfields() {return Nfields;};
   unsigned getnshells(unsigned g) {return g == glast ? nshells : 0;};
 
   Table<InitialConditionBase> *InitialConditionTable;
@@ -556,17 +556,17 @@ void MDNS::Project(unsigned gb)
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
-  int aInvisible=(int) G[ga]->getInvisible();
-  int bInvisible=(int) G[gb]->getInvisible();
-  int axorigin=(int) G[ga]->getxorigin();
-  int bxorigin=(int) G[gb]->getxorigin();
+  unsigned  aInvisible=G[ga]->getInvisible();
+  unsigned  bInvisible=G[gb]->getInvisible();
+  unsigned  axorigin=G[ga]->getxorigin();
+  unsigned  bxorigin=G[gb]->getxorigin();
   unsigned aNx=G[ga]->getNx();
   unsigned amy=G[ga]->getmy();
-  int amx=(int) G[ga]->getmx();
-  int bmx=(int) G[gb]->getmx();
+  unsigned  amx=G[ga]->getmx();
+  unsigned  bmx=G[gb]->getmx();
   unsigned bNx=G[gb]->getNx();
   unsigned bmy=G[gb]->getmy();
-  int dx=(int) bxorigin-axorigin;
+  unsigned dx=bxorigin-axorigin;
   Real ak02=G[ga]->getk02();
   Real bk02=G[gb]->getk02();
 
@@ -575,14 +575,14 @@ void MDNS::Project(unsigned gb)
   Set(wa,mY[ga][OMEGA]);
   Set(wb,mY[gb][OMEGA]);
   
-  const int xstart=bxorigin-bInvisible;
-  const int xstop=bxorigin+bInvisible;
+  const unsigned xstart=bxorigin-bInvisible;
+  const unsigned xstop=bxorigin+bInvisible;
 
   if(radix == 1) {
-    for(int i=xstart; i <= xstop; i++) {
+    for(unsigned int i=xstart; i <= xstop; i++) {
       vector wai=wa[i-dx];
       vector wbi=wb[i];
-      for(int j=i <= bxorigin ? 1 : 0; j <= bInvisible; ++j) {
+      for(unsigned int j=i <= bxorigin ? 1 : 0; j <= bInvisible; ++j) {
   	wbi[j]=wai[j];
       }
     }

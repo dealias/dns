@@ -62,6 +62,8 @@ public:
     ConservativeSource(Src,Y,t);
     NonConservativeSource(Src,Y,t);
   }
+  
+  void Initialize();
 
 };
 
@@ -238,6 +240,10 @@ DNS::~DNS()
   fftwpp::deleteAlign(block);
 }
 
+void DNS::Initialize()
+{
+  DNSBase::Initialize();
+}
 
 void DNS::InitialConditions()
 {
