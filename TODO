@@ -25,6 +25,8 @@ MDNS::Output
 forcing
 
 mdns Nx=15 doesn't work, but 31 and 64 do. (??)
+     I get an error with "./mdns Nx=15 Ny=15" but not with 
+     "./mdns Nx=15 Ny=15 icalpha=1 icbeta=1": this is a triad issue.
 
 moments, transfer
 

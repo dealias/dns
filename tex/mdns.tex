@@ -131,7 +131,7 @@ in Fourier space. The Liouville theorem for the Navier--Stokes equations
 implies that decimated grids will only reach the correct equipartition if 
 they are decimated uniformly.  Thus, we have a limited number of options in
 what type of subgrid we choose to use.  We present two here: a radix-2 scheme
-and a radix-4 scheme.
+and a radix-4 scheme. % FIXME: and a trivial radix-1 scheme
 
 \subsection{Radix-1 Decimated Grid}
 The radix-1 decimated grid is just the original grid; each gridpoint
@@ -323,6 +323,7 @@ $Z$.
   \end{center}
 \end{figure}
 
+% FIXME: out-of-place
 However, scaling the grids by a factor introduces a restriction on the
 geometry that we can use. In particular, the imposition of a square
 lattice will lead to a problem with projection/prolongation near the
@@ -385,17 +386,45 @@ diagram as in figure \ref{rad4cross}.
     \label{rad4cross}
   \end{center}
 \end{figure}
-Following case~\ref{rowcol}, we solve for $\alpha$ and $\beta$ using energy
-and enstrophy conservation:
-\bec
-\alpha=\frac{K^2-k_3^2}{k_1^2-k_3^2}, 
-\qquad 
-\beta=\frac{K^2-k_4^2}{k_2^2-k_4^2}.
-\eec
+Following case~\ref{rowcol}, we solve for $\alpha$ and $\beta$ using
+energy and enstrophy conservation:
+\begin{dmath*}[compact]
+  \alpha=\frac{K^2-k_3^2}{k_1^2-k_3^2}, 
+  \qquad 
+  \beta=\frac{K^2-k_4^2}{k_2^2-k_4^2}.
+\end{dmath*}
 In this case, however, the denominator vanishes for either $\alpha$ or $\beta$
 is the mode $K$ lies on a line which goes through the origin at 45$^\circ$.
 
 
+Due to this problem (which also occurs on radix-2 projection), %FIXME:
+ref we propose an alternative solution.  Let
+$L=\{k_i,i=1,2,3,4|k_i^2<K^2 \}$ and $H=\{k_i,i=1,2,3,4|k_i^2>K^2 \}$.
+We are guaranteed that $H$ and $L$ have at least one element, and that
+$\abs{H} + \abs{L}=4$.  Suppose that we put energy $E_L$ into the
+modes in $L$ and $E_H$ into the modes in $H$, which, is then divided 
+among the modes to in a stat-mech equipartition. Thus, for modes
+in set $S=L$ of $S=H$, we have $\a=\a_S$, $\b=\b_S$.
+
+Suppose that we send $\abs{H}S$ of energy to
+the modes in $S$, 
+
+Nah, forget that: Let's just equipartition the thing. We start out
+with energy $E$ and enstrophy $K^2E$. In equiparition, mode $k_i$ has
+enstrophy $1/\(\alpha/k_i^2 + \beta\)$. Thus, the total energy and
+enstrophy are
+\begin{dmath*}[compact]
+  E = \sum_{i} \frac{1}{\alpha + \beta k_i^2},
+  \quad
+  Z = \sum_{i} \frac{k_i^2}{\alpha + \beta k_i^2}
+\end{dmath*}
+This gives us two equations with two unknowns, which
+we should be able to solve.  Amusingly, this is actually an exercise 
+from math 655: 
+\begin{dmath*}
+  \a=\frac{\abs{S}/2 - \beta Z}{E}.
+\end{dmath*}
+In the case that $\abs{S}=2$, we can solve this 
 
 Also, what about prolonging the boundary modes?
 
