@@ -18,16 +18,23 @@ won't compile on Orcinus due to fftwpp:: namespace issues.
 
 subint=RK2 won't evolve but subint=RK{1,3,4,5} will. ?!
 
+fprolog (see goysr/Goy.cc ?)
+
+spectrum: 
+	  Src[EK] is curently set for all grids.
+	  should move this info to just one grid.
+	  radix=1 works, radix=4 borks.
+
 radix=4
-radix=2
+	project and prolong
+	
+
 
 MDNS::Output
 
 forcing
 
-mdns Nx=15 doesn't work, but 31 and 64 do. (??)
-     I get an error with "./mdns Nx=15 Ny=15" but not with 
-     "./mdns Nx=15 Ny=15 icalpha=1 icbeta=1": this is a triad issue.
+radix=2
 
 moments, transfer
 
