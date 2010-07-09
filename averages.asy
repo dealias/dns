@@ -67,9 +67,14 @@ real[][] transfer()
 void Ekavg()
 {
   Ek=0.5*moment2()[NL];
-
-  k=Ek > 0 ? kc : null;
-  Ek=Ek > 0 ? Ek : null;
+  write("Ek");
+  write(Ek);
+  write();
+  write("kc");
+  write(kc);
+  k=kc;
+  //  k=Ek > 0 ? kc : null;
+  //  Ek=Ek > 0 ? Ek : null;
 }
 
 bool nextrun()

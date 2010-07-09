@@ -2,6 +2,8 @@
 #include "dns.h"
 #include "MultiIntegrator.h"
 
+using namespace fftwpp;
+
 const double ProblemVersion=1.0;
 
 #ifndef DEPEND
@@ -109,7 +111,7 @@ private:
   ofstream Mfevt;
   oxstream fekvk;
   ofstream ft;
-  oxstream fprolog;
+  //oxstream fprolog;
   int tcount;
   DynVector<unsigned> kvals;
 public:
@@ -125,6 +127,7 @@ public:
     unsigned sNx, smx, smy, sxorigin, xdiff;
     void NLDimension();
     MDNS * parent;
+    unsigned nfields;
 
     // for subgrid non-linearity calculation:
     DNSBase * smallDNSBase;
@@ -149,11 +152,13 @@ public:
     void NonLinearSource(const vector & Src, const vector & Y, double t);
     void LinearSource(const vector & Src, const vector & Y, double t);
     void Transfer(const vector2 & Src, const vector2 & Y);
-    void Spectrum(vector& S, const vector& y);
+    void Spectrum(vector& S, const vector& w0);
     
     void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
     void Computek(DynVector<unsigned> & kvals);
     
+    void coutw() {cout << "mygrid is"<<myg<<endl<< w << endl;}
+  
     void loopwF(const FunctRRPtr,int n,...);
     class Invariants : public FunctRR {
       void f(const Real w2, const Real k02, int n,va_list args) {
@@ -177,7 +182,8 @@ public:
     //return (g == glast && spectrum) ? Nfields : 1;
   };
   unsigned getNfields() {return Nfields;};
-  unsigned getnshells(unsigned g) {return g == glast ? nshells : 0;};
+  //unsigned getnshells(unsigned g) {return g == glast ? nshells : 0;};
+  unsigned getnshells(unsigned g) {return nshells;}; // FIXME: kludge
 
   Table<InitialConditionBase> *InitialConditionTable;
   void InitialConditions();
@@ -198,7 +204,7 @@ public:
   // Output functions
   Real getSpectrum(unsigned i) {return mY[glast][EK][i].re;};
   void Computek(DynVector<unsigned>&);
-  Real getk(unsigned i) {return kvals[i];}
+  //Real getk(unsigned i) {return kvals[i];}
 
   void FinalOutput();
   void Initialize();
@@ -239,10 +245,11 @@ MDNS::Grid::Grid(unsigned g)
   SetParams();
 }
 
-MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y) 
+MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y)
 {
   parent=prob;
-  Dimension(w,Y[OMEGA]);
+  //  w.Set(Y[OMEGA]);
+  w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
 }
 
 MDNS::Grid::~Grid()
@@ -257,7 +264,8 @@ MDNS::Grid::~Grid()
 void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y) 
 {
   parent=prob;
-  Dimension(w,Y[OMEGA]);
+  nfields=parent->getNfields();
+  w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
 }
 
 void MDNS::Grid::SetParams()
@@ -312,7 +320,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
   //  int my0=Ny0/2+1; //unused so far...
 
 
-  block=fftwpp::ComplexAlign(3*Nx*my);
+  block=ComplexAlign(3*Nx*my);
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
   NLDimension();
 
@@ -393,10 +401,12 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
   // FIXME
 }
 
-void MDNS::Grid::Spectrum(vector& S, const vector& y)
+void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 {
-  w.Set(y);
+  w.Set(w0);
   
+  // FIXME: loop over only visible modes!
+
   // Compute instantaneous angular sum over each circular shell.
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
@@ -413,27 +423,31 @@ void MDNS::Grid::Spectrum(vector& S, const vector& y)
 
 void MDNS::Grid::Computek(DynVector<unsigned> & kvals)
 {
+  
+  /*
   for(unsigned i=xorigin; i < Nx; ++i) {
     int I2=(int) (i - xorigin)*(i - xorigin);
     for(unsigned j=0; j < my; ++j) { // FIXME: include origin?
-      unsigned k=(unsigned) sqrt(k02*(I2+j*j));
+      Real k=sqrt(k02*(I2+j*j));
       bool set=false;
-      for(unsigned a=0; a < kvals.Size(); ++a) {
+      for(unsigned a=0; a < kvals.Size() && !set; ++a) {
 	set=false;
-	if(k==kvals[a]) {
-	  a=kvals.Size();
+	if(k==kvals[a])
 	  set=true;
-	}
       }
       if(!set)
-	kvals[kvals.Size()]=k;
+	kvals.Push(k);
     }
   }
+  cout << kvals.Size() << endl;
+  */
 }
 
 void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 {
-  Dimension(w,Y[OMEGA]);
+  w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
+  //  w.Set(Y[OMEGA]);
+  //Dimension(w,Y[OMEGA]); // FIXME: breaks makeopt
   FunctRRPtr F = new Invariants;
   loopwF(F,3,&Z,&E,&P);
 }
@@ -496,7 +510,7 @@ MDNS::~MDNS()
 
 //***** wrappers for output curves *****//
 Real curve_Spectrum(unsigned i) {return MDNSProblem->getSpectrum(i);}
-Real curve_k(unsigned i) {return MDNSProblem->getk(i);}
+//Real curve_k(unsigned i) {return MDNSProblem->getk(i);}
 
 void MDNS::InitialConditions()
 {
@@ -516,12 +530,15 @@ void MDNS::InitialConditions()
   }
 
   if(spectrum) { 
-    Computek(kvals);
-    nshells=kvals.Size();
-  } else 
+    //Computek(kvals);
+    //nshells=kvals.Size();
+    nshells=spectrum ? 
+      (unsigned) (G[glast]->getk0()*hypot(gm(mx,glast)-1,gm(my,glast)-1)+0.5) 
+      : 0; // FIXME: k0??
+  } else
     nshells=0;
 
-  Allocate(spectra,kvals.Size());
+  Allocate(spectra,nshells);
   for (unsigned i=0; i < nshells; ++i) 
     spectra[i]=0.0;
 
@@ -529,7 +546,7 @@ void MDNS::InitialConditions()
     nfields=getNfields();
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
     NY[nfields*g+TRANSFER]=0; // getnshells(g); FIXME 
-    NY[nfields*g+EK]=kvals.Size(); //getnshells(g);
+    NY[nfields*g+EK]=getnshells(g);
   }
 
   Allocator(align); // allocate MultiIntegrator
@@ -539,11 +556,19 @@ void MDNS::InitialConditions()
 
   for(unsigned g=0; g < Ngrids; ++g)
     G[g]->InitialConditions(g);
-  
+
+  // FIXME: kludge
+  for(unsigned g=0; g < Ngrids; ++g) {
+    unsigned stop=G[g]->getNx()*G[g]->getmy();
+    for(unsigned i=0; i < stop; ++i)
+      Y[nfields*g+OMEGA][i]=Complex(icalpha,icbeta);
+  }
+
   //***** output *****//
-  open_output(fprolog,dirsep,"prolog",0);
-  out_curve(fprolog,curve_k,"k",G[glast]->getnshells());
-  // delete kvals here to save memory?
+  // FIXME: where does fprolog go???
+  //  open_output(fprolog,dirsep,"prolog",0);
+  //out_curve(fprolog,curve_k,"k",G[glast]->getnshells()); // FIXME?
+  //out_curve(fprolog,curve_k,"k",kvals.Size());
   tcount=0;
   open_output(Mfevt,dirsep,"evt");
   open_output(ft,dirsep,"t");
@@ -553,6 +578,7 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
+  return; // FIXME: temp
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
@@ -642,11 +668,13 @@ void MDNS::Project(unsigned gb)
 
   
 
-  fftwpp::HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
+  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
 }
 
 void MDNS::Prolong(unsigned ga)
 {
+  return;  // FIXME: temp
+
   //  cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
   
@@ -655,12 +683,27 @@ void MDNS::Prolong(unsigned ga)
   int amx=(int) G[ga]->getmx();
   int dx=(int) G[gb]->getxorigin()-axorigin;
 
-  array1<array1<Complex> > va=mY[ga];
-  Set(wa,va[OMEGA]);
-  array1<array1<Complex> > vb=mY[ga];
-  Set(wb,vb[OMEGA]);
   wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
   wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
+
+  // FIXME: code doesn't work under both make and makeopt.
+  // for make:
+  ///*
+  array1<array1<Complex> > va=mY[ga];
+  Set(wa,va[OMEGA]);
+  array1<array1<Complex> > vb=mY[gb];
+  Set(wb,vb[OMEGA]);
+  //*/
+
+  // for makeopt:
+  /*
+  array1<Complex *> va=mY[ga];
+  wa.Set(va[OMEGA]);
+  array1<Complex *> vb=mY[gb];
+  wb.Set(vb[OMEGA]);
+  */
+
+
 
   if(radix == 1) {
     const int xstart=amx-aInvisible;
@@ -679,6 +722,8 @@ void MDNS::Prolong(unsigned ga)
 
   fftwpp::HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa);
   // maybe only on the overlapping modes?
+
+  // FIXME: copy stuff from spectra onto just onto lastgrid's Src[EK]
 }
 
 void MDNS::Initialize()
@@ -697,7 +742,9 @@ void MDNS::Output(int it)
     ostringstream buf;
     buf << "ekvk" << dirsep << "t" << tcount;
     open_output(fekvk,dirsep,buf.str().c_str(),0);
-    out_curve(fekvk,curve_Spectrum,"Ek",G[glast]->getnshells());
+    out_curve(fekvk,t,"t");
+    out_curve(fekvk,curve_Spectrum,"Ek",nshells);
+    out_curve(fekvk,curve_Spectrum,"nuk*Ek",nshells); // FIXME: Temp
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
   }
@@ -722,6 +769,7 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 
 void MDNS::Computek(DynVector<unsigned> & kvals) 
 {
+  /*
   for(unsigned g=0; g < Ngrids; ++g)
     G[g]->Computek(kvals);
 
@@ -740,6 +788,7 @@ void MDNS::Computek(DynVector<unsigned> & kvals)
       }
     }
   }
+  */
 }
 
 void MDNS::FinalOutput()
@@ -768,17 +817,21 @@ void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t)
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 {
   if(spectrum) {
-    if(grid==0) {       // zero spectrum
-      unsigned gnshells=G[glast]->getnshells();
-      for(unsigned i=0; i < gnshells; ++i)
-	spectra[i]=0;
-    }
-    
-    G[grid]->Spectrum(spectra,Y[OMEGA]);
-
-    if(grid==glast) {
-      for (unsigned i=0; i < nshells; ++i) 
-	Src[EK]=spectra[i];       // might this instead be a swap?
+    for(unsigned g=0; g < Ngrids; ++g) {
+      if(g==0) { // zero the spectrum
+	for(unsigned i=0; i < nshells; ++i)
+	  spectra[i]=0;
+      }
+      vector w0,source;
+      Dimension(w0,Y[OMEGA]);
+      G[g]->Spectrum(spectra,w0);
+      
+      if(g==glast) {
+	vector S;
+	Dimension(S,Src[EK]);
+	for (unsigned i=0; i < nshells; ++i)
+	  S[i]=spectra[i];  // might this instead be a swap?
+      }
     }
   }
   //Moments(Src,Y,t);

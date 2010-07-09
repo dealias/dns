@@ -12,6 +12,7 @@
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
 
 using namespace Array;
+using namespace fftwpp;
 using std::ostringstream;
 
 //class DNS : public ProblemBase {
@@ -49,8 +50,8 @@ class DNSBase {
   Complex *F[2];
   Complex *G[2];
   Complex *block;
-  fftwpp::ImplicitHConvolution2 *Convolution;
-  fftwpp::ExplicitHConvolution2 *Padded;
+  ImplicitHConvolution2 *Convolution;
+  ExplicitHConvolution2 *Padded;
 
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;
@@ -59,7 +60,7 @@ class DNSBase {
  public:
   DNSBase() {}
   DNSBase(unsigned Nx, unsigned my, Real k0): Nx(Nx), my(my), k0(k0) {
-    block=fftwpp::ComplexAlign(3*Nx*my);
+    block=ComplexAlign(3*Nx*my);
     mx=(Nx+1)/2;
     xorigin=mx-1;
     origin=xorigin*my;
@@ -72,7 +73,7 @@ class DNSBase {
     F[1]=f1;
     G[0]=g0;
     G[1]=g1;
-    Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
+    Convolution=new ImplicitHConvolution2(mx,my,2);
   }
   ~DNSBase() {}
 
@@ -102,7 +103,7 @@ class DNSBase {
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
     if(spectrum) Spectrum(Src[EK],Y[OMEGA]);
-    fftwpp::HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
+    HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
   }
 
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
@@ -204,7 +205,7 @@ void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
     }
   }
   F[0]=f0;
-  Convolution->convolve(F,G);
+  //  Convolution->convolve(F,G);
   f0(origin)=0.0;
 
 #if 0

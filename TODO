@@ -11,6 +11,7 @@ set svn ignore on linked header files in ~/dns
 ***** dns.cc: *****
 memory leak in transfer?
 
+won't compile on Orcinus due to fftwpp:: namespace issues.
 
 
 ***** mdns.cc: *****
