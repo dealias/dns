@@ -111,7 +111,7 @@ private:
   ofstream Mfevt;
   oxstream fekvk;
   ofstream ft;
-  //oxstream fprolog;
+  oxstream fprolog;
   int tcount;
   DynVector<unsigned> kvals;
 public:
@@ -202,9 +202,9 @@ public:
   void Prolong(unsigned gb);
   
   // Output functions
-  Real getSpectrum(unsigned i) {return mY[glast][EK][i].re;};
+  Real getSpectrum(unsigned i) {return Y[EK][i].re;}; 
   void Computek(DynVector<unsigned>&);
-  //Real getk(unsigned i) {return kvals[i];}
+  Real getk(unsigned i) {return (Real) i;};
 
   void FinalOutput();
   void Initialize();
@@ -510,7 +510,7 @@ MDNS::~MDNS()
 
 //***** wrappers for output curves *****//
 Real curve_Spectrum(unsigned i) {return MDNSProblem->getSpectrum(i);}
-//Real curve_k(unsigned i) {return MDNSProblem->getk(i);}
+Real curve_k(unsigned i) {return MDNSProblem->getk(i);}
 
 void MDNS::InitialConditions()
 {
@@ -565,10 +565,11 @@ void MDNS::InitialConditions()
   }
 
   //***** output *****//
-  // FIXME: where does fprolog go???
-  //  open_output(fprolog,dirsep,"prolog",0);
-  //out_curve(fprolog,curve_k,"k",G[glast]->getnshells()); // FIXME?
-  //out_curve(fprolog,curve_k,"k",kvals.Size());
+  // FIXME: is anyone else writing to fprolog?
+  open_output(fprolog,dirsep,"prolog",0);
+  out_curve(fprolog,curve_k,"k",G[glast]->getnshells());
+  fprolog.close();
+
   tcount=0;
   open_output(Mfevt,dirsep,"evt");
   open_output(ft,dirsep,"t");
