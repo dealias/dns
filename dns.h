@@ -205,9 +205,9 @@ void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
     }
   }
   F[0]=f0;
-  //  Convolution->convolve(F,G);
+  Convolution->convolve(F,G);
   f0(origin)=0.0;
-
+  
 #if 0
   Real sum=0.0;
   for(unsigned i=0; i < Nx; ++i) {
