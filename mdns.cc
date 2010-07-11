@@ -113,10 +113,13 @@ private:
   ofstream ft;
   oxstream fprolog;
   int tcount;
-  DynVector<unsigned> kvals;
+  array1<unsigned>::opt count;
+  DynVector<unsigned> kvals; // FIXME: deprecated?
 public:
+  MDNS();
+  ~MDNS();
 
-//***** Grid class based on DNS *****//
+  //***** Grid class based on DNSBase *****//
   class Grid : public DNSBase {
   private:
     unsigned Invisible;
@@ -153,7 +156,8 @@ public:
     void LinearSource(const vector & Src, const vector & Y, double t);
     void Transfer(const vector2 & Src, const vector2 & Y);
     void Spectrum(vector& S, const vector& w0);
-    
+    void setcount(array1<unsigned>::opt & count);
+
     void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
     void Computek(DynVector<unsigned> & kvals);
     
@@ -173,8 +177,6 @@ public:
   };
   array1<Grid *> G;
   
-  MDNS();
-  ~MDNS();
 
   enum Field {OMEGA,TRANSFER,EK,Nfields};
   unsigned getnfields(unsigned g) {
@@ -200,9 +202,12 @@ public:
   
   void Project(unsigned ga);
   void Prolong(unsigned gb);
-  
+
   // Output functions
-  Real getSpectrum(unsigned i) {return Y[EK][i].re;}; 
+  Real getSpectrum(unsigned i) {
+    double c=count[i];
+    return c > 0 ? Y[EK][i].re/c : 0.0;
+  };  
   void Computek(DynVector<unsigned>&);
   Real getk(unsigned i) {return (Real) i;};
 
@@ -248,8 +253,8 @@ MDNS::Grid::Grid(unsigned g)
 MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y)
 {
   parent=prob;
-  //  w.Set(Y[OMEGA]);
-  w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
+  w.Set(Y[OMEGA]);
+  //w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
 }
 
 MDNS::Grid::~Grid()
@@ -265,7 +270,8 @@ void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
 {
   parent=prob;
   nfields=parent->getNfields();
-  w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
+  w.Set(Y[OMEGA]);
+  //w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
 }
 
 void MDNS::Grid::SetParams()
@@ -401,13 +407,28 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
   // FIXME
 }
 
+void MDNS::Grid::setcount(array1<unsigned>::opt & count)
+{
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      Real k=sqrt(k02*(I2+j*j));
+      count[(unsigned)(k-0.5)] += 1;
+    }
+  }
+
+}
+
 void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 {
   w.Set(w0);
   
-  // FIXME: loop over only visible modes!
+
 
   // Compute instantaneous angular sum over each circular shell.
+
+  // FIXME: loop over only visible modes!
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -416,7 +437,8 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
       Real k2=k02*(I2+j*j);
       Real k=sqrt(k2);
       Real w2=abs2(wi[j]);
-      S[(unsigned)(k-0.5)] += Complex(w2/k,nuk(k2)*w2); //nuk set?
+      S[(unsigned)(k-0.5)].re += w2/k;
+      //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
     }
   }
 }
@@ -445,8 +467,8 @@ void MDNS::Grid::Computek(DynVector<unsigned> & kvals)
 
 void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 {
-  w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
-  //  w.Set(Y[OMEGA]);
+  //w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
+  w.Set(Y[OMEGA]);
   //Dimension(w,Y[OMEGA]); // FIXME: breaks makeopt
   FunctRRPtr F = new Invariants;
   loopwF(F,3,&Z,&E,&P);
@@ -557,20 +579,20 @@ void MDNS::InitialConditions()
   for(unsigned g=0; g < Ngrids; ++g)
     G[g]->InitialConditions(g);
 
-  // FIXME: kludge
-  for(unsigned g=0; g < Ngrids; ++g) {
-    unsigned stop=G[g]->getNx()*G[g]->getmy();
-    for(unsigned i=0; i < stop; ++i)
-      Y[nfields*g+OMEGA][i]=Complex(icalpha,icbeta);
-  }
 
   //***** output *****//
-  // FIXME: is anyone else writing to fprolog?
   open_output(fprolog,dirsep,"prolog",0);
-  out_curve(fprolog,curve_k,"k",G[glast]->getnshells());
+  out_curve(fprolog,curve_k,"kc",nshells);
+  out_curve(fprolog,curve_k,"kb",nshells);
   fprolog.close();
 
   tcount=0;
+  Allocate(count,nshells);
+  for(unsigned i=0; i < nshells; ++i)
+    count[i]=0;
+  for(unsigned g=0; g < Ngrids; ++g)
+    G[g]->setcount(count);
+
   open_output(Mfevt,dirsep,"evt");
   open_output(ft,dirsep,"t");
   if(!restart) remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
@@ -579,7 +601,6 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
-  return; // FIXME: temp
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
@@ -674,8 +695,6 @@ void MDNS::Project(unsigned gb)
 
 void MDNS::Prolong(unsigned ga)
 {
-  return;  // FIXME: temp
-
   //  cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
   
@@ -745,7 +764,7 @@ void MDNS::Output(int it)
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
     out_curve(fekvk,curve_Spectrum,"Ek",nshells);
-    out_curve(fekvk,curve_Spectrum,"nuk*Ek",nshells); // FIXME: Temp
+    out_curve(fekvk,curve_Spectrum,"nuk*Ek",nshells); // FIXME: replace with nuk
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
   }
@@ -820,8 +839,10 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
   if(spectrum) {
     for(unsigned g=0; g < Ngrids; ++g) {
       if(g==0) { // zero the spectrum
-	for(unsigned i=0; i < nshells; ++i)
-	  spectra[i]=0;
+	for(unsigned i=0; i < nshells; ++i) {
+	  spectra[i]=Complex(0.0,0.0);
+	  Src[EK][i]=Complex(0.0,0.0);
+	}
       }
       vector w0,source;
       Dimension(w0,Y[OMEGA]);

@@ -25,6 +25,10 @@ spectrum:
 	  should move this info to just one grid.
 	  radix=1 works, radix=4 borks.
 
+radix=1
+	spectrum not working right now for some reason.
+		 (memory issues?)
+
 radix=4
 	project and prolong
 	

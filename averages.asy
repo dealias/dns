@@ -67,14 +67,11 @@ real[][] transfer()
 void Ekavg()
 {
   Ek=0.5*moment2()[NL];
-  write("Ek");
-  write(Ek);
-  write();
-  write("kc");
-  write(kc);
+  kc=sequence(1,Ek.length);
   k=kc;
-  //  k=Ek > 0 ? kc : null;
-  //  Ek=Ek > 0 ? Ek : null;
+
+  k=Ek > 0 ? kc : null;
+  Ek=Ek > 0 ? Ek : null;
 }
 
 bool nextrun()
@@ -86,7 +83,7 @@ bool nextrun()
   lastpos=pos > 0 ? pos+1 : -1;
   eval("include \""+rundir()+"param.asy\";",true);
 
-  int N=round(hypot((Nx-1)/2,(Ny-1)/2));
+  int N=round(hypot((Nx-1)/2,(Ny-1)/2));  // overridden in EKavg
   kc=sequence(1,N);
   kb=kc-0.5;
   kb.push(N+0.5);
