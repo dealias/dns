@@ -17,20 +17,20 @@ won't compile on Orcinus due to fftwpp:: namespace issues.
 ***** mdns.cc: *****
 
 subint=RK2 won't evolve but subint=RK{1,3,4,5} will. ?!
-
-fprolog (see goysr/Goy.cc ?)
+	   or is subintegrator even being set?
 
 spectrum: 
 	  Src[EK] is curently set for all grids.
 	  should move this info to just one grid.
-	  radix=1 works, radix=4 borks.
+	  radix=1 is wonky, radix=4 borks.
+
+radix=4
+	project / prolong
+	  
 
 radix=1
 	spectrum not working right now for some reason.
 		 (memory issues?)
-
-radix=4
-	project and prolong
 	
 
 

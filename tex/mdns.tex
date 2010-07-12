@@ -308,10 +308,9 @@ We choose to remove energy from $U_-$ and $U_+$ so that
   \min\{\frac{\hat U_-^2}{U_-^2},\frac{\hat U_+^2}{U_+^2}\}.
 \end{eqnarray}
 This guarantees that we do not attempt to remove more energy from
-coarse modes than there be present. Any remaining energy is then
-deposited into the fine-grid modes that coincide with coarse-grid
-modes in Fourier space, which automatically conserves both $E$ and
-$Z$.
+coarse modes than is present. Any remaining energy is then deposited
+into the fine-grid modes that coincide with coarse-grid modes in
+Fourier space, which automatically conserves both $E$ and $Z$.
 
 \subsection{Radix-4 Decimated Grid}
 
@@ -406,8 +405,7 @@ modes in $L$ and $E_H$ into the modes in $H$, which, is then divided
 among the modes to in a stat-mech equipartition. Thus, for modes
 in set $S=L$ of $S=H$, we have $\a=\a_S$, $\b=\b_S$.
 
-Suppose that we send $\abs{H}S$ of energy to
-the modes in $S$, 
+Suppose that we send $\abs{H}S$ of energy to the modes in $S$,\dots
 
 Nah, forget that: Let's just equipartition the thing. We start out
 with energy $E$ and enstrophy $K^2E$. In equiparition, mode $k_i$ has
@@ -420,11 +418,27 @@ enstrophy are
 \end{dmath*}
 This gives us two equations with two unknowns, which
 we should be able to solve.  Amusingly, this is actually an exercise 
-from math 655: 
+from math 655, and we can eliminate $\a$: 
 \begin{dmath*}
   \a=\frac{\abs{S}/2 - \beta Z}{E}.
 \end{dmath*}
-In the case that $\abs{S}=2$, we can solve this 
+The energy equation is (with $\abs{S}=n$ and assuming $E\neq 0$) then 
+\begin{dmath*}
+  1 = \sum_{i} \frac{1}{n/2+ \b\( E k_i^2- Z\) }.
+\end{dmath*}
+Multiply both sides by $\prod_i \[n/2+ \b\( E k_i^2- Z\)\]$ yields
+\begin{dmath*}
+  \prod_i \[n/2+ \b\( E k_i^2- Z\)\]
+  = \sum_{i} \prod_{j\neq i} \[n/2+ \b\( E k_j^2- Z\)\].
+\end{dmath*}
+In the case that $n=2$, we can solve this explicitly:
+\begin{dmath*}[compact]
+  \prod_{i=1,2} \[1+ \b\( E k_i^2- Z\)\]
+  = \sum_{i=1,2}  \[1+ \b\( E k_i^2- Z\)\] 
+  \implies \b^2 = \prod_{i=1,2} \frac{1}{E k_i^2 -Z}
+\end{dmath*}
+
+
 
 Also, what about prolonging the boundary modes?
 

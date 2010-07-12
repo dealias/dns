@@ -253,7 +253,7 @@ MDNS::Grid::Grid(unsigned g)
 MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y)
 {
   parent=prob;
-  w.Set(Y[OMEGA]);
+  w.Dimension(Y[OMEGA]);
   //w.Set(Y[nfields*myg+OMEGA]); // FIXME: is this right?
 }
 
@@ -347,6 +347,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
   InitialCondition->Set(w,Nx*my);
+  // FIXME: this doesn't seem to set the correct w.
 
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 }
@@ -375,6 +376,15 @@ void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
 {
   w.Set(w0);
   f0.Set(source);
+
+  if(t==0) { // FIXME!!!
+    for(unsigned i=0; i < Nx; ++i)
+      for(unsigned j=0; j < my; ++j) 
+	w[i][j]=Complex(icalpha,icbeta);
+  }
+
+  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
+  cout << w << endl;
 
   DNSBase::NonLinearSource(source,w0,t);
 
@@ -409,15 +419,16 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 
 void MDNS::Grid::setcount(array1<unsigned>::opt & count)
 {
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real k=sqrt(k02*(I2+j*j));
-      count[(unsigned)(k-0.5)] += 1;
+  if(spectrum) {
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	Real k=sqrt(k02*(I2+j*j));
+	count[(unsigned)(k-0.5)] += 1;
+      }
     }
   }
-
 }
 
 void MDNS::Grid::Spectrum(vector& S, const vector& w0)
@@ -576,8 +587,9 @@ void MDNS::InitialConditions()
   for(unsigned int g=0; g < Ngrids; ++g)
     G[g]->AttachTo(this,Y);
 
+
   for(unsigned g=0; g < Ngrids; ++g)
-    G[g]->InitialConditions(g);
+    G[g]->InitialConditions(g); 
 
 
   //***** output *****//
@@ -601,17 +613,18 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
+  return; // FIXME:TEMP
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
-  unsigned  aInvisible=G[ga]->getInvisible();
-  unsigned  bInvisible=G[gb]->getInvisible();
-  unsigned  axorigin=G[ga]->getxorigin();
-  unsigned  bxorigin=G[gb]->getxorigin();
+  unsigned aInvisible=G[ga]->getInvisible();
+  unsigned bInvisible=G[gb]->getInvisible();
+  unsigned axorigin=G[ga]->getxorigin();
+  unsigned bxorigin=G[gb]->getxorigin();
   unsigned aNx=G[ga]->getNx();
   unsigned amy=G[ga]->getmy();
-  unsigned  amx=G[ga]->getmx();
-  unsigned  bmx=G[gb]->getmx();
+  unsigned amx=G[ga]->getmx();
+  unsigned bmx=G[gb]->getmx();
   unsigned bNx=G[gb]->getNx();
   unsigned bmy=G[gb]->getmy();
   unsigned dx=bxorigin-axorigin;
@@ -620,9 +633,17 @@ void MDNS::Project(unsigned gb)
 
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
-  Set(wa,mY[ga][OMEGA]);
-  Set(wb,mY[gb][OMEGA]);
+  wa.Dimension(mY[ga][OMEGA]);
+  wb.Dimension(mY[gb][OMEGA]);
   
+  /*
+  // is this necessary?
+  array1<vector> va=mY[ga];
+  Set(wa,va[OMEGA]);
+  array1<vector> vb=mY[gb];
+  Set(wb,vb[OMEGA]);
+  */
+
   const unsigned xstart=bxorigin-bInvisible;
   const unsigned xstop=bxorigin+bInvisible;
 
@@ -695,33 +716,28 @@ void MDNS::Project(unsigned gb)
 
 void MDNS::Prolong(unsigned ga)
 {
+  return; // FIXME:TEMP
   //  cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
-  
-  int aInvisible=(int) G[ga]->getInvisible();
-  int axorigin=(int) G[ga]->getxorigin();
-  int amx=(int) G[ga]->getmx();
-  int dx=(int) G[gb]->getxorigin()-axorigin;
+  unsigned aInvisible=G[ga]->getInvisible();
+  unsigned bInvisible=G[gb]->getInvisible();
+  unsigned axorigin=G[ga]->getxorigin();
+  unsigned bxorigin=G[gb]->getxorigin();
+  unsigned aNx=G[ga]->getNx();
+  unsigned amy=G[ga]->getmy();
+  unsigned amx=G[ga]->getmx();
+  unsigned bmx=G[gb]->getmx();
+  unsigned bNx=G[gb]->getNx();
+  unsigned bmy=G[gb]->getmy();
+  unsigned dx=bxorigin-axorigin;
+  Real ak02=G[ga]->getk02();
+  Real bk02=G[gb]->getk02();
 
-  wa.Dimension(G[ga]->getNx(),G[ga]->getmy());
-  wb.Dimension(G[gb]->getNx(),G[gb]->getmy());
-
-  // FIXME: code doesn't work under both make and makeopt.
-  // for make:
-  ///*
-  array1<array1<Complex> > va=mY[ga];
-  Set(wa,va[OMEGA]);
-  array1<array1<Complex> > vb=mY[gb];
-  Set(wb,vb[OMEGA]);
-  //*/
-
-  // for makeopt:
-  /*
-  array1<Complex *> va=mY[ga];
-  wa.Set(va[OMEGA]);
-  array1<Complex *> vb=mY[gb];
-  wb.Set(vb[OMEGA]);
-  */
+  wa.Dimension(aNx,amy);
+  wb.Dimension(bNx,bmy);
+  wa.Dimension(mY[ga][OMEGA]); // FIXME: check
+  wb.Dimension(mY[gb][OMEGA]);
+ 
 
 
 
@@ -845,12 +861,12 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 	}
       }
       vector w0,source;
-      Dimension(w0,Y[OMEGA]);
+      w0.Dimension(Y[OMEGA]);
       G[g]->Spectrum(spectra,w0);
       
       if(g==glast) {
 	vector S;
-	Dimension(S,Src[EK]);
+	S.Dimension(Src[EK]);
 	for (unsigned i=0; i < nshells; ++i)
 	  S[i]=spectra[i];  // might this instead be a swap?
       }
