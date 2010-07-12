@@ -148,7 +148,9 @@ public:
     unsigned getNx() {return Nx;};
     unsigned getmy() {return my;};
     unsigned getInvisible() {return Invisible;};
-    
+    array2<Complex> * getwp() {return &w;};
+    void settow(array2<Complex> & w0) { Set(w0,w);};
+
     void InitialConditions(unsigned g);
     Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
     
@@ -383,8 +385,8 @@ void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
 	w[i][j]=Complex(icalpha,icbeta);
   }
 
-  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
-  cout << w << endl;
+  //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
+  //  cout << w << endl;
 
   DNSBase::NonLinearSource(source,w0,t);
 
@@ -613,7 +615,7 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
-  return; // FIXME:TEMP
+ 
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
@@ -633,19 +635,29 @@ void MDNS::Project(unsigned gb)
 
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
-  wa.Dimension(mY[ga][OMEGA]);
-  wb.Dimension(mY[gb][OMEGA]);
+
+
+  Dimension(wa,mY[ga][OMEGA]);
+  Dimension(wb,mY[gb][OMEGA]);
   
-  /*
+
   // is this necessary?
   array1<vector> va=mY[ga];
   Set(wa,va[OMEGA]);
   array1<vector> vb=mY[gb];
   Set(wb,vb[OMEGA]);
-  */
+
 
   const unsigned xstart=bxorigin-bInvisible;
   const unsigned xstop=bxorigin+bInvisible;
+
+  //G[ga]->settow(wa);
+  //G[gb]->settow(wb);
+  //cout << wa << endl;  exit(1);
+  // FIXME: looks like this isn't set right.
+  // maybe w isn't set right in Grid:: ?
+
+  return; // FIXME:TEMP
 
   if(radix == 1) {
     for(unsigned int i=xstart; i <= xstop; i++) {
