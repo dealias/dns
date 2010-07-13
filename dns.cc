@@ -1,8 +1,4 @@
-#include "options.h"
-#include "dns.h"
-
-
-
+#include "dnsbase.h"
 
 const double ProblemVersion=1.0;
 
@@ -37,8 +33,6 @@ Real icalpha=1.0;
 Real icbeta=1.0;
 
 // other global variables:
-int xpad=1;
-int ypad=1;
 
 
 class DNS : public DNSBase, public ProblemBase {
@@ -248,15 +242,11 @@ void DNS::Initialize()
 void DNS::InitialConditions()
 {
   // load vocabulary from global variables
-  xpad=::xpad;
-  ypad=::ypad;
-  nuH=::nuH;
-  nuL=::nuL;
-  pH=::pH;
-  pL=::pL;
   Nx=::Nx;
   Ny=::Ny;
-  spectrum=::spectrum;
+  nuH=::nuH;
+  nuL=::nuL;
+
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
   k0=1.0;
@@ -284,6 +274,7 @@ void DNS::InitialConditions()
 
   unsigned int Nxmy=Nx*my;
   unsigned int nbuf=3*Nxmy;
+  
   unsigned int Nx0=Nx+xpad;
   unsigned int Ny0=Ny+ypad;
   int my0=Ny0/2+1;
@@ -314,9 +305,14 @@ void DNS::InitialConditions()
   InitialCondition->Set(w,NY[OMEGA]);
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 
+  Set(T,Y[TRANSFER]);
   for(unsigned i=0; i < nshells; i++)
-    Y[EK][i]=0.0;
-
+    T[i]=0.0;
+  
+  Set(T,Y[EK]);
+  for(unsigned i=0; i < nshells; i++)
+    T[i]=0.0;
+  
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
   if(dynamic && false) {

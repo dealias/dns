@@ -1,5 +1,4 @@
-#include "options.h"
-#include "dns.h"
+#include "dnsbase.h"
 #include "MultiIntegrator.h"
 
 using namespace fftwpp;
@@ -37,9 +36,7 @@ unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
 
-// global variables for dns.h
-int xpad=1;
-int ypad=1;
+// global variables
 
 //***** Initial Conditions *****//
 InitialConditionBase *InitialCondition;
@@ -306,13 +303,9 @@ void MDNS::Grid::InitialConditions(unsigned g)
 {
   // load vocabulary from global variables
   myg=g;
-  xpad=::xpad;
-  ypad=::ypad;
   nuH=::nuH;
   nuL=::nuL;
-  pH=::pH;
-  pL=::pL;
-  spectrum=::spectrum;
+
   //  SetParams();
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
@@ -331,7 +324,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
-
 
   block=ComplexAlign(3*Nx*my);
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
@@ -754,9 +746,9 @@ void MDNS::Prolong(unsigned ga)
   const unsigned xstop=bxorigin+bInvisible;
 
   if(radix == 1) {
-    const int xstart=amx-aInvisible;
-    const int xstop=amx-aInvisible;
-    for(int i=xstart; i < xstop; i++) {
+    const unsigned xstart=amx-aInvisible;
+    const unsigned xstop=amx-aInvisible;
+    for(unsigned i=xstart; i < xstop; i++) {
       vector wai=wa[i];
       vector wbi=wb[i+dx];
       for(unsigned j=i < axorigin ? 1 : 0; j < aInvisible; ++j) {
