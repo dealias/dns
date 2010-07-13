@@ -590,19 +590,19 @@ void MDNS::Project(unsigned gb)
   cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
-  unsigned aInvisible=G[ga]->getInvisible();
+  //unsigned aInvisible=G[ga]->getInvisible();
   unsigned bInvisible=G[gb]->getInvisible();
   unsigned axorigin=G[ga]->getxorigin();
   unsigned bxorigin=G[gb]->getxorigin();
   unsigned aNx=G[ga]->getNx();
   unsigned amy=G[ga]->getmy();
-  unsigned amx=G[ga]->getmx();
-  unsigned bmx=G[gb]->getmx();
+  //unsigned amx=G[ga]->getmx();
+  //unsigned bmx=G[gb]->getmx();
   unsigned bNx=G[gb]->getNx();
   unsigned bmy=G[gb]->getmy();
   unsigned dx=bxorigin-axorigin;
-  Real ak02=G[ga]->getk02();
-  Real bk02=G[gb]->getk02();
+  //Real ak02=G[ga]->getk02();
+  //Real bk02=G[gb]->getk02();
 
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
@@ -651,7 +651,7 @@ void MDNS::Project(unsigned gb)
  	const int aJ=2*j;
 	const int aJp=aJ+1;
 	const int aJm=aJ==0? aJp : aJ-1;
-	/*
+
 	Real B2=abs2(wbi[j]);
 
 	// co-incident point 
@@ -699,7 +699,7 @@ void MDNS::Project(unsigned gb)
 	       << " is zero in project."<<endl;
 	  exit(1); // FIXME: work out something better for this case.
 	}
-	*/
+
       }
     }
     //    cout << "project GB \n" << G[gb]->GB << endl;
@@ -736,12 +736,12 @@ void MDNS::Prolong(unsigned ga)
   unsigned aNx=G[ga]->getNx();
   unsigned amy=G[ga]->getmy();
   unsigned amx=G[ga]->getmx();
-  unsigned bmx=G[gb]->getmx();
+  //unsigned bmx=G[gb]->getmx();
   unsigned bNx=G[gb]->getNx();
   unsigned bmy=G[gb]->getmy();
   unsigned dx=bxorigin-axorigin;
-  Real ak02=G[ga]->getk02();
-  Real bk02=G[gb]->getk02();
+  //Real ak02=G[ga]->getk02();
+  //Real bk02=G[gb]->getk02();
 
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
@@ -759,7 +759,7 @@ void MDNS::Prolong(unsigned ga)
     for(int i=xstart; i < xstop; i++) {
       vector wai=wa[i];
       vector wbi=wb[i+dx];
-      for(int j=i <= axorigin ? 1 : 0; j < aInvisible; ++j) {
+      for(unsigned j=i < axorigin ? 1 : 0; j < aInvisible; ++j) {
 	wai[j]=wbi[j];
       }
     }
