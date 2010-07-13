@@ -138,6 +138,8 @@ public:
     // for subgrid non-linearity calculation:
     DNSBase * smallDNSBase;
 
+
+
   public:
     Grid();
     Grid(unsigned, MDNS *);
@@ -146,12 +148,15 @@ public:
     void AttachTo(MDNS *prob, const vector2 & Y);
     void SetParams();
     unsigned myg;
+
+    array2<Real> GB;
   
     unsigned getnshells() {return nshells;};
     unsigned getNx() {return Nx;};
     unsigned getmy() {return my;};
     unsigned getInvisible() {return Invisible;};
     array2<Complex> * getwp() {return &w;};
+    void settow(array2<Complex> & w0) {Set(w0,w);};
 
     void InitialConditions(unsigned g);
     //Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
@@ -345,6 +350,11 @@ void MDNS::Grid::InitialConditions(unsigned g)
     wS.Dimension(sNx,smy,wSblock);
     SrcwS.Dimension(sNx,smy,SrcwSblock);
     smallDNSBase=new DNSBase(sNx,smy,k0); // TODO: share memory block
+    GB.Dimension(2*Invisible+1,Invisible+1);
+    Allocate(GB,(2*Invisible+1)*(Invisible+1));
+    for(unsigned i=0; i < 2*Invisible+1; ++i)
+      GB[i]=0.0;
+	  
   }
 
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
@@ -498,7 +508,7 @@ MDNSVocabulary::MDNSVocabulary()
 }
 
 MDNS::MDNS() 
-{
+{ 
   nfields = Nfields;
   MDNSProblem=this;
   MProblem=this;
@@ -506,7 +516,7 @@ MDNS::MDNS()
   align=sizeof(Complex);
 }
 
-MDNS::~MDNS() 
+MDNS::~MDNS()
 {
 }
 
@@ -529,8 +539,7 @@ void MDNS::InitialConditions()
 
   if(spectrum) { 
     nshells=spectrum ? 
-      (unsigned) (gk(glast)*hypot(gm(mx,glast)-1,gm(my,glast)-1)+0.5) 
-      : 0; // FIXME: k0??
+      (unsigned) (gk(glast)*hypot(gm(mx,glast)-1,gm(my,glast)-1)+0.5) : 0;
   } else
     nshells=0;
 
@@ -552,6 +561,8 @@ void MDNS::InitialConditions()
     G[g]=new Grid(g,this);
     G[g]->AttachTo(this,Y);
     G[g]->InitialConditions(g); 
+    icalpha *= sqrt(radix);
+    icbeta *= sqrt(radix);
   }
 
   //***** output *****//
@@ -566,7 +577,7 @@ void MDNS::InitialConditions()
     count[i]=0;
   for(unsigned g=0; g < Ngrids; ++g)
     G[g]->setcount(count);
-
+  
   open_output(Mfevt,dirsep,"evt");
   open_output(ft,dirsep,"t");
   if(!restart) remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
@@ -575,8 +586,8 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
- 
-  //  cout << "project onto " << G[gb]->myg << endl;
+  return;
+  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
   unsigned aInvisible=G[ga]->getInvisible();
@@ -596,28 +607,19 @@ void MDNS::Project(unsigned gb)
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
 
+  Dimension(wa,mY[ga][OMEGA]); // FIXME: check
+  Dimension(wb,mY[gb][OMEGA]);
 
+  G[ga]->settow(wa);
+  G[gb]->settow(wb);
 
-  // FIXME: should be 
-  //Dimension(wa,mY[ga][OMEGA]);
-  ///Dimension(wb,mY[gb][OMEGA]);
-  
-
-  // is this necessary?
-  array1<vector> va=mY[ga];
-  Set(wa,va[OMEGA]);
-  array1<vector> vb=mY[gb];
-  Set(wb,vb[OMEGA]);
-
+  //  cout << wa << endl;
+  //G[ga]->coutw();
+  //G[gb]->coutw();
+  //  cout << wb << endl;
 
   const unsigned xstart=bxorigin-bInvisible;
   const unsigned xstop=bxorigin+bInvisible;
-
-  //cout << wa << endl;  //exit(1);
-  //cout << wb << endl;  //exit(1);
-  // FIXME: looks like this isn't set right.
-  // maybe w isn't set right in Grid:: ?
-
 
   if(radix == 1) {
     for(unsigned int i=xstart; i <= xstop; i++) {
@@ -632,40 +634,46 @@ void MDNS::Project(unsigned gb)
   if(radix == 4) {
     for(unsigned i=xstart; i <= xstop; ++ i) {
       int I=(int)i - (int)bxorigin;
+      //unsigned Bi=i-xstart;
+      array1<Real> Bi;
+      //Bi.Set(Bg[i-xstart]);
+      Bi.Set(G[gb]->GB[i-xstart]);
+      Bi.Dimension(bInvisible+1);
+
       vector wai=wa[2*I+axorigin];
-      vector waim=wa[2*I+axorigin-1];;
+      vector waim=wa[2*I+axorigin-1];
       vector waip=wa[2*I+axorigin+1];
       vector wbi=wb[i];
       
-      for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
+
+      for(unsigned j= i < axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
 	
  	const int aJ=2*j;
 	const int aJp=aJ+1;
 	const int aJm=aJ==0? aJp : aJ-1;
-
+	/*
 	Real B2=abs2(wbi[j]);
 
-
-	// project co-incident point
-	//wai[aJ]=Complex(2*I,aJ);
+	// co-incident point 
+	//wai[aJ]=Complex(2*I,aJ); // 00
 	Real A2=abs2(wai[aJ]);
 	
-	//project points on same row/column
-	//waim[aJ]=Complex(2*I-1,aJ);
-	//waip[aJ]=Complex(2*I+1,aJ);
+	// points on same row/column
+	//waim[aJ]=Complex(2*I-1,aJ); // -0
+	//waip[aJ]=Complex(2*I+1,aJ); // +0
 	A2 += 0.5*(abs2(waim[aJ]) + abs2(waip[aJ]));
 
 	if(aJ) {// Hermiticity case.
-	  //wai[aJm]=Complex(2*I,aJm); 
+	  //wai[aJm]=Complex(2*I,aJm); // 0-
 	  A2 += 0.5*abs2(wai[aJm]);
 	} else {
-	  wa[axorigin-2*I][aJp]=Complex(-2*I,aJm); //--
+	  //wa[axorigin-2*I][aJp]=Complex(-2*I,aJm); //0-
 	  A2 += 0.5*abs2(wa[axorigin-2*I][aJp]);
 	}
-	//wai[aJp]=Complex(2*I,aJp);
+	//wai[aJp]=Complex(2*I,aJp); // 0+
 	A2 += 0.5*abs2(wai[aJp]);
 	
-	//project points on diagnols.
+	// points on diagnols.
 	//waim[aJp]=Complex(2*I-1,aJp); // -+
 	//waip[aJp]=Complex(2*I+1,aJp); // ++
 	A2 += 0.25*(abs2(waim[aJp]) + abs2(waip[aJp]));
@@ -679,17 +687,23 @@ void MDNS::Project(unsigned gb)
 	  A2 += 0.25*(abs2(wa[axorigin-2*I+1][aJm]) + 
 		      abs2(wa[axorigin-2*I-1][aJm]));
 	}
+
+
 	if(B2) {
-	  wbi[j] *= sqrt(A2/B2);
+	  //	  B2 *=4;
+	  //wbi[j] *= sqrt(A2/B2);
+	  cout << "A2/B2=" << A2/B2 << endl;
+	  Bi[j]=B2;
 	} else {
 	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb 
-	       << " is zero."<<endl;
-	  exit(1);
+	       << " is zero in project."<<endl;
+	  exit(1); // FIXME: work out something better for this case.
 	}
-	
+	*/
       }
     }
-
+    //    cout << "project GB \n" << G[gb]->GB << endl;
+    /*
     for(unsigned i=0; i < aNx; i += 2) {
       int I= (int) i - (int) bxorigin;
       int bI=I/2;
@@ -699,18 +713,22 @@ void MDNS::Project(unsigned gb)
 	Real bZ=abs2(wb[bi][bj]);
       }
     }
+    */
   }
 
   
+
+  //  cout << wa << endl;  cout << wb << endl;
 
   HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
 }
 
 void MDNS::Prolong(unsigned ga)
 {
-  return; // FIXME:TEMP
-  //  cout << "prolong onto " << G[ga]->myg << endl;
+  return;
+  cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
+
   unsigned aInvisible=G[ga]->getInvisible();
   unsigned bInvisible=G[gb]->getInvisible();
   unsigned axorigin=G[ga]->getxorigin();
@@ -727,11 +745,13 @@ void MDNS::Prolong(unsigned ga)
 
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
-  wa.Dimension(mY[ga][OMEGA]); // FIXME: check
-  wb.Dimension(mY[gb][OMEGA]);
- 
+
+  G[ga]->settow(wa);
+  G[gb]->settow(wb);
 
 
+  const unsigned xstart=bxorigin-bInvisible;
+  const unsigned xstop=bxorigin+bInvisible;
 
   if(radix == 1) {
     const int xstart=amx-aInvisible;
@@ -745,10 +765,69 @@ void MDNS::Prolong(unsigned ga)
     }
   }
   if(radix == 4) {
-    // TODO: radix4
-  }
+    for(unsigned i=xstart; i <= xstop; ++ i) {
+      int I=(int)i - (int)bxorigin;
+      //unsigned Bi=i-xstart;
+      array1<Real> Bi;
+      //Bi.Set(Bg[i-xstart]);
+      Bi.Set(G[gb]->GB[i-xstart]);
+      Bi.Dimension(bInvisible+1);
 
-  fftwpp::HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa);
+      vector wai=wa[2*I+axorigin];
+      vector waim=wa[2*I+axorigin-1];
+      vector waip=wa[2*I+axorigin+1];
+      vector wbi=wb[i];
+      
+      for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
+	
+ 	const int aJ=2*j;
+	const int aJp=aJ+1;
+	const int aJm=aJ==0? aJp : aJ-1;
+
+	
+	Real f;
+	Real B2=abs2(wbi[j]);
+	if(B2 > 0) {
+	  f=sqrt(Bi[j]/B2);
+	} else {
+	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb 
+	       << " is zero in prolong."<<endl;
+	  exit(1); // FIXME: work out something better for this case.
+	}
+	cout << "f="<<f<<endl;
+	f=1; // FIXME: temp
+
+
+	// co-incident point
+	wai[aJ] *= f;
+	
+	// on same row/column
+	waim[aJ] *= f;
+	waip[aJ] *= f;
+
+	if(aJ) {
+	  wai[aJm] *= f;
+	} else {
+	  wa[axorigin-2*I][aJp] *=f;
+	}
+	wai[aJp] *= f;
+	
+	//project points on diagnols.
+	waim[aJp] *= f;
+	waip[aJp] *= f;
+	if(aJ) {// Hermiticity case.
+	  waim[aJm] *= f;
+	  waip[aJm] *= f;
+	} else {
+	  wa[axorigin-2*I+1][aJm] *= f;
+	  wa[axorigin-2*I-1][aJm] *= f;
+	}
+      }
+    }
+  }
+  
+  cout << "prolong \n" << G[gb]->GB << endl;
+  HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa);
   // maybe only on the overlapping modes?
 
   // FIXME: copy stuff from spectra onto just onto lastgrid's Src[EK]
@@ -863,6 +942,7 @@ void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   vector w0,source;
   Dimension(w0,Y[OMEGA]);
   Dimension(source,Src[OMEGA]);
+  if(radix==1) {cout << "radix=1 breaks the convolution." << endl; exit(1);}
   G[grid]->NonLinearSource(source,w0,t);
 }
 
