@@ -1,5 +1,6 @@
 #include "dnsbase.h"
 #include "MultiIntegrator.h"
+#include "Conservative.h"
 
 using namespace fftwpp;
 
@@ -209,6 +210,18 @@ public:
   
   void Project(unsigned ga);
   void Prolong(unsigned gb);
+
+  void IndexLimits(unsigned int& start, unsigned int& stop,
+		   unsigned int& startT, unsigned int& stopT,
+		   unsigned int& startM, unsigned int& stopM) {
+    // FIXME: this might not be set right for exponential integrators
+    start=Start(OMEGA);
+    stop=Stop(OMEGA);
+    startT=Start(TRANSFER);
+    stopT=Stop(TRANSFER);
+    startM=Start(EK);
+    stopM=Stop(EK);
+  }
 
   // Output functions
   Real getSpectrum(unsigned i) {
@@ -420,13 +433,14 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 
 void MDNS::Grid::setcount(array1<unsigned>::opt & count)
 {
+  unsigned const gfactor = pow(radix,myg);
   if(spectrum) {
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real k=sqrt(k02*(I2+j*j));
-	count[(unsigned)(k-0.5)] += 1;
+	count[(unsigned)(k-0.5)] += gfactor;
       }
     }
   }
@@ -514,6 +528,7 @@ MDNS::MDNS()
   check_compatibility(DEBUG);
   align=sizeof(Complex);
   grid=0;
+  ConservativeIntegrators(MDNS_Vocabulary.IntegratorTable,this);
 }
 
 MDNS::~MDNS()
@@ -697,9 +712,9 @@ void MDNS::Project(unsigned gb)
 
 
 	if(B2) {
-	  //	  B2 *=4;
+	  B2 *=4;
 	  //wbi[j] *= sqrt(A2/B2); // FIXME: restore
-	  //cout << "A2/B2=" << A2/B2 << endl;
+	  //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
 	  Bi[j]=B2;
 	} else {
 	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb 
@@ -800,13 +815,13 @@ void MDNS::Prolong(unsigned ga)
 	Real f;
 	Real B2=abs2(wbi[j]);
 	if(B2 > 0) {
-	  f=sqrt(Bi[j]/B2);
+	  f=0.25*sqrt(Bi[j]/B2);
 	} else {
 	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb 
 	       << " is zero in prolong."<<endl;
 	  exit(1); // FIXME: work out something better for this case.
 	}
-	cout << "f="<<f<<endl;
+	//cout << "f="<<f<<endl;
 	f=1; // FIXME: temp
 
 
@@ -838,7 +853,7 @@ void MDNS::Prolong(unsigned ga)
     }
   }
   
-  cout << "prolong \n" << G[gb]->GB << endl;
+  //cout << "prolong \n" << G[gb]->GB << endl;
   HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa);
   // maybe only on the overlapping modes?
 
