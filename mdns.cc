@@ -586,7 +586,7 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
-  return;
+  //  return;
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
@@ -635,24 +635,31 @@ void MDNS::Project(unsigned gb)
     for(unsigned i=xstart; i <= xstop; ++ i) {
       int I=(int)i - (int)bxorigin;
       //unsigned Bi=i-xstart;
+
       array1<Real> Bi;
-      //Bi.Set(Bg[i-xstart]);
       Bi.Set(G[gb]->GB[i-xstart]);
       Bi.Dimension(bInvisible+1);
 
-      vector wai=wa[2*I+axorigin];
-      vector waim=wa[2*I+axorigin-1];
-      vector waip=wa[2*I+axorigin+1];
-      vector wbi=wb[i];
+      vector wai, waim, waip;
+      Set(wai,wa[2*I+axorigin]);
+      Set(waim,wa[2*I+axorigin-1]);
+      Set(waip,wa[2*I+axorigin+1]);
+      Dimension(wai,wa[2*I+axorigin]);
+      Dimension(waim,wa[2*I+axorigin-1]);
+      Dimension(waip,wa[2*I+axorigin+1]);
+
+      vector wbi;
+      Set(wbi,wb[i]);
+      Dimension(wbi,wb[i]);
       
 
       for(unsigned j= i < axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
-	
+	Real B2=abs2(wbi[j]);
+
  	const int aJ=2*j;
 	const int aJp=aJ+1;
 	const int aJm=aJ==0? aJp : aJ-1;
 
-	Real B2=abs2(wbi[j]);
 
 	// co-incident point 
 	//wai[aJ]=Complex(2*I,aJ); // 00
@@ -691,7 +698,7 @@ void MDNS::Project(unsigned gb)
 
 	if(B2) {
 	  //	  B2 *=4;
-	  //wbi[j] *= sqrt(A2/B2);
+	  //wbi[j] *= sqrt(A2/B2); // FIXME: restore
 	  //cout << "A2/B2=" << A2/B2 << endl;
 	  Bi[j]=B2;
 	} else {
@@ -699,7 +706,6 @@ void MDNS::Project(unsigned gb)
 	       << " is zero in project."<<endl;
 	  exit(1); // FIXME: work out something better for this case.
 	}
-
       }
     }
     //    cout << "project GB \n" << G[gb]->GB << endl;
@@ -720,7 +726,7 @@ void MDNS::Project(unsigned gb)
 
   //  cout << wa << endl;  cout << wb << endl;
 
-  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
+  //HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
 }
 
 void MDNS::Prolong(unsigned ga)
@@ -767,16 +773,22 @@ void MDNS::Prolong(unsigned ga)
   if(radix == 4) {
     for(unsigned i=xstart; i <= xstop; ++ i) {
       int I=(int)i - (int)bxorigin;
-      //unsigned Bi=i-xstart;
+
       array1<Real> Bi;
-      //Bi.Set(Bg[i-xstart]);
       Bi.Set(G[gb]->GB[i-xstart]);
       Bi.Dimension(bInvisible+1);
 
-      vector wai=wa[2*I+axorigin];
-      vector waim=wa[2*I+axorigin-1];
-      vector waip=wa[2*I+axorigin+1];
-      vector wbi=wb[i];
+      vector wai, waim, waip;
+      Set(wai,wa[2*I+axorigin]);
+      Set(waim,wa[2*I+axorigin-1]);
+      Set(waip,wa[2*I+axorigin+1]);
+      Dimension(wai,wa[2*I+axorigin]);
+      Dimension(waim,wa[2*I+axorigin-1]);
+      Dimension(waip,wa[2*I+axorigin+1]);
+
+      vector wbi;
+      Set(wbi,wb[i]);
+      Dimension(wbi,wb[i]);
       
       for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
 	
