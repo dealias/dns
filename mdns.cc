@@ -56,7 +56,7 @@ ForcingBase *Forcing;
 //***** Global variables for MultiIntegrator.h *****//
 MultiProblem *MProblem;
 unsigned Ngrids=2;
-const char *subintegrator; 
+const char *subintegrator="rk4";
 
 // ***** Vocabulary ***** //
 class MDNSVocabulary : public VocabularyBase {
@@ -278,7 +278,7 @@ void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
   parent=prob;
   nfields=parent->getNfields();
   w.Set(Y[nfields*myg+OMEGA]);
-  Sp.Set(Y[nfields*myg+EK]);
+  Set(Sp,Y[nfields*myg+EK]);
 }
 
 void MDNS::Grid::SetParams()
@@ -347,11 +347,11 @@ void MDNS::Grid::InitialConditions(unsigned g)
     wS.Dimension(sNx,smy,wSblock);
     SrcwS.Dimension(sNx,smy,SrcwSblock);
     smallDNSBase=new DNSBase(sNx,smy,k0); // TODO: share memory block
+
     GB.Dimension(2*Invisible+1,Invisible+1);
     Allocate(GB,(2*Invisible+1)*(Invisible+1));
     for(unsigned i=0; i < 2*Invisible+1; ++i)
-      GB[i]=0.0;
-	  
+      GB[i][0]=0.0;
   }
 
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
@@ -585,7 +585,7 @@ void MDNS::InitialConditions()
 void MDNS::Project(unsigned gb) 
 {
   return;
-  cout << "project onto " << G[gb]->myg << endl;
+  //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
   //unsigned aInvisible=G[ga]->getInvisible();
@@ -605,8 +605,8 @@ void MDNS::Project(unsigned gb)
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
 
-  Dimension(wa,mY[ga][OMEGA]); // FIXME: check
-  Dimension(wb,mY[gb][OMEGA]);
+  //  wa.Dimension(mY[ga][OMEGA]); // FIXME: check
+  //  wb.Dimension(mY[gb][OMEGA]);
 
   G[ga]->settow(wa);
   G[gb]->settow(wb);
@@ -690,7 +690,7 @@ void MDNS::Project(unsigned gb)
 	if(B2) {
 	  //	  B2 *=4;
 	  //wbi[j] *= sqrt(A2/B2);
-	  cout << "A2/B2=" << A2/B2 << endl;
+	  //cout << "A2/B2=" << A2/B2 << endl;
 	  Bi[j]=B2;
 	} else {
 	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb 
@@ -724,7 +724,7 @@ void MDNS::Project(unsigned gb)
 void MDNS::Prolong(unsigned ga)
 {
   return;
-  cout << "prolong onto " << G[ga]->myg << endl;
+  //  cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
 
   unsigned aInvisible=G[ga]->getInvisible();
@@ -941,7 +941,6 @@ void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   vector w0,source;
   Set(w0,Y[OMEGA]);
   Set(source,Src[OMEGA]);
-  if(radix==1) {cout << "radix=1 breaks the convolution." << endl; exit(1);}
   G[grid]->NonLinearSource(source,w0,t);
 }
 

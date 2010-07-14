@@ -20,9 +20,8 @@ radix=4
 spectrum: 
 	  Src[EK] is curently set for all grids.
 	  should move this info to just one grid.
-	  radix=1 is wonky, radix=4 borks.
 
-dynamic=1 seems to have no effect
+subint=rk5 drives the time-step to zero and then segfaults. w00t.
 
 radix=1
 	spectrum not working right now for some reason.
