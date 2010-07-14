@@ -132,6 +132,8 @@ public:
     MDNS * parent;
     unsigned nfields;
 
+    vector Sp; // Spectrum
+
     // for subgrid non-linearity calculation:
     DNSBase * smallDNSBase;
 
@@ -212,7 +214,7 @@ public:
   Real getSpectrum(unsigned i) {
     double c=count[i];
     return c > 0 ? Y[EK][i].re/c : 0.0;
-  };  
+  };
   void Computek(DynVector<unsigned>&);
   Real getk(unsigned i) {return (Real) i;};
 
@@ -276,8 +278,7 @@ void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
   parent=prob;
   nfields=parent->getNfields();
   w.Set(Y[nfields*myg+OMEGA]);
-  w=0.0; // Temporary
-  T.Set(Y[nfields*myg+EK]);
+  Sp.Set(Y[nfields*myg+EK]);
 }
 
 void MDNS::Grid::SetParams()
@@ -303,12 +304,12 @@ void MDNS::Grid::SetParams()
 
 void MDNS::Grid::InitialConditions(unsigned g)
 {
-  // load vocabulary from global variables
   myg=g;
+
+  // load vocabulary from global variables
   nuH=::nuH;
   nuL=::nuL;
 
-  //  SetParams();
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
@@ -321,9 +322,9 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   cout << "\nALLOCATING FFT BUFFERS" << endl;
 
-  Dimension(T,nshells);
+  Dimension(Sp,nshells);
   for(unsigned i=0; i < nshells; i++)
-    T[i]=0.0;
+    Sp[i]=0.0;
   
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
@@ -911,6 +912,7 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
       if(g==glast) {
 	vector S;
 	Set(S,Src[EK]);
+	Dimension(S,nshells);
 	for (unsigned i=0; i < nshells; ++i)
 	  S[i]=spectra[i];  // might this instead be a swap?
       }

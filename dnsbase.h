@@ -38,7 +38,7 @@ class DNSBase {
   Real k02; // k0^2
   array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
-  vector T;
+  vector T; // Transfer
 
   int tcount;
   array1<unsigned>::opt count;
