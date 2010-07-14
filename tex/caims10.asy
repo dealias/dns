@@ -44,32 +44,43 @@ algorithms that we have recently developed for computing implicitly
 dealiased convolu- tions (http://fftwpp.sourceforge.net).
 */
 
-titlepage("The Fastest Convolution in the West",
-	  "Malcolm Roberts","\Blue{University of Alberta}",
+titlepage("The Multispectral Method",
+	  "Bruno Eckhardt, John Bowman, {\bf Malcolm Roberts}",
 	  date="2010-07-25",
 	  url="www.math.ualberta.ca/$\sim$mroberts");
 
 newslide(stepping=false);
 title("Outline",newslide=false);
-item("Convolution");
-subitem("Definition");
-subitem("Applications");
-item("Fast Convolutions");
-subitem("The Convolution Theorem");
-item("Aliasing Errors");
-subitem("Zero-padding");
-subitem("Phase-shift dealiasing");
-subitem("Implicit Padding");
-item("Centered Hermitian Convolutions");
-item("Ternary Convolutions");
+item("High Reynolds-Number Turbulence");
+item("Pseudospectral simulations");
+item("Multispectral simulations");
+subitem("Grid geometry");
+subitem("Time-stepping");
+subitem("Projection / Prolongation");
+item("Test-bed: shell models of turbulence");
+item("2D incompressible turbulence");
+subitem("Decimation schemes");
+subitem("Projection / Prolongation");
+item("Future work");
 
-title("Convolutions");
-item("The convolution of the functions $f$ and $g$ is");
-equation("(f*g)(t)=\int_{-\infty}^\infty f(\tau) g(t-\tau)\, d\tau.");
-item("For example, if $f=g=\chi_{(-1,1)}(t)$");
-figure("cyrc_f");
-item("Then $f*g$ is:");
-figure("cyrc_fg");
+title("High Reynolds-Number Turbulence");
+//R=2560 from P173Kaneda.pdf (3D), wall-bounded turbulence
+// Jupiter: 50m/s = 5e3 cm/s
+// Helium: dynamic viscosity: 8.4 μPa·s = 8.4 e-6 g/cm
+// density: 0.08988 g/L (HE) or  1.326 g/cm (Jupiter)
+// radius: ~ 70 000 km = 7e11 cm
+// R ~ 4e+20 ?
+item("K14 theory");
+item("We can reach low Reynolds number.");
+item("We need to reach high Reynolds numbers.");
+item("e.g.\ Jupiter: Re ~ 4e+20");
+
+title("Pseudo-spectral simulations");
+item("put pseudo-code for nonlinear source here!");
+item("plug fftwpp");
+
+title("The multispectral method");
 
 
-bibliography("refs");
+
+//bibliography("refs");
