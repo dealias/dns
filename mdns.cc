@@ -14,8 +14,8 @@ const double ProblemVersion=1.0;
 const char *problem="Multispectral Direct Numerical Simulation of Turbulence";
 
 const char *method="MDNS";
-const char *integrator="RK5";
-const char *ic="Equipartition";
+const char *integrator="MultiIntegrator";
+const char *ic="Constant";
 //const char *linearity="Power";
 const char *forcing="WhiteNoiseBanded";
 
@@ -586,7 +586,7 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
-  //  return;
+  return;
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
