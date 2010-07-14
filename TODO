@@ -22,6 +22,7 @@ spectrum:
 	  should move this info to just one grid.
 
 subint=rk5 drives the time-step to zero and then segfaults. w00t.
+	   (maybe just caused by too-high dt setting at start?)
 
 radix=1
 	spectrum not working right now for some reason.

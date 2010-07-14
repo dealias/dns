@@ -310,7 +310,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
   nuH=::nuH;
   nuL=::nuL;
 
-
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
   if(radix != 1 && radix != 4) 
@@ -437,6 +436,9 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 {
   w.Set(w0);
   
+  for(unsigned i=0; i < nshells; ++i)
+    S[i]=Complex(0.0,0.0);
+
   // Compute instantaneous angular sum over each circular shell.
 
   // FIXME: loop over only visible modes!
@@ -902,7 +904,6 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
       if(g==0) { // zero the spectrum
 	for(unsigned i=0; i < nshells; ++i) {
 	  spectra[i]=Complex(0.0,0.0);
-	  Src[EK][i]=Complex(0.0,0.0);
 	}
       }
       vector w0;
