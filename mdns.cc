@@ -259,7 +259,7 @@ MDNS::Grid::Grid(unsigned g, MDNS * parent0)
 MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y)
 {
   parent=prob;
-  w.Dimension(Y[OMEGA]);
+  w.Set(Y[OMEGA]);
 }
 
 MDNS::Grid::~Grid()
@@ -276,6 +276,8 @@ void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
   parent=prob;
   nfields=parent->getNfields();
   w.Set(Y[nfields*myg+OMEGA]);
+  w=0.0; // Temporary
+  T.Set(Y[nfields*myg+EK]);
 }
 
 void MDNS::Grid::SetParams()
@@ -320,7 +322,9 @@ void MDNS::Grid::InitialConditions(unsigned g)
   cout << "\nALLOCATING FFT BUFFERS" << endl;
 
   Dimension(T,nshells);
-
+  for(unsigned i=0; i < nshells; i++)
+    T[i]=0.0;
+  
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
@@ -506,6 +510,7 @@ MDNS::MDNS()
   MProblem=this;
   check_compatibility(DEBUG);
   align=sizeof(Complex);
+  grid=0;
 }
 
 MDNS::~MDNS()
@@ -900,12 +905,12 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 	}
       }
       vector w0;
-      Dimension(w0,Y[OMEGA]);
+      Set(w0,Y[OMEGA]);
       G[g]->Spectrum(spectra,w0);
       
       if(g==glast) {
 	vector S;
-	Dimension(S,Src[EK]);
+	Set(S,Src[EK]);
 	for (unsigned i=0; i < nshells; ++i)
 	  S[i]=spectra[i];  // might this instead be a swap?
       }
@@ -924,23 +929,23 @@ void MDNS::ExponentialSource(const vector2& Src, const vector2& Y, double t)
 void MDNS::LinearSource(const vector2& Src, const vector2& Y, double t) 
 {
   vector w0,source;
-  Dimension(w0,Y[OMEGA]);
-  Dimension(source,Src[OMEGA]);
+  Set(w0,Y[OMEGA]);
+  Set(source,Src[OMEGA]);
   G[grid]->LinearSource(source,w0,t);
 }
 
 void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double t) 
 {
   vector w0,source;
-  Dimension(w0,Y[OMEGA]);
-  Dimension(source,Src[OMEGA]);
+  Set(w0,Y[OMEGA]);
+  Set(source,Src[OMEGA]);
   if(radix==1) {cout << "radix=1 breaks the convolution." << endl; exit(1);}
   G[grid]->NonLinearSource(source,w0,t);
 }
 
 void MDNS::Stochastic(const vector2& Y, double t, double dt) 
 {
-  //G[grid]->Stochastic(T,y,t,dt);
+//  G[grid]->Stochastic(T,y,t,dt);
 }
 
 /*
@@ -952,6 +957,6 @@ void MDNS::Moments(const vector2& Src, const vector2& Y, double t)
   
 void MDNS::Transfer(const vector2& Src, const vector2& Y) 
 {
-  G[grid]->Transfer(Src,Y);
+//  G[grid]->Transfer(Src,Y);
 }
 
