@@ -172,16 +172,18 @@ public:
     void coutw() {cout << "mygrid is "<<myg<<endl<< w << endl;}
   
     void loopwF(const FunctRRPtr,int n,...);
+    /*
     class Invariants : public FunctRR {
       void f(const Real w2, const Real k02, int n,va_list args) {
 	double * Z=va_arg(args,double *);
 	double * E=va_arg(args,double *);
 	double * P=va_arg(args,double *);
 	*Z += w2;
-	*E += w2/k02;
-	*P += w2*k02;
+	*E += w2/k2;
+	*P += w2*k2;
       }
     };
+    */
   };
   array1<Grid *> G;
   
@@ -310,9 +312,10 @@ void MDNS::Grid::SetParams()
   if(myg == 0) {
     Invisible=Invisible2=0;
   } else {
-    // Check nonsquare radices.
-    Invisible=(gm(::Nx,myg-1)/2)*
-      ((unsigned) (parent->gk(myg-1)/parent->gk(myg)+0.5));
+    // FIXME!
+    Invisible=(unsigned) (gm(::Nx,myg-1)/2*parent->gk(myg-1)/parent->gk(myg)+
+                          0.1);
+    cout << Invisible << endl;
     Invisible2=Invisible*Invisible;
   }
 }
@@ -475,8 +478,22 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 {
   w.Set(Y[OMEGA]);
-  FunctRRPtr F = new Invariants;
-  loopwF(F,3,&Z,&E,&P);
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      if(j > Invisible || I2 > Invisible2) {
+	Real w2=abs2(wi[j]);
+	Real k2=k02*(I2+j*j);
+	Z += w2;
+	E += w2/k2;
+	P += w2*k2;
+      }
+    }
+  }
+//  FunctRRPtr F = new Invariants;
+//  loopwF(F,3,&Z,&E,&P);
 }
 
 /****** Vocabulary *****/
