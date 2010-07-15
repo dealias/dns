@@ -54,13 +54,15 @@ title("Outline",newslide=false);
 item("High Reynolds-Number Turbulence");
 item("Pseudospectral simulations");
 item("Multispectral simulations");
-subitem("Grid geometry");
-subitem("Time-stepping");
-subitem("Projection / Prolongation");
-item("Test-bed: shell models of turbulence");
-item("2D incompressible turbulence");
-subitem("Decimation schemes");
-subitem("Projection / Prolongation");
+item("Grid geometry:");
+subitem("radix-2 decimation");
+subitem("radix-4 decimation");
+item("Decimated evolution equation");
+item("Synchronizing grids");
+subitem("Projection");
+subitem("Prolongation");
+item("Time-stepping");
+//item("initial results?");
 item("Future work");
 
 title("High Reynolds-Number Turbulence");
@@ -70,17 +72,72 @@ title("High Reynolds-Number Turbulence");
 // density: 0.08988 g/L (HE) or  1.326 g/cm (Jupiter)
 // radius: ~ 70 000 km = 7e11 cm
 // R ~ 4e+20 ?
-item("K14 theory");
-item("We can reach low Reynolds number.");
-item("We need to reach high Reynolds numbers.");
-item("e.g.\ Jupiter: Re ~ 4e+20");
+item("The Navier--Stokes equations");
+equation("1+1=2"); // FIXME
+remark("are characterized by the  Reynolds-number $R$,");
+equation("R=\frac{U L}{\nu}"); // REF?
+item("where $U$ and $L$ are characteristic velocity and length scales, and
+$\nu$ is the kinematic viscosity.");
+item("Energy is dissipated at scales around $k_d=FIXME$");
+item("The number of modes $N$ required ro resolve this grows as");
+equation("N \sim Re^{2.25}.");
+
+title("Reynolds Numbers");
+item("Airplanes: $R \approx 10^6$.");
+item("The Earth's atmosphere $R \approx 10^9$.");
+//item("Jupiter's red spot has $R \approx 10^{14}$.");
+item("Jupiter's atmosphere has $R \approx 10^{20}$.");
+//skip();
+item("The large Earth simulator can reach $R=2560$. REF"); // FIXME
+item("Under-resolved simulations can have errors at the largest scales.");
+indexedfigure("underres_",1,8,"width=16cm");
+
+title("Pseudo-spectral simulations"); // ref
+item("Spectral simulations evolve the Fourier-transformed Navier--Stoks equations:");
+equation("1+1=3.");
+item("The advection term $u \del \cdot u$ becomes a convolution $FIXME$ in Fourier space, taking $\O(n^2)$ operations.");
+item("This is best done by transforming back into $x$-space and multiplying, using $\O n \log n$ operations.");
+//FIXME: figure (or equation?)
 
 title("Pseudo-spectral simulations");
-item("put pseudo-code for nonlinear source here!");
 item("plug fftwpp");
+item("put algorithm for calculating nonlinear source here."); // FIXME
 
 title("The multispectral method");
+item("we care about the large scales but need to resolve at least some of
+the small scales.");
+item("we can't use a variably decimated grid because of the Liouville theorem.");
+equation("E(k) = FIXME");
+item("a picture of decimated grids on top of each other (ooh yeah....)");
+item("This focuses resolution at the large, energy-carrying scale, while
+preserving the Liouville theorem.");
+item("The 2D, vorticity-based Navier--Stokes equations are a good choice on which to develop the method.");
+equation("1+1=4");
+item("Of theoretical interest, complicated by two invariants, simplified
+by a scalar field.");
 
+title("Grid geometry: radix-2");
+
+title("Grid geometry: radix-4");
+item("we choose radix-4");
+
+title("Evolution equation on decimated grid");
+item("we just change k0");
+
+title("Projecting onto a decimated grid");
+
+title("Prolonging from a decimated grid");
+
+title("time-stepping");
+item("explain how we move forward in time");
+item("just like in goysr talk.");
+
+title("maybe we have some results? yes? no?");
+
+title("future work");
+item("finish coding 2D case");
+item("work on 3D case");
+item("Develop Runge-Kutta integrators with sub-stage accuracy?");
 
 
 //bibliography("refs");
