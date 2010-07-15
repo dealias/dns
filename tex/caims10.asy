@@ -75,8 +75,8 @@ title("High Reynolds-Number Turbulence");
 item("The Navier--Stokes equations");
 equation("1+1=2"); // FIXME
 remark("are characterized by the  Reynolds-number $R$,");
-equation("R=\frac{U L}{\nu}"); // REF?
-item("where $U$ and $L$ are characteristic velocity and length scales, and
+equation("R=\frac{U L}{\nu}.");
+item("$U$ and $L$ are characteristic velocity and length scales, and
 $\nu$ is the kinematic viscosity.");
 item("Energy is dissipated at scales around $k_d=FIXME$");
 item("The number of modes $N$ required ro resolve this grows as");
@@ -93,14 +93,15 @@ item("Under-resolved simulations can have errors at the largest scales.");
 indexedfigure("underres_",1,8,"width=16cm");
 
 title("Pseudo-spectral simulations"); // ref
-item("Spectral simulations evolve the Fourier-transformed Navier--Stoks equations:");
+item("Spectral simulations evolve the Fourier-transformed Navier--Stokes equations:");
 equation("1+1=3.");
-item("The advection term $u \del \cdot u$ becomes a convolution $FIXME$ in Fourier space, taking $\O(n^2)$ operations.");
-item("This is best done by transforming back into $x$-space and multiplying, using $\O n \log n$ operations.");
-//FIXME: figure (or equation?)
+item("The advection term $u \del \cdot u$ becomes a convolution $\sum FIXME$ in Fourier space, taking $\O(n^2)$ operations.");
+item("This is best done by transforming back into $x$-space and multiplying, using $\O(n \log n)$ operations.");
+item("figure of pseudo-spectral"); // FIXME
+item("Aliasing errors can be removed by padding.");
 
 title("Pseudo-spectral simulations");
-item("plug fftwpp");
+item("Using implicit padding from {\tt fftw++}, this is quite simple:"); // FIXME: ref
 item("put algorithm for calculating nonlinear source here."); // FIXME
 
 title("The multispectral method");
