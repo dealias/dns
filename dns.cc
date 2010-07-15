@@ -110,7 +110,7 @@ class None : public ForcingBase {
 class ConstantBanded : public ForcingBase {
 public:
   const char *Name() {return "Constant Banded";}
-  void Force(array2<Complex> &w, vector& T, const Complex&) {
+  void Force(array2<Complex> &w, vector& T) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
     unsigned xorigin=DNSProblem->getxorigin();

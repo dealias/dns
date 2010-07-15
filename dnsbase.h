@@ -76,7 +76,7 @@ class DNSBase {
     G[1]=g1;
     Convolution=new ImplicitHConvolution2(mx,my,2);
   }
-  ~DNSBase() {}
+  virtual ~DNSBase() {}
 
   unsigned getNx() {return Nx;}
   unsigned getmx() {return mx;}

@@ -83,6 +83,7 @@ MDNSVocabulary MDNS_Vocabulary;
 //***** Base class for functionoids *****//
 class FunctRR {
  public:
+  virtual ~FunctRR() {};
   virtual void f(Real w2,Real k2, int n,va_list args) = 0;
 };
 typedef FunctRR* FunctRRPtr;
@@ -117,7 +118,6 @@ public:
   MDNS();
   ~MDNS();
 
-  
   Real gk(unsigned g) {return k0*pow(sqrt((double) radix),g);};
 
   //***** Grid class based on DNSBase *****//
@@ -310,7 +310,9 @@ void MDNS::Grid::SetParams()
   if(myg == 0) {
     Invisible=Invisible2=0;
   } else {
-    Invisible=(gm(::Nx,myg-1)/2)*parent->gk(myg-1)/parent->gk(myg);
+    // Check nonsquare radices.
+    Invisible=(gm(::Nx,myg-1)/2)*
+      ((unsigned) (parent->gk(myg-1)/parent->gk(myg)+0.5));
     Invisible2=Invisible*Invisible;
   }
 }
