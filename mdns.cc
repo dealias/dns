@@ -601,7 +601,7 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
-  return;
+  //  return;
   //  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
@@ -746,7 +746,7 @@ void MDNS::Project(unsigned gb)
 
 void MDNS::Prolong(unsigned ga)
 {
-  return;
+  //return;
   //  cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
 
