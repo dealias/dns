@@ -72,17 +72,19 @@ title("High Reynolds-Number Turbulence");
 // density: 0.08988 g/L (HE) or  1.326 g/cm (Jupiter)
 // radius: ~ 70 000 km = 7e11 cm
 // R ~ 4e+20 ?
-item("The Navier--Stokes equations");
-equation("1+1=2"); // FIXME
-remark("are characterized by the  Reynolds-number $R$,");
-equation("R=\frac{U L}{\nu}.");
-item("$U$ and $L$ are characteristic velocity and length scales, and
+item("The incompressible Navier--Stokes equations");
+equation(" \ppt{\v{u}} +\v{u}\cdot\grad\v{u} 
+  = -\grad P + \nu\nabla^2 \v{u}, \quad \del\cdot \v{u}=0,");
+step();
+remark("are characterized by the  Reynolds-number $Re$,");
+equation("Re=\frac{U L}{\nu}.");
+remark("where $U$ and $L$ are characteristic velocity and length scales, and
 $\nu$ is the kinematic viscosity.");
-item("Energy is dissipated at scales around $k_d=FIXME$");
+item("Energy is dissipated at scales around $\eta_d \sim \nu^{4/3}.$");
 item("The number of modes $N$ required ro resolve this grows as");
 equation("N \sim Re^{2.25}.");
 
-title("Reynolds Numbers");
+title("High Reynolds-Number Turbulence");
 item("Airplanes: $R \approx 10^6$.");
 item("The Earth's atmosphere $R \approx 10^9$.");
 //item("Jupiter's red spot has $R \approx 10^{14}$.");
@@ -92,30 +94,37 @@ item("The large Earth simulator can reach $R=2560$. REF"); // FIXME
 item("Under-resolved simulations can have errors at the largest scales.");
 indexedfigure("underres_",1,8,"width=16cm");
 
-title("Pseudo-spectral simulations"); // ref
+title("Pseudo-spectral simulations");
 item("Spectral simulations evolve the Fourier-transformed Navier--Stokes equations:");
 equation("1+1=3.");
-item("The advection term $u \del \cdot u$ becomes a convolution $\sum FIXME$ in Fourier space, taking $\O(n^2)$ operations.");
+item("The advection term $u \del \cdot u$ becomes a convolution
+$\sum_{k=p+q} \hat{u}_p (q \cdot \hat{u}_q)$ in Fourier space, taking $\O(n^2)$ operations.");
 item("This is best done by transforming back into $x$-space and multiplying, using $\O(n \log n)$ operations.");
-item("figure of pseudo-spectral"); // FIXME
-item("Aliasing errors can be removed by padding.");
+item("FIXME: figure of pseudo-spectral"); // FIXME
 
 title("Pseudo-spectral simulations");
+item("Aliasing errors can be removed by padding.");
 item("Using implicit padding from {\tt fftw++}, this is quite simple:"); // FIXME: ref
-item("put algorithm for calculating nonlinear source here."); // FIXME
+item("FIXME: put algorithm for calculating nonlinear source here.");
 
 title("The multispectral method");
-item("we care about the large scales but need to resolve at least some of
-the small scales.");
-item("we can't use a variably decimated grid because of the Liouville theorem.");
-equation("E(k) = FIXME");
-item("a picture of decimated grids on top of each other (ooh yeah....)");
-item("This focuses resolution at the large, energy-carrying scale, while
-preserving the Liouville theorem.");
-item("The 2D, vorticity-based Navier--Stokes equations are a good choice on which to develop the method.");
-equation("1+1=4");
-item("Of theoretical interest, complicated by two invariants, simplified
-by a scalar field.");
+item("The large scales are more important but we need the small scales.");
+item("We would like to reduce resolution at high wavenumbers.");
+item("If $\nu=0$, the system reaches a statistical mechanical equilibrium:
+quadratic invariants are evenly distributed between modes.");
+equation("E(k)=\alpha, \quad \text{or} \quad E(k)=\frac{1}{\alpha+\beta k^2}.");
+item("A variably-decimated grid breaks this equilibrium.");
+item("We can use uniformly decimated grids:");
+item("FIXME: a figure of decimated grids on top of each other");
+
+title("The multispectral method");
+item("The 2D vorticity-based Navier--Stokes equations");
+equation("\frac{\partial\omega}{\partial t} + \v{u} \cdot \grad \omega
+  =  +\nu \nabla^2 \omega.");
+remark("are a good choice on which to develop the method.");
+item("The 2D equation is complicated by two invariants, but we need
+to evolve just a scalar field, $\omega = \hat{z} \cdot \del \times \v u$.");
+item("FIXME: figure of just a plain old grid, showing Hermitian symmetry.");
 
 title("Grid geometry: radix-2");
 
