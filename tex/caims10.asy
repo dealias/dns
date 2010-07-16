@@ -54,10 +54,10 @@ title("Outline",newslide=false);
 item("High Reynolds-Number Turbulence");
 item("Pseudospectral simulations");
 item("Multispectral simulations");
+item("Decimated evolution equation");
 item("Grid geometry:");
 subitem("radix-2 decimation");
 subitem("radix-4 decimation");
-item("Decimated evolution equation");
 item("Synchronizing grids");
 subitem("Projection");
 subitem("Prolongation");
@@ -89,18 +89,21 @@ item("Airplanes: $R \approx 10^6$.");
 item("The Earth's atmosphere $R \approx 10^9$.");
 //item("Jupiter's red spot has $R \approx 10^{14}$.");
 item("Jupiter's atmosphere has $R \approx 10^{20}$.");
-//skip();
 item("The large Earth simulator can reach $R=2560$. REF"); // FIXME
 item("Under-resolved simulations can have errors at the largest scales.");
 indexedfigure("underres_",1,8,"width=16cm");
 
 title("Pseudo-spectral simulations");
 item("Spectral simulations evolve the Fourier-transformed Navier--Stokes equations:");
-equation("1+1=3.");
-item("The advection term $u \del \cdot u$ becomes a convolution
-$\sum_{k=p+q} \hat{u}_p (q \cdot \hat{u}_q)$ in Fourier space, taking $\O(n^2)$ operations.");
+equation("\frac{\partial }{\partial t}\hat{\v{u}}_{\v k}
++ \[(\hat{\v{u}}\cdot \v{k} ) \hat{\v{u}}\]_{\v k}
+= \frac{1}{\rho}i \v{k} P - \nu k^2 \hat{\v{u}}_{\v k}");
+item("The advection term $u \del \cdot u$ becomes a convolution");
+equation("\sum_{\v{k}=\v{p}+\v{q}} \hat{\v{u}}_{\v{p}} (\v{q} \cdot \hat{\v{u}}_{\v{q}})");
+remark("in Fourier space, taking $\O(n^2)$ operations.");
 item("This is best done by transforming back into $x$-space and multiplying, using $\O(n \log n)$ operations.");
-item("FIXME: figure of pseudo-spectral"); // FIXME
+figure("pseudonl","height=2.9cm");
+// FIXME: should I show the convolution, as in the equation above?
 
 title("Pseudo-spectral simulations");
 item("Aliasing errors can be removed by padding.");
@@ -108,46 +111,87 @@ item("Using implicit padding from {\tt fftw++}, this is quite simple:"); // FIXM
 item("FIXME: put algorithm for calculating nonlinear source here.");
 
 title("The multispectral method");
+item("The 2D vorticity-based Navier--Stokes equations");
+equation("\frac{\partial\omega}{\partial t}+ \v{u} \cdot \grad \omega
+  =  \nu \nabla^2 \omega.");
+remark("are a good choice on which to develop the method.");
+item("The 2D equation is complicated by two invariants, but we need
+to evolve just a scalar field, $\omega = \hat{z} \cdot \del \times \v u$.");
+figure("hermit","width=14cm");
+
+title("The multispectral method");
 item("The large scales are more important but we need the small scales.");
-item("We would like to reduce resolution at high wavenumbers.");
+item("We would like to decimate at high wavenumbers.");
 item("If $\nu=0$, the system reaches a statistical mechanical equilibrium:
 quadratic invariants are evenly distributed between modes.");
 equation("E(k)=\alpha, \quad \text{or} \quad E(k)=\frac{1}{\alpha+\beta k^2}.");
 item("A variably-decimated grid breaks this equilibrium.");
 item("We can use uniformly decimated grids:");
-item("FIXME: a figure of decimated grids on top of each other");
-
-title("The multispectral method");
-item("The 2D vorticity-based Navier--Stokes equations");
-equation("\frac{\partial\omega}{\partial t} + \v{u} \cdot \grad \omega
-  =  +\nu \nabla^2 \omega.");
-remark("are a good choice on which to develop the method.");
-item("The 2D equation is complicated by two invariants, but we need
-to evolve just a scalar field, $\omega = \hat{z} \cdot \del \times \v u$.");
-item("FIXME: figure of just a plain old grid, showing Hermitian symmetry.");
-
-title("Grid geometry: radix-2");
-
-title("Grid geometry: radix-4");
-item("we choose radix-4");
+figure("figures/grids","width=8cm"); // FIXME: why the fuck is this black?
 
 title("Evolution equation on decimated grid");
 item("we just change k0");
+item("small-scale periodicity");
+item("reasonable if the high-pass-filtered vorticity field has a
+correlcation length less than $1/k0$.");
+item("view decimated vortictity as average of undecimated vorticity.");
+item("if $k_0 \rightarrow \lambda k_0$, then");
+equation("\ppt{\v{u}} +\v{u}\cdot\grad\v{u} 
+= -\frac{1}{\rho}\grad P + \nu\nabla^2 \v{u}.
+");
+item("is sent to");
+equation("\ppt{\v{u}} +\v{u}\cdot\lambda\grad\v{u} 
+= -\frac{1}{\rho}\lambda\grad P + \nu\lambda^2\nabla^2 \v{u}.
+");
+item("high-pass filter source term by removeing low-low-low interactions.");
+
+title("Grid geometry: radix-2");
+//item("FIXME: put radix-2 grid here, showing removed modes.");
+item("Modes with are removed in a checker-board pattern.");
+figure("lambdar2rot","width=10cm");
+item("The maximum wavenumber is increased by a factor of $\sqrt{2}$.");
+item("The overlapping area is a square lattice when symmetry is taken into account.");
+
+title("Grid geometry: radix-4");
+item("Modes with are removed along rows and columns.");
+figure("lambda2","width=14cm");
+item("The maximum wavenumber is increased by a factor of $2$.");
+item("The overlap has simple geometry.");
+item("High-pass filtering the source term is correspondingly simple.");
+item("Synchronizing the grids is also more straightforward.");
+//item("The overlapping area is a square lattice when symmetry is taken into account.");
+
 
 title("Projecting onto a decimated grid");
+item("three cases");
+item("co-incident: easy");
+item("row/colum: determined");
+item("square/diamond: underdetermined");
 
 title("Prolonging from a decimated grid");
+item("not sure what to do here");
+item("co-incident: easy");
+item("row/colum: determined");
+item("square/diamond: underdetermined");
+item("FIXME: do I really undertand these?");
+
 
 title("time-stepping");
 item("explain how we move forward in time");
 item("just like in goysr talk.");
 
-title("maybe we have some results? yes? no?");
+//title("maybe we have some results? yes? no?");
+//item("fucking unlikely");
 
-title("future work");
+title("Conclusions and Future Work");
+center("Conclusions:");
+item("The Multispectral scheme dramatically reduces the cost of finding solutions to the Navier--Stokes equations.");
+item("This technique can be extended to arbitrarily many grids.");
+center("Future Work:");
 item("finish coding 2D case");
-item("work on 3D case");
+item("accuracy order.");
 item("Develop Runge-Kutta integrators with sub-stage accuracy?");
-
+item("develop symmetric projection/prolongation (aka synchronization)");
+item("work on 3D case");
 
 //bibliography("refs");
