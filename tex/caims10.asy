@@ -9,7 +9,67 @@ usersetting();
 
 usepackage("hypercitebracket");
 usepackage("amsmath,mathdef,pde");
-texpreamble("\let\cases\ocases");
+//texpreamble("\let\cases\ocases");
+texpreamble("
+\def\zhat{\v{\widehat z}}
+\let\dotover\dot
+\def\dot{{\v \cdot}}
+\def\Re{\mathop{\rm Re}\nolimits}
+\def\Im{\mathop{\rm Im}\nolimits}
+\def\vl{{\v \ell}}
+\def\wk{\w_\vk}
+\def\wp{\w_\vp}
+\def\wq{\w_\vq}
+\def\wl{\w_\vl}
+\def\Jkpq{\e_{\kpq}}
+\def\kpq{{\vk\vp\vq}}
+\def\Z{{\mathbb Z}}
+\let\ocases\cases
+
+\SetProcFnt{\textnormal}
+\setlength{\algomargin}{0.6em}
+\SetAlCapSkip{3pt}
+\def\ProcNameFnt{\tt}
+
+\def\fft{{\tt fft}}
+\def\crfft{{\tt crfft}}
+\def\rcfft{{\tt rcfft}}
+\def\cconv{{\tt cconv}}
+\def\conv{{\tt conv}}
+\def\biconv{{\tt biconv}}
+\def\build{{\tt build}}
+\def\fftpadBackwards{{\tt fftpadBackwards}}
+\def\fftpadForwards{{\tt fftpadForwards}}
+\def\fftOpadBackwards{{\tt fft0padBackwards}}
+\def\fftOpadForwards{{\tt fft0padForwards}}
+\def\fftbipadBackwards{{\tt fftbipadBackwards}}
+\def\fftbipadForwards{{\tt fftbipadForwards}}
+\def\fftObipadBackwards{{\tt fft0bipadBackwards}}
+\def\fftObipadForwards{{\tt fft0bipadForwards}}
+\SetKwData{xf}{f}
+\SetKwData{xu}{u}
+\SetKwData{xFk}{F}
+\SetKwData{xA}{A}
+\SetKwData{xB}{B}
+\SetKwData{xg}{g}
+\SetKwData{xh}{h}
+\SetKwData{xv}{v}
+\SetKwData{xw}{w}
+\SetKwData{xA}{A}
+\SetKwData{xB}{B}
+\SetKwData{xC}{C}
+\SetKwData{xD}{D}
+\SetKwData{xF}{F}
+\SetKwData{xG}{G}
+\SetKwData{xS}{S}
+\SetKwData{xT}{T}
+\SetKwData{xU}{U}
+\SetKwData{xV}{V}
+\SetKwData{xW}{W}
+");
+
+
+
 
 bibliographystyle("rmp2");
 
@@ -89,7 +149,7 @@ item("Airplanes: $R \approx 10^6$.");
 item("The Earth's atmosphere $R \approx 10^9$.");
 //item("Jupiter's red spot has $R \approx 10^{14}$.");
 item("Jupiter's atmosphere has $R \approx 10^{20}$.");
-item("The large Earth simulator can reach $R=2560$. REF"); // FIXME
+item("The large Earth simulator can reach $R=2560$."); // FIXME: REF
 item("Under-resolved simulations can have errors at the largest scales.");
 indexedfigure("underres_",1,8,"width=16cm");
 
@@ -108,12 +168,28 @@ figure("pseudonl","height=2.9cm");
 title("Pseudo-spectral simulations");
 item("Aliasing errors can be removed by padding.");
 item("Using implicit padding from {\tt fftw++}, this is quite simple:"); // FIXME: ref
-item("FIXME: put algorithm for calculating nonlinear source here.");
+remark("
+\begin{function}[H]
+  \KwIn{vector $\xw$}
+  \KwOut{vector $\xf_0$}
+  $\xf_0 \leftarrow i k_x\xw$\;
+  $\xf_1 \leftarrow i k_y\xw$\;
+  $\xg_0 \leftarrow i \frac{k_y}{k^2}\xw$\;
+  $\xg_1 \leftarrow -i \frac{k_x}{k^2}\xw$\;
+$ \xf_0 \leftarrow \text{ImplicitHermitian2DConvolve}\left(\{\xf_0,\xf_1\},\{\xg_0,\xg_1\} \right)$\;
+  $\xf_0\[k=0\] \leftarrow 0$\;
+  \Return $\xf_0$\;
+\end{function}
+");
+item("For more details see John Bowman's talk, \emph\"Dealiased convolutions
+without the padding\"");
+remark("Tuesday, 10:00, in Avalon/Battery.");
+
 
 title("The multispectral method");
 item("The 2D vorticity-based Navier--Stokes equations");
 equation("\frac{\partial\omega}{\partial t}+ \v{u} \cdot \grad \omega
-  =  \nu \nabla^2 \omega.");
+  =  \nu \nabla^2 \omega");
 remark("are a good choice on which to develop the method.");
 item("The 2D equation is complicated by two invariants, but we need
 to evolve just a scalar field, $\omega = \hat{z} \cdot \del \times \v u$.");
@@ -129,21 +205,22 @@ item("A variably-decimated grid breaks this equilibrium.");
 item("We can use uniformly decimated grids:");
 figure("figures/grids","width=8cm");
 
-title("Evolution equation on decimated grid"); // FIXME: finish this section
-item("we just change k0");
-item("small-scale periodicity");
-item("reasonable if the high-pass-filtered vorticity field has a
-correlcation length less than $1/k0$.");
-item("view decimated vortictity as average of undecimated vorticity.");
-item("if $k_0 \rightarrow \lambda k_0$, then");
+title("Evolution equation on decimated grid");
+item("Decimating the grid scales all wavevectors by $\l$.");
+item("This is the same as scaling the physical system by $1/\l$.");
+//item("The high-pass filtered vorticity field has period $2\pi/k_0$.");
+item("This is a resonable assumption if high-pass-filtered vorticity field
+has a correlcation length less than $2\pi/\l k_0$.");
+item("The decimated vortictity is the average of undecimated vorticity.");
+item("if $k \rightarrow \lambda k$, then");
 equation("\ppt{\v{u}} +\v{u}\cdot\grad\v{u} 
-= -\frac{1}{\rho}\grad P + \nu\nabla^2 \v{u}.
+= -\frac{1}{\rho}\grad P + \nu\nabla^2 \v{u}
 ");
-item("is sent to");
-equation("\ppt{\v{u}} +\v{u}\cdot\lambda\grad\v{u} 
+//item("is sent to");
+equation(" \rightarrow\ppt{\v{u}} +\v{u}\cdot\lambda\grad\v{u} 
 = -\frac{1}{\rho}\lambda\grad P + \nu\lambda^2\nabla^2 \v{u}.
 ");
-item("high-pass filter source term by removeing low-low-low interactions.");
+item("We remove redundant interaction by high-pass filtering the source term.");
 
 title("Grid geometry: radix-2");
 item("Modes with are removed in a checker-board pattern.");
@@ -159,21 +236,21 @@ item("The overlap has simple geometry.");
 item("High-pass filtering the source term is correspondingly simple.");
 item("Synchronizing the grids is also more straightforward.");
 
-title("Synchronizing the grids"); // FIXME:  step?
+title("Synchronizing the grids");
 item("The grids are synchronized via projection and prolongation.");
-//item("There are three distinct geometric relationship between modes.");
 item("The undecimated and decimated modes might:");
+step();
 remark("1) be coincident in Fourier-space:");
 figure("rad1","height=0.8cm");
+step();
 remark("2) share the same row/column (only with radix-4 decimation):");
 figure("rad4row","height=0.8cm");
+step();
 remark("3) or the undecimated mode might be between four decimated modes:");
 figure("rad4cross","height=3.8cm");
 
-title("Projecting onto a decimated grid"); // FIXME: remove labels from figures
+title("Projecting onto a decimated grid");
 item("Projection set the decimated modes.");
-//item("We must populate the modes on the decimated grid."); // FIXME: awkward
-//item("FIXME: explain what we do in these three cases.");
 item("Case 1 is simple: invariants are automatically conserved.");
 figure("rad1","height=0.8cm");
 item("For case 2, we need to conserve energy and enstrophy: we have 2
@@ -194,20 +271,18 @@ item("We can deal with case 3 the same way.");
 figure("rad4cross","height=3.8cm");
 
 //item("As the undecimated modes have given, so shall they receive.");
-// FIXME: flesh this out.
-//item("It is important that we modify the vorticity field, and not its source
-//term; doing so would ruin equiparition.");
 
 title("Time-stepping");
-item("Once we know");
+item("Once we know:");
+step();
 subitem("the decimated evolution equation, and");
+step();
 subitem("how to synchronize the grids,");
+step();
 remark("we can move forward in time:");
-indexedfigure("timestep",0,4,"height=3.8cm");
-//figure("timestep","height=3.8cm");
+indexedfigure("timestep",0,8,"height=3.8cm");
 item("Alternatively, we can synchronize simultaneously:");
-figure("timestep","height=3.8cm"); // FIXME
-// FIXME: should this be a stepped image?
+indexedfigure("symstep",0,4,"height=3.8cm");
 
 //title("maybe we have some results? yes? no?");
 //item("unfuckinglikely");
@@ -216,14 +291,15 @@ title("Conclusions and Future Work");
 center("Conclusions:");
 item("The Multispectral scheme dramatically reduces the cost of finding solutions to the Navier--Stokes equations.");
 item("This technique can be extended to arbitrarily many grids.");
+step();
 center("Future Work:");
-item("finish coding 2D case");
-item("accuracy order.");
-item("Develop Runge-Kutta integrators with sub-stage accuracy?");
-item("develop symmetric projection/prolongation (aka synchronization)");
-item("Look into spectral reduction instead of scaling for decimated
-evolution equation."); // FIXME: ref
-item("work on 3D case");
+item("Finish coding the 2D vorticity-based case.");
+item("Determine the time-accuracy of the method.");
+step();
+subitem("Develop Runge-Kutta integrators with sub-stage accuracy?");
+item("Develop symmetric projection/prolongation.");
+item("Compare scaling vs.\ spectral reduction for the evolution equation."); // FIXME: ref
+item("Extend the method to 3D.");
 
 
 //bibliography("refs");

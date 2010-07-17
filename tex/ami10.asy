@@ -343,13 +343,13 @@ the Lesser GNU Public License.");
 item("With the advent of this {\tt FFTW++} library, writing a high-performance dealiased pseudospectral code is now a relatively straightforward exercise.");  
 
 title("\mbox{Asymptote: 2D \& 3D Vector Graphics Language}");
-asyinclude("logo3");
+//asyinclude("logo3");
 center("Andy Hammerlindl, John C. Bowman, Tom Prince");
 center("\tt http://asymptote.sf.net");
 center("(freely available under the Lesser GNU Public License)");
 
 title("Asymptote Lifts \TeX\ to 3D");
-asyinclude("label3solid");
+//asyinclude("label3solid");
 skip();
 center("\tt http://asymptote.sf.net");
 center("Acknowledgements: Orest Shardt (U. Alberta)");

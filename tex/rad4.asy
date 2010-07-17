@@ -30,7 +30,7 @@ for(int i=0; i < outnames.length; ++i) {
 
   a=(0,0);
   filldraw(pic,shift(a)*g,fillpen,p);
-  label(pic,"$K$",a,loffset*S);
+  //  label(pic,"$K$",a,loffset*S);
   
   // decimated grid
   p=blue;
@@ -44,7 +44,7 @@ for(int i=0; i < outnames.length; ++i) {
     //draw(pic,L[i][j],(0,0)..(1-s)*a,S,EndArrow);
     draw(pic,(0,0)..(1-s)*a,S,EndArrow);
     filldraw(pic,shift(a)*g,fillpen,p);
-    label(pic,"$k_"+(string)(j+1)+"$",a,loffset*S);
+    //    label(pic,"$k_"+(string)(j+1)+"$",a,loffset*S);
     // FIXME: label aligns should not all be S.
   }
   shipout(outnames[i],pic);
