@@ -141,7 +141,7 @@ equation("Re=\frac{U L}{\nu}.");
 remark("where $U$ and $L$ are characteristic velocity and length scales, and
 $\nu$ is the kinematic viscosity.");
 item("Energy is dissipated at scales around $\eta_d \sim \nu^{4/3}.$");
-item("The number of modes $N$ required ro resolve this grows as");
+item("The number of modes $N$ required to resolve this grows as");
 equation("N \sim Re^{2.25}.");
 
 title("High Reynolds-Number Turbulence");
@@ -151,6 +151,7 @@ item("The Earth's atmosphere $R \approx 10^9$.");
 item("Jupiter's atmosphere has $R \approx 10^{20}$.");
 item("The large Earth simulator can reach $R=2560$."); // FIXME: REF
 item("Under-resolved simulations can have errors at the largest scales.");
+step();
 indexedfigure("underres_",1,8,"width=16cm");
 
 title("Pseudo-spectral simulations");
@@ -196,7 +197,8 @@ to evolve just a scalar field, $\omega = \hat{z} \cdot \del \times \v u$.");
 figure("hermit","width=14cm");
 
 title("The multispectral method");
-item("The large scales are more important but we need the small scales.");
+item("The large scales are more important but we can't just eliminate the
+small scales.");
 item("We would like to decimate at high wavenumbers.");
 item("If $\nu=0$, the system reaches a statistical mechanical equilibrium:
 quadratic invariants are evenly distributed between modes:");
@@ -209,17 +211,19 @@ title("Evolution equation on decimated grid");
 item("Decimating the grid scales all wavevectors by $\l$.");
 item("This is the same as scaling the physical system by $1/\l$.");
 //item("The high-pass filtered vorticity field has period $2\pi/k_0$.");
-item("This is a resonable assumption if high-pass-filtered vorticity field
-has a correlcation length less than $2\pi/\l k_0$.");
-item("The decimated vortictity is the average of undecimated vorticity.");
+item("This is a reasonable assumption if high-pass-filtered vorticity field
+has a correlation length less than $2\pi/\l k_0$.");
+item("The decimated vorticity is the average of undecimated vorticity.");
 item("if $k \rightarrow \lambda k$, then");
 equation("\ppt{\v{u}} +\v{u}\cdot\grad\v{u} 
 = -\frac{1}{\rho}\grad P + \nu\nabla^2 \v{u}
 ");
 //item("is sent to");
+step();
 equation(" \rightarrow\ppt{\v{u}} +\v{u}\cdot\lambda\grad\v{u} 
 = -\frac{1}{\rho}\lambda\grad P + \nu\lambda^2\nabla^2 \v{u}.
 ");
+step();
 item("We remove redundant interaction by high-pass filtering the source term.");
 
 title("Grid geometry: radix-2");
@@ -258,7 +262,7 @@ equations and 2 unknowns.");
 figure("rad4row","height=0.8cm");
 item("Case 3 is undertermined: 2 equations and 4 unknowns.");
 figure("rad4cross","height=3.8cm");
-item("One idea is to distribute a linear combination of E and Z.");
+item("We distribute a combination of E and Z, as in equipartition.");
 
 title("Prolonging from a decimated grid");
 item("Projections sets the undecimated grid.");
@@ -266,7 +270,7 @@ item("Case 1 is again simple.");
 figure("rad1","height=0.8cm");
 item("In case 2, we send some energy up-scale, and some down-scale.");
 figure("rad4row","height=0.8cm");
-item("We distribute the change from the decimated grid propotionally.");
+item("We distribute the change from the decimated grid proportionally.");
 item("We can deal with case 3 the same way.");
 figure("rad4cross","height=3.8cm");
 
@@ -282,6 +286,7 @@ step();
 remark("we can move forward in time:");
 indexedfigure("timestep",0,8,"height=3.8cm");
 item("Alternatively, we can synchronize simultaneously:");
+step();
 indexedfigure("symstep",0,4,"height=3.8cm");
 
 //title("maybe we have some results? yes? no?");
@@ -289,14 +294,17 @@ indexedfigure("symstep",0,4,"height=3.8cm");
 
 title("Conclusions and Future Work");
 center("Conclusions:");
+step();
 item("The Multispectral scheme dramatically reduces the cost of finding solutions to the Navier--Stokes equations.");
 item("This technique can be extended to arbitrarily many grids.");
 step();
 center("Future Work:");
+step();
 item("Finish coding the 2D vorticity-based case.");
 item("Determine the time-accuracy of the method.");
 step();
 subitem("Develop Runge-Kutta integrators with sub-stage accuracy?");
+step();
 item("Develop symmetric projection/prolongation.");
 item("Compare scaling vs.\ spectral reduction for the evolution equation."); // FIXME: ref
 item("Extend the method to 3D.");
