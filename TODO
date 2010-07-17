@@ -10,9 +10,13 @@ set svn ignore on linked header files in ~/dns
 memory leak in transfer?
 
 won't compile on Orcinus due to fftwpp:: namespace issues.
-
+      (fixed?)
 
 ***** mdns.cc: *****
+
+normalization
+	the decimated grid modes are the mean of the undecimated modes.
+	    the mean of the energy? or the velocity? (sqrt(2) issue!)
 
 radix=4
 	project / prolong

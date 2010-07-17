@@ -312,10 +312,10 @@ void MDNS::Grid::SetParams()
   if(myg == 0) {
     Invisible=Invisible2=0;
   } else {
-    // FIXME!
+    // FIXME! set Invisible as a function of radix.
     Invisible=(unsigned) (gm(::Nx,myg-1)/2*parent->gk(myg-1)/parent->gk(myg)+
                           0.1);
-    cout << Invisible << endl;
+    //cout << Invisible << endl;
     Invisible2=Invisible*Invisible;
   }
 }
@@ -469,7 +469,7 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
       Real k2=k02*(I2+j*j);
       Real k=sqrt(k2);
       Real w2=abs2(wi[j]);
-      S[(unsigned)(k-0.5)].re += w2/k;
+      S[(unsigned)(k-0.5)].re += w2/k2; // FIXME: should this be k or k2?
       //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
     }
   }
@@ -694,21 +694,21 @@ void MDNS::Project(unsigned gb)
 	const int aJp=aJ+1;
 	const int aJm=aJ==0? aJp : aJ-1;
 
-
 	// co-incident point 
 	//wai[aJ]=Complex(2*I,aJ); // 00
 	Real A2=abs2(wai[aJ]);
 	
-	// points on same row/column
+	// points on same row
 	//waim[aJ]=Complex(2*I-1,aJ); // -0
 	//waip[aJ]=Complex(2*I+1,aJ); // +0
 	A2 += 0.5*(abs2(waim[aJ]) + abs2(waip[aJ]));
 
-	if(aJ) {// Hermiticity case.
-	  //wai[aJm]=Complex(2*I,aJm); // 0-
+	// points on same column
+	if(aJ) {  // 0-
+	  //wai[aJm]=Complex(2*I,aJm);
 	  A2 += 0.5*abs2(wai[aJm]);
 	} else {
-	  //wa[axorigin-2*I][aJp]=Complex(-2*I,aJm); //0-
+	  //wa[axorigin-2*I][aJp]=Complex(-2*I,aJm);
 	  A2 += 0.5*abs2(wa[axorigin-2*I][aJp]);
 	}
 	//wai[aJp]=Complex(2*I,aJp); // 0+
@@ -718,21 +718,20 @@ void MDNS::Project(unsigned gb)
 	//waim[aJp]=Complex(2*I-1,aJp); // -+
 	//waip[aJp]=Complex(2*I+1,aJp); // ++
 	A2 += 0.25*(abs2(waim[aJp]) + abs2(waip[aJp]));
-	if(aJ) {// Hermiticity case.
+	if(aJ) { // -- and +-
 	  //waim[aJm]=Complex(2*I-1,aJm);
 	  //waip[aJm]=Complex(2*I+1,aJm);
 	  A2 += 0.25*(abs2(waim[aJm]) + abs2(waip[aJm]));
 	} else {
-	  //wa[axorigin-2*I+1][aJm]=Complex(-2*I+1,aJm); // --
-	  //wa[axorigin-2*I-1][aJm]=Complex(-2*I-1,aJm); // +-
+	  //wa[axorigin-2*I+1][aJm]=Complex(-2*I+1,aJm);
+	  //wa[axorigin-2*I-1][aJm]=Complex(-2*I-1,aJm);
 	  A2 += 0.25*(abs2(wa[axorigin-2*I+1][aJm]) + 
 		      abs2(wa[axorigin-2*I-1][aJm]));
 	}
 
-
 	if(B2) {
-	  B2 *=4;
-	  //wbi[j] *= sqrt(A2/B2); // FIXME: restore
+	  //B2 *=4;
+	  wbi[j] *= sqrt(A2/B2); // FIXME: restore
 	  //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
 	  Bi[j]=B2;
 	} else {
@@ -756,11 +755,8 @@ void MDNS::Project(unsigned gb)
     */
   }
 
-  
-
   //  cout << wa << endl;  cout << wb << endl;
-
-  //HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
+  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
 }
 
 void MDNS::Prolong(unsigned ga)
@@ -805,6 +801,10 @@ void MDNS::Prolong(unsigned ga)
     }
   }
   if(radix == 4) {
+
+    // FIXME: I think that this has to be uncoarsened-grid centric.
+    // see notes 2010-07-16.
+
     for(unsigned i=xstart; i <= xstop; ++ i) {
       int I=(int)i - (int)bxorigin;
 
@@ -825,48 +825,46 @@ void MDNS::Prolong(unsigned ga)
       Dimension(wbi,wb[i]);
       
       for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
-	
  	const int aJ=2*j;
 	const int aJp=aJ+1;
 	const int aJm=aJ==0? aJp : aJ-1;
 
-	
 	Real f;
 	Real B2=abs2(wbi[j]);
 	if(B2 > 0) {
 	  f=0.25*sqrt(Bi[j]/B2);
+	  //cout << "f="<<f<<endl;
+	  f=1; // FIXME: temp
+	  
+	  // co-incident point
+	  wai[aJ] *= sqrt(Bi[j]/B2);
+	  
+	  // on same row/column
+	  waim[aJ] *= f;
+	  waip[aJ] *= f;
+	  
+	  if(aJ) {
+	    wai[aJm] *= f;
+	  } else {
+	    wa[axorigin-2*I][aJp] *=f;
+	  }
+	  wai[aJp] *= f;
+	  
+	  //project points on diagnols.
+	  waim[aJp] *= f;
+	  waip[aJp] *= f;
+	  if(aJ) {// Hermiticity case.
+	    waim[aJm] *= f;
+	    waip[aJm] *= f;
+	  } else {
+	    wa[axorigin-2*I+1][aJm] *= f;
+	    wa[axorigin-2*I-1][aJm] *= f;
+	  }
 	} else {
-	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb 
+	  cout << "energy for mode (" << i << ","<<j << ") on grid "<< gb 
 	       << " is zero in prolong."<<endl;
-	  exit(1); // FIXME: work out something better for this case.
-	}
-	//cout << "f="<<f<<endl;
-	f=1; // FIXME: temp
-
-
-	// co-incident point
-	wai[aJ] *= f;
-	
-	// on same row/column
-	waim[aJ] *= f;
-	waip[aJ] *= f;
-
-	if(aJ) {
-	  wai[aJm] *= f;
-	} else {
-	  wa[axorigin-2*I][aJp] *=f;
-	}
-	wai[aJp] *= f;
-	
-	//project points on diagnols.
-	waim[aJp] *= f;
-	waip[aJp] *= f;
-	if(aJ) {// Hermiticity case.
-	  waim[aJm] *= f;
-	  waip[aJm] *= f;
-	} else {
-	  wa[axorigin-2*I+1][aJm] *= f;
-	  wa[axorigin-2*I-1][aJm] *= f;
+	  msg(ERROR,"energy zero in prolong"); 
+	  // FIXME: work out something better for this case.
 	}
       }
     }

@@ -16,7 +16,7 @@ filltype F;
 
 void drawdots() {
   for(int i=-n; i <=n; ++i) {
-    for(int j= i > 0 ? 0 : 1 ; j <=n; ++j) {
+    for(int j= i >= 0 ? 0 : 1 ; j <=n; ++j) {
       pair a=L*r*(i,j);
       g=scale(s)*unitcircle;
       filldraw(pic,shift(a)*g,fillpen,p);

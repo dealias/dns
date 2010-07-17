@@ -123,13 +123,13 @@ title("The multispectral method");
 item("The large scales are more important but we need the small scales.");
 item("We would like to decimate at high wavenumbers.");
 item("If $\nu=0$, the system reaches a statistical mechanical equilibrium:
-quadratic invariants are evenly distributed between modes.");
-equation("E(k)=\alpha, \quad \text{or} \quad E(k)=\frac{1}{\alpha+\beta k^2}.");
+quadratic invariants are evenly distributed between modes:");
+equation("E(k)=\frac{1}{\alpha+\beta k^2}.");
 item("A variably-decimated grid breaks this equilibrium.");
 item("We can use uniformly decimated grids:");
-figure("figures/grids","width=8cm"); // FIXME: why the fuck is this black?
+figure("figures/grids","width=8cm");
 
-title("Evolution equation on decimated grid");
+title("Evolution equation on decimated grid"); // FIXME: finish this section
 item("we just change k0");
 item("small-scale periodicity");
 item("reasonable if the high-pass-filtered vorticity field has a
@@ -146,7 +146,6 @@ equation("\ppt{\v{u}} +\v{u}\cdot\lambda\grad\v{u}
 item("high-pass filter source term by removeing low-low-low interactions.");
 
 title("Grid geometry: radix-2");
-//item("FIXME: put radix-2 grid here, showing removed modes.");
 item("Modes with are removed in a checker-board pattern.");
 figure("lambdar2rot","width=10cm");
 item("The maximum wavenumber is increased by a factor of $\sqrt{2}$.");
@@ -159,29 +158,59 @@ item("The maximum wavenumber is increased by a factor of $2$.");
 item("The overlap has simple geometry.");
 item("High-pass filtering the source term is correspondingly simple.");
 item("Synchronizing the grids is also more straightforward.");
-//item("The overlapping area is a square lattice when symmetry is taken into account.");
 
+title("Synchronizing the grids"); // FIXME:  step?
+item("The grids are synchronized via projection and prolongation.");
+//item("There are three distinct geometric relationship between modes.");
+item("The undecimated and decimated modes might:");
+remark("1) be coincident in Fourier-space:");
+figure("rad1","height=0.8cm");
+remark("2) share the same row/column (only with radix-4 decimation):");
+figure("rad4row","height=0.8cm");
+remark("3) or the undecimated mode might be between four decimated modes:");
+figure("rad4cross","height=3.8cm");
 
-title("Projecting onto a decimated grid");
-item("three cases");
-item("co-incident: easy");
-item("row/colum: determined");
-item("square/diamond: underdetermined");
+title("Projecting onto a decimated grid"); // FIXME: remove labels from figures
+item("Projection set the decimated modes.");
+//item("We must populate the modes on the decimated grid."); // FIXME: awkward
+//item("FIXME: explain what we do in these three cases.");
+item("Case 1 is simple: invariants are automatically conserved.");
+figure("rad1","height=0.8cm");
+item("For case 2, we need to conserve energy and enstrophy: we have 2
+equations and 2 unknowns."); 
+figure("rad4row","height=0.8cm");
+item("Case 3 is undertermined: 2 equations and 4 unknowns.");
+figure("rad4cross","height=3.8cm");
+item("One idea is to distribute a linear combination of E and Z.");
 
 title("Prolonging from a decimated grid");
-item("not sure what to do here");
-item("co-incident: easy");
-item("row/colum: determined");
-item("square/diamond: underdetermined");
-item("FIXME: do I really undertand these?");
+item("Projections sets the undecimated grid.");
+item("Case 1 is again simple.");
+figure("rad1","height=0.8cm");
+item("In case 2, we send some energy up-scale, and some down-scale.");
+figure("rad4row","height=0.8cm");
+item("We distribute the change from the decimated grid propotionally.");
+item("We can deal with case 3 the same way.");
+figure("rad4cross","height=3.8cm");
 
+//item("As the undecimated modes have given, so shall they receive.");
+// FIXME: flesh this out.
+//item("It is important that we modify the vorticity field, and not its source
+//term; doing so would ruin equiparition.");
 
-title("time-stepping");
-item("explain how we move forward in time");
-item("just like in goysr talk.");
+title("Time-stepping");
+item("Once we know");
+subitem("the decimated evolution equation, and");
+subitem("how to synchronize the grids,");
+remark("we can move forward in time:");
+indexedfigure("timestep",0,4,"height=3.8cm");
+//figure("timestep","height=3.8cm");
+item("Alternatively, we can synchronize simultaneously:");
+figure("timestep","height=3.8cm"); // FIXME
+// FIXME: should this be a stepped image?
 
 //title("maybe we have some results? yes? no?");
-//item("fucking unlikely");
+//item("unfuckinglikely");
 
 title("Conclusions and Future Work");
 center("Conclusions:");
@@ -192,6 +221,9 @@ item("finish coding 2D case");
 item("accuracy order.");
 item("Develop Runge-Kutta integrators with sub-stage accuracy?");
 item("develop symmetric projection/prolongation (aka synchronization)");
+item("Look into spectral reduction instead of scaling for decimated
+evolution equation."); // FIXME: ref
 item("work on 3D case");
+
 
 //bibliography("refs");
