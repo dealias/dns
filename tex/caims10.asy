@@ -105,7 +105,7 @@ dealiased convolu- tions (http://fftwpp.sourceforge.net).
 */
 
 titlepage("The Multispectral Method",
-	  "Bruno Eckhardt, John Bowman, {\bf Malcolm Roberts}",
+	  "{\bf Malcolm Roberts}, John Bowman, Bruno Eckhardt",
 	  date="2010-07-25",
 	  url="www.math.ualberta.ca/$\sim$mroberts");
 
@@ -137,12 +137,12 @@ equation(" \ppt{\v{u}} +\v{u}\cdot\grad\v{u}
   = -\grad P + \nu\nabla^2 \v{u}, \quad \del\cdot \v{u}=0,");
 step();
 remark("are characterized by the  Reynolds-number $Re$,");
-equation("Re=\frac{U L}{\nu}.");
+equation("R=\frac{U L}{\nu}.");
 remark("where $U$ and $L$ are characteristic velocity and length scales, and
 $\nu$ is the kinematic viscosity.");
 item("Energy is dissipated at scales around $\eta_d \sim \nu^{4/3}.$");
 item("The number of modes $N$ required to resolve this grows as");
-equation("N \sim Re^{2.25}.");
+equation("N \sim R^{2.25}.");
 
 title("High Reynolds-Number Turbulence");
 item("Airplanes: $R \approx 10^6$.");
@@ -197,12 +197,12 @@ to evolve just a scalar field, $\omega = \hat{z} \cdot \del \times \v u$.");
 figure("hermit","width=14cm");
 
 title("The multispectral method");
-item("The large scales are more important but we can't just eliminate the
-small scales.");
+item("The large scales are often of greater interest but we can't just
+eliminate the small scales.");
 item("We would like to decimate at high wavenumbers.");
 item("If $\nu=0$, the system reaches a statistical mechanical equilibrium:
 quadratic invariants are evenly distributed between modes:");
-equation("E(k)=\frac{1}{\alpha+\beta k^2}.");
+equation("E(k)=\frac{k}{\alpha+\beta k^2}.");
 item("A variably-decimated grid breaks this equilibrium.");
 item("We can use uniformly decimated grids:");
 figure("figures/grids","width=8cm");
@@ -212,7 +212,7 @@ item("Decimating the grid scales all wavevectors by $\l$.");
 item("This is the same as scaling the physical system by $1/\l$.");
 //item("The high-pass filtered vorticity field has period $2\pi/k_0$.");
 item("This is a reasonable assumption if high-pass-filtered vorticity field
-has a correlation length less than $2\pi/\l k_0$.");
+has a correlation length less than $2\pi/(\l k_0)$.");
 item("The decimated vorticity is the average of undecimated vorticity.");
 item("if $k \rightarrow \lambda k$, then");
 equation("\ppt{\v{u}} +\v{u}\cdot\grad\v{u} 
@@ -236,7 +236,7 @@ title("Grid geometry: radix-4");
 item("Modes with are removed along rows and columns.");
 figure("lambda2","width=14cm");
 item("The maximum wavenumber is increased by a factor of $2$.");
-item("The overlap has simple geometry.");
+item("The overlap has a simple geometry.");
 item("High-pass filtering the source term is correspondingly simple.");
 item("Synchronizing the grids is also more straightforward.");
 
