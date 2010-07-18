@@ -95,7 +95,7 @@ memory usage is a critical limiting factor, and self-sorting in-place
 multidimensional Fourier transforms~\cite{Temperton91} are typically used to
 reduce the memory footprint of the required spectral convolutions.
 
-Because the discrete convolution, which produces cyclic output from cyclic
+Because the FFT-based convolution, which produces cyclic output from cyclic
 input, is applied in these problems to nonperiodic (wavenumber-space) data,
 it is important
 to remove aliases from the convolution. Typically the input data arrays are
@@ -110,9 +110,11 @@ achievable is $K=34/9$~\cite{Johnson07,Lundy07}), the asymptotic cost of
 computing the convolution of two vectors of unpadded length~$m$ is
 $6Km\log_2 m$ (using $N=2m$ and three Fourier transforms).
 
-Another important case in practice is the centered Hermitian~1D convolution,
-$\sum_{p=k-m+1}^{m-1} f_p g_{k-p}$, which requires $\fr{9}{2}Km\log_2 m$
-operations.
+Another important case in practice is the centered Hermitian~1D convolution.
+Since the computational cost for a complex-to-real and real-to-complex Fourier
+transform of size~$N$ is asymptotic to $K/2 N\log_2 N$, the
+Hermitian convolution $\sum_{p=k-m+1}^{m-1} f_p g_{k-p}$ requires
+$\fr{9}{2}Km\log_2 m$ operations.
 Alternatively, phase shift dealiasing~\cite{Patterson71,Canuto06} can be used
 to cancel out the aliasing errors between two convolutions with
 different phase shifts. However, this second technique is rarely used in
@@ -183,8 +185,8 @@ outermost subdivision is unnecessary: the scrambled Fourier subtransforms of the
 two input vectors can be multiplied together as they are produced
 (perhaps while still accessible in the cache). Second, the implicit
 method allows most of the subtransforms for an in-place convolution to
-be computed as out-of-place transforms, which execute faster than
-in-place transforms since they require no extra (pre-, post-, or
+be computed as out-of-place transforms, which typically execute faster than
+in-place transforms (cf. **) since they require no extra (pre-, post-, or
 interlaced) bit-reversal stage.  These savings help keep our
 one-dimensional in-place implicit convolution competitive with an
 explicitly padded convolution based on the same highly optimized

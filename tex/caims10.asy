@@ -136,7 +136,7 @@ item("The incompressible Navier--Stokes equations");
 equation(" \ppt{\v{u}} +\v{u}\cdot\grad\v{u} 
   = -\grad P + \nu\nabla^2 \v{u}, \quad \del\cdot \v{u}=0,");
 step();
-remark("are characterized by the  Reynolds-number $R$,");
+remark("are characterized by the Reynolds-number");
 equation("R=\frac{U L}{\nu}.");
 remark("where $U$ and $L$ are characteristic velocity and length scales, and
 $\nu$ is the kinematic viscosity.");
@@ -152,7 +152,7 @@ item("Jupiter's atmosphere has $R \approx 10^{20}$.");
 item("The large Earth simulator can reach $R=2560$."); // FIXME: REF
 item("Under-resolved simulations can have errors at the largest scales.");
 step();
-indexedfigure("underres_",1,8,"width=16cm");
+indexedfigure("figures/underres_",1,8,"width=16cm");
 
 title("Pseudo-spectral simulations");
 item("Spectral simulations evolve the Fourier-transformed Navier--Stokes equations:");
@@ -227,7 +227,7 @@ step();
 item("We remove redundant interaction by high-pass filtering the source term.");
 
 title("Grid geometry: radix-2");
-item("Modes with are removed in a checker-board pattern.");
+item("Modes are removed in a checker-board pattern.");
 figure("lambdar2rot","width=10cm");
 item("The maximum wavenumber is increased by a factor of $\sqrt{2}$.");
 item("The overlapping area is a square lattice when symmetry is taken into account.");
@@ -260,12 +260,12 @@ figure("rad1","height=0.8cm");
 item("For case 2, we need to conserve energy and enstrophy: we have 2
 equations and 2 unknowns."); 
 figure("rad4row","height=0.8cm");
-item("Case 3 is undertermined: 2 equations and 4 unknowns.");
+item("Case 3 is underdetermined: 2 equations and 4 unknowns.");
 figure("rad4cross","height=3.8cm");
 item("We distribute a combination of E and Z, as in equipartition.");
 
 title("Prolonging from a decimated grid");
-item("Projections sets the undecimated grid.");
+item("Projection sets the undecimated grid.");
 item("Case 1 is again simple.");
 figure("rad1","height=0.8cm");
 item("In case 2, we send some energy up-scale, and some down-scale.");
