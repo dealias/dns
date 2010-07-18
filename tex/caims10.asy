@@ -136,7 +136,7 @@ item("The incompressible Navier--Stokes equations");
 equation(" \ppt{\v{u}} +\v{u}\cdot\grad\v{u} 
   = -\grad P + \nu\nabla^2 \v{u}, \quad \del\cdot \v{u}=0,");
 step();
-remark("are characterized by the  Reynolds-number $Re$,");
+remark("are characterized by the  Reynolds-number $R$,");
 equation("R=\frac{U L}{\nu}.");
 remark("where $U$ and $L$ are characteristic velocity and length scales, and
 $\nu$ is the kinematic viscosity.");
@@ -182,8 +182,8 @@ $ \xf_0 \leftarrow \text{ImplicitHermitian2DConvolve}\left(\{\xf_0,\xf_1\},\{\xg
   \Return $\xf_0$\;
 \end{function}
 ");
-item("For more details see John Bowman's talk, \emph\"Dealiased convolutions
-without the padding\"");
+item("For more details see John Bowman's talk, ``Dealiased convolutions
+without the padding\".");
 remark("Tuesday, 10:00, in Avalon/Battery.");
 
 
@@ -197,12 +197,12 @@ to evolve just a scalar field, $\omega = \hat{z} \cdot \del \times \v u$.");
 figure("hermit","width=14cm");
 
 title("The multispectral method");
-item("The large scales are often of greater interest but we can't just
-eliminate the small scales.");
+item("The large scales are often more important but we can't just eliminate
+the small scales.");
 item("We would like to decimate at high wavenumbers.");
 item("If $\nu=0$, the system reaches a statistical mechanical equilibrium:
 quadratic invariants are evenly distributed between modes:");
-equation("E(k)=\frac{k}{\alpha+\beta k^2}.");
+equation("E(k)=\frac{\pi k}{\alpha+\beta k^2}.");
 item("A variably-decimated grid breaks this equilibrium.");
 item("We can use uniformly decimated grids:");
 figure("figures/grids","width=8cm");
