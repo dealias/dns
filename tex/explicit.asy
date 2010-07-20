@@ -144,7 +144,7 @@ for(int i=0; i<6; ++i){
   z=(0,h);
   p=shift(z)*g;
   filldraw(pic,p,convpen);
-  label(pic,"F*G",center(p),labelpen);
+  label(pic,"$F*G$",center(p),labelpen);
   q1=top(p);
   draw(pic,p1..q1,EndArrow);
   

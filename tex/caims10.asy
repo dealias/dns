@@ -184,7 +184,7 @@ $ \xf_0 \leftarrow \text{ImplicitHermitian2DConvolve}\left(\{\xf_0,\xf_1\},\{\xg
 ");
 item("For more details see John Bowman's talk, ``Dealiased convolutions
 without the padding\".");
-remark("Tuesday, 10:00, in Avalon/Battery.");
+remark("Tuesday, 10:30, in Avalon/Battery.");
 
 
 title("The multispectral method");
