@@ -405,7 +405,7 @@ void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
   //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
   //  cout << w << endl;
 
-  DNSBase::NonLinearSource(source,w0,t);
+  DNSBase::NonLinearSource(source,w,t); // FIXME: w0 here? uninitialied?
 
   if(myg > 0) {
     //copy overlapping modes to wS
@@ -685,7 +685,6 @@ void MDNS::Project(unsigned gb)
       vector wbi;
       Set(wbi,wb[i]);
       Dimension(wbi,wb[i]);
-      
 
       for(unsigned j= i < axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
 	Real B2=abs2(wbi[j]);
@@ -731,7 +730,7 @@ void MDNS::Project(unsigned gb)
 
 	if(B2) {
 	  //B2 *=4;
-	  wbi[j] *= sqrt(A2/B2); // FIXME: restore
+	  //wbi[j] *= sqrt(A2/B2); // FIXME: restore
 	  //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
 	  Bi[j]=B2;
 	} else {
@@ -741,7 +740,7 @@ void MDNS::Project(unsigned gb)
 	}
       }
     }
-    //    cout << "project GB \n" << G[gb]->GB << endl;
+    //cout << "project GB \n" << G[gb]->GB << endl;
     /*
     for(unsigned i=0; i < aNx; i += 2) {
       int I= (int) i - (int) bxorigin;
@@ -756,7 +755,7 @@ void MDNS::Project(unsigned gb)
   }
 
   //  cout << wa << endl;  cout << wb << endl;
-  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb); 
+  //  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb);  // FIXME: messed up?
 }
 
 void MDNS::Prolong(unsigned ga)
@@ -784,7 +783,6 @@ void MDNS::Prolong(unsigned ga)
 
   G[ga]->settow(wa);
   G[gb]->settow(wb);
-
 
   const unsigned xstart=bxorigin-bInvisible;
   const unsigned xstop=bxorigin+bInvisible;
@@ -821,8 +819,8 @@ void MDNS::Prolong(unsigned ga)
       Dimension(waip,wa[2*I+axorigin+1]);
 
       vector wbi;
-      Set(wbi,wb[i]);
       Dimension(wbi,wb[i]);
+      Set(wbi,wb[i]);
       
       for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
  	const int aJ=2*j;
@@ -834,11 +832,11 @@ void MDNS::Prolong(unsigned ga)
 	if(B2 > 0) {
 	  f=0.25*sqrt(Bi[j]/B2);
 	  //cout << "f="<<f<<endl;
-	  f=1; // FIXME: temp
-	  
+	  f=1.0; // FIXME: temp
+
 	  // co-incident point
-	  wai[aJ] *= sqrt(Bi[j]/B2);
-	  
+	  //wai[aJ] *= sqrt(Bi[j]/B2); // FIXME!!!
+
 	  // on same row/column
 	  waim[aJ] *= f;
 	  waip[aJ] *= f;
@@ -860,6 +858,7 @@ void MDNS::Prolong(unsigned ga)
 	    wa[axorigin-2*I+1][aJm] *= f;
 	    wa[axorigin-2*I-1][aJm] *= f;
 	  }
+
 	} else {
 	  cout << "energy for mode (" << i << ","<<j << ") on grid "<< gb 
 	       << " is zero in prolong."<<endl;
@@ -870,8 +869,10 @@ void MDNS::Prolong(unsigned ga)
     }
   }
   
+
+  cout << "prolong GB \n" << G[gb]->GB << endl;
   //cout << "prolong \n" << G[gb]->GB << endl;
-  HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa);
+  //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
   // maybe only on the overlapping modes?
 
   // FIXME: copy stuff from spectra onto just onto lastgrid's Src[EK]
