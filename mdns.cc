@@ -595,8 +595,8 @@ void MDNS::InitialConditions()
     G[g]=new Grid(g,this);
     G[g]->AttachTo(this,Y);
     G[g]->InitialConditions(g); 
-    icalpha *= sqrt(radix);
-    icbeta *= sqrt(radix);
+    //    icalpha *= sqrt(radix);
+    //    icbeta *= sqrt(radix);
   }
 
   //***** output *****//
@@ -641,16 +641,8 @@ void MDNS::Project(unsigned gb)
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
 
-  //  wa.Dimension(mY[ga][OMEGA]); // FIXME: check
-  //  wb.Dimension(mY[gb][OMEGA]);
-
   G[ga]->settow(wa);
   G[gb]->settow(wb);
-
-  //  cout << wa << endl;
-  //G[ga]->coutw();
-  //G[gb]->coutw();
-  //  cout << wb << endl;
 
   const unsigned xstart=bxorigin-bInvisible;
   const unsigned xstop=bxorigin+bInvisible;
@@ -729,18 +721,17 @@ void MDNS::Project(unsigned gb)
 	}
 
 	if(B2) {
-	  //B2 *=4;
 	  //wbi[j] *= sqrt(A2/B2); // FIXME: restore
 	  //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
 	  Bi[j]=B2;
 	} else {
-	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb 
+	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb
 	       << " is zero in project."<<endl;
 	  exit(1); // FIXME: work out something better for this case.
 	}
       }
     }
-    //cout << "project GB \n" << G[gb]->GB << endl;
+    cout << "project GB \n" << G[gb]->GB << endl;
     /*
     for(unsigned i=0; i < aNx; i += 2) {
       int I= (int) i - (int) bxorigin;
@@ -804,73 +795,120 @@ void MDNS::Prolong(unsigned ga)
     // see notes 2010-07-16.
 
     for(unsigned i=xstart; i <= xstop; ++ i) {
-      int I=(int)i - (int)bxorigin;
+      const int I=(int)i - (int)bxorigin;
 
-      array1<Real> Bi;
-      Bi.Set(G[gb]->GB[i-xstart]);
-      Bi.Dimension(bInvisible+1);
-
-      vector wai, waim, waip;
+      vector wai;
       Set(wai,wa[2*I+axorigin]);
-      Set(waim,wa[2*I+axorigin-1]);
-      Set(waip,wa[2*I+axorigin+1]);
       Dimension(wai,wa[2*I+axorigin]);
-      Dimension(waim,wa[2*I+axorigin-1]);
+      vector waip;
+      Set(waip,wa[2*I+axorigin+1]);
       Dimension(waip,wa[2*I+axorigin+1]);
+      vector waim;
+      Set(waim,wa[2*I+axorigin-1]);
+      Dimension(waim,wa[2*I+axorigin-1]);
+      
+      // FIXME: can we make the following arrays const?
+      array1<Real> Bim;
+      const bool imOK=i > xstart;
+      if(imOK) { // make sure we're not going negative
+	Set(Bim,G[gb]->GB[i-xstart-1]);
+	Bim.Dimension(bInvisible+1);
+      }
+      array1<Real> Bi;
+      Set(Bi,G[gb]->GB[i-xstart]);
+      Bi.Dimension(bInvisible+1);
+      array1<Real> Bip;
+      Bip.Set(G[gb]->GB[i-xstart]+1);
+      Bip.Dimension(bInvisible+1);
 
       vector wbi;
-      Dimension(wbi,wb[i]);
       Set(wbi,wb[i]);
+      Dimension(wbi,wb[i]);
+      vector wbim;
+      if(imOK) {
+	Set(wbim,wb[i-1]);
+	Dimension(wbim,wb[i-1]);
+      }
+      vector wbip;
+      Set(wbip,wb[i+1]);
+      Dimension(wbip,wb[i+1]);
       
       for(unsigned j= i <= axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
+	// FIXME: figure out what to deal with division-by-zero case.
  	const int aJ=2*j;
 	const int aJp=aJ+1;
-	const int aJm=aJ==0? aJp : aJ-1;
+	const bool jmOK=aJ > 0;
+	const int aJm=jmOK ? aJp : aJ-1;
+	const bool imjmOK=imOK && jmOK;
 
-	Real f;
-	Real B2=abs2(wbi[j]);
-	if(B2 > 0) {
-	  f=0.25*sqrt(Bi[j]/B2);
-	  //cout << "f="<<f<<endl;
-	  f=1.0; // FIXME: temp
+	// possible optimization: only some of these need to be recalculate.
+	// most can be copied from one stage to the next, put into 
+	// different positions.
+	const Real Bij=abs2(wbi[j]);
+	const Real oldBij=Bi[j];
 
-	  // co-incident point
-	  //wai[aJ] *= sqrt(Bi[j]/B2); // FIXME!!!
+	const Real Bimj=imOK ? abs2(wbim[j]) : 0.0; // kludge
+	const Real oldBimj=imOK ? Bim[j] : 0.0; // kludge
 
-	  // on same row/column
-	  waim[aJ] *= f;
-	  waip[aJ] *= f;
-	  
-	  if(aJ) {
-	    wai[aJm] *= f;
-	  } else {
-	    wa[axorigin-2*I][aJp] *=f;
-	  }
-	  wai[aJp] *= f;
-	  
-	  //project points on diagnols.
-	  waim[aJp] *= f;
-	  waip[aJp] *= f;
-	  if(aJ) {// Hermiticity case.
-	    waim[aJm] *= f;
-	    waip[aJm] *= f;
-	  } else {
-	    wa[axorigin-2*I+1][aJm] *= f;
-	    wa[axorigin-2*I-1][aJm] *= f;
-	  }
+	const Real Bipj=abs2(wbip[j]);
+	const Real oldBipj=Bip[j];
 
-	} else {
-	  cout << "energy for mode (" << i << ","<<j << ") on grid "<< gb 
-	       << " is zero in prolong."<<endl;
-	  msg(ERROR,"energy zero in prolong"); 
-	  // FIXME: work out something better for this case.
+	const Real Bijm=jmOK ? abs2(wbi[j-1]) : 0.0; // kludge
+	const Real oldBijm=jmOK ? Bi[j-1] : 0.0; // kludge
+
+	const Real Bijp=abs2(wbip[j+1]);
+	const Real oldBijp=Bi[j+1];
+	
+	// co-incident point
+	wai[aJ] *= sqrt(Bi[j]/oldBij);
+		
+	// same row
+	if(imOK) waim[aJ] *= (Bimj+Bij)/(oldBimj+oldBij);
+	waip[aJ] *= (Bij+Bipj)/(oldBij+oldBipj);
+	
+	// same column
+	if(jmOK) wai[aJm] *= (Bijm+Bij)/(oldBijm+oldBij);
+	else {
+	  //wa[axorigin-2*I][aJp] *=f;// FIXME: figure out Hermitian conjugate
 	}
+	wai[aJp] *= (Bij+Bijp)/(oldBij+oldBijp);
+
+	// quad-prolongs:
+	// --
+	if(imjmOK) waim[aJm] *= ()/(); // FIXME
+	wa[axorigin-2*I-1][aJm] *= f;
+
+	// -+
+	
+	// +-
+
+	// ++
+
+	/*	
+	Real f=1.0; // FIXME: temp
+	//project points on diagnols.
+	waim[aJp] *= f;
+	waip[aJp] *= f;
+	if(jmOK) {// Hermiticity case.
+
+	  waip[aJm] *= f;
+	} else {
+	  wa[axorigin-2*I+1][aJm] *= f;
+
+	}
+	*/	
+
+	// else { // B2 is zero
+	//cout << "energy for mode (" << i << ","<<j << ") on grid "<< gb
+	//     << " is zero in prolong."<<endl;
+	//msg(ERROR,"energy zero in prolong"); 
+	// FIXME: work out something better for this case.
       }
     }
   }
   
 
-  cout << "prolong GB \n" << G[gb]->GB << endl;
+  //  cout << "prolong GB \n" << G[gb]->GB << endl;
   //cout << "prolong \n" << G[gb]->GB << endl;
   //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
   // maybe only on the overlapping modes?
