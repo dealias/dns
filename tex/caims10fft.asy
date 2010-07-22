@@ -329,14 +329,9 @@ equation("
 =\sum_{\vk=\vp+\vq} \frac{p_xq_y - p_y q_x}{q^2}\w_{\v p}\w_{\v q}.
 ");
 
-remark("
-\begin{function}[H]
-  \KwIn{vector $\w$}
-  \KwOut{$-(\zhat\cross\grad \del^{-2}\w)\dot \grad \w$}
-  \Return
-${\tt ImplicitHConvolution2}(i k_x\w,i k_y\w,i k_y \w/k^2,-ik_x\w/k^2)$\;
-\end{function}
-");
+item("The right-hand side of this equation may be computed as")
+equation(
+"\tt ImplicitHConvolution2}(i k_x\w,i k_y\w,i k_y \w/k^2,-ik_x\w/k^2).");
 
 title("Ternary convolution");
 

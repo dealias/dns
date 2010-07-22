@@ -111,10 +111,10 @@ computing the convolution of two vectors of unpadded length~$m$ is
 $6Km\log_2 m$ (using $N=2m$ and three Fourier transforms).
 
 Another important case in practice is the centered Hermitian~1D convolution.
-Since the computational cost for a complex-to-real and real-to-complex Fourier
-transform of size~$N$ is asymptotic to $K/2 N\log_2 N$, the
-Hermitian convolution $\sum_{p=k-m+1}^{m-1} f_p g_{k-p}$ requires
-$\fr{9}{2}Km\log_2 m$ operations.
+Taking the computational cost of complex-to-real and real-to-complex Fourier
+transforms of size~$N$ to be asymptotic to $\half K N\log_2 N$, the
+FFT-based Hermitian con\-vol\-u\-tion $\sum_{p=k-m+1}^{m-1} f_p g_{k-p}$
+requires three transforms and hence $\fr{9}{2}Km\log_2 m$ operations.
 Alternatively, phase shift dealiasing~\cite{Patterson71,Canuto06} can be used
 to cancel out the aliasing errors between two convolutions with
 different phase shifts. However, this second technique is rarely used in
@@ -185,12 +185,12 @@ outermost subdivision is unnecessary: the scrambled Fourier subtransforms of the
 two input vectors can be multiplied together as they are produced
 (perhaps while still accessible in the cache). Second, the implicit
 method allows most of the subtransforms for an in-place convolution to
-be computed as out-of-place transforms, which typically execute faster than
-in-place transforms (cf. **) since they require no extra (pre-, post-, or
-interlaced) bit-reversal stage.  These savings help keep our
-one-dimensional in-place implicit convolution competitive with an
-explicitly padded convolution based on the same highly optimized
-library.
+be optionally computed as out-of-place transforms, which typically execute
+faster than in-place transforms (cf. \cite{fftwoutofplace}) since they
+require no extra (pre-, post-, or interlaced) bit-reversal stage.  These
+savings help keep our one-dimensional in-place implicit convolution
+competitive with an explicitly padded convolution based on the same highly
+optimized library.
 
 In Section~\ref{1d}, we develop an algorithm for Fourier transforming a
 one-dimensional zero-padded vector without the need for explicit
@@ -201,7 +201,7 @@ applied to compute the discrete Fourier transform of an input
 vector padded beyond an arbitrary fraction~$p/q$ of its length. 
 Building on these one-dimensional algorithms, implicitly-padded
 convolutions are implemented for two- and three-dimensional input 
-in Sections~\ref{2d} and~\ref{3d}. Finally, in Section \ref{hyperconv}, we
+in Section~\ref{multid}. Finally, in Section \ref{hyperconv}, we
 show for both general and Hermitian data how implicit padding may be used to
 dealias higher-order convolutions efficiently.
 
@@ -262,7 +262,7 @@ compute a dealiased convolution of unpadded length~$m$ using
 two arrays of size~$m$ as input vectors instead of one array of size $2m$.
 This seemingly trivial distinction is the key to the improved efficiency
 and reduced storage requirements of the higher-dimensional implicit
-convolutions described in Sections~\ref{2d} and~\ref{3d}.
+convolutions described in Section~\ref{multid}.
 Moreover, in Function~{\tt\ref{cconv}} we see that implicit padding allows
 each of the six complex Fourier transforms of size $m$ to be done out of place.
 In the listed pseudocode, an asterisk ($*$) denotes an element-by-element
@@ -272,12 +272,11 @@ In principle, the stable trigonometric recursion described by
 Buneman~\cite{Buneman87}, which requires two small precomputed tables, each
 of size~$\log_2 N$, could be used to compute the required roots of unity
 $\zeta_N^k$ that appear in \Eqs{cconv1backwards}
-and~\hEq{cconv1forwards}. For the
-record we note that, in terms of the smallest positive number $\e$ 
+and~\hEq{cconv1forwards}.\footnote{We note that, in terms of the smallest
+positive number $\e$
 satisfying $1+\e > 1$ in a given machine representation, the singularity in
 Buneman's scheme can be removed by replacing $\sec{\pi/2}$ with  $5/\e$,
-$\sin 4\pi$ with $-\e/2$, and $\sin{2\pi}$ and $\sin{\pi}$ each with $-\e/10$.
-
+$\sin 4\pi$ with $-\e/2$, and $\sin{2\pi}$ and $\sin{\pi}$ each with $-\e/10$.}
 While Buneman's recursion has the same average accuracy as an FFT
 itself~\cite{Tasche02}, on modern hardware a factorization method that does
 not rely on successive table updates turns out to be more
@@ -286,7 +285,7 @@ We instead calculate the $\zeta_N^k$ factors with a single complex
 multiply, using two short precomputed tables $H_a=\zeta_N^{as}$ and
 $L_b=\zeta_N^b$, where $k=as+b$ with $s=\floor{\sqrt m}$,
 $a=0,1,\ldots,\ceil{m/s}-1$, and $b=0,1,\ldots,s-1$. Since these
-one-dimensional tables require only $\O(2\sqrt{m})$ complex words of
+one-dimensional tables require only $\O(\sqrt{m})$ complex words of
 storage and our focus is on higher dimensional convolutions anyway, we do
 not account for them in our estimates of memory use. 
 
@@ -304,8 +303,8 @@ specialized single-instruction multiple-data (SIMD) code.
 To compare the normalized error for the two methods, we considered the
 input vectors $f_k=F e^{ik}$ and $g_k=G e^{ik}$ for $k=0,\ldots,m-1$,
 with $F=\sqrt3+ i\sqrt 7$ and $G=\sqrt5+ i\sqrt {11}$.
-Since $\pi$ is irrational, the Fourier transforms of these vectors have
-nonzero components for all transform sizes.
+The Fourier transforms of these vectors have nonzero components for all
+transform sizes.
 In Fig.~\ref{error1c} we compare the normalized~$L^2$ error 
 $\sqrt{\sum_{k=0}^{m-1}\Abs{h_k-H_k}^2}/\sqrt{\sum_{k=0}^{m-1} \Abs{H_k}^2}$
 for each of the computed solutions $h_k$ relative to the exact solution 
@@ -321,16 +320,16 @@ $H_k=\sum_{p=0}^k f_p g_{k-p}=FG (k+1) e^{ik}$.
 \def\rcfft{{\tt rcfft}}
 \def\cconv{{\tt cconv}}
 \def\conv{{\tt conv}}
-\def\biconv{{\tt biconv}}
+\def\tconv{{\tt tconv}}
 \def\build{{\tt build}}
 \def\fftpadBackwards{{\tt fftpadBackwards}}
 \def\fftpadForwards{{\tt fftpadForwards}}
 \def\fftOpadBackwards{{\tt fft0padBackwards}}
 \def\fftOpadForwards{{\tt fft0padForwards}}
-\def\fftbipadBackwards{{\tt fftbipadBackwards}}
-\def\fftbipadForwards{{\tt fftbipadForwards}}
-\def\fftObipadBackwards{{\tt fft0bipadBackwards}}
-\def\fftObipadForwards{{\tt fft0bipadForwards}}
+\def\ffttpadBackwards{{\tt ffttpadBackwards}}
+\def\ffttpadForwards{{\tt ffttpadForwards}}
+\def\fftOtpadBackwards{{\tt fft0tpadBackwards}}
+\def\fftOtpadForwards{{\tt fft0tpadForwards}}
 \SetKwData{xf}{f}
 \SetKwData{xu}{u}
 \SetKwData{xFk}{F}
@@ -443,7 +442,7 @@ mode $m-1$ from beating with itself to contaminate the most negative
 (first) mode, corresponding to wavenumber $-m+1$. Since the ratio of the
 number of physical to total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$
 for large $m$, this padding scheme is often referred to as the {\it 2/3
-padding rule}.
+padding rule} \cite{Orszag71}.
 
 For explicit padding, one usually chooses the padded vector length
 $N$ to be a power of $2$, with $m=\floor{(n+2)/3}$.
@@ -547,7 +546,7 @@ inverse of \fftOpadBackwards({\sf f},{\sf u}).}
 
 In this frequently encountered case (relevant to the pseudospectral
 method), each input vector is the Fourier transform of real-valued data;
-that is, it satisfies the {\it Hermiticity condition} $U_{-k}=\conj{U_k}$.
+that is, it satisfies the {\it Hermitian symmetry} $U_{-k}=\conj{U_k}$.
 While the physical data represented is of length $2m-1$, centered
 about the Fourier origin, the redundant modes (corresponding to
 negative wavenumbers) are not
@@ -717,23 +716,12 @@ dealiased centered Hermitian in-place 1D convolutions of length $2m-1$.}
 \end{figure}
 
 \begin{figure}[htbp]
-\begin{minipage}{0.49\linewidth}
 \begin{center}
 \includegraphics{error1r}
 \caption{Normalized $L^2$ error for explicitly and implicitly
 dealiased centered Hermitian in-place 1D convolutions of length $m$.}
 \phantomsection{}\label{error1r}
 \end{center}
-\end{minipage}
-\,
-\begin{minipage}{0.49\linewidth}
-\begin{center}
-\includegraphics{timing2c}
-\caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 2D convolutions of size $m^2$.}
-\phantomsection{}\label{timing2c}
-\end{center}
-\end{minipage}
 \end{figure}
 
 \subsection{General Padding}\label{pq}
@@ -762,11 +750,9 @@ $$
 also requires $q$ Fourier transforms of length $m$. Again, the computational
 savings for a one-dimensional transform is marginal.
 
-\section{Implicitly dealiased 2D convolutions}\label{2d}
+\section{Higher-dimensional convolutions}\label{multid}
 The algorithms developed in Section~\ref{1d} can be used as building
-blocks to construct efficient implicitly padded 2D convolutions.
-In this section, we consider both the standard 2D complex convolution and the
-centered 2D Hermitian convolution.
+blocks to construct efficient implicitly padded higher-dimensional convolutions.
 \subsection{Complex 2D convolution}
 The implicitly padded 2D convolution shown in Algorithm {\tt\ref{cconv2}} 
 is designed for data stored with a stride of one in the $y$
@@ -789,6 +775,16 @@ a $1024^2$ implicit complex convolution is $1.84$ times faster.
 As one would expect, the gains appear to increase with transform size: an
 $8192^2$ implicit convolution is $2.03$ times faster than an explicit one. 
 
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics{timing2c}
+\caption{Comparison of computation times for explicitly and implicitly
+dealiased complex in-place 2D convolutions of size $m^2$.}
+\phantomsection{}\label{timing2c}
+\end{center}
+\end{figure}
+
 The third sentence of the quote from Steven G. Johnson on
 page~\ref{Johnson} suggests a sensible optimization for
 explicitly padded 2D convolutions: one can omit for $m \le y < 2m$
@@ -809,9 +805,9 @@ of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
 words, much less than the $8m_xm_y$ complex words needed for an
 explicitly padded convolution.
 
-\subsection{Centered 2D Hermitian convolution}
+\subsection{Centered Hermitian 2D convolution}
 
-In two dimensions, the Fourier-centered Hermiticity condition appears as
+In two dimensions, the Fourier-centered Hermitian symmetry appears as
 $U_{-k,-\ell}=\conj{U_{k,\ell}}$. 
 This symmetry is exploited in the centered Hermitian convolution
 algorithm described in Function~{\tt\ref{conv2}}. As shown in
@@ -898,7 +894,26 @@ dealiased complex in-place 3D convolutions of size $m^3$.}
 %
 \end{figure}
 
-\section{Implicitly dealiased 3D convolutions}\label{3d}
+\subsection{2D Pseudospectral Application}
+In our implementation, we allow the
+convolution inputs to be arrays of vectors, $f_i$ and~$g_i$ ($i=1,\ldots,M$),
+interpeting in Procedures~{\tt\ref{cconv}},~{\tt\ref{conv}},
+and~{\tt\ref{tconv}}, the product $f * g$ as the element-by-element
+dot product $\sum_i f_i * g_i$.
+Allowing $M$ input data blocks like this enables, for example,
+the nonlinear term of the 2D incompressible Euler equation
+to be computed using five Fourier transforms (instead of three) in
+each of the $M=2$ dimensions. Specifically, the advective term
+$-\vu\dot\grad\w=-(\zhat\cross\grad \del^{-2}\w)\dot \grad \w$,
+which appears in Fourier space as
+$$
+\sum_{\vk=\vp+\vq} \frac{p_xq_y - p_y q_x}{q^2}\w_{\v p}\w_{\v q},
+$$
+can be computed efficiently with the call
+${\tt conv2}(i k_x\w,i k_y\w,i k_y \w/k^2,-ik_x\w/k^2,{\sf u},{\sf v})$
+given work arrays {\sf u} and {\sf v}.
+
+\subsection{Complex and Centered Hermitian 3D convolutions}
 
 The decoupling of the 2D work arrays in Procedure~{\tt\ref{cconv2}}
 also allows us to construct the efficient 3D implicit complex convolution
@@ -959,10 +974,10 @@ and vectors ${\sf u}_1$ and ${\sf v}_1$ of length~$m_z$.}\label{cconv3}
   $\xf \leftarrow \fft\inv(\xf)$\;
   $\xu \leftarrow \fft\inv(\xu)$\;
   \Return f;
-  \caption{fft0bipadBackwards({\sf f},{\sf u}) stores the 
+  \caption{fft0tpadBackwards({\sf f},{\sf u}) stores the 
 scrambled signed~$4m$-padded centered backwards Fourier transform values of a
 vector {\sf f} of length~$2m$ in {\sf f} and an auxiliary vector~{\sf u} of
-length $2m$.}\label{fft0bipadBackwards}
+length $2m$.}\label{fft0tpadBackwards}
 \end{procedure}
 \begin{function}[H]
   \KwIn{vector \xf, vector \xu}
@@ -973,16 +988,16 @@ length $2m$.}\label{fft0bipadBackwards}
     $\xf[k] \leftarrow \xf[k] +i \z_{4m}^{-k}\xu[k]$\;
   }
   \Return \xf/(4m)\;
-  \caption{fft0bipadForwards({\sf f},{\sf u}) returns the
-inverse of Procedure \fftObipadBackwards({\sf f},{\sf u}).}
-\label{fft0bipadForwards}
+  \caption{fft0tpadForwards({\sf f},{\sf u}) returns the
+inverse of Procedure \fftOtpadBackwards({\sf f},{\sf u}).}
+\label{fft0tpadForwards}
 \end{function}
 \end{minipage}
 \end{figure}
 
-\section{Implicitly dealiased biconvolutions}\label{hyperconv}
+\section{Implicitly dealiased ternary convolutions}\label{hyperconv}
 In this section, we show that implicit padding is well suited to
-dealiasing the centered biconvolution
+dealiasing the centered ternary convolution
 $$
 \sum_{p=-m+1}^{m-1}\sum_{q=-m+1}^{m-1}\sum_{r=-m+1}^{m-1} f_p g_q h_r\d_{p+q+r,k},
 $$
@@ -992,7 +1007,7 @@ two-dimensional incompressible flow expressed in terms of the scalar
 vorticity~$\w$~\cite{Bowman10}. The basic building blocks for this problem
 are again the centered Fourier transform and the Hermitian convolution.
 
-\subsection{Implicit double dealiased centered Fourier transform}
+\subsection{Implicit double-dealiased centered Fourier transform}
 \label{fft0bi}
 Here the input data length is $2m-1$, with the Fourier origin at index
 $m-1$, so one needs to pad to $N\ge 4m-3$ to prevent contamination due to
@@ -1009,7 +1024,7 @@ we find on substituting $k'=k+m$ that
 u_{2\ell +r}\no=\sum_{k=-m}^{m-1}\z_{2m}^{\ell k} \z_N^{rk} U_k
 =\sum_{k'=0}^{2m-1}\z_{2m}^{\ell (k'-m)} \z_N^{r(k'-m)} U_{k'-m}
 =(-1)^\ell i^{-r}\sum_{k=0}^{2m-1}\z_{2m}^{\ell k} \z_N^{rk} U_{k-m}.
-\label{fft0bibackwards}
+\label{fft0tbackwards}
 \eel
 The scaled forwards transform is then given by
 \bel
@@ -1017,19 +1032,19 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\el
 \qquad k\no =-m+1,\ldots,m-1
 =\sum_{r=0}^{1}\zeta_N^{-r(k'-m)}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell (k'-m)} u_{2\ell+r},
 =\sum_{r=0}^{1}\zeta_N^{-rk'}i^r\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k'}(-1)^\ell u_{2\ell+r},
-\qquad k'\no =1,\ldots,2m-1.\label{fft0biforwards}
+\qquad k'\no =1,\ldots,2m-1.\label{fft0tforwards}
 \eel
-For a biconvolution, the product of the three factors $(-1)^\ell$
-(one for each input vector) arising from \Eq{fft0bibackwards}
-and the factor $(-1)^\ell$ in \Eq{fft0biforwards} cancel.
-Procedures {\tt\ref{fft0bipadBackwards}} and {\tt\ref{fft0bipadForwards}}
+For a ternary convolution, the product of the three factors $(-1)^\ell$
+(one for each input vector) arising from \Eq{fft0tbackwards}
+and the factor $(-1)^\ell$ in \Eq{fft0tforwards} cancel.
+Procedures {\tt\ref{fft0tpadBackwards}} and {\tt\ref{fft0tpadForwards}}
 each have an operation count asymptotic to $4Km\log_2 m$. As they
 operate fully in place on their arguments, with no additional storage
 requirements, it is straightforward to implement strided multivector
 versions of these algorithms.
 
-\subsection{Implicitly dealiased centered Hermitian 1D biconvolution}
-Let us now consider a Hermitian biconvolution with $N=4m$, where $m$ is a
+\subsection{Implicitly dealiased centered Hermitian 1D ternary convolution}
+Let us now consider a Hermitian ternary convolution with $N=4m$, where $m$ is a
 power of $2$. For explicit padding, one needs to pad the $m$ non-negative
 wavenumbers with $m+1$ zeros, for a total vector length of $2m+1$.
 
@@ -1050,25 +1065,25 @@ NU_k=\sum_{r=0}^{1}\zeta_N^{-rk}
 \qquad k\no =-m+1,\ldots,m-1.
 \ee
 
-The resulting implicitly padded Hermitian biconvolution,
-Procedure {\tt\ref{biconv}}, has an operation count of $8Km\log_2 m$. 
+The resulting implicitly padded Hermitian ternary convolution,
+Procedure {\tt\ref{tconv}}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out of place.
 Fig.~\ref{timing1b} we show that this algorithm is competitive with
-explicit padding. Procedure {\tt\ref{biconv}} requires $6(m+1)$ complex words of
+explicit padding. Procedure {\tt\ref{tconv}} requires $6(m+1)$ complex words of
 storage, slightly more than the $3(2m+1)=6m+3$ complex words needed for explicit
 padding.
 
 Just as for convolutions, the performance and memory benefits of
 dealiasing hyperconvolutions {\it via\/} implicit padding manifest themselves only in
 higher dimensions. For example, in Fig.~\ref{timing2b}, we observe 
-that an implicit $4096^2$ Hermitian biconvolution is $2.30$ times
-faster than an explicit biconvolution.
-The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian biconvolution
+that an implicit $4096^2$ Hermitian ternary convolution is $2.30$ times
+faster than an explicit ternary convolution.
+The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian ternary convolution
 is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
 compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
-(using power-of-two transforms) for an explicit biconvolution. In contrast, a
-$4096^2$ $y$-pruned biconvolution requires the same amount of storage as, but
-is $1.48$ times faster than, an explicitly padded biconvolution.
+(using power-of-two transforms) for an explicit ternary convolution. In contrast, a
+$4096^2$ $y$-pruned ternary convolution requires the same amount of storage as, but
+is $1.48$ times faster than, an explicitly padded ternary convolution.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.48\linewidth}
@@ -1099,10 +1114,10 @@ is $1.48$ times faster than, an explicitly padded biconvolution.
     $\xf[k] \leftarrow \xf[k] + \z_{4m}^{-k}\xu[k]$\;
   }
   \Return f/(4m)\;
-\caption{biconv({\sf f},{\sf g},{\sf h},{\sf u},{\sf v},{\sf w}) computes
-an in-place implicitly dealiased biconvolution of three centered
+\caption{tconv({\sf f},{\sf g},{\sf h},{\sf u},{\sf v},{\sf w}) computes
+an in-place implicitly dealiased ternary convolution of three centered
 Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
-{\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{biconv}
+{\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{tconv}
 \end{function}
 \end{minipage}
 %
@@ -1111,24 +1126,24 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
   \KwIn{matrix \xf, matrix \xg, matrix \xh}
   \KwOut{matrix \xf}
   \For{$j=0$ \KwTo $m_y-1$}{
-    $\fftObipadBackwards(\xf^T[j],\xU^T[j])$\;
-    $\fftObipadBackwards(\xg^T[j],\xV^T[j])$\;
-    $\fftObipadBackwards(\xh^T[j],\xW^T[j])$\;
+    $\fftOtpadBackwards(\xf^T[j],\xU^T[j])$\;
+    $\fftOtpadBackwards(\xg^T[j],\xV^T[j])$\;
+    $\fftOtpadBackwards(\xh^T[j],\xW^T[j])$\;
   }
   \For{$i=0$ \KwTo $2m_x-1$}{
-    $\biconv(\xf[i],\xg[i],\xh[i],\xu,\xv,\xw)$\;
-    $\biconv(\xU[i],\xV[i],\xW[i],\xu,\xv,\xw)$\;
+    $\tconv(\xf[i],\xg[i],\xh[i],\xu,\xv,\xw)$\;
+    $\tconv(\xU[i],\xV[i],\xW[i],\xu,\xv,\xw)$\;
   }
   \For{$j=0$ \KwTo $m_y-1$}{
-    $\fftObipadForwards(\xf^T[j],\xU^T[j])$\;
+    $\fftOtpadForwards(\xf^T[j],\xU^T[j])$\;
   }
   \Return \xf\;
-\caption{biconv2({\sf f},{\sf g},{\sf h}) 
+\caption{tconv2({\sf f},{\sf g},{\sf h}) 
 returns an in-place implicitly dealiased convolution of \hbox{$2m_x\times
 (m_y+1)$} matrices~{\sf f},~{\sf g}, and~{\sf h} using
 temporary \hbox{$2m_x\times (m_y+1)$} matrices~{\sf U}, {\sf V}, and~{\sf W} and
 vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
-}\label{biconv2}
+}\label{tconv2}
 \end{function}
 \end{minipage}
 \end{figure}
@@ -1138,7 +1153,7 @@ vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 \begin{center}
 \includegraphics{timing1b}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 1D biconvolutions of length $m$.}
+dealiased complex in-place 1D ternary convolutions of length $m$.}
 \phantomsection{}\label{timing1b}
 \end{center}
 \end{minipage}
@@ -1147,7 +1162,7 @@ dealiased complex in-place 1D biconvolutions of length $m$.}
 \begin{center}
 \includegraphics{timing2b}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased centered Hermitian in-place 2D biconvolutions of size $(2m-1)\times m$.}
+dealiased centered Hermitian in-place 2D ternary convolutions of size $(2m-1)\times m$.}
 \phantomsection{}\label{timing2b}
 \end{center}
 \end{minipage}
@@ -1208,10 +1223,11 @@ straightforward exercise.
 
 % LocalWords:  dealiasing dealias hyperconvolutions Hermitian fftw FFT priori
 % LocalWords:  hyperconvolution nonperiodic FFTs noncentered subtransforms pre
-% LocalWords:  unpadded dealised biconvolution th unnormalized jk kU kj cconv
-% LocalWords:  textit fft crfft rcfft padBackwards padForwards bipadBackwards
-% LocalWords:  bipadForwards xf xFk xA xB xg xw xC xD xF xG xS xT xU xV SIMD rk
+% LocalWords:  unpadded dealised th unnormalized jk kU kj cconv
+% LocalWords:  textit fft crfft rcfft padBackwards padForwards tpadBackwards
+% LocalWords:  tpadForwards xf xFk xA xB xg xw xC xD xF xG xS xT xU xV SIMD rk
 % LocalWords:  fftpadBackwards fftpadForwards backwardsB strided conv Buneman
 % LocalWords:  multivector Hermiticity unsymmetrized backwardsA forwardsB DFT
-% LocalWords:  Canuto xm biconvolutions bibackwards biforwards biconv qm mq fp
+% LocalWords:  Canuto xm ternary convolutions tbackwards tforwards 
+% LocalWords:  qm mq fp 
 % LocalWords:  parallelizability pseudocode ansi ik xW ip xz ym xy Buneman's FG
