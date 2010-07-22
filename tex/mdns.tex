@@ -1,8 +1,6 @@
-\documentclass[10pt,showpacs,showkeys,%preprint,
-amsfonts,amsmath,
-onecolumn,
-floatfix,aps,superscriptaddress]{report}
-%floatfix,aps,superscriptaddress]{revtex4}
+\documentclass[12pt,showpacs,showkeys,%preprint,
+amsfonts,amsmath,onecolumn,
+floatfix,aps,superscriptaddress]{revtex4}
 \usepackage{amsfonts,amsmath,array}
 \usepackage{graphicx}
 \usepackage{bm}
@@ -71,7 +69,6 @@ the property. For the projection operator to conserve $E$ and $Z$, we
 thus need to transfer all of the energy and enstrophy from the
 remaining fine-grid nodes to coarse grid nodes.
 
-
 \section{Decimated Evolution Equation}
 We wish to evolve the vorticity field forward in time.  As such, we
 need a differential equation that specifies the time-derivative of the
@@ -81,9 +78,7 @@ Navier--Stokes equation, or we simply treat the small-scale vorticity
 field as periodic in $x$-space and scale the Navier--Stokes equation
 by a factor determined by the period we have assumed.
 
-
 \subsection{Spectrally Reduced Navier--Stokes Equation}
-
 Shell models of turbulence spectrally reduce in a special case, since
 the GOY model reduced to the DN model, which is then a fixed point. Id
 est, the nonlinear source term is invariant.  Unsurprisingly, the
@@ -176,7 +171,7 @@ interactions are only $\O\tau^1$.
 
 \begin{figure}[htbp]
   \begin{center}
-    \includegraphics{lambda1}
+    \includegraphics{figures/lambda1}
     \caption{Radix-1 Decimated Grid.}
     \label{lambda1}
   \end{center}
@@ -198,14 +193,14 @@ to use a larger number of modes in the subgrid than in the undecimated grid.
 
 \begin{figure}[htbp]
   \begin{center}
-    \includegraphics{lambdar2rot}
+    \includegraphics{figures/lambdar2rot}
     \caption{Radix-2 Decimated Grid.}
     \label{lambdar2rot}
   \end{center}
 \end{figure}
 \begin{figure}[htbp]
   \begin{center}
-    \includegraphics{lambdar2}
+    \includegraphics{figures/lambdar2}
     \caption{Rotated Radix-2 Decimated Grid.}
     \label{lambdar2}
   \end{center}
@@ -230,7 +225,7 @@ require modes on opposite sides of the mode on the fully-resolved grid
 conserver energy and enstrophy pair-wise, as in figure~\ref{rad2cross}. 
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{rad2cross}
+    \includegraphics{figures/rad2cross}
     \caption{Projection diagram.}
     \label{rad2cross}
   \end{center}
@@ -270,7 +265,7 @@ to what modes. The prolongation operator diagram is shown in figure
 in this subsection.
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{prolside}
+    \includegraphics{figures/prolside}
     \caption{Side-view of projection.}
     \label{prolside}
   \end{center}
@@ -317,7 +312,7 @@ Fourier space, which automatically conserves both $E$ and $Z$.
 
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{lambda2}
+    \includegraphics{figures/lambda2}
     \caption{Radix-4 Decimated Grid.}
     \label{lambda2}
   \end{center}
@@ -357,7 +352,7 @@ vorticity.  Let $E$ be the energy and $K^2E$ the enstrophy in the mode
 on the fully resolved grid. 
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{rad4row}
+    \includegraphics{figures/rad4row}
     \caption{Radix-4 row/colum projection.}
     \label{rad4row}
   \end{center}
@@ -367,9 +362,9 @@ sent to the mode at $k_1$, then energy conservation requires that
 $1-\alpha$ of the energy be sent to the mode at $k_2$.  The enstrophy
 after projection is $k_1^2\alpha E+ k_2^2 (1-\alpha)E$.  Solving for 
 $\alpha$, we get
-\be
-\alpha=\frac{K^2-k_2^2}{k_1^2-k_2^2}.
-\ee
+\begin{dmath*}[compact]
+  \alpha=\frac{K^2-k_2^2}{k_1^2-k_2^2}.
+\end{dmath*}
 If $k_1^2=k_2^2\neq K^2$, it isn't possible to conserve enstrophy under
 projection.  Fortunately, this is impossible with radix-4 decimation.
 %FIXME: prove this.
@@ -381,7 +376,7 @@ pair-wise conserve energy and enstrophy, we are left a projection
 diagram as in figure \ref{rad4cross}.
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{rad4cross}
+    \includegraphics{figures/rad4cross}
     \caption{Radix-4 equidistant projection.}
     \label{rad4cross}
   \end{center}
