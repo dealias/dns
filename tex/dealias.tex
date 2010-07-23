@@ -1068,14 +1068,14 @@ The forwards transform is
 The resulting implicitly padded Hermitian ternary convolution,
 Procedure {\tt\ref{tconv}}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out of place.
-Fig.~\ref{timing1b} we show that this algorithm is competitive with
+Fig.~\ref{timing1t} we show that this algorithm is competitive with
 explicit padding. Procedure {\tt\ref{tconv}} requires $6(m+1)$ complex words of
 storage, slightly more than the $3(2m+1)=6m+3$ complex words needed for explicit
 padding.
 
 Just as for convolutions, the performance and memory benefits of
 dealiasing higher-order convolutions {\it via\/} implicit padding manifest themselves only in
-higher dimensions. For example, in Fig.~\ref{timing2b}, we observe 
+higher dimensions. For example, in Fig.~\ref{timing2t}, we observe 
 that an implicit $4096^2$ Hermitian ternary convolution is $2.30$ times
 faster than an explicit ternary convolution.
 The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian ternary convolution
@@ -1151,19 +1151,19 @@ vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 \begin{figure}[htbp]
 \begin{minipage}{0.49\linewidth}
 \begin{center}
-\includegraphics{timing1b}
+\includegraphics{timing1t}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased complex in-place 1D ternary convolutions of length $m$.}
-\phantomsection{}\label{timing1b}
+\phantomsection{}\label{timing1t}
 \end{center}
 \end{minipage}
 \,
 \begin{minipage}{0.49\linewidth}
 \begin{center}
-\includegraphics{timing2b}
+\includegraphics{timing2t}
 \caption{Comparison of computation times for explicitly and implicitly
 dealiased centered Hermitian in-place 2D ternary convolutions of size $(2m-1)\times m$.}
-\phantomsection{}\label{timing2b}
+\phantomsection{}\label{timing2t}
 \end{center}
 \end{minipage}
 \end{figure}
