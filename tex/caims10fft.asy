@@ -224,7 +224,7 @@ f_{2\ell}
 \endl
 f_{2\ell+1}
 &=&\ds\sum_{k=0}^{m-1}\zeta_{2m}^{(2\ell+1) k} F_k
-=\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \Red{\zeta_N^kF_k,}
+=\ds\sum_{k=0}^{m-1}\zeta_m^{\ell k} \Red{\zeta_{2m}^kF_k,}
 \qquad
 \ell=0,1,\ldots m-1.
 ");
