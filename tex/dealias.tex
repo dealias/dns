@@ -243,14 +243,14 @@ for an overall computational scaling of order $2m\log_2 m=N\log_2 m$.
 The odd and even terms of the convolution can then be computed separately
 (without the need for a bit reversal stage), multiplied term-by-term, and
 finally transformed again to Fourier space using the forward transform
-\bel
-2mU_k=\sum_{j=0}^{2m-1}\zeta_{2m}^{-kj} u_j
+\ben
+2mU_k&=&\sum_{j=0}^{2m-1}\zeta_{2m}^{-kj} u_j
 =\sum_{\ell=0}^{m-1}\zeta_{2m}^{-k2\ell} u_{2\ell}
-+\sum_{\ell=0}^{m-1}\zeta_{2m}^{-k(2\ell+1)} u_{2\ell+1}
-=\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell}
++\sum_{\ell=0}^{m-1}\zeta_{2m}^{-k(2\ell+1)} u_{2\ell+1}\endl
+&=&\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell}
 +\zeta_{2m}^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell+1}
 \qquad k\no=0,\ldots,m-1.\label{cconv1forwards}
-\eel
+\een
 The implicitly padded transforms described by~\Eqs{cconv1backwards}
 and~\hEq{cconv1forwards} are implemented as
 Procedure~{\tt\ref{fftpadBackwards}} and Function~{\tt\ref{fftpadForwards}}.
@@ -290,10 +290,14 @@ Referring to the computation times shown in Fig.~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
 and~\hEq{cconv1forwards}
 can thus be implemented to be competitive with explicitly padded
-convolutions. The error bars indicate the lower and upper standard deviations
+convolutions. The error bars indicate the lower and upper {\it one-sided
+standard deviations}
 $$
-\sigma_L=\sqrt{1/(\fr{n}{2}-1)}\sum_{i=1\atop{t_i < \<t_i\>}^n (t_i-\<t_i\>)^2}
+\sigma_L=\sqrt{\fr{1}{\fr{n}{2}-1}}\sum_{i=1\atop{t_i < T}}^n (t_i-T)^2,
+\qquad
+\sigma_H=\sqrt{\fr{1}{\fr{n}{2}-1}}\sum_{i=1\atop{t_i \ge T}}^n (t_i-T)^2,
 $$
+where $T$ denotes the mean execution time for $n$ samples.
 Both the FFTW-3.2.2 library and the convolution layer we built on
 top of it were compiled with the Intel C/C++ 11.0 20081105 compiler, using
 the optimization options {\tt -ansi-alias -malign-double -fp-model fast=2}
