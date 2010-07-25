@@ -1,0 +1,33 @@
+#!/bin/bash
+cd ~/fftw++
+for i in conv cconv tconv conv2 cconv2 tconv2 cconv3
+do
+    
+    ./autiming $i
+
+    if [ "$i" == "conv" ]; then
+	outname=timing1r
+    fi
+    if [ "$i" == "conv2" ]; then
+	outname=timing2r
+    fi
+    if [ "$i" == "cconv" ]; then
+	outname=timing1c
+    fi
+    if [ "$i" == "cconv2" ]; then
+	outname=timing2c
+    fi
+    if [ "$i" == "tconv" ]; then
+	outname=timing1t
+    fi
+    if [ "$i" == "tconv2" ]; then
+	outname=timing2t
+    fi
+    if [ "$i" == "cconv3" ]; then
+	outname=timing3c
+    fi
+
+#    gv timing.eps
+    mv timing.eps ~/dns/tex/$outname.eps
+done
+cd ~/dns/tex

@@ -48,19 +48,21 @@ Sciences, University of Alberta, Edmonton, Alberta T6G 2G1, Canada.}
 {\centerline {Submitted to SIAM J. Sci. Comp, March 8, 2010}}
 
 \begin{abstract}
-Algorithms are developed for calculating dealiased linear convolution sums
-without the expense of conventional zero-padding or phase-shift
+Algorithms are developed for calculating dealiased linear convolution
+sums without the expense of conventional zero-padding or phase-shift
 techniques. For one-dimensional in-place convolutions, the memory
-requirements are identical with the zero-padding technique, with the important
-distinction that the additional work memory need not be contiguous with the
-input data. This decoupling of data and work arrays dramatically reduces
-the memory and computation time required to evaluate higher-dimensional
-in-place convolutions. The technique also allows one to dealias the
-higher-order convolutions that arise on Fourier transforming cubic and higher powers.
-Implicitly dealiased convolutions can be built on top of state-of-the-art
-fast Fourier transform libraries: vectorized multidimensional implementations
-for the complex and centered Hermitian (pseudospectral) cases have
-been implemented in the open-source software {\tt fftw++}.
+requirements are identical with the zero-padding technique, with the
+important distinction that the additional work memory need not be
+contiguous with the input data. This decoupling of data and work
+arrays dramatically reduces the memory and computation time required
+to evaluate higher-dimensional in-place convolutions. The technique
+also allows one to dealias the higher-order convolutions that arise
+from Fourier transforming cubic and higher powers.  Implicitly
+dealiased convolutions can be built on top of state-of-the-art fast
+Fourier transform libraries: vectorized multidimensional
+implementations for the complex and centered Hermitian
+(pseudospectral) cases have been implemented in the open-source
+software {\tt fftw++}.
 \end{abstract} 
 
 \begin{keywords} 
@@ -89,20 +91,19 @@ memory usage is a critical limiting factor, and self-sorting in-place
 multidimensional Fourier transforms~\cite{Temperton91} are typically used to
 reduce the memory footprint of the required spectral convolutions.
 
-Because the FFT-based convolution, which produces cyclic output from cyclic
-input, is applied in these problems to nonperiodic (wavenumber-space) data,
-it is important
-to remove aliases from the convolution. Typically the input data arrays are
-extended by padding them with enough zeros so that wave beats of
-the positive frequencies cannot wrap around and contaminate
-the negative frequencies. A cyclic convolution $\sum_{p=0}^{N-1} f_p g_{k-p}$ 
-is then performed using a
-correspondingly larger Fourier transform size~$N$. If the cost of 
-computing a complex Fourier transform of size~$N$ is asymptotic to 
-$K N\log_2 N$ as \hbox{$N\goesto\infty$} (the lowest bound currently 
-achievable is $K=34/9$~\cite{Johnson07,Lundy07}), the asymptotic cost of
-computing the convolution of two vectors of unpadded length~$m$ is
-$6Km\log_2 m$ (using $N=2m$ and three Fourier transforms).
+It is important to remove aliases from FFT-based convolutions applied
+to nonperiodic (wavenumber-space) data because the FFT-based
+convolution assumes cyclic input and prodces cyclic output. Typically
+the input data arrays are extended by padding them with enough zeros
+so that wave beats of the positive frequencies cannot wrap around and
+contaminate the negative frequencies. A cyclic convolution
+$\sum_{p=0}^{N-1} f_p g_{k-p}$ is then performed using a
+correspondingly larger Fourier transform size~$N$. If the cost of
+computing a complex Fourier transform of size~$N$ is asymptotic to $K
+N\log_2 N$ as \hbox{$N\goesto\infty$} (the lowest bound currently
+achievable is $K=34/9$~\cite{Johnson07,Lundy07}), the asymptotic cost
+of computing the convolution of two vectors of unpadded length~$m$ is
+$6Km\log_2 m$ (using three Fourier transforms with $N=2m$).
 
 Another important case in practice is the centered Hermitian~1D
 convolution, dealiased by the {\it 2/3 padding rule} \cite{Orszag71}.
@@ -134,7 +135,6 @@ higher dimensions, matters change (e.g.\ for a 3d zero-padded array about
 two or so simply by skipping 1d sub-transforms that are zero).
 }
 \end{quotation}
-
 The reasoning behind the assertion that such one-dimensional pruned FFTs
 are not worth thinking about is that if $m$ of the $N$ inputs are nonzero,
 the computational cost is reduced only from $N\log_2 N$ to $N\log_2 m$.
@@ -143,33 +143,33 @@ Moreover, since a zero-padded Fourier transform of size~$N$ yields~$N$
 (typically nonzero) output values, no savings in memory appear to be
 possible in one dimension. Nevertheless, in this work we demonstrate that
 pruning the zero-padded elements of one-dimensional convolutions is still
-worth thinking about, primarily because this provides useful building blocks
+worth thinking about, because this provides useful building blocks
 for constructing more efficient multidimensional convolutions.
 
-The key observation is this: although the memory usage of our implicitly
-padded 1D convolution is identical to that of a conventional explicitly
-padded convolution, the additional temporary memory need not be contiguous
-with the user data.  In a multidimensional context, this external work
-buffer can be reused for other low dimensional convolutions.
-As a result, in $d$ dimensions an implicitly dealised convolution
-asymptotically uses $1/2^{d-1}$ of the
-storage space needed for an explicitly padded convolution. When the Fourier origin is
-centered in the domain, memory usage is reduced to $(2/3)^{d-1}$ of the
-conventional amount.
-If saving memory alone were the goal, this reduction could
-also be achieved with explicit zero padding by copying the data for the
-innermost convolution to an external padded buffer, but such extra data
-communication would degrade overall performance. The fact that our
-one-dimensional convolution does not require this extra copying is the
-main feature that was exploited to obtain simultaneous improvements in
-memory usage and speed.
+The key observation is this: although the memory usage of our
+implicitly padded 1D convolution is identical to that of a
+conventional explicitly padded convolution, the additional temporary
+memory need not be contiguous with the user data.  In a
+multidimensional context, this external work buffer can be reused for
+other low dimensional convolutions.  As a result, in $d$ dimensions an
+implicitly dealised convolution asymptotically uses $1/2^{d-1}$ of the
+storage space needed for an explicitly padded convolution. When the
+Fourier origin is centered in the domain, memory usage is reduced to
+$(2/3)^{d-1}$ of the conventional amount.  If saving memory alone were
+the goal, this reduction could also be achieved with explicit zero
+padding by copying the data for the innermost convolution to an
+external padded buffer, but such extra data communication would
+degrade overall performance. The fact that our one-dimensional
+convolution does not require this extra copying is the main feature
+that was exploited to obtain simultaneous improvements in memory usage
+and speed.
 
 Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
 compete with a problem-dependent, architecture-adaptive
-FFT algorithm like that provided by the award-winning FFTW \cite{Frigo05}
-library (which empirically predetermines a near optimal butterfly graph
-at each subdivision). Effectively one wants to perform
+FFT algorithm like that provided by the award-winning FFTW~\cite{Frigo05}
+library which empirically predetermines a near optimal butterfly graph
+at each subdivision. Effectively one wants to perform
 the outer FFT subdivision manually, dropping the zero terms and
 deferring the computation of the inner transforms to a standard library
 routine. But this also restricts the set of available platform-dependent
@@ -209,8 +209,8 @@ implicitly dealiased convolutions.
 The Fourier origin for standard convolutions is located at the first
 (zero) index of the array.
 Therefore, input data vectors of length~$m$ must be padded with zeros to
-length $N\ge 2m-1$ to prevent mode $m-1$ from beating with itself to
-contaminate mode~$N=0\mod N$. However, since FFT sizes with small prime
+length $N\ge 2m-1$ to prevent modes with wavenumber $m-1$ from beating to
+contaminating mode~$N=0\mod N$. However, since FFT sizes with small prime
 factors in practice yield the most efficient implementations, it is normally
 desirable to extend the padding to $N=2m$.
 
@@ -439,12 +439,12 @@ dealiased complex in-place 1D convolutions of length $m$.}
 \end{figure}
 
 \subsection{Implicitly dealiased centered Fourier transform}\label{fft0}
-A basic building block for constructing multidimensional pseudospectral
+A basic building block for constructing multidimensional centered
 convolutions is an implicitly dealiased centered Fourier transform, where the
 input data length is odd, say $2m-1$, with the Fourier origin at index $m-1$. 
 Here, one needs to pad to $N\ge 3m-2$ to prevent 
 mode $m-1$ from beating with itself to contaminate the most negative
-(first) mode, corresponding to wavenumber $-m+1$. Since the ratio of the
+(first) mode, corresponding to wavenumber $-m+1$. The ratio of the
 number of physical to total modes, $(2m-1)/(3m-2)$ is asymptotic to $2/3$
 for large $m$ \cite{Orszag71}.
 
@@ -453,7 +453,7 @@ $N$ to be a power of $2$, with $m=\floor{(n+2)/3}$.
 However, for implicit
 padding, it is advantageous to choose $m$ itself to be a power of $2$
 since the algorithm reduces to computing FFTs of length $m$.
-Moreover, it is convenient to pad implicitly slightly beyond $3m-2$, to $N=3m$,
+Moreover, it is convenient to implicitly pad slightly beyond $3m-2$, to $N=3m$,
 as this allow the use of a radix $3$ subdivision at the outermost level, so
 that only two of the three subtransforms of length $m$ need to be retained. 
 
@@ -572,7 +572,6 @@ U_0&if $k=0$,\cr
 \z_{3m}^{rk}\(U_k+\z_3^{-r}\conj{U_{m-k}}\)&if $1\le k\le m-1$.\cr
 }
 \eel
-
 We note that $w_{k,r}$ obeys the Hermitian symmetry 
 $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
@@ -589,7 +588,9 @@ Since $u_{3\ell+r}$ is real, a real-to-complex transform can be used to
 compute the first $c+1$ frequencies of
 $\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}$; the remaining $m-c-1$
 frequencies needed in \Eq{fft0forwardsB} are then computed using Hermitian
-symmetry. Since there are two input vectors and
+symmetry. 
+
+Since there are two input vectors and
 one output vector, the complete convolution requires a total of nine
 Hermitian Fourier transforms of size $m$, for an overall computational
 scaling of $\fr{9}{2}K m \log_2 m$ operations, in agreement with the
@@ -740,7 +741,6 @@ u_{q\ell+r}=\sum_{k=0}^{pm-1}\z_{qm}^{(q\ell+r)k} U_k
 U_{t m+s}
 =\sum_{s=0}^{m-1}\z_m^{\ell s}\sum_{t=0}^{p-1}\z_{qm}^{r(t m+s)} U_{t m+s}.
 $$
-
 Since there are $q$ choices of $r$, the problem reduces
 to computing $q$ Fourier transforms of length~$m$, which requires
 $K q m\log_2 m=K N\log_2 (N/q)$ operations. 
@@ -752,7 +752,8 @@ $$
 \qquad k\no =0,\ldots,pm-1
 $$
 also requires $q$ Fourier transforms of length $m$. Again, the computational
-savings for a one-dimensional transform is marginal.
+savings for a one-dimensional transform is marginal, but gains are expected
+in higher dimensions.
 
 \section{Higher-dimensional convolutions}\label{multid}
 The algorithms developed in Section~\ref{1d} can be used as building
@@ -906,8 +907,8 @@ and~{\tt\ref{tconv}}, the product $f * g$ as the element-by-element
 dot product $\sum_i f_i * g_i$.
 Allowing $M$ input data blocks like this enables, for example,
 the nonlinear term of the 2D incompressible Euler equation
-to be computed using five Fourier transforms (instead of three) in
-each of the $M=2$ dimensions. Specifically, the advective term
+to be computed using five Fourier transforms (instead of three for
+each of the $M=2$ input pairs). Specifically, the advective term
 $-\vu\dot\grad\w=-(\zhat\cross\grad \del^{-2}\w)\dot \grad \w$,
 which appears in Fourier space as
 $$
@@ -1030,7 +1031,7 @@ u_{2\ell +r}\no=\sum_{k=-m}^{m-1}\z_{2m}^{\ell k} \z_{4m}^{rk} U_k
 =(-1)^\ell i^{-r}\sum_{k=0}^{2m-1}\z_{2m}^{\ell k} \z_{4m}^{rk} U_{k-m}.
 \label{fft0tbackwards}
 \eel
-The scaled forwards transform is then given by
+The forwards transform is then given by
 \bel
 {4m}U_k=\sum_{r=0}^{1}\zeta_{4m}^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\ell+r},
 \qquad k\no =-m+1,\ldots,m-1
@@ -1068,7 +1069,6 @@ The forwards transform is
 \sum_{\ell=0}^{2m-1} \zeta_{2m}^{-\ell k} u_{2\ell+r}
 \qquad k\no =-m+1,\ldots,m-1.
 \ee
-
 The resulting implicitly padded Hermitian ternary convolution,
 Procedure {\tt\ref{tconv}}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out of place.
@@ -1187,7 +1187,7 @@ asymptotically, as $m_x\goesto\infty$, an implicit complex convolution
 requires one-half of the memory needed for a zero padded convolution in two
 dimensions and one-quarter in three dimensions. In the centered Hermitian
 case, the memory use in two dimensions is $2/3$ of the amount used for an
-explicit convolution and $4/9$ in three dimensions. 
+explicit convolution and $4/9$ in three dimensions.
 
 Even in one dimension, where implicit padding can be implemented
 competitively with conventional methods, the method has notable advantages.
