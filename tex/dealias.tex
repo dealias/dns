@@ -136,11 +136,11 @@ two or so simply by skipping 1d sub-transforms that are zero).
 }
 \end{quotation}
 The reasoning behind the assertion that such one-dimensional pruned FFTs
-are not worth thinking about is that if $m$ of the $N$ inputs are nonzero,
+are not worth thinking about is that if only $m$ of the $N$ inputs are nonzero,
 the computational cost is reduced only from $N\log_2 N$ to $N\log_2 m$.
 For example, if $m=N/2$, the savings is a minuscule $1/\log_2 N$.
 Moreover, since a zero-padded Fourier transform of size~$N$ yields~$N$
-(typically nonzero) output values, no savings in memory appear to be
+(typically nonzero) output values, no storage savings appear
 possible in one dimension. Nevertheless, in this work we demonstrate that
 pruning the zero-padded elements of one-dimensional convolutions is still
 worth thinking about, primarily because this provides useful building blocks
@@ -167,7 +167,7 @@ and speed.
 Nevertheless, the task of writing an efficient implicitly dealiased
 one-dimensional convolution is onerous, particularly if one tries to
 compete with a problem-dependent, architecture-adaptive
-FFT algorithm (like that provided by the award-winning FFTW~\cite{Frigo05}
+FFT algorithm (like that provided by the award-winning FFTW \cite{Frigo05}
 library, which empirically predetermines a near optimal butterfly graph
 at each subdivision). Effectively one wants to perform
 the outer FFT subdivision manually, dropping the zero terms and
@@ -242,7 +242,7 @@ for an overall computational scaling of order $2m\log_2 m=N\log_2 m$.
 
 The odd and even terms of the convolution can then be computed separately
 (without the need for a bit reversal stage), multiplied term-by-term, and
-finally transformed again to Fourier space using the forward transform
+finally transformed again to Fourier space using the (scaled) forward transform
 \ben
 2mU_k&=&\sum_{j=0}^{2m-1}\zeta_{2m}^{-kj} u_j
 =\sum_{\ell=0}^{m-1}\zeta_{2m}^{-k2\ell} u_{2\ell}
@@ -281,10 +281,10 @@ efficient~\cite{Johnson09}, at the expense of somewhat higher memory usage.
 We instead calculate the $\zeta_N^k$ factors with a single complex
 multiply, using two short precomputed tables $H_a=\zeta_N^{as}$ and
 $L_b=\zeta_N^b$, where $k=as+b$ with $s=\floor{\sqrt m}$,
-$a=0,1,\ldots,\ceil{m/s}-1$, and $b=0,1,\ldots,s-1$. Since these
+\hbox{$a=0,1,\ldots,\ceil{m/s}-1$}, and $b=0,1,\ldots,s-1$. Since these
 one-dimensional tables require only $\O(\sqrt{m})$ complex words of
-storage and our focus is on higher dimensional convolutions anyway, we do
-not account for them in our estimates of memory use. 
+storage and our focus is on higher-dimensional convolutions anyway, we do
+not account for them in our storage estimates.
 
 Referring to the computation times shown in Fig.~\ref{timing1c},
 we see that the implicit padding algorithm described by \Eqs{cconv1backwards} 
@@ -443,7 +443,7 @@ A basic building block for constructing multidimensional centered
 convolutions is an implicitly dealiased centered Fourier transform, where the
 input data length is odd, say $2m-1$, with the Fourier origin at index $m-1$. 
 Here, one needs to pad to $N\ge 3m-2$ to prevent
-modes with wavenumber $m-1$ from beating together to contaminate the
+modes with wavenumber $m-1$ from beating together to contaminate
 the mode with wavenumber $-m+1$. The ratio of the
 number of physical to total modes, $(2m-1)/(3m-2)$, is asymptotic to $2/3$
 for large $m$ \cite{Orszag71}.
@@ -474,7 +474,7 @@ U_0&if $k=0$,\cr
 \z_{3m}^{rk}(U_k+\z_3^{-r}U_{k-m})&if $1\le k\le m-1$.\cr
 }\label{fft0backwardsB}
 \eel
-The (scaled) forwards transform is then
+The forwards transform is then
 \bel
 {3m}U_k=\sum_{r=-1}^{1}\zeta_{3m}^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
 \qquad k\no =-m+1,\ldots,m-1.\label{fft0forwards}
@@ -911,17 +911,18 @@ each of the $M=2$ input pairs). Specifically, the advective term
 $-\vu\dot\grad\w=-(\zhat\cross\grad \del^{-2}\w)\dot \grad \w$,
 which appears in Fourier space as
 $$
-\sum_{\vk=\vp+\vq} \frac{p_xq_y - p_y q_x}{q^2}\w_{\v p}\w_{\v q},
+\sum_{\vp} \frac{p_xk_y - p_y k_x}{|\vk-\vp|^2}\w_{\vp}\w_{\vk-\vp},
 $$
 can be computed efficiently with the call
-${\tt conv2}(i k_x\w,i k_y\w,i k_y \w/k^2,-ik_x\w/k^2,{\sf u},{\sf v})$
-given work arrays {\sf u} and {\sf v}.
+${\tt conv2}(i k_x\w,i k_y\w,i k_y \w/k^2,-ik_x\w/k^2,{\sf u},{\sf v})$,
+where {\sf u} and {\sf v} are work arrays.
 
 \subsection{Complex and Centered Hermitian 3D convolutions}
 
 The decoupling of the 2D work arrays in Procedure~{\tt\ref{cconv2}}
-also allows us to construct the efficient 3D implicit complex convolution
-listed in Procedure~{\tt\ref{cconv3}}. As shown in Fig.~\ref{timing3c}, an implicit
+facilitates the construction of an efficient 3D implicit complex convolution,
+as described in Procedure~{\tt\ref{cconv3}}. As shown in
+Fig.~\ref{timing3c}, an implicit
 $256^3$ convolution is $1.90$ times faster than the explicit version, while
 an $xz$-pruned version is only $1.18$ times faster. The memory usage of an
 implicitly padded 3D $m_x\times m_y\times m_z$ convolution is
@@ -1032,10 +1033,10 @@ u_{2\ell +r}\no=\sum_{k=-m}^{m-1}\z_{2m}^{\ell k} \z_{4m}^{rk} U_k
 \eel
 The forwards transform is then given by
 \bel
-{4m}U_k=\sum_{r=0}^{1}\zeta_{4m}^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\ell+r},
+{4m}U_k=\sum_{r=0}^{1}\zeta_{4m}^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\ell+r}
 \qquad k\no =-m+1,\ldots,m-1
-=\sum_{r=0}^{1}\zeta_{4m}^{-r(k'-m)}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell (k'-m)} u_{2\ell+r},
-=\sum_{r=0}^{1}\zeta_{4m}^{-rk'}i^r\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k'}(-1)^\ell u_{2\ell+r},
+=\sum_{r=0}^{1}\zeta_{4m}^{-r(k'-m)}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell (k'-m)} u_{2\ell+r}
+=\sum_{r=0}^{1}\zeta_{4m}^{-rk'}i^r\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k'}(-1)^\ell u_{2\ell+r}
 \qquad k'\no =1,\ldots,2m-1.\label{fft0tforwards}
 \eel
 For a ternary convolution, the product of the three factors $(-1)^\ell$
@@ -1071,7 +1072,7 @@ The forwards transform is
 The resulting implicitly padded Hermitian ternary convolution,
 Procedure {\tt\ref{tconv}}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out of place.
-Fig.~\ref{timing1t} we show that this algorithm is competitive with
+In Fig.~\ref{timing1t} we show that this algorithm is competitive with
 explicit padding. Procedure {\tt\ref{tconv}} requires $6(m+1)$ complex words of
 storage, slightly more than the $3(2m+1)=6m+3$ complex words needed for explicit
 padding.
@@ -1080,13 +1081,13 @@ Just as for convolutions, the performance and memory benefits of
 dealiasing higher-order convolutions {\it via\/} implicit padding manifest themselves only in
 higher dimensions. For example, in Fig.~\ref{timing2t}, we observe 
 that an implicit $4096^2$ Hermitian ternary convolution is $2.30$ times
-faster than an explicit ternary convolution.
-The memory usage for a $(2m_x-1)\times (2m_y-1)$ Hermitian ternary convolution
-is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
+faster than an explicit version.
+The memory usage for a $(2m_x-1)\times (2m_y-1)$ implicit Hermitian ternary
+convolution is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
 compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
-(using power-of-two transforms) for an explicit ternary convolution. In contrast, a
-$4096^2$ $y$-pruned ternary convolution requires the same amount of storage as, but
-is $1.48$ times faster than, an explicitly padded ternary convolution.
+(using power-of-two transforms) for an explicit version. In contrast, a
+$4096^2$ $y$-pruned Hermitian ternary convolution requires the same amount
+of storage as, but is $1.48$ times faster than, an explicitly padded version.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.48\linewidth}
@@ -1177,7 +1178,7 @@ convolutions in one or more dimensions.
 In this work we have developed an efficient method for avoiding explicit zero
 padding in multidimensional convolutions, thereby saving both memory and
 computation time. The key idea that was exploited was the decoupling
-of temporary storage and user data, which in higher dimensions allowed
+of temporary storage and user data, which in higher dimensions allows
 the reuse of storage space. The resulting increased data locality
 significantly enhanced performance by as much as a factor of $2$.
 The savings in memory use, obtained by computing the Fourier transformed
@@ -1186,7 +1187,8 @@ asymptotically, as $m_x\goesto\infty$, an implicit complex convolution
 requires one-half of the memory needed for a zero padded convolution in two
 dimensions and one-quarter in three dimensions. In the centered Hermitian
 case, the memory use in two dimensions is $2/3$ of the amount used for an
-explicit convolution and $4/9$ in three dimensions.
+explicit convolution and $4/9$ of the corresponding storage requirement in
+three dimensions.
 
 Even in one dimension, where implicit padding can be implemented
 competitively with conventional methods, the method has notable advantages.
