@@ -60,7 +60,7 @@ dealiased convolutions can be built on top of state-of-the-art fast
 Fourier transform libraries: vectorized multidimensional
 implementations for the complex and centered Hermitian
 (pseudospectral) cases have been implemented in the open-source
-software {\tt fftw++}.
+software {\tt FFTW++}.
 \end{abstract} 
 
 \begin{keywords} 
@@ -1212,7 +1212,7 @@ For 2D and 3D Hermitian convolutions, a prepackaged routine should also
 automatically enforce Hermitian symmetry of the data along the $x$ axis or
 the~$xy$ plane, respectively. With the highly optimized implementations of
 the algorithms developed in this work made available in the open source
-package {\tt fftw++}~\cite{fftwpp}, writing a pseudospectral code for
+package {\tt FFTW++}~\cite{fftwpp}, writing a pseudospectral code for
 solving nonlinear partial differential equations should now be a relatively
 straightforward exercise.
 
@@ -1223,7 +1223,7 @@ straightforward exercise.
 \bibliography{refs}
 \end{document}
 
-% LocalWords:  dealiasing dealias Hermitian fftw FFT priori mU tconv xq
+% LocalWords:  dealiasing dealias Hermitian FFTW FFT priori mU tconv xq xk
 % LocalWords:  nonperiodic FFTs noncentered subtransforms pre ffttpadBackwards
 % LocalWords:  unpadded dealised th unnormalized jk kU kj cconv ffttpadForwards
 % LocalWords:  textit fft crfft rcfft padBackwards padForwards tpadBackwards
@@ -1231,5 +1231,5 @@ straightforward exercise.
 % LocalWords:  fftpadBackwards fftpadForwards backwardsB strided conv Buneman
 % LocalWords:  multivector Hermiticity unsymmetrized backwardsA forwardsB DFT
 % LocalWords:  Canuto xm ternary convolutions tbackwards tforwards  prewritten
-% LocalWords:  qm mq fp 
+% LocalWords:  qm mq fp  Convolving
 % LocalWords:  parallelizability pseudocode ansi ik xW ip xz ym xy Buneman's FG
