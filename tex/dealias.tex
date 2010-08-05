@@ -181,7 +181,7 @@ two input vectors can be multiplied together as they are produced
 (perhaps while still accessible in the cache). Second, the implicit
 method allows most of the subtransforms for an in-place convolution to
 be optionally computed as out-of-place transforms, which typically execute
-faster than in-place transforms (cf. Figs.~1-6 of~\cite{Frigo05}) since they
+faster than in-place transforms (cf.~Figs.~1--6 of~\cite{Frigo05}) since they
 require no extra (pre-, post-, or interlaced) bit-reversal stage.  These
 savings help keep our one-dimensional in-place implicit convolution
 competitive with an explicitly padded convolution based on the same highly
@@ -295,7 +295,7 @@ standard deviations}
 $$
 \sigma_L=\sqrt{\fr{1}{\fr{n}{2}-1}}\sum_{i=1\atop{t_i < T}}^n (t_i-T)^2,
 \qquad
-\sigma_H=\sqrt{\fr{1}{\fr{n}{2}-1}}\sum_{i=1\atop{t_i \ge T}}^n (t_i-T)^2,
+\sigma_H=\sqrt{\fr{1}{\fr{n}{2}-1}}\sum_{i=1\atop{t_i > T}}^n (t_i-T)^2,
 $$
 where $T$ denotes the mean execution time of $n$ samples.
 Both the FFTW-3.2.2 library and the convolution layer we built on
