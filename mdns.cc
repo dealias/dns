@@ -853,8 +853,20 @@ void MDNS::Prolong(unsigned ga)
 	const Real Bipj=abs2(wbip[j]);
 	const Real oldBipj=Bip[j];
 
+	const Real Bimjp=imOK ? abs2(wbim[j+1]) : 0.0; // kludge
+	const Real oldBimjp=imOK ? Bim[j+1] : 0.0; // kludge
+
+	const Real Bipjm=jmOK ? abs2(wbip[j-1]) : 0.0; // kludge
+	const Real oldBipjm=jmOK ? Bip[j-1] : 0.0; // kludge
+
 	const Real Bijm=jmOK ? abs2(wbi[j-1]) : 0.0; // kludge
 	const Real oldBijm=jmOK ? Bi[j-1] : 0.0; // kludge
+
+	const Real Bimjm=imjmOK ? abs2(wbim[j-1]) : 0.0; // kludge
+	const Real oldBimjm=imjmOK ? Bim[j-1] : 0.0; // kludge
+
+	const Real Bipjp=abs2(wbip[j+1]);
+	const Real oldBipjp=Bip[j+1];
 
 	const Real Bijp=abs2(wbip[j+1]);
 	const Real oldBijp=Bi[j+1];
@@ -875,28 +887,29 @@ void MDNS::Prolong(unsigned ga)
 
 	// quad-prolongs:
 	// --
-	if(imjmOK) waim[aJm] *= ()/(); // FIXME
-	wa[axorigin-2*I-1][aJm] *= f;
+	if(imjmOK) {
+	  waim[aJm] *= (Bij+Bimj+Bimjm+Bijm)/(oldBij+oldBimj+oldBimjm+oldBijm);
+	} else {
+	  // FIXME: figure out Hermitian case
+	}
 
 	// -+
+	if(imOK) {
+	  waim[aJ] *= (Bij+Bijp+Bimjp+Bimj)/(oldBij+oldBijp+oldBimjp+oldBimj);
+	} else {
+	  // FIXME: figure out Hermitian case
+	}
 	
 	// +-
+	if(jmOK) {
+	  waip[aJm] *= (Bij+Bijm+Bipjm+Bipj)/(oldBij+oldBijm+oldBipjm+oldBipj);
+	} else {
+	  // FIXME: figure out Hermitian case
+	}
 
 	// ++
+	waip[aJm] *= (Bij+Bipj+Bipjp+Bijp)/(oldBij+oldBipj+oldBipjp+oldBijp);
 
-	/*	
-	Real f=1.0; // FIXME: temp
-	//project points on diagnols.
-	waim[aJp] *= f;
-	waip[aJp] *= f;
-	if(jmOK) {// Hermiticity case.
-
-	  waip[aJm] *= f;
-	} else {
-	  wa[axorigin-2*I+1][aJm] *= f;
-
-	}
-	*/	
 
 	// else { // B2 is zero
 	//cout << "energy for mode (" << i << ","<<j << ") on grid "<< gb
