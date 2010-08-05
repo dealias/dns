@@ -312,10 +312,17 @@ void MDNS::Grid::SetParams()
   if(myg == 0) {
     Invisible=Invisible2=0;
   } else {
-    // FIXME! set Invisible as a function of radix.
-    Invisible=(unsigned) (gm(::Nx,myg-1)/2*parent->gk(myg-1)/parent->gk(myg)+
-                          0.1);
-    //cout << Invisible << endl;
+    if(radix==1) 
+      Invisible=my; // FIXME;
+
+    if(radix==2) {
+      cerr << "radix two case not implimented" << endl;
+      exit(1);
+    }
+
+    if(radix==4)
+      Invisible=gm(::Nx,myg-1)/2;
+
     Invisible2=Invisible*Invisible;
   }
 }
@@ -659,32 +666,35 @@ void MDNS::Project(unsigned gb)
 
   if(radix == 4) {
     for(unsigned i=xstart; i <= xstop; ++ i) {
-      int I=(int)i - (int)bxorigin;
+      int I=(int)i +(int) axorigin - (int)bxorigin;
       //unsigned Bi=i-xstart;
 
+      cout << "i="<<i<<" I="<<I<<endl;// FIXME: temp
+      
       array1<Real> Bi;
       Bi.Set(G[gb]->GB[i-xstart]);
       Bi.Dimension(bInvisible+1);
 
       vector wai, waim, waip;
-      Set(wai,wa[2*I+axorigin]);
-      Set(waim,wa[2*I+axorigin-1]);
-      Set(waip,wa[2*I+axorigin+1]);
-      Dimension(wai,wa[2*I+axorigin]);
-      Dimension(waim,wa[2*I+axorigin-1]);
-      Dimension(waip,wa[2*I+axorigin+1]);
+      Set(wai,wa[2*I + (int) axorigin]);
+      Set(waim,wa[2*I + (int) axorigin-1]);
+      Set(waip,wa[2*I + (int) axorigin+1]);
+      Dimension(wai,aNx);
+      Dimension(waim,aNx);
+      Dimension(waip,aNx);
 
       vector wbi;
       Set(wbi,wb[i]);
       Dimension(wbi,wb[i]);
 
-      for(unsigned j= i < axorigin ? 1 : 0 ; j <= bInvisible; ++j) {
+      for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
+	cout << "j="<<j<<endl; // FIXME: temp
 	Real B2=abs2(wbi[j]);
 
  	const int aJ=2*j;
 	const int aJp=aJ+1;
 	const int aJm=aJ==0? aJp : aJ-1;
-
+	
 	// co-incident point 
 	//wai[aJ]=Complex(2*I,aJ); // 00
 	Real A2=abs2(wai[aJ]);
@@ -866,7 +876,7 @@ void MDNS::Prolong(unsigned ga)
 	const Real oldBimjm=imjmOK ? Bim[j-1] : 0.0; // kludge
 
 	const Real Bipjp=abs2(wbip[j+1]);
-	const Real oldBipjp=Bip[j+1];
+	const Real oldBipjp=Bip[j+1]; // FIXME: out-of-bounds
 
 	const Real Bijp=abs2(wbip[j+1]);
 	const Real oldBijp=Bi[j+1];
