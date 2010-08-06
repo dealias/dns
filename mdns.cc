@@ -149,7 +149,7 @@ public:
     void SetParams();
     unsigned myg;
 
-    array2<Real> GB;
+    array2<Real> tildeB;
   
     unsigned getnshells() {return nshells;};
     unsigned getNx() {return Nx;};
@@ -374,10 +374,10 @@ void MDNS::Grid::InitialConditions(unsigned g)
     SrcwS.Dimension(sNx,smy,SrcwSblock);
     smallDNSBase=new DNSBase(sNx,smy,k0); // TODO: share memory block
 
-    GB.Dimension(2*Invisible+1,Invisible+1);
-    Allocate(GB,(2*Invisible+1)*(Invisible+1));
+    tildeB.Dimension(2*Invisible+1,Invisible+1);
+    Allocate(tildeB,(2*Invisible+1)*(Invisible+1));
     for(unsigned i=0; i < 2*Invisible+1; ++i)
-      GB[i][0]=0.0;
+      tildeB[i][0]=0.0;
   }
 
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
@@ -653,8 +653,6 @@ void MDNS::Project(unsigned gb)
   G[ga]->settow(wa);
   G[gb]->settow(wb);
 
-  G[gb]->GB.Load(0.0); // FIXME: necessary?
-
   const unsigned xstart=bInvisible;
   const unsigned xstop=bxorigin+bInvisible;
 
@@ -675,16 +673,12 @@ void MDNS::Project(unsigned gb)
   cout << "xstart=" << xstart << endl;
   cout << "xstop=" << xstop << endl;
   if(radix == 4) {
+    unsigned I=1;
     for(unsigned i=xstart; i < xstop; ++i) {
-      int I= 2*((int)i - (int)bxorigin)+axorigin;
-      //unsigned Bi=i-xstart;
+      //int I= 2*((int)i - (int)bxorigin)+axorigin;
 
       cout << "i="<<i<<" I="<<I<<endl;// FIXME: temp
       
-      array1<Real> Bi;
-      Bi.Set(G[gb]->GB[i-xstart]);
-      Bi.Dimension(bInvisible+1);
-
       vector wai, waim, waip;
       Set(wai,wa[I]);
       Set(waim,wa[I > 0 ? I-1 : 1]); // FIXME: need to adjust j as well.
@@ -736,7 +730,6 @@ void MDNS::Project(unsigned gb)
 	} else {
 	  //wa[2*axorigin-I+1][aJm]=Complex(-I+1,aJm);
 	  //wa[2*axorigin-I-1][aJm]=Complex(-I-1,aJm);
-
 	  A2 += 0.25*(abs2(wa[2*axorigin-I+1][aJm]) + 
 		      abs2(wa[2*axorigin-I-1][aJm]));
 	}
@@ -744,16 +737,37 @@ void MDNS::Project(unsigned gb)
 	if(B2) {
 	  //wbi[j] *= sqrt(A2/B2); // FIXME: restore
 	  //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
-	  Bi[j]=B2;
 	} else {
 	  cerr << "energy for mode (" << i << ","<<j << "1) on grid "<< gb
 	       << " is zero in project."<<endl;
 	  exit(1); // FIXME: work out something better for this case.
 	}
       }
+      I += 2;
     }
 
-    cout << "project GB \n" << G[gb]->GB << endl;
+
+    { // copy to tildeB
+      // TODO: make this a function?
+      G[gb]->tildeB.Load(0.0); // necessary?
+      const unsigned istop=2*bInvisible+1;
+      const unsigned jstop=bInvisible+1;
+      unsigned wi=(int) bxorigin-bInvisible;
+      for(unsigned i=0; i < istop; ++i) {
+	array1<Real> tildeBi;
+	tildeBi.Set(G[gb]->tildeB[i]);
+	tildeBi.Dimension(jstop);
+	vector wbi;
+	Set(wbi,wb[wi]);
+	Dimension(wbi,wb[wi]);
+	++wi;
+	for(unsigned j=0; j < jstop; ++j)
+	  tildeBi[j]=abs2(wbi[j]);
+	// TODO: some of these are redundant from Hermitian symmerty.
+      }
+    }
+
+    cout << "project tildeB \n" << G[gb]->tildeB << endl;
     /*
     for(unsigned i=0; i < aNx; i += 2) {
       int I= (int) i - (int) bxorigin;
@@ -769,8 +783,6 @@ void MDNS::Project(unsigned gb)
 
   //  cout << wa << endl;  cout << wb << endl;
   //  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb);  // FIXME: messed up?
-
-  exit(1);
 }
 
 void MDNS::Prolong(unsigned ga)
@@ -819,7 +831,7 @@ void MDNS::Prolong(unsigned ga)
     // see notes 2010-07-16.
 
     for(unsigned i=xstart; i <= xstop; ++ i) {
-      const int I=(int)i - (int)bxorigin;
+      const int I=(int)i - (int)bxorigin; // FIXME: this are all borked
 
       vector wai;
       Set(wai,wa[2*I+axorigin]);
@@ -832,17 +844,19 @@ void MDNS::Prolong(unsigned ga)
       Dimension(waim,wa[2*I+axorigin-1]);
       
       // FIXME: can we make the following arrays const?
+
+      // FIXME: rename all Bi arrays tildeBi and stuff.
       array1<Real> Bim;
       const bool imOK=i > xstart;
       if(imOK) { // make sure we're not going negative
-	Set(Bim,G[gb]->GB[i-xstart-1]);
+	Set(Bim,G[gb]->tildeB[i-xstart-1]);
 	Bim.Dimension(bInvisible+1);
       }
       array1<Real> Bi;
-      Set(Bi,G[gb]->GB[i-xstart]);
+      Set(Bi,G[gb]->tildeB[i-xstart]);
       Bi.Dimension(bInvisible+1);
       array1<Real> Bip;
-      Bip.Set(G[gb]->GB[i-xstart]+1);
+      Bip.Set(G[gb]->tildeB[i-xstart]+1);
       Bip.Dimension(bInvisible+1);
 
       vector wbi;
@@ -866,7 +880,7 @@ void MDNS::Prolong(unsigned ga)
 	const bool imjmOK=imOK && jmOK;
 
 	// possible optimization: only some of these need to be recalculate.
-	// most can be copied from one stage to the next, put into 
+	// most can be copied from one stage to the next, put into
 	// different positions.
 	const Real Bij=abs2(wbi[j]);
 	const Real oldBij=Bi[j];
@@ -945,12 +959,13 @@ void MDNS::Prolong(unsigned ga)
   }
   
 
-  //  cout << "prolong GB \n" << G[gb]->GB << endl;
-  //cout << "prolong \n" << G[gb]->GB << endl;
+  //  cout << "prolong tildeB \n" << G[gb]->tildeB << endl;
+  //cout << "prolong \n" << G[gb]->tildeB << endl;
   //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
   // maybe only on the overlapping modes?
 
   // FIXME: copy stuff from spectra onto just onto lastgrid's Src[EK]
+  exit(1);
 }
 
 void MDNS::Initialize()
