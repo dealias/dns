@@ -10,7 +10,7 @@ set svn ignore on linked header files in ~/dns
 memory leak in transfer?
 
 won't compile on Orcinus due to fftwpp:: namespace issues.
-      (fixed?)
+      now a problem with tri/config/x86_64:
 
 ***** mdns.cc: *****
 
@@ -20,6 +20,8 @@ normalization
 
 radix=4
 	project / prolong
+	what does GB do in project again?
+	project now had the correct loop limits; copy these to prolong
 
 spectrum: 
 	  Src[EK] is curently set for all grids.

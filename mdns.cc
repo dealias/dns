@@ -321,8 +321,10 @@ void MDNS::Grid::SetParams()
     }
 
     if(radix==4)
-      Invisible=gm(::Nx,myg-1)/2;
+      Invisible=gm(::Nx,myg-1)/2-1;
 
+    cout << "Invisible=" << Invisible << endl; // FIXME: temp
+    
     Invisible2=Invisible*Invisible;
   }
 }
@@ -628,7 +630,7 @@ void MDNS::InitialConditions()
 void MDNS::Project(unsigned gb) 
 {
   //  return;
-  //  cout << "project onto " << G[gb]->myg << endl;
+  cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
   //unsigned aInvisible=G[ga]->getInvisible();
@@ -651,7 +653,9 @@ void MDNS::Project(unsigned gb)
   G[ga]->settow(wa);
   G[gb]->settow(wb);
 
-  const unsigned xstart=bxorigin-bInvisible;
+  G[gb]->GB.Load(0.0); // FIXME: necessary?
+
+  const unsigned xstart=bInvisible;
   const unsigned xstop=bxorigin+bInvisible;
 
   if(radix == 1) {
@@ -663,10 +667,16 @@ void MDNS::Project(unsigned gb)
       }
     }
   }
+  cout << "wa:"<<endl;
+  cout << wa << endl;
+  cout << "wb:"<<endl;
+  cout << wb << endl;
 
+  cout << "xstart=" << xstart << endl;
+  cout << "xstop=" << xstop << endl;
   if(radix == 4) {
-    for(unsigned i=xstart; i <= xstop; ++ i) {
-      int I=(int)i +(int) axorigin - (int)bxorigin;
+    for(unsigned i=xstart; i < xstop; ++i) {
+      int I= 2*((int)i - (int)bxorigin)+axorigin;
       //unsigned Bi=i-xstart;
 
       cout << "i="<<i<<" I="<<I<<endl;// FIXME: temp
@@ -676,9 +686,9 @@ void MDNS::Project(unsigned gb)
       Bi.Dimension(bInvisible+1);
 
       vector wai, waim, waip;
-      Set(wai,wa[2*I + (int) axorigin]);
-      Set(waim,wa[2*I + (int) axorigin-1]);
-      Set(waip,wa[2*I + (int) axorigin+1]);
+      Set(wai,wa[I]);
+      Set(waim,wa[I > 0 ? I-1 : 1]); // FIXME: need to adjust j as well.
+      Set(waip,wa[I+1]);
       Dimension(wai,aNx);
       Dimension(waim,aNx);
       Dimension(waip,aNx);
@@ -696,38 +706,39 @@ void MDNS::Project(unsigned gb)
 	const int aJm=aJ==0? aJp : aJ-1;
 	
 	// co-incident point 
-	//wai[aJ]=Complex(2*I,aJ); // 00
+	//wai[aJ]=Complex(I,aJ); // 00
 	Real A2=abs2(wai[aJ]);
 	
 	// points on same row
-	//waim[aJ]=Complex(2*I-1,aJ); // -0
-	//waip[aJ]=Complex(2*I+1,aJ); // +0
+	//waim[aJ]=Complex(I-1,aJ); // -0
+	//waip[aJ]=Complex(I+1,aJ); // +0
 	A2 += 0.5*(abs2(waim[aJ]) + abs2(waip[aJ]));
 
 	// points on same column
 	if(aJ) {  // 0-
-	  //wai[aJm]=Complex(2*I,aJm);
+	  //wai[aJm]=Complex(I,aJm);
 	  A2 += 0.5*abs2(wai[aJm]);
 	} else {
-	  //wa[axorigin-2*I][aJp]=Complex(-2*I,aJm);
-	  A2 += 0.5*abs2(wa[axorigin-2*I][aJp]);
+	  //wa[2*axorigin-I][aJp]=Complex(-I,aJm);
+	  A2 += 0.5*abs2(wa[2*axorigin-I][aJp]);
 	}
-	//wai[aJp]=Complex(2*I,aJp); // 0+
+	//wai[aJp]=Complex(I,aJp); // 0+
 	A2 += 0.5*abs2(wai[aJp]);
 	
 	// points on diagnols.
-	//waim[aJp]=Complex(2*I-1,aJp); // -+
-	//waip[aJp]=Complex(2*I+1,aJp); // ++
+	//waim[aJp]=Complex(I-1,aJp); // -+
+	//waip[aJp]=Complex(I+1,aJp); // ++
 	A2 += 0.25*(abs2(waim[aJp]) + abs2(waip[aJp]));
 	if(aJ) { // -- and +-
-	  //waim[aJm]=Complex(2*I-1,aJm);
-	  //waip[aJm]=Complex(2*I+1,aJm);
+	  //waim[aJm]=Complex(I-1,aJm);
+	  //waip[aJm]=Complex(I+1,aJm);
 	  A2 += 0.25*(abs2(waim[aJm]) + abs2(waip[aJm]));
 	} else {
-	  //wa[axorigin-2*I+1][aJm]=Complex(-2*I+1,aJm);
-	  //wa[axorigin-2*I-1][aJm]=Complex(-2*I-1,aJm);
-	  A2 += 0.25*(abs2(wa[axorigin-2*I+1][aJm]) + 
-		      abs2(wa[axorigin-2*I-1][aJm]));
+	  //wa[2*axorigin-I+1][aJm]=Complex(-I+1,aJm);
+	  //wa[2*axorigin-I-1][aJm]=Complex(-I-1,aJm);
+
+	  A2 += 0.25*(abs2(wa[2*axorigin-I+1][aJm]) + 
+		      abs2(wa[2*axorigin-I-1][aJm]));
 	}
 
 	if(B2) {
@@ -735,12 +746,13 @@ void MDNS::Project(unsigned gb)
 	  //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
 	  Bi[j]=B2;
 	} else {
-	  cout << "energy for mode (" << i << ","<<j << "1) on grid "<< gb
+	  cerr << "energy for mode (" << i << ","<<j << "1) on grid "<< gb
 	       << " is zero in project."<<endl;
 	  exit(1); // FIXME: work out something better for this case.
 	}
       }
     }
+
     cout << "project GB \n" << G[gb]->GB << endl;
     /*
     for(unsigned i=0; i < aNx; i += 2) {
@@ -757,12 +769,14 @@ void MDNS::Project(unsigned gb)
 
   //  cout << wa << endl;  cout << wb << endl;
   //  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb);  // FIXME: messed up?
+
+  exit(1);
 }
 
 void MDNS::Prolong(unsigned ga)
 {
   //return;
-  //  cout << "prolong onto " << G[ga]->myg << endl;
+  cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
 
   unsigned aInvisible=G[ga]->getInvisible();
