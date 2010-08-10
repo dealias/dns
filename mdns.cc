@@ -193,7 +193,7 @@ public:
   };
   unsigned getNfields() {return Nfields;};
   //unsigned getnshells(unsigned g) {return g == glast ? nshells : 0;};
-  unsigned getnshells(unsigned g) {return nshells;}; // FIXME: kludge
+  unsigned getnshells(unsigned g) {return nshells;};
 
   Table<InitialConditionBase> *InitialConditionTable;
   void InitialConditions();
@@ -311,7 +311,7 @@ void MDNS::Grid::SetParams()
     Invisible=Invisible2=0;
   } else {
     if(radix==1) 
-      Invisible=my; // FIXME;
+      Invisible=my;
 
     if(radix==2) {
       cerr << "radix two case not implimented" << endl;
@@ -321,8 +321,6 @@ void MDNS::Grid::SetParams()
     if(radix==4)
       Invisible=gm(::Nx,myg-1)/2-1;
 
-    cout << "Invisible=" << Invisible << endl; // FIXME: temp
-    
     Invisible2=Invisible*Invisible;
   }
 }
@@ -348,7 +346,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   Dimension(Sp,nshells);
   for(unsigned i=0; i < nshells; i++)
-    Sp[i]=0.0;
+    Sp[i]=Complex(1.0,1.0);
   
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
@@ -445,7 +443,7 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 
 void MDNS::Grid::setcount(array1<unsigned>::opt & count)
 {
-  unsigned const gfactor = pow(radix,myg);
+  const unsigned gfactor = pow(radix,myg);
   if(spectrum) {
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
@@ -462,10 +460,11 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 {
   w.Set(w0);
   
-  for(unsigned i=0; i < nshells; ++i)
-    S[i]=Complex(0.0,0.0);
+  S.Load(Complex(0.0,0.0));
 
   // Compute instantaneous angular sum over each circular shell.
+
+  const unsigned gfactor = pow(radix,myg);
 
   // FIXME: loop over only visible modes!
   for(unsigned i=0; i < Nx; i++) {
@@ -479,7 +478,8 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
       
       // FIXME: this line drives the time-step to zero.
       // errormask this out?
-      S[(unsigned)(k-0.5)].re += w2/k2; // FIXME: should this be k or k2?
+      S[(unsigned)(k-0.5)].re += gfactor*w2/k2; 
+      // FIXME: should this be k or k2?
 
       //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
     }
@@ -774,6 +774,8 @@ void MDNS::Project(unsigned gb)
     }
     */
   }
+  
+
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
   //  exit(1);
   //  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb);  // FIXME: messed up?
@@ -999,23 +1001,20 @@ void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t)
 
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 {
+  // FIXME: this seems quite differen than, say, NonLinearSource
   if(spectrum) {
     for(unsigned g=0; g < Ngrids; ++g) {
-      if(g==0) { // zero the spectrum
-	for(unsigned i=0; i < nshells; ++i) {
-	  spectra[i]=Complex(0.0,0.0);
-	}
-      }
+      if(g==0) spectra.Load(Complex(0.0,0.0));
+
       vector w0;
       Set(w0,Y[OMEGA]);
-      G[g]->Spectrum(spectra,w0);
-      
+      //G[g]->Spectrum(spectra,w0);
+
       if(g==glast) {
 	vector S;
 	Set(S,Src[EK]);
 	Dimension(S,nshells);
-	for (unsigned i=0; i < nshells; ++i)
-	  S[i]=spectra[i];  // might this instead be a swap?
+	for (unsigned i=0; i < nshells; ++i) S[i]=spectra[i];
       }
     }
   }
