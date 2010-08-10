@@ -138,8 +138,6 @@ public:
     // for subgrid non-linearity calculation:
     DNSBase * smallDNSBase;
 
-
-
   public:
     Grid();
     Grid(unsigned, MDNS *);
@@ -478,7 +476,11 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
       Real k2=k02*(I2+j*j);
       Real k=sqrt(k2);
       Real w2=abs2(wi[j]);
+      
+      // FIXME: this line drives the time-step to zero.
+      // errormask this out?
       S[(unsigned)(k-0.5)].re += w2/k2; // FIXME: should this be k or k2?
+
       //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
     }
   }
@@ -629,23 +631,18 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
-  //  return;
+  //return;
   //cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
-  //unsigned aInvisible=G[ga]->getInvisible();
-  unsigned bInvisible=G[gb]->getInvisible();
-  unsigned axorigin=G[ga]->getxorigin();
-  unsigned bxorigin=G[gb]->getxorigin();
-  unsigned aNx=G[ga]->getNx();
-  unsigned amy=G[ga]->getmy();
-  //unsigned amx=G[ga]->getmx();
-  //unsigned bmx=G[gb]->getmx();
-  unsigned bNx=G[gb]->getNx();
-  unsigned bmy=G[gb]->getmy();
-  unsigned dx=bxorigin-axorigin;
-  //Real ak02=G[ga]->getk02();
-  //Real bk02=G[gb]->getk02();
+  const unsigned bInvisible=G[gb]->getInvisible();
+  const unsigned axorigin=G[ga]->getxorigin();
+  const unsigned bxorigin=G[gb]->getxorigin();
+  const unsigned aNx=G[ga]->getNx();
+  const unsigned amy=G[ga]->getmy();
+  const unsigned bNx=G[gb]->getNx();
+  const unsigned bmy=G[gb]->getmy();
+  const unsigned dx=bxorigin-axorigin;
 
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
@@ -653,14 +650,11 @@ void MDNS::Project(unsigned gb)
   G[ga]->settow(wa);
   G[gb]->settow(wb);
 
-  const unsigned xstart=bInvisible;
-  const unsigned xstop=bxorigin+bInvisible;
-
   if(radix == 1) {
-    for(unsigned int i=xstart; i <= xstop; i++) {
-      vector wai=wa[i-dx];
-      vector wbi=wb[i];
-      for(unsigned int j=i <= bxorigin ? 1 : 0; j <= bInvisible; ++j) {
+    for(unsigned int i=0; i < aNx; i++) {
+      vector wai=wa[i];
+      vector wbi=wb[i+dx];
+      for(unsigned j=0; j < amy; ++j) {
   	wbi[j]=wai[j];
       }
     }
@@ -669,6 +663,9 @@ void MDNS::Project(unsigned gb)
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
 
   if(radix == 4) {
+    const unsigned xstart=bInvisible;
+    const unsigned xstop=bxorigin+bInvisible;
+  
     unsigned I=1;
     for(unsigned i=xstart; i < xstop; ++i) {
       //int I= 2*((int)i - (int)bxorigin)+axorigin;
@@ -699,12 +696,12 @@ void MDNS::Project(unsigned gb)
 	//wai[aJ]=Complex(I,aJ); // 00
 	Real A2=abs2(wai[aJ]);
 	
-	// points on same row
+	// same row
 	//waim[aJ]=Complex(I-1,aJ); // -0
 	//waip[aJ]=Complex(I+1,aJ); // +0
 	A2 += 0.5*(abs2(waim[aJ]) + abs2(waip[aJ]));
 
-	// points on same column
+	// same column
 	if(aJ) {  // 0-
 	  //wai[aJm]=Complex(I,aJm);
 	  A2 += 0.5*abs2(wai[aJm]);
@@ -714,8 +711,8 @@ void MDNS::Project(unsigned gb)
 	}
 	//wai[aJp]=Complex(I,aJp); // 0+
 	A2 += 0.5*abs2(wai[aJp]);
-	
-	// points on diagnols.
+
+	// quad-prolongs:
 	//waim[aJp]=Complex(I-1,aJp); // -+
 	//waip[aJp]=Complex(I+1,aJp); // ++
 	A2 += 0.25*(abs2(waim[aJp]) + abs2(waip[aJp]));
@@ -788,19 +785,16 @@ void MDNS::Prolong(unsigned ga)
   //cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
 
-  unsigned aInvisible=G[ga]->getInvisible();
-  unsigned bInvisible=G[gb]->getInvisible();
-  unsigned axorigin=G[ga]->getxorigin();
-  unsigned bxorigin=G[gb]->getxorigin();
-  unsigned aNx=G[ga]->getNx();
-  unsigned amy=G[ga]->getmy();
-  unsigned amx=G[ga]->getmx();
-  //unsigned bmx=G[gb]->getmx();
-  unsigned bNx=G[gb]->getNx();
-  unsigned bmy=G[gb]->getmy();
-  unsigned dx=bxorigin-axorigin;
-  //Real ak02=G[ga]->getk02();
-  //Real bk02=G[gb]->getk02();
+  //const unsigned aInvisible=G[ga]->getInvisible();
+  const unsigned bInvisible=G[gb]->getInvisible();
+  const unsigned axorigin=G[ga]->getxorigin();
+  const unsigned bxorigin=G[gb]->getxorigin();
+  const unsigned aNx=G[ga]->getNx();
+  const unsigned amy=G[ga]->getmy();
+  //const unsigned amx=G[ga]->getmx();
+  const unsigned bNx=G[gb]->getNx();
+  const unsigned bmy=G[gb]->getmy();
+  const unsigned dx=bxorigin-axorigin;
 
   const unsigned dtilX=bInvisible+bInvisible;
 
@@ -810,21 +804,20 @@ void MDNS::Prolong(unsigned ga)
   G[ga]->settow(wa);
   G[gb]->settow(wb);
 
-  const unsigned xstart=bInvisible;
-  const unsigned xstop=bxorigin+bInvisible;
-
   if(radix == 1) {
-    const unsigned xstart=amx-aInvisible;
-    const unsigned xstop=amx-aInvisible;
-    for(unsigned i=xstart; i < xstop; i++) {
+    for(unsigned int i=0; i < aNx; i++) {
       vector wai=wa[i];
       vector wbi=wb[i+dx];
-      for(unsigned j=i < axorigin ? 1 : 0; j < aInvisible; ++j) {
-	wai[j]=wbi[j];
+      for(unsigned j=0; j < amy; ++j) {
+  	wai[j]=wbi[j];
       }
     }
   }
+
   if(radix == 4) {
+    const unsigned xstart=bInvisible;
+    const unsigned xstop=bxorigin+bInvisible;
+
     //cout << "xstart=" << xstart << "\nxstop=" << xstop << endl;
     for(unsigned i=xstart; i < xstop; ++ i) {
       const int I= 2*((int)i - (int)bxorigin)+axorigin;
@@ -843,17 +836,15 @@ void MDNS::Prolong(unsigned ga)
       Dimension(waim,wa[I-1]);
       
       // FIXME: can we make the following arrays const?
-      // FIXME: should be vector instead of array1<Real>?
-
       array1<Real> tildeBim;
-      Set(tildeBim,G[gb]->tildeB[tildei-1]);
-      Dimension(tildeBim,G[gb]->tildeB[tildei-1]);
+      tildeBim.Set(G[gb]->tildeB[tildei-1]);
+      tildeBim.Dimension(G[gb]->tildeB[tildei-1]);
       array1<Real> tildeBi;
-      Set(tildeBi,G[gb]->tildeB[tildei]);
-      Dimension(tildeBi,G[gb]->tildeB[tildei]);
+      tildeBi.Set(G[gb]->tildeB[tildei]);
+      tildeBi.Dimension(G[gb]->tildeB[tildei]);
       array1<Real> tildeBip;
       tildeBip.Set(G[gb]->tildeB[tildei+1]);
-      Dimension(tildeBip,G[gb]->tildeB[tildei+1]);
+      tildeBip.Dimension(G[gb]->tildeB[tildei+1]);
 
       vector wbi;
       Set(wbi,wb[i]);
@@ -878,7 +869,7 @@ void MDNS::Prolong(unsigned ga)
 
 	const Real Bij=abs2(wbi[j]);
 	const Real tildeBij=tildeBi[j];
-
+	
 	const Real Bimj=abs2(wbim[j]);
 	const Real tildeBimj=tildeBim[j];
 
@@ -887,9 +878,9 @@ void MDNS::Prolong(unsigned ga)
 
 	const Real Bimjp=abs2(wbim[j+1]);
 	const Real tildeBimjp=tildeBim[j+1];
-
+	
 	const Real Bipjm=jmOK ? abs2(wbip[j-1]) :abs2(wb[2*bxorigin-i-1][1]);
-	const Real tildeBipjm=jmOK ? tildeBip[j-1] : 
+	const Real tildeBipjm=jmOK ? tildeBip[j-1] :
 	  G[gb]->tildeB[dtilX-tildei-1][1];
 
 	const Real Bijm=jmOK ? abs2(wbi[j-1]) : abs2(wb[2*bxorigin-i][1]);
@@ -905,7 +896,7 @@ void MDNS::Prolong(unsigned ga)
 
 	const Real Bijp=abs2(wbip[j+1]);
 	const Real tildeBijp=tildeBi[j+1];
-	
+
 	// co-incident point
 	wai[aJ] *= sqrt(Bij/tildeBij);
 		
@@ -930,17 +921,14 @@ void MDNS::Prolong(unsigned ga)
 	// ++
 	waip[aJm] *= (Bij+Bipj+Bipjp+Bijp)
 	  /(tildeBij+tildeBipj+tildeBipjp+tildeBijp);
-
       }
     }
   }
   
-
-  //  cout << "prolong tildeB \n" << G[gb]->tildeB << endl;
-  //cout << "prolong \n" << G[gb]->tildeB << endl;
   //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
   // maybe only on the overlapping modes?
 
+  //cout << "prolong tildeB \n" << G[gb]->tildeB << endl;
   // FIXME: copy stuff from spectra onto just onto lastgrid's Src[EK]
   //exit(1);
 }
