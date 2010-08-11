@@ -650,7 +650,7 @@ void MDNS::InitialConditions()
 void MDNS::Project(unsigned gb) 
 {
   //return;
-  //cout << "project onto " << G[gb]->myg << endl;
+  if(verbose > 2) cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
   const unsigned bInvisible=G[gb]->getInvisible();
@@ -778,8 +778,10 @@ void MDNS::Project(unsigned gb)
 	// TODO: some of these are redundant from Hermitian symmerty.
       }
     }
-
-    //cout << "project tildeB \n" << G[gb]->tildeB << endl;
+    if(verbose > 2) {
+      cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
+      cout <<"\n~B:\n" << G[gb]->tildeB << endl;
+    }
     /*
     for(unsigned i=0; i < aNx; i += 2) {
       int I= (int) i - (int) bxorigin;
@@ -802,7 +804,7 @@ void MDNS::Project(unsigned gb)
 void MDNS::Prolong(unsigned ga)
 {
   //return;
-  //cout << "prolong onto " << G[ga]->myg << endl;
+  if(verbose > 2) cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
 
   //const unsigned aInvisible=G[ga]->getInvisible();
@@ -921,30 +923,30 @@ void MDNS::Prolong(unsigned ga)
 	wai[aJ] *= sqrt(Bij/tildeBij);
 
 	// same row
-	waim[aJ] *= (Bimj+Bij)/(tildeBimj+tildeBij);
+	waim[aJ] *= sqrt((Bimj+Bij)/(tildeBimj+tildeBij));
 	//	cout << (Bimj+Bij)/(tildeBimj+tildeBij) << endl;
-	waip[aJ] *= (Bij+Bipj)/(tildeBij+tildeBipj);
+	waip[aJ] *= sqrt((Bij+Bipj)/(tildeBij+tildeBipj));
 
 	// same column
-	wai[aJm] *= (Bijm+Bij)/(tildeBijm+tildeBij);
-	wai[aJp] *= (Bij+Bijp)/(tildeBij+tildeBijp);
+	wai[aJm] *= sqrt((Bijm+Bij)/(tildeBijm+tildeBij));
+	wai[aJp] *= sqrt((Bij+Bijp)/(tildeBij+tildeBijp));
 	
 	// quad-prolongs:
 	// --
-	waim[aJm] *= (Bij+Bimj+Bimjm+Bijm)
-	  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm);
-	cout << (Bij+Bimj+Bimjm+Bijm)
-	  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm) << endl;
+	waim[aJm] *= sqrt((Bij+Bimj+Bimjm+Bijm)
+			  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm));
+	//	cout << (Bij+Bimj+Bimjm+Bijm)
+	//	  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm) << endl;
 
 	// -+
-	waim[aJ] *= (Bij+Bijp+Bimjp+Bimj)
-	  /(tildeBij+tildeBijp+tildeBimjp+tildeBimj);
+	waim[aJ] *= sqrt((Bij+Bijp+Bimjp+Bimj)
+			 /(tildeBij+tildeBijp+tildeBimjp+tildeBimj));
 	// +-
-	waip[aJm] *= (Bij+Bijm+Bipjm+Bipj)
-	  /(tildeBij+tildeBijm+tildeBipjm+tildeBipj);
+	waip[aJm] *= sqrt((Bij+Bijm+Bipjm+Bipj)
+			  /(tildeBij+tildeBijm+tildeBipjm+tildeBipj));
 	// ++
-	waip[aJm] *= (Bij+Bipj+Bipjp+Bijp)
-	  /(tildeBij+tildeBipj+tildeBipjp+tildeBijp);
+	waip[aJm] *= sqrt((Bij+Bipj+Bipjp+Bijp)
+			  /(tildeBij+tildeBipj+tildeBipjp+tildeBijp));
 	
       }
     }
@@ -952,7 +954,10 @@ void MDNS::Prolong(unsigned ga)
   
   //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
   // maybe only on the overlapping modes?
-  cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb <<"\n~B:\n" << G[gb]->tildeB << endl;
+  if(verbose > 2) {
+    cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
+    cout <<"\n~B:\n" << G[gb]->tildeB << endl;
+  }
   // FIXME: copy stuff from spectra onto just onto lastgrid's Src[EK]
   //  exit(1);
 }
