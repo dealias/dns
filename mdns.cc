@@ -36,6 +36,9 @@ unsigned rezero=0;
 unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
+enum PRTYPE {AREA,COINCIDENT};
+unsigned prtype=AREA;
+
 
 // global variables
 
@@ -567,6 +570,7 @@ MDNSVocabulary::MDNSVocabulary()
   INTEGRATOR(MultiIntegrator);
   VOCAB(Ngrids,1,INT_MAX,"Number of multispectral grids");
   VOCAB(radix,1,INT_MAX,"Radix number for grid decimation");
+  VOCAB(prtype,0,1,"Synchronization scheme (0=area, 1=coincident)");
 }
 
 MDNS::MDNS() 
@@ -673,7 +677,7 @@ void MDNS::Project(unsigned gb)
       vector wai=wa[i];
       vector wbi=wb[i+dx];
       for(unsigned j=0; j < amy; ++j) {
-  	wbi[j]=wai[j];
+	wbi[j]=wai[j];
       }
     }
   }
@@ -681,27 +685,29 @@ void MDNS::Project(unsigned gb)
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
 
   if(radix == 4) {
-    const unsigned xstart=bInvisible;
-    const unsigned xstop=bxorigin+bInvisible;
-  
-    unsigned I=1;
-    for(unsigned i=xstart; i < xstop; ++i) {
-      //int I= 2*((int)i - (int)bxorigin)+axorigin;
 
-      //cout << "i="<<i<<" I="<<I<<endl;
+    if(prtype==AREA) {
+      const unsigned xstart=bInvisible;
+      const unsigned xstop=bxorigin+bInvisible;
       
-      vector wai, waim, waip;
-      Set(wai,wa[I]);
-      Set(waim,wa[I-1]);
-      Set(waip,wa[I+1]);
-      Dimension(wai,aNx);
-      Dimension(waim,aNx);
-      Dimension(waip,aNx);
-
-      vector wbi;
-      Set(wbi,wb[i]);
-      Dimension(wbi,wb[i]);
-
+      unsigned I=1;
+      for(unsigned i=xstart; i < xstop; ++i) {
+	//int I= 2*((int)i - (int)bxorigin)+axorigin;
+	
+	//cout << "i="<<i<<" I="<<I<<endl;
+	
+	vector wai, waim, waip;
+	Set(wai,wa[I]);
+	Set(waim,wa[I-1]);
+	Set(waip,wa[I+1]);
+	Dimension(wai,aNx);
+	Dimension(waim,aNx);
+	Dimension(waip,aNx);
+	
+	vector wbi;
+	Set(wbi,wb[i]);
+	Dimension(wbi,wb[i]);
+	
       for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
 	//cout << "j="<<j<<endl;
 	Real B2=abs2(wbi[j]);
@@ -793,14 +799,36 @@ void MDNS::Project(unsigned gb)
       }
     }
     */
+    }
   }
   
+  if(prtype==COINCIDENT) {
+    const unsigned xstart=bInvisible;
+    const unsigned xstop=bxorigin+bInvisible;
+    
+    unsigned I=1;
+    for(unsigned i=xstart; i < xstop; ++i) {
+      //cout << "i="<<i<<" I="<<I<<endl;
+      vector wai;
+      Set(wai,wa[I]);
+      Dimension(wai,aNx);
+      vector wbi;
+      Set(wbi,wb[i]);
+      Dimension(wbi,wb[i]);
+	
+      for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
+	//cout << "j="<<j<<endl;
+	wbi[j]=wai[j+j];
+      }
+      I += 2;
+    }
+  }
 
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
   //  exit(1);
   //  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb);  // FIXME: messed up?
 }
-
+  
 void MDNS::Prolong(unsigned ga)
 {
   //return;
@@ -837,117 +865,141 @@ void MDNS::Prolong(unsigned ga)
   }
 
   if(radix == 4) {
-    const unsigned xstart=bInvisible;
-    const unsigned xstop=bxorigin+bInvisible;
+    if(prtype==AREA) {
+      const unsigned xstart=bInvisible;
+      const unsigned xstop=bxorigin+bInvisible;
 
-    //cout << "xstart=" << xstart << "\nxstop=" << xstop << endl;
-    for(unsigned i=xstart; i < xstop; ++ i) {
-      const int I= 2*((int)i - (int)bxorigin)+axorigin;
-      const unsigned tildei=i+1-xstart;
+      //cout << "xstart=" << xstart << "\nxstop=" << xstop << endl;
+      for(unsigned i=xstart; i < xstop; ++ i) {
+	const int I= 2*((int)i - (int)bxorigin)+axorigin;
+	const unsigned tildei=i+1-xstart;
 
-      // cout << "i="<<i << " I="<<I << " tildei=" << tildei << endl;
+	// cout << "i="<<i << " I="<<I << " tildei=" << tildei << endl;
 
-      vector wai;
-      Set(wai,wa[I]);
-      Dimension(wai,wa[I]);
-      vector waip;
-      Set(waip,wa[I+1]);
-      Dimension(waip,wa[I+1]);
-      vector waim;
-      Set(waim,wa[I-1]);
-      Dimension(waim,wa[I-1]);
+	vector wai;
+	Set(wai,wa[I]);
+	Dimension(wai,wa[I]);
+	vector waip;
+	Set(waip,wa[I+1]);
+	Dimension(waip,wa[I+1]);
+	vector waim;
+	Set(waim,wa[I-1]);
+	Dimension(waim,wa[I-1]);
       
-      // FIXME: can we make the following arrays const?
-      array1<Real> tildeBim;
-      tildeBim.Set(G[gb]->tildeB[tildei-1]);
-      tildeBim.Dimension(G[gb]->tildeB[tildei-1]);
-      array1<Real> tildeBi;
-      tildeBi.Set(G[gb]->tildeB[tildei]);
-      tildeBi.Dimension(G[gb]->tildeB[tildei]);
-      array1<Real> tildeBip;
-      tildeBip.Set(G[gb]->tildeB[tildei+1]);
-      tildeBip.Dimension(G[gb]->tildeB[tildei+1]);
+	// FIXME: can we make the following arrays const?
+	array1<Real> tildeBim;
+	tildeBim.Set(G[gb]->tildeB[tildei-1]);
+	tildeBim.Dimension(G[gb]->tildeB[tildei-1]);
+	array1<Real> tildeBi;
+	tildeBi.Set(G[gb]->tildeB[tildei]);
+	tildeBi.Dimension(G[gb]->tildeB[tildei]);
+	array1<Real> tildeBip;
+	tildeBip.Set(G[gb]->tildeB[tildei+1]);
+	tildeBip.Dimension(G[gb]->tildeB[tildei+1]);
 
-      vector wbi;
-      Set(wbi,wb[i]);
-      Dimension(wbi,wb[i]);
-      vector wbim;
-      Set(wbim,wb[i-1]);
-      Dimension(wbim,wb[i-1]);
-      vector wbip;
-      Set(wbip,wb[i+1]);
-      Dimension(wbip,wb[i+1]);
+	vector wbi;
+	Set(wbi,wb[i]);
+	Dimension(wbi,wb[i]);
+	vector wbim;
+	Set(wbim,wb[i-1]);
+	Dimension(wbim,wb[i-1]);
+	vector wbip;
+	Set(wbip,wb[i+1]);
+	Dimension(wbip,wb[i+1]);
       
-      // possible optimization: only some of these need to be recalculate.
-      // most can be copied from one stage to the next, put into
-      // different positions.
-      // FIXME: figure out what to deal with division-by-zero case.
-      for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-	//cout << "j=" << j << endl;
- 	const unsigned aJ=j+j;
-	const unsigned aJp=aJ+1;
-	const bool jmOK=aJ > 0;
-	const unsigned aJm=jmOK ? aJ-1 : aJp;
+	// possible optimization: only some of these need to be recalculate.
+	// most can be copied from one stage to the next, put into
+	// different positions.
+	// FIXME: figure out what to deal with division-by-zero case.
+	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
+	  //cout << "j=" << j << endl;
+	  const unsigned aJ=j+j;
+	  const unsigned aJp=aJ+1;
+	  const bool jmOK=aJ > 0;
+	  const unsigned aJm=jmOK ? aJ-1 : aJp;
 
-	const Real Bij=abs2(wbi[j]);
-	const Real tildeBij=tildeBi[j];
+	  const Real Bij=abs2(wbi[j]);
+	  const Real tildeBij=tildeBi[j];
 	
-	const Real Bimj=abs2(wbim[j]);
-	const Real tildeBimj=tildeBim[j];
+	  const Real Bimj=abs2(wbim[j]);
+	  const Real tildeBimj=tildeBim[j];
 
-	const Real Bipj=abs2(wbip[j]);
-	const Real tildeBipj=tildeBip[j];
+	  const Real Bipj=abs2(wbip[j]);
+	  const Real tildeBipj=tildeBip[j];
 
-	const Real Bimjp=abs2(wbim[j+1]);
-	const Real tildeBimjp=tildeBim[j+1];
+	  const Real Bimjp=abs2(wbim[j+1]);
+	  const Real tildeBimjp=tildeBim[j+1];
 	
-	const Real Bipjm=jmOK ? abs2(wbip[j-1]) :abs2(wb[2*bxorigin-i-1][1]);
-	const Real tildeBipjm=jmOK ? tildeBip[j-1] :
-	  G[gb]->tildeB[dtilX-tildei-1][1];
+	  const Real Bipjm=jmOK ? abs2(wbip[j-1]) :abs2(wb[2*bxorigin-i-1][1]);
+	  const Real tildeBipjm=jmOK ? tildeBip[j-1] :
+	    G[gb]->tildeB[dtilX-tildei-1][1];
 
-	const Real Bijm=jmOK ? abs2(wbi[j-1]) : abs2(wb[2*bxorigin-i][1]);
-	const Real tildeBijm=jmOK ? tildeBi[j-1] : 
-	  G[gb]->tildeB[dtilX-tildei][1];
+	  const Real Bijm=jmOK ? abs2(wbi[j-1]) : abs2(wb[2*bxorigin-i][1]);
+	  const Real tildeBijm=jmOK ? tildeBi[j-1] : 
+	    G[gb]->tildeB[dtilX-tildei][1];
 
-	const Real Bimjm=jmOK ? abs2(wbim[j-1]) : abs2(wb[2*bxorigin-i+1][1]);
-	const Real tildeBimjm=jmOK ? tildeBim[j-1] : 
-	  G[gb]->tildeB[dtilX-tildei+1][1];
+	  const Real Bimjm=jmOK ? abs2(wbim[j-1]) : abs2(wb[2*bxorigin-i+1][1]);
+	  const Real tildeBimjm=jmOK ? tildeBim[j-1] : 
+	    G[gb]->tildeB[dtilX-tildei+1][1];
 
-	const Real Bipjp=abs2(wbip[j+1]);
-	const Real tildeBipjp=tildeBip[j+1];
+	  const Real Bipjp=abs2(wbip[j+1]);
+	  const Real tildeBipjp=tildeBip[j+1];
 
-	const Real Bijp=abs2(wbip[j+1]);
-	const Real tildeBijp=tildeBi[j+1];
+	  const Real Bijp=abs2(wbip[j+1]);
+	  const Real tildeBijp=tildeBi[j+1];
 
-	// co-incident point
-	wai[aJ] *= sqrt(Bij/tildeBij);
+	  // co-incident point
+	  wai[aJ] *= sqrt(Bij/tildeBij);
 
-	// same row
-	waim[aJ] *= sqrt((Bimj+Bij)/(tildeBimj+tildeBij));
-	//	cout << (Bimj+Bij)/(tildeBimj+tildeBij) << endl;
-	waip[aJ] *= sqrt((Bij+Bipj)/(tildeBij+tildeBipj));
+	  // same row
+	  waim[aJ] *= sqrt((Bimj+Bij)/(tildeBimj+tildeBij));
+	  //	cout << (Bimj+Bij)/(tildeBimj+tildeBij) << endl;
+	  waip[aJ] *= sqrt((Bij+Bipj)/(tildeBij+tildeBipj));
 
-	// same column
-	wai[aJm] *= sqrt((Bijm+Bij)/(tildeBijm+tildeBij));
-	wai[aJp] *= sqrt((Bij+Bijp)/(tildeBij+tildeBijp));
+	  // same column
+	  wai[aJm] *= sqrt((Bijm+Bij)/(tildeBijm+tildeBij));
+	  wai[aJp] *= sqrt((Bij+Bijp)/(tildeBij+tildeBijp));
 	
-	// quad-prolongs:
-	// --
-	waim[aJm] *= sqrt((Bij+Bimj+Bimjm+Bijm)
-			  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm));
-	//	cout << (Bij+Bimj+Bimjm+Bijm)
-	//	  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm) << endl;
+	  // quad-prolongs:
+	  // --
+	  waim[aJm] *= sqrt((Bij+Bimj+Bimjm+Bijm)
+			    /(tildeBij+tildeBimj+tildeBimjm+tildeBijm));
+	  //	cout << (Bij+Bimj+Bimjm+Bijm)
+	  //	  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm) << endl;
 
-	// -+
-	waim[aJ] *= sqrt((Bij+Bijp+Bimjp+Bimj)
-			 /(tildeBij+tildeBijp+tildeBimjp+tildeBimj));
-	// +-
-	waip[aJm] *= sqrt((Bij+Bijm+Bipjm+Bipj)
-			  /(tildeBij+tildeBijm+tildeBipjm+tildeBipj));
-	// ++
-	waip[aJm] *= sqrt((Bij+Bipj+Bipjp+Bijp)
-			  /(tildeBij+tildeBipj+tildeBipjp+tildeBijp));
+	  // -+
+	  waim[aJ] *= sqrt((Bij+Bijp+Bimjp+Bimj)
+			   /(tildeBij+tildeBijp+tildeBimjp+tildeBimj));
+	  // +-
+	  waip[aJm] *= sqrt((Bij+Bijm+Bipjm+Bipj)
+			    /(tildeBij+tildeBijm+tildeBipjm+tildeBipj));
+	  // ++
+	  waip[aJm] *= sqrt((Bij+Bipj+Bipjp+Bijp)
+			    /(tildeBij+tildeBipj+tildeBipjp+tildeBijp));
 	
+	}
+      }
+    }
+
+    if(prtype==COINCIDENT) {
+      const unsigned xstart=bInvisible;
+      const unsigned xstop=bxorigin+bInvisible;
+      
+      unsigned I=1;
+      for(unsigned i=xstart; i < xstop; ++i) {
+	//cout << "i="<<i<<" I="<<I<<endl;
+	vector wai;
+	Set(wai,wa[I]);
+	Dimension(wai,aNx);
+	vector wbi;
+	Set(wbi,wb[i]);
+	Dimension(wbi,wb[i]);
+	
+	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
+	  //cout << "j="<<j<<endl;
+	  wai[j+j]=wbi[j];
+	}
+	I += 2;
       }
     }
   }
