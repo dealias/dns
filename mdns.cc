@@ -111,9 +111,8 @@ private:
   oxstream fekvk;
   ofstream ft;
   oxstream fprolog;
-  int tcount;
-  array1<unsigned>::opt count;
   Real k0;
+  int tcount;
 public:
   MDNS();
   ~MDNS();
@@ -134,9 +133,9 @@ public:
     unsigned nfields;
 
     vector Sp; // Spectrum
+    array1<unsigned>::opt count;
 
-    // for subgrid non-linearity calculation:
-    DNSBase * smallDNSBase;
+    DNSBase * smallDNSBase; // for subgrid non-linearity calculation
 
   public:
     Grid();
@@ -158,12 +157,13 @@ public:
 
     void InitialConditions(unsigned g);
     //Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
-    
+  
     void NonLinearSource(const vector & Src, const vector & Y, double t);
+    void NonConservativeSource(const vector & Src, const vector & Y, double t);
     void LinearSource(const vector & Src, const vector & Y, double t);
     void Transfer(const vector2 & Src, const vector2 & Y);
     void Spectrum(vector& S, const vector& w0);
-    void setcount(array1<unsigned>::opt & count);
+    void setcount();
 
     void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
     
@@ -224,9 +224,10 @@ public:
   }
 
   // Output functions
-  Real getSpectrum(unsigned i) {
-    double c=count[i];
-    return c > 0 ? Y[EK][i].re/c : 0.0;
+  Real getSpectrum(unsigned i) { // FIXME: changing setup here.
+    //double c=count[i]; // FIXME!!!
+    // return c > 0 ? Y[EK][i].re/c : 0.0; // FIXME!!!
+    return 0.0; // FIXME: TEMP
   };
   void Computek(DynVector<unsigned>&);
   Real getk(unsigned i) {return (Real) i;};
@@ -436,21 +437,38 @@ void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
   }
 }
 
+
+void MDNS::Grid::NonConservativeSource(const vector& source, const vector& w0, 
+				       double)
+{
+  // FIXME: do stuff.
+  if(spectrum) {
+    vector S;
+    Set(S,source);
+    Dimension(S,nshells);
+    DNSBase::Spectrum(S,w0);
+  }
+}
+
 void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 {
   // FIXME
 }
 
-void MDNS::Grid::setcount(array1<unsigned>::opt & count)
+//void MDNS::Grid::setcount(array1<unsigned>::opt & count)
+void MDNS::Grid::setcount()
 {
-  const unsigned gfactor = pow(radix,myg);
+  Allocate(count,nshells); // FIXME: is nshells right?
+  for(unsigned i=0; i < nshells; ++i) 
+    count[i]=0;
+  //const unsigned gfactor=pow(radix,myg);
   if(spectrum) {
     for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
+      const int I=(int) i-(int) xorigin;
+      const int I2=I*I;
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	Real k=sqrt(k02*(I2+j*j));
-	count[(unsigned)(k-0.5)] += gfactor;
+	const Real kint=sqrt(I2+j*j);
+	count[(unsigned)(kint-0.5)] += 1;
       }
     }
   }
@@ -472,13 +490,14 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real k2=k02*(I2+j*j);
-      Real k=sqrt(k2);
-      Real w2=abs2(wi[j]);
+      const Real kint=sqrt(I2+j*j);
+      const Real k2=k02*kint;
+      //const Real k=sqrt(k2);
+      const Real w2=abs2(wi[j]);
       
       // FIXME: this line drives the time-step to zero.
       // errormask this out?
-      S[(unsigned)(k-0.5)].re += gfactor*w2/k2; 
+      S[(unsigned)(kint-0.5)].re += gfactor*w2/k2; 
       // FIXME: should this be k or k2?
 
       //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
@@ -588,9 +607,8 @@ void MDNS::InitialConditions()
   } else
     nshells=0;
 
-  Allocate(spectra,nshells);
-  for (unsigned i=0; i < nshells; ++i)
-    spectra[i]=0.0;
+  //  Allocate(spectra,nshells);
+  //  for (unsigned i=0; i < nshells; ++i) spectra[i]=0.0;
 
   for(unsigned g=0; g < Ngrids; ++g) {
     nfields=getNfields();
@@ -617,11 +635,11 @@ void MDNS::InitialConditions()
   fprolog.close();
 
   tcount=0;
-  Allocate(count,nshells);
-  for(unsigned i=0; i < nshells; ++i)
-    count[i]=0;
   for(unsigned g=0; g < Ngrids; ++g)
-    G[g]->setcount(count);
+    G[g]->setcount();
+  // FIXME: set overall count, tcount here, somehow.
+  
+  //  Allocate(count,nshells);
   
   open_output(Mfevt,dirsep,"evt");
   open_output(ft,dirsep,"t");
@@ -712,7 +730,7 @@ void MDNS::Project(unsigned gb)
 	//wai[aJp]=Complex(I,aJp); // 0+
 	A2 += 0.5*abs2(wai[aJp]);
 
-	// quad-prolongs:
+	// quad-projects:
 	//waim[aJp]=Complex(I-1,aJp); // -+
 	//waip[aJp]=Complex(I+1,aJp); // ++
 	A2 += 0.25*(abs2(waim[aJp]) + abs2(waip[aJp]));
@@ -732,7 +750,7 @@ void MDNS::Project(unsigned gb)
 	  wbi[j] *= sqrt(A2/B2);
 	  //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
 	} else {
-	  cerr << "energy for mode (" << i << ","<<j << "1) on grid "<< gb
+	  cerr << "energy for mode (" << i << ","<<j << ") on grid "<< gb
 	       << " is zero in project."<<endl;
 	  exit(1); // FIXME: work out something better for this case.
 	}
@@ -740,7 +758,7 @@ void MDNS::Project(unsigned gb)
       I += 2;
     }
 
-
+    
     { // copy to tildeB
       // TODO: make this a function?
       G[gb]->tildeB.Load(0.0); // necessary?
@@ -825,7 +843,7 @@ void MDNS::Prolong(unsigned ga)
       const int I= 2*((int)i - (int)bxorigin)+axorigin;
       const unsigned tildei=i+1-xstart;
 
-      //cout << "i="<<i << " I="<<I << " tildei=" << tildei << endl;
+      // cout << "i="<<i << " I="<<I << " tildei=" << tildei << endl;
 
       vector wai;
       Set(wai,wa[I]);
@@ -901,19 +919,23 @@ void MDNS::Prolong(unsigned ga)
 
 	// co-incident point
 	wai[aJ] *= sqrt(Bij/tildeBij);
-		
+
 	// same row
 	waim[aJ] *= (Bimj+Bij)/(tildeBimj+tildeBij);
+	//	cout << (Bimj+Bij)/(tildeBimj+tildeBij) << endl;
 	waip[aJ] *= (Bij+Bipj)/(tildeBij+tildeBipj);
-	
+
 	// same column
 	wai[aJm] *= (Bijm+Bij)/(tildeBijm+tildeBij);
 	wai[aJp] *= (Bij+Bijp)/(tildeBij+tildeBijp);
-
+	
 	// quad-prolongs:
 	// --
 	waim[aJm] *= (Bij+Bimj+Bimjm+Bijm)
 	  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm);
+	cout << (Bij+Bimj+Bimjm+Bijm)
+	  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm) << endl;
+
 	// -+
 	waim[aJ] *= (Bij+Bijp+Bimjp+Bimj)
 	  /(tildeBij+tildeBijp+tildeBimjp+tildeBimj);
@@ -923,16 +945,16 @@ void MDNS::Prolong(unsigned ga)
 	// ++
 	waip[aJm] *= (Bij+Bipj+Bipjp+Bijp)
 	  /(tildeBij+tildeBipj+tildeBipjp+tildeBijp);
+	
       }
     }
   }
   
   //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
   // maybe only on the overlapping modes?
-
-  //cout << "prolong tildeB \n" << G[gb]->tildeB << endl;
+  cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb <<"\n~B:\n" << G[gb]->tildeB << endl;
   // FIXME: copy stuff from spectra onto just onto lastgrid's Src[EK]
-  //exit(1);
+  //  exit(1);
 }
 
 void MDNS::Initialize()
@@ -949,7 +971,7 @@ void MDNS::Output(int it)
     
   if(spectrum) {
     ostringstream buf;
-    buf << "ekvk" << dirsep << "t" << tcount;
+    buf << "ekvk" << dirsep << "t" << tcount; 
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
     out_curve(fekvk,curve_Spectrum,"Ek",nshells);
@@ -1000,24 +1022,44 @@ void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t)
 }
 
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
-{
-  // FIXME: this seems quite differen than, say, NonLinearSource
+{  
+  vector w0,source;
+  Set(w0,Y[OMEGA]);
+  Set(source,Src[EK]);
+  G[grid]->NonConservativeSource(source,w0,t);
+
+  /*
   if(spectrum) {
+    vector w0;
+    Set(w0,Y[OMEGA]);
+    vector S;
+    Set(S,Src[EK]);
+    Dimension(S,nshells);
+    //G[g]->Spectrum(spectra,w0);
+    G[grid]->Spectrum(S,w0);
+    
+
     for(unsigned g=0; g < Ngrids; ++g) {
-      if(g==0) spectra.Load(Complex(0.0,0.0));
+      //if(g==0) spectra.Load(Complex(0.0,0.0));
 
       vector w0;
       Set(w0,Y[OMEGA]);
+      vector S;
+      Set(S,Src[EK]);
+      Dimension(S,nshells);
       //G[g]->Spectrum(spectra,w0);
+      G[g]->Spectrum(S,w0);
+      
+      //if(g==glast) {
+      //vector S;
+      //Set(S,Src[EK]);
+      //Dimension(S,nshells);
+      //for (unsigned i=0; i < nshells; ++i) S[i]=spectra[i];
+      //}
 
-      if(g==glast) {
-	vector S;
-	Set(S,Src[EK]);
-	Dimension(S,nshells);
-	for (unsigned i=0; i < nshells; ++i) S[i]=spectra[i];
-      }
     }
   }
+  */
   //Moments(Src,Y,t);
 }
 

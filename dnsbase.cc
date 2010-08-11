@@ -104,10 +104,12 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real k2=k02*(I2+j*j);
+      unsigned k2int=I2+j*j;
+      Real k2=k02*k2int;
+      Real kind=sqrt(k2int);
       Real k=sqrt(k2);
       Real w2=abs2(wi[j]);
-      S[(unsigned)(k-0.5)] += Complex(w2/k,nuk(k2)*w2);
+      S[(unsigned)(kind-0.5)] += Complex(w2/k,nuk(k2)*w2);
     }
   }
 }
