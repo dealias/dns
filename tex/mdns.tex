@@ -166,8 +166,8 @@ have the original system, with the important disctinction that all
 source terms would be calculated at each stage of the Runge-Kutta
 integrator.  With two grids, the high grid is affected by low-low-low
 interactions only at the end of the time step; as such, we expect that,
-while the sub-integrators have error $\O\tau^{n+1},$ the low-low-low
-interactions are only $\O\tau^1$.
+while the sub-integrators have error $\O\(\tau^{n+1}\),$ the low-low-low
+interactions are only $\O\(\tau^1\)$.
 
 \begin{figure}[htbp]
   \begin{center}
@@ -468,9 +468,25 @@ There are two methods: rescaling and  projection/prolongation.
 
 \subsection{Rescaling}
 I talked about this in my MSc thesis, but was told not to do it then.  Now 
-people seem to like it.  Whatever.
+people seem to like it.
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{figures/symstep4}
+    \caption{Time-stepping with rescaling}
+    \label{symstep4}
+  \end{center}
+\end{figure}
+
 
 \subsection{Projection/Prolongation}
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics{figures/timestep8}
+    \caption{Time-stepping with projection/prolongation}
+    \label{timestep8}
+  \end{center}
+\end{figure}
+\subsubsection{Mode-centric synchronization}
 Let $A$ be a set of modes on grid $a$ which correspond to the modes in
 set $B$ on grid $b$.  We wish to project/prolong between grids $a$ and
 $b$.  Projection and prolongation are assymetric operations.  Let
@@ -488,13 +504,35 @@ $\tilde{B}(t)\rightarrow B(t+\t)$.  This change must now be imposed on $A$:
 \begin{dmath}
   A(t+\t) = \tilde{A}(t+\t)\times \frac{||B(t+\t)||}{||\tilde{B}(t)||}.
 \end{dmath}
-\begin{figure}[htbp]
-  \begin{center}
-    \includegraphics{figures/timestep8}
-    \caption{Time-stepping with projection/prolongation}
-    \label{timestep8}
-  \end{center}
-\end{figure}
+
+\subsubsection{Transform-centric rescaling}
+The spectral Navier--Stokes equations are derived by projecting the
+solution onto a basis which consists of Fourier modes.  The decimated
+equation is just the projection onto a different decimated
+basis. Therefore, synchronizing the grids should be done using the
+same projection operator, the Fourier transform.
+
+OK, this section is really in flux.  Some points:
+\begin{enumerate}
+\item If we accept the decimated modes as 
+  $\{e^{i k \cdot x}, k = \(2 i, 2j\)\}$, then the global interpolation
+  \begin{dmath}
+    \text{fine grid} \xrightarrow{\text{fft}^{-1}} x-\text{space} 
+    \xrightarrow{\text{fft}} \text{decimated grid}
+  \end{dmath}
+  just copies the even-indexed modes from the fine grid to the coarse grid. 
+  That is, we could just project/prolong by copying coincident modes.
+
+\item For symmetric symmetrization, does this mean that we can combine
+  the two grids? As in, we can just put all the modes on one oddly
+  shaped grid, transferring the source, with no
+  $(\text{high},\text{high})\rightarrow\text{low}$ nonlinear source
+  term for odd-indexed modes?  That would be awesome, but I'm not sure 
+  that I really believe it.
+  
+
+\end{enumerate}
+
 
 
 
