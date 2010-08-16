@@ -603,22 +603,18 @@ void MDNS::InitialConditions()
 
   nshells=0;
   if(spectrum) {
-    unsigned gfactor;
-    if(radix==1) gfactor=1;
-    if(radix==4) gfactor=2;
+    unsigned lambda;
+    if(radix==1) lambda=1;
+    if(radix==4) lambda=2;
     nshells=gm(my,0);
-    cout << nshells << endl;
     for(unsigned g=1; g < glast; ++g) {
-      nshells += gm(my,g) - gm(my,g-1)/gfactor;
-      cout << nshells << endl;
+      nshells += gm(my,g) - gm(my,g-1)/lambda;
     }
     unsigned gmx=gm(mx,glast);
     unsigned gmy=gm(my,glast);
-    gmx=gm(my,glast)/gfactor;
-    nshells += (unsigned) (hypot(gmx-1,gmy-1)+0.5) - gm(my,glast-1)/gfactor;
-    
+    //nshells += (unsigned) (hypot(gmx-1,gmy-1)+0.5*pow(lambda,glast) - gm(my,glast-1)/lambda);
+    nshells += (unsigned) (hypot(gmx-1,gmy-1) + 0.5*pow(lambda,glast) - gm(my,glast-1)/lambda);
   }
-  cout << nshells << endl; exit(1);// FIXME: temp
 
   //  Allocate(spectra,nshells);
   //  for (unsigned i=0; i < nshells; ++i) spectra[i]=0.0;
@@ -1035,7 +1031,7 @@ void MDNS::Output(int it)
     buf << "ekvk" << dirsep << "t" << tcount; 
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
-    cout << nshells << endl; exit(1);
+    cout << nshells << endl; exit(1); // FIXME: temp
     out_curve(fekvk,curve_Spectrum,"Ek",nshells);
     out_curve(fekvk,curve_Spectrum,"nuk*Ek",nshells); // FIXME: replace with nuk
     fekvk.close();
