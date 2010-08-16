@@ -228,8 +228,15 @@ public:
 
   // Output functions
   Real getSpectrum(unsigned i) { // FIXME: changing setup here.
-    //double c=count[i]; // FIXME!!!
-    // return c > 0 ? Y[EK][i].re/c : 0.0; // FIXME!!!
+    unsigned gfactor= radix==1 ? 1 : 2;
+    for(unsigned g=0; g < Ngrids; ++g) {
+      if(i < gfactor*G[g]->getmy()) {
+	cout << i << " yo, " << g <<endl;
+      }
+
+    //double c=count[i];
+    // return c > 0 ? Y[EK][i].re/c : 0.0;
+    }
     return 0.0; // FIXME: TEMP
   };
   void Computek(DynVector<unsigned>&);
@@ -342,7 +349,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
   if(radix != 1 && radix != 4) 
     msg(ERROR,"only radix 1 (trivial) or 4 decimations enabled");
 
-  nshells=MDNSProblem->getnshells(myg);
+  nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
 
@@ -478,16 +485,10 @@ void MDNS::Grid::setcount()
 }
 
 void MDNS::Grid::Spectrum(vector& S, const vector& w0)
-{
+{ // Compute instantaneous angular sum over each circular shell.
   w.Set(w0);
-  
   S.Load(Complex(0.0,0.0));
-
-  // Compute instantaneous angular sum over each circular shell.
-
-  const unsigned gfactor = pow(radix,myg);
-
-  // FIXME: loop over only visible modes!
+  //  const unsigned gfactor = pow(radix,myg);
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -495,14 +496,9 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       const Real kint=sqrt(I2+j*j);
       const Real k2=k02*kint;
-      //const Real k=sqrt(k2);
+      const Real overk=1/sqrt(k2);
       const Real w2=abs2(wi[j]);
-      
-      // FIXME: this line drives the time-step to zero.
-      // errormask this out?
-      S[(unsigned)(kint-0.5)].re += gfactor*w2/k2; 
-      // FIXME: should this be k or k2?
-
+      S[(unsigned)(kint-0.5)].re += w2*overk; 
       //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
     }
   }
@@ -605,11 +601,24 @@ void MDNS::InitialConditions()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
-  if(spectrum) { 
-    nshells=spectrum ? 
-      (unsigned) (gk(glast)*hypot(gm(mx,glast)-1,gm(my,glast)-1)+0.5) : 0;
-  } else
-    nshells=0;
+  nshells=0;
+  if(spectrum) {
+    unsigned gfactor;
+    if(radix==1) gfactor=1;
+    if(radix==4) gfactor=2;
+    nshells=gm(my,0);
+    cout << nshells << endl;
+    for(unsigned g=1; g < glast; ++g) {
+      nshells += gm(my,g) - gm(my,g-1)/gfactor;
+      cout << nshells << endl;
+    }
+    unsigned gmx=gm(mx,glast);
+    unsigned gmy=gm(my,glast);
+    gmx=gm(my,glast)/gfactor;
+    nshells += (unsigned) (hypot(gmx-1,gmy-1)+0.5) - gm(my,glast-1)/gfactor;
+    
+  }
+  cout << nshells << endl; exit(1);// FIXME: temp
 
   //  Allocate(spectra,nshells);
   //  for (unsigned i=0; i < nshells; ++i) spectra[i]=0.0;
@@ -800,28 +809,23 @@ void MDNS::Project(unsigned gb)
     }
     */
     }
-  }
-  
-  if(prtype==COINCIDENT) {
-    const unsigned xstart=bInvisible;
-    const unsigned xstop=bxorigin+bInvisible;
     
+  if(prtype==COINCIDENT) {
+    unsigned xstart=bInvisible;
+    unsigned xstop=bxorigin+bInvisible;
     unsigned I=1;
     for(unsigned i=xstart; i < xstop; ++i) {
-      //cout << "i="<<i<<" I="<<I<<endl;
       vector wai;
       Set(wai,wa[I]);
       Dimension(wai,aNx);
       vector wbi;
       Set(wbi,wb[i]);
       Dimension(wbi,wb[i]);
-	
-      for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-	//cout << "j="<<j<<endl;
+      for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j)
 	wbi[j]=wai[j+j];
-      }
       I += 2;
     }
+  }
   }
 
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
@@ -1031,6 +1035,7 @@ void MDNS::Output(int it)
     buf << "ekvk" << dirsep << "t" << tcount; 
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
+    cout << nshells << endl; exit(1);
     out_curve(fekvk,curve_Spectrum,"Ek",nshells);
     out_curve(fekvk,curve_Spectrum,"nuk*Ek",nshells); // FIXME: replace with nuk
     fekvk.close();
