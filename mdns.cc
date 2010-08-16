@@ -91,11 +91,11 @@ class FunctRR {
 };
 typedef FunctRR* FunctRRPtr;
 
-unsigned gN(unsigned N, unsigned g) {
+unsigned gN(unsigned N, unsigned g) {// FIXME: should this be part of MDNS?
   return radix == 1 ? pow(2,(int) g)*(N+1)-1 : N;
 };
 
-unsigned gm(unsigned m, unsigned g) {
+unsigned gm(unsigned m, unsigned g) { // FIXME: should this be part of MDNS?
   return radix == 1 ? pow(2,(int) g)*m : m;
 };
 
@@ -197,6 +197,8 @@ public:
   unsigned getNfields() {return Nfields;};
   //unsigned getnshells(unsigned g) {return g == glast ? nshells : 0;};
   unsigned getnshells(unsigned g) {return nshells;};
+  Real kshellmin(const unsigned i) { return 0;}; // FIXME
+  Real kshellmax(const unsigned i) { return 0;}; // FIXME
 
   Table<InitialConditionBase> *InitialConditionTable;
   void InitialConditions();
@@ -227,17 +229,44 @@ public:
   }
 
   // Output functions
-  Real getSpectrum(unsigned i) { // FIXME: changing setup here.
-    unsigned gfactor= radix==1 ? 1 : 2;
+  Real getSpectrum(unsigned i) {
+    unsigned lambda=radix==1 ? 1 : 2;
+    double val=0.0;
+
+    Real kmin=kshellmin(i);
+    Real kmax=kshellmax(i);
+
     for(unsigned g=0; g < Ngrids; ++g) {
-      if(i < gfactor*G[g]->getmy()) {
+      Real gk0=G[g]->getk0();
+      unsigned gmx=G[g]->getmx();
+      unsigned gmy=G[g]->getmy();
+      unsigned gky=gk0*gmy;
+      Real gkhypot=gk0*hypot(gmx,gmy);
+      Real gkInvisible=gk0*G[g]->getInvisible();
+      unsigned gnshells=G[g]->getnshells();
+
+      // is this shell part of this grid?
+      if(kmin > gkInvisible && kmax <= gkhypot) { 
+	for(unsiged k=0; k < gnshells; ++k) {
+	  Real K=gk0*k; // centre of grid's shell
+	  if(kmax <= gky) {
+	    // 1. the shell is composed of visible modes from grid g
+	    // The resolution is simply that of the specrum of the grid.
+	  } else {
+	  // 2. the shell is composed of visible modes from two grids.
+	  // in this case, we use the resolution of the more decimated grid
+	  }
+	}
+      }
+
+      if(i < lambda*G[g]->getmy()) {
 	cout << i << " yo, " << g <<endl;
       }
 
     //double c=count[i];
     // return c > 0 ? Y[EK][i].re/c : 0.0;
     }
-    return 0.0; // FIXME: TEMP
+    return val;
   };
   void Computek(DynVector<unsigned>&);
   Real getk(unsigned i) {return (Real) i;};
@@ -468,11 +497,12 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 //void MDNS::Grid::setcount(array1<unsigned>::opt & count)
 void MDNS::Grid::setcount()
 {
-  Allocate(count,nshells); // FIXME: is nshells right?
-  for(unsigned i=0; i < nshells; ++i) 
-    count[i]=0;
-  //const unsigned gfactor=pow(radix,myg);
   if(spectrum) {
+    Allocate(count,nshells); 
+    for(unsigned k=0; k < nshells; ++k) 
+      count[k]=0;
+
+    // FIXME: loop over visible modes only.
     for(unsigned i=0; i < Nx; i++) {
       const int I=(int) i-(int) xorigin;
       const int I2=I*I;
@@ -488,7 +518,8 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 { // Compute instantaneous angular sum over each circular shell.
   w.Set(w0);
   S.Load(Complex(0.0,0.0));
-  //  const unsigned gfactor = pow(radix,myg);
+
+  // FIXME: loop over visible modes only.
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -1031,7 +1062,6 @@ void MDNS::Output(int it)
     buf << "ekvk" << dirsep << "t" << tcount; 
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
-    cout << nshells << endl; exit(1); // FIXME: temp
     out_curve(fekvk,curve_Spectrum,"Ek",nshells);
     out_curve(fekvk,curve_Spectrum,"nuk*Ek",nshells); // FIXME: replace with nuk
     fekvk.close();
