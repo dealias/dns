@@ -200,6 +200,23 @@ public:
   Real kshellmin(const unsigned i) { return 0;}; // FIXME
   Real kshellmax(const unsigned i) { return 0;}; // FIXME
 
+  unsigned shellindex(const Real k, int fromg=-1) {
+    if(fromg == -1) { 
+      // if(k < G[g]->k0*getmy()), then we are on grid g.      
+
+    } else { // we know which grid the mode comes from
+      if(fromg==0) {
+	 if(k < k0*G[0]->getmy()) return (unsigned) (k/k0);
+      }
+      
+
+    }
+
+
+
+    return 0; // default
+  };
+
   Table<InitialConditionBase> *InitialConditionTable;
   void InitialConditions();
 
@@ -247,7 +264,7 @@ public:
 
       // is this shell part of this grid?
       if(kmin > gkInvisible && kmax <= gkhypot) { 
-	for(unsiged k=0; k < gnshells; ++k) {
+	for(unsigned k=0; k < gnshells; ++k) {
 	  Real K=gk0*k; // centre of grid's shell
 	  if(kmax <= gky) {
 	    // 1. the shell is composed of visible modes from grid g
@@ -1111,11 +1128,50 @@ void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t)
 
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 {  
-  vector w0,source;
-  Set(w0,Y[OMEGA]);
-  Set(source,Src[EK]);
-  G[grid]->NonConservativeSource(source,w0,t);
+  if(spectrum) {
+    vector w0,source;
+    Set(w0,Y[OMEGA]);
+    Set(source,Src[EK]);
+    G[grid]->NonConservativeSource(source,w0,t);
+    Real lambda=1.0;
+    if(radix==4) lambda=2.0;
 
+    // FIXME: work goes here now.
+    for(unsigned g=0; g < Ngrids; ++g) {
+      // determine shell boundaries for this grid
+      unsigned gInvisible=G[g]->getInvisible();
+      Real gk0=G[g]->getk0();
+      Real hkInvis=sqrt(2.0)*gk0*gInvisible;
+      Real gfactor=pow(lambda,g);
+      unsigned gmy=G[g]->getmy();
+      Real gky=gk0*gmy;
+
+      // loop over visible modes
+      {
+	// get the mode's wavenumber k
+	Real k=0.0; // FIXME
+      
+	// determine the corresponding shell index K
+	{
+	  if(k < hkInvis) {
+	    // 1. the mode is part of a shell between spanning grid g-1 and g
+	    // shell width is from grid g
+	  }
+
+	  if(k >= hkInvis && k < gky) {
+	    // 2. the modes is part of a shell that is entirely inside grid g
+	    // shell width is from grid g
+	  }
+
+	  if(k >= gky) {
+	    // 3. the mode is part of a shell between spanning grid g and g+1
+	    // shell width is from grid g+1
+	    
+	  }
+	}
+      }
+    }
+  }
   /*
   if(spectrum) {
     vector w0;
