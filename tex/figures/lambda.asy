@@ -51,20 +51,41 @@ for(int i=0; i < lambda.length; ++i) {
 
   if(drawring) {
     // FIXME: this stuff really only applies to radix-4 grids
-    real kmax=n0*2^(ngrids-1);
+
     int glast=ngrids-1;
+    real radlast=0;
+    path semi=(1,0){N}..(0,1){W}..{S}(-1,0);
     for(int G=0; G < ngrids; ++G) {
-      int w=2^G;
-      int start=G==0? 0 : n0;
-      real stop=G==glast ? kmax +w/2 : w*n0;
-      for(int j=start; j < stop; j += w)
-	draw(pic,scale(j+w/2)*unitcircle);
+      int L=2^G;
+      real istart=G==0 ? 0 : quotient(n0,2);
+      real rad = istart*L;
+      int gmy=n0;
+      real kmy=L*gmy;
+      real stoprad=G ==glast ? sqrt(2)*kmy-L : kmy;
+
+      while(rad < stoprad) {
+	path[] paths={scale(rad+L/2)*semi,scale(radlast)*semi};
+	pen fpen=dotpen[G]+opacity(0.3);
+	pen[] pens={fpen,fpen};
+	draw(pic,paths,pens);
+	
+	draw(pic,scale(rad+L/2)*semi,dotpen[G]+dashed);
+	radlast=rad+L/2;
+	rad += L;
+      }
+      /*
+      int start=G==0? 0 : quotient(n0,L);
+      real stop=G==glast ? ceil((kmax +1/2)/L) : n0-1;
+
+      for(int j=start; j < stop; j += 1) {
+	draw(pic,scale(rad)*unitcircle,dotpen[G]+dashed);
+	//draw(pic,scale(rad+w)*unitcircle,dotpen[G]+Dotted);
+	write(rad);
+	lastrad=rad;
+      }
+      */
     }
-    //draw(pic,scale(kmax)*unitcircle);
   }
-  //for(int j=0; j < n; ++j) draw(pic,scale(j+0.5)*unitcircle);
-  //for(int j=n; j < sqrt(8)*n; j+=1) draw(pic,scale(j+0.5)*unitcircle);
-    
   shipout(outnames[i],pic);
 
   
