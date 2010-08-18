@@ -155,7 +155,7 @@ public:
     unsigned getNx() {return Nx;};
     unsigned getmy() {return my;};
     unsigned getInvisible() {return Invisible;};
-    array2<Complex> * getwp() {return &w;};
+    //    array2<Complex> * getwp() {return &w;};
     void settow(array2<Complex> & w0) {Set(w0,w);};
 
     void InitialConditions(unsigned g);
@@ -247,43 +247,8 @@ public:
 
   // Output functions
   Real getSpectrum(unsigned i) {
-    unsigned lambda=radix==1 ? 1 : 2;
-    double val=0.0;
-
-    Real kmin=kshellmin(i);
-    Real kmax=kshellmax(i);
-
-    for(unsigned g=0; g < Ngrids; ++g) {
-      Real gk0=G[g]->getk0();
-      unsigned gmx=G[g]->getmx();
-      unsigned gmy=G[g]->getmy();
-      unsigned gky=gk0*gmy;
-      Real gkhypot=gk0*hypot(gmx,gmy);
-      Real gkInvisible=gk0*G[g]->getInvisible();
-      unsigned gnshells=G[g]->getnshells();
-
-      // is this shell part of this grid?
-      if(kmin > gkInvisible && kmax <= gkhypot) { 
-	for(unsigned k=0; k < gnshells; ++k) {
-	  Real K=gk0*k; // centre of grid's shell
-	  if(kmax <= gky) {
-	    // 1. the shell is composed of visible modes from grid g
-	    // The resolution is simply that of the specrum of the grid.
-	  } else {
-	  // 2. the shell is composed of visible modes from two grids.
-	  // in this case, we use the resolution of the more decimated grid
-	  }
-	}
-      }
-
-      if(i < lambda*G[g]->getmy()) {
-	cout << i << " yo, " << g <<endl;
-      }
-
-    //double c=count[i];
-    // return c > 0 ? Y[EK][i].re/c : 0.0;
-    }
-    return val;
+    // FIXME: this should just look at the first grid's EK again.
+    return 0.0;
   };
   void Computek(DynVector<unsigned>&);
   Real getk(unsigned i) {return (Real) i;};
@@ -519,35 +484,38 @@ void MDNS::Grid::setcount()
     for(unsigned k=0; k < nshells; ++k) 
       count[k]=0;
 
+    unsigned gfactor=pow(radix,myg);
     // FIXME: loop over visible modes only.
     for(unsigned i=0; i < Nx; i++) {
       const int I=(int) i-(int) xorigin;
       const int I2=I*I;
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	const Real kint=sqrt(I2+j*j);
-	count[(unsigned)(kint-0.5)] += 1;
+	count[(unsigned)(kint-0.5)] += gfactor;
       }
     }
   }
 }
 
+// FIXME: get rid of this?
 void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 { // Compute instantaneous angular sum over each circular shell.
   w.Set(w0);
   S.Load(Complex(0.0,0.0));
 
-  // FIXME: loop over visible modes only.
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      const Real kint=sqrt(I2+j*j);
-      const Real k2=k02*kint;
-      const Real overk=1/sqrt(k2);
-      const Real w2=abs2(wi[j]);
-      S[(unsigned)(kint-0.5)].re += w2*overk; 
-      //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
+      if(j > Invisible || I2 > Invisible2) {
+	const Real kint=sqrt(I2+j*j);
+	const Real k2=k02*kint;
+	const Real overk=1/sqrt(k2);
+	const Real w2=abs2(wi[j]);
+	S[(unsigned)(kint-0.5)].re += w2*overk; 
+	//S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
+      }
     }
   }
 }
@@ -1136,74 +1104,36 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
     Real lambda=1.0;
     if(radix==4) lambda=2.0;
 
-    // FIXME: work goes here now.
+
     for(unsigned g=0; g < Ngrids; ++g) {
-      // determine shell boundaries for this grid
-      unsigned gInvisible=G[g]->getInvisible();
-      Real gk0=G[g]->getk0();
-      Real hkInvis=sqrt(2.0)*gk0*gInvisible;
-      Real gfactor=pow(lambda,g);
-      unsigned gmy=G[g]->getmy();
-      Real gky=gk0*gmy;
-
-      // loop over visible modes
-      {
-	// get the mode's wavenumber k
-	Real k=0.0; // FIXME
+      unsigned nextra=0;
+      for(unsigned i=1; i < g; ++i)
+	nextra += G[i]->getmy()/lambda;
       
-	// determine the corresponding shell index K
-	{
-	  if(k < hkInvis) {
-	    // 1. the mode is part of a shell between spanning grid g-1 and g
-	    // shell width is from grid g
-	  }
-
-	  if(k >= hkInvis && k < gky) {
-	    // 2. the modes is part of a shell that is entirely inside grid g
-	    // shell width is from grid g
-	  }
-
-	  if(k >= gky) {
-	    // 3. the mode is part of a shell between spanning grid g and g+1
-	    // shell width is from grid g+1
-	    
+      array2<Complex> gw;
+      G[g]->settow(gw);
+      gw.Dimension(G[g]->getNx(),G[g]->getmy());
+      unsigned gInvisible=G[g]->getInvisible();
+      int gInvisible2=gInvisible*gInvisible;
+      unsigned gxorigin=G[g]->getxorigin();
+      //Real gfactor=pow(radix,g);
+      for(unsigned i=0; i < Nx; i++) {
+	int I=(int) i-(int)gxorigin;
+	int I2=I*I;
+	vector gwi=gw[i];
+	for(unsigned j=i <= gxorigin ? 1 : 0; j < my; ++j) {
+	  if(j > gInvisible || I2 > gInvisible2) {
+	    unsigned iEK=(unsigned) (sqrt(I2+j*j) - 0.5 -nextra);
+	    cout << "grid " << g << " (I,j)=(" << I << "," << j << ")";
+	    cout << " iEK="<<iEK << endl;
+	    //[iEK] += gfactor*abs2(gwi[j]); // maybe divide by k or k2?
+	    // FIXME: put this into the first grid's EK.
 	  }
 	}
       }
     }
   }
-  /*
-  if(spectrum) {
-    vector w0;
-    Set(w0,Y[OMEGA]);
-    vector S;
-    Set(S,Src[EK]);
-    Dimension(S,nshells);
-    //G[g]->Spectrum(spectra,w0);
-    G[grid]->Spectrum(S,w0);
-    
-
-    for(unsigned g=0; g < Ngrids; ++g) {
-      //if(g==0) spectra.Load(Complex(0.0,0.0));
-
-      vector w0;
-      Set(w0,Y[OMEGA]);
-      vector S;
-      Set(S,Src[EK]);
-      Dimension(S,nshells);
-      //G[g]->Spectrum(spectra,w0);
-      G[g]->Spectrum(S,w0);
-      
-      //if(g==glast) {
-      //vector S;
-      //Set(S,Src[EK]);
-      //Dimension(S,nshells);
-      //for (unsigned i=0; i < nshells; ++i) S[i]=spectra[i];
-      //}
-
-    }
-  }
-  */
+  exit(1);
   //Moments(Src,Y,t);
 }
 
