@@ -136,7 +136,6 @@ public:
     unsigned nfields;
 
     vector Sp; // Spectrum
-    array1<unsigned>::opt count;
 
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
 
@@ -150,13 +149,21 @@ public:
     unsigned myg;
 
     array2<Real> tildeB;
-  
+
+    array1<unsigned>::opt count;
+    void setcount();
+    //unsigned extrashells;  
+
     unsigned getnshells() {return nshells;};
     unsigned getNx() {return Nx;};
     unsigned getmy() {return my;};
     unsigned getInvisible() {return Invisible;};
     //    array2<Complex> * getwp() {return &w;};
-    void settow(array2<Complex> & w0) {Set(w0,w);};
+    void settow(array2<Complex> & w0) {
+      Set(w0,w);
+      Dimension(w0,w);
+    };
+    //unsigned nshellbelow;
 
     void InitialConditions(unsigned g);
     //Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
@@ -166,7 +173,6 @@ public:
     void LinearSource(const vector & Src, const vector & Y, double t);
     void Transfer(const vector2 & Src, const vector2 & Y);
     void Spectrum(vector& S, const vector& w0);
-    void setcount();
 
     void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
     
@@ -195,27 +201,12 @@ public:
     //return (g == glast && spectrum) ? Nfields : 1;
   };
   unsigned getNfields() {return Nfields;};
-  //unsigned getnshells(unsigned g) {return g == glast ? nshells : 0;};
-  unsigned getnshells(unsigned g) {return nshells;};
-  Real kshellmin(const unsigned i) { return 0;}; // FIXME
-  Real kshellmax(const unsigned i) { return 0;}; // FIXME
-
-  unsigned shellindex(const Real k, int fromg=-1) {
-    if(fromg == -1) { 
-      // if(k < G[g]->k0*getmy()), then we are on grid g.      
-
-    } else { // we know which grid the mode comes from
-      if(fromg==0) {
-	 if(k < k0*G[0]->getmy()) return (unsigned) (k/k0);
-      }
-      
-
-    }
-
-
-
-    return 0; // default
+  unsigned getnshells(unsigned g) {
+    return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
   };
+
+  //array1<unsigned>::opt count;
+  //void setcount();
 
   Table<InitialConditionBase> *InitialConditionTable;
   void InitialConditions();
@@ -247,9 +238,11 @@ public:
 
   // Output functions
   Real getSpectrum(unsigned i) {
-    // FIXME: this should just look at the first grid's EK again.
+    // FIXME
+    // the plan is to look at bundle shells from individual grids
     return 0.0;
   };
+
   void Computek(DynVector<unsigned>&);
   Real getk(unsigned i) {return (Real) i;};
 
@@ -271,7 +264,7 @@ void MDNS::Grid::loopwF(const FunctRRPtr F,int n,...)
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(j > Invisible || I2 > Invisible2) {
+      if(j >= Invisible || I2 >= Invisible2) {
 	Real w2=abs2(wi[j]);
 	Real k2=k02*(I2+j*j);
 	F->f(w2,k2,n,args);
@@ -341,7 +334,7 @@ void MDNS::Grid::SetParams()
     }
 
     if(radix==4)
-      Invisible=gm(::Nx,myg-1)/2-1;
+      Invisible=gm(my,myg-1)/2;
 
     Invisible2=Invisible*Invisible;
   }
@@ -360,19 +353,22 @@ void MDNS::Grid::InitialConditions(unsigned g)
   if(radix != 1 && radix != 4) 
     msg(ERROR,"only radix 1 (trivial) or 4 decimations enabled");
 
-  nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
+  nshells=0;
+
+  if(spectrum) {
+    nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
+    Dimension(Sp,nshells); // FIXME: allocated?
+    for(unsigned i=0; i < nshells; i++)  Sp[i]=Complex(0.0,0.0);
+    setcount();
+  }
+
+  //  unsigned Nx0=Nx+xpad;//unused so far...
+  //  unsigned Ny0=Ny+ypad; //unused so far...
+  //  int my0=Ny0/2+1; //unused so far...
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
 
   cout << "\nALLOCATING FFT BUFFERS" << endl;
-
-  Dimension(Sp,nshells);
-  for(unsigned i=0; i < nshells; i++)
-    Sp[i]=Complex(1.0,1.0);
-  
-  //  unsigned Nx0=Nx+xpad;//unused so far...
-  //  unsigned Ny0=Ny+ypad; //unused so far...
-  //  int my0=Ny0/2+1; //unused so far...
 
   block=ComplexAlign(3*Nx*my);
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
@@ -400,6 +396,8 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
   InitialCondition->Set(w,Nx*my);
+
+  // FIXME: initialize spectrum to zero as well?
 
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 }
@@ -462,12 +460,11 @@ void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
 void MDNS::Grid::NonConservativeSource(const vector& source, const vector& w0, 
 				       double)
 {
-  // FIXME: do stuff.
   if(spectrum) {
     vector S;
     Set(S,source);
     Dimension(S,nshells);
-    DNSBase::Spectrum(S,w0);
+    Spectrum(S,w0);
   }
 }
 
@@ -476,28 +473,25 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
   // FIXME
 }
 
-//void MDNS::Grid::setcount(array1<unsigned>::opt & count)
 void MDNS::Grid::setcount()
 {
   if(spectrum) {
-    Allocate(count,nshells); 
+    Allocate(count,nshells);
     for(unsigned k=0; k < nshells; ++k) 
       count[k]=0;
-
-    unsigned gfactor=pow(radix,myg);
-    // FIXME: loop over visible modes only.
     for(unsigned i=0; i < Nx; i++) {
       const int I=(int) i-(int) xorigin;
       const int I2=I*I;
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	const Real kint=sqrt(I2+j*j);
-	count[(unsigned)(kint-0.5)] += gfactor;
+	if(j > Invisible || I2 > Invisible2) {
+	  const Real kint=sqrt(I2+j*j);
+	  count[(unsigned)(kint-0.5)] += 1;
+	}
       }
     }
   }
 }
 
-// FIXME: get rid of this?
 void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 { // Compute instantaneous angular sum over each circular shell.
   w.Set(w0);
@@ -511,7 +505,7 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
       if(j > Invisible || I2 > Invisible2) {
 	const Real kint=sqrt(I2+j*j);
 	const Real k2=k02*kint;
-	const Real overk=1/sqrt(k2);
+	const Real overk=1.0/sqrt(k2);
 	const Real w2=abs2(wi[j]);
 	S[(unsigned)(kint-0.5)].re += w2*overk; 
 	//S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
@@ -618,6 +612,7 @@ void MDNS::InitialConditions()
   my=(Ny+1)/2;
 
   nshells=0;
+  /*
   if(spectrum) {
     unsigned lambda;
     if(radix==1) lambda=1;
@@ -631,6 +626,7 @@ void MDNS::InitialConditions()
     //nshells += (unsigned) (hypot(gmx-1,gmy-1)+0.5*pow(lambda,glast) - gm(my,glast-1)/lambda);
     nshells += (unsigned) (hypot(gmx-1,gmy-1) + 0.5*pow(lambda,glast) - gm(my,glast-1)/lambda);
   }
+  */
 
   //  Allocate(spectra,nshells);
   //  for (unsigned i=0; i < nshells; ++i) spectra[i]=0.0;
@@ -643,15 +639,16 @@ void MDNS::InitialConditions()
   }
 
   Allocator(align); // allocate MultiIntegrator
-
+  
   G.Allocate(Ngrids);
-  for(unsigned int g=0; g < Ngrids; ++g) {
+
+  for(unsigned g=0; g < Ngrids; ++g) {
     G[g]=new Grid(g,this);
     G[g]->AttachTo(this,Y);
-    G[g]->InitialConditions(g); 
-    //    icalpha *= sqrt(radix);
-    //    icbeta *= sqrt(radix);
+    G[g]->InitialConditions(g);
   }
+  for (unsigned g=1; g< Ngrids; g++) 
+    Project(g);  
 
   //***** output *****//
   open_output(fprolog,dirsep,"prolog",0);
@@ -660,11 +657,7 @@ void MDNS::InitialConditions()
   fprolog.close();
 
   tcount=0;
-  for(unsigned g=0; g < Ngrids; ++g)
-    G[g]->setcount();
-  // FIXME: set overall count, tcount here, somehow.
-  
-  //  Allocate(count,nshells);
+  //setcount();
   
   open_output(Mfevt,dirsep,"evt");
   open_output(ft,dirsep,"t");
@@ -822,7 +815,7 @@ void MDNS::Project(unsigned gb)
     */
     }
     
-  if(prtype==COINCIDENT) {
+    if(prtype==COINCIDENT) { // FIXME: check
     unsigned xstart=bInvisible;
     unsigned xstop=bxorigin+bInvisible;
     unsigned I=1;
@@ -902,7 +895,6 @@ void MDNS::Prolong(unsigned ga)
 	Set(waim,wa[I-1]);
 	Dimension(waim,wa[I-1]);
       
-	// FIXME: can we make the following arrays const?
 	array1<Real> tildeBim;
 	tildeBim.Set(G[gb]->tildeB[tildei-1]);
 	tildeBim.Dimension(G[gb]->tildeB[tildei-1]);
@@ -998,7 +990,7 @@ void MDNS::Prolong(unsigned ga)
     }
 
     if(prtype==COINCIDENT) {
-      const unsigned xstart=bInvisible;
+      const unsigned xstart=bInvisible; // FIXME: check
       const unsigned xstop=bxorigin+bInvisible;
       
       unsigned I=1;
@@ -1094,46 +1086,34 @@ void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t)
   LinearSource(Src,Y,t); // is this really a conservative source?
 }
 
-void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
-{  
-  if(spectrum) {
-    vector w0,source;
-    Set(w0,Y[OMEGA]);
-    Set(source,Src[EK]);
-    G[grid]->NonConservativeSource(source,w0,t);
-    Real lambda=1.0;
-    if(radix==4) lambda=2.0;
-
-
-    for(unsigned g=0; g < Ngrids; ++g) {
-      unsigned nextra=0;
-      for(unsigned i=1; i < g; ++i)
-	nextra += G[i]->getmy()/lambda;
-      
-      array2<Complex> gw;
-      G[g]->settow(gw);
-      gw.Dimension(G[g]->getNx(),G[g]->getmy());
-      unsigned gInvisible=G[g]->getInvisible();
-      int gInvisible2=gInvisible*gInvisible;
-      unsigned gxorigin=G[g]->getxorigin();
-      //Real gfactor=pow(radix,g);
-      for(unsigned i=0; i < Nx; i++) {
-	int I=(int) i-(int)gxorigin;
-	int I2=I*I;
-	vector gwi=gw[i];
-	for(unsigned j=i <= gxorigin ? 1 : 0; j < my; ++j) {
-	  if(j > gInvisible || I2 > gInvisible2) {
-	    unsigned iEK=(unsigned) (sqrt(I2+j*j) - 0.5 -nextra);
-	    cout << "grid " << g << " (I,j)=(" << I << "," << j << ")";
-	    cout << " iEK="<<iEK << endl;
-	    //[iEK] += gfactor*abs2(gwi[j]); // maybe divide by k or k2?
-	    // FIXME: put this into the first grid's EK.
-	  }
+/*
+void MDNS::setcount() 
+{
+  count.Allocate(nshells);
+  for(unsigned g=0; g < Ngrids; ++g) {
+    unsigned gInvisible=G[g]->getInvisible();
+    int gInvisible2=gInvisible*gInvisible;
+    unsigned gNx=G[g]->getNx();
+    unsigned gxorigin=G[g]->getxorigin();
+    for(unsigned i=0; i < gNx; i++) {
+      int I=(int) i-(int)gxorigin;
+      int I2=I*I;
+      for(unsigned j=i <= gxorigin ? 1 : 0; j < my; ++j) {
+	if(j > gInvisible || I2 > gInvisible2) {
 	}
       }
     }
   }
   exit(1);
+}
+*/
+
+void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
+{  
+  vector w0,source;
+  Set(w0,Y[OMEGA]);
+  Set(source,Src[EK]);
+  G[grid]->NonConservativeSource(source,w0,t);
   //Moments(Src,Y,t);
 }
 

@@ -1,11 +1,11 @@
-size(6cm,0);
+size(16cm,0);
 
 string[] outnames={"lambda1","lambdar2","lambdar2rot","lambda2"};
 real[] lambda={1,sqrt(2),sqrt(2),2};
 pair[] R={(1,0),(1,0),exp(-pi*I/4),(1,0)};
 
 int n0=4; // really should be called mx, and a power of two.
-int ngrids=2; // the following three arrays only work up to ngrids=3
+int Ngrids=2; // the following three arrays only work up to ngrids=3
 
 bool drawring=true;
 
@@ -20,26 +20,34 @@ real L, s;
 pair r;
 filltype F;
 
+usersetting();
+
+int Invisible;
 
 void drawdots() {
   for(int i=-n+1; i <n; ++i) {
     for(int j= i >= 0? 0 : 1; j <n; ++j) {
       pair a=L*r*(i,j);
       g=scale(s)*unitcircle;
-      filldraw(pic,shift(a)*g,fillpen,p);
+      if((j >= Invisible) || (abs(i) >= Invisible)) {
+	//label(pic,"("+(string) i +"," + (string) j+")",a,NE);
+	filldraw(pic,shift(a)*g,fillpen,p);
+      } else {
+	filldraw(pic,shift(a)*g,fillpen,p+dashed);
+      }
     }
   }
 }
 
-usersetting();
 
 for(int i=0; i < lambda.length; ++i) {
   pic = new picture;
-  size(pic,10cm,0);
+  size(pic,30cm,0);
   
-  for(int G=0; G < ngrids; ++G) {
+  for(int G=0; G < Ngrids; ++G) {
     n=n0;
     if(i==0) n=n0*2^G;
+    Invisible= G==0 ? 0 : floor(n/2);
     p=dotpen[G];
     fillpen=dotfillpen[G];
     F=dotfill[G];
@@ -52,17 +60,17 @@ for(int i=0; i < lambda.length; ++i) {
   if(drawring) {
     // FIXME: this stuff really only applies to radix-4 grids
 
-    int glast=ngrids-1;
-    real radlast=0;
+    int glast=Ngrids-1;
+    real radlast=0.5;
     path semi=(1,0){N}..(0,1){W}..{S}(-1,0);
-    for(int G=0; G < ngrids; ++G) {
+    for(int G=0; G < Ngrids; ++G) {
       int L=2^G;
       real istart=G==0 ? 0 : quotient(n0,2);
       real rad = istart*L;
       int gmy=n0;
       real kmy=L*gmy;
       real stoprad=G ==glast ? sqrt(2)*kmy-L : kmy;
-
+      
       while(rad < stoprad) {
 	path[] paths={scale(rad+L/2)*semi,scale(radlast)*semi};
 	pen fpen=dotpen[G]+opacity(0.3);
