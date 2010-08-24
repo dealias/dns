@@ -4,7 +4,7 @@ string[] outnames={"lambda1","lambdar2","lambdar2rot","lambda2"};
 real[] lambda={1,sqrt(2),sqrt(2),2};
 pair[] R={(1,0),(1,0),exp(-pi*I/4),(1,0)};
 
-int n0=4; // really should be called mx, and a power of two.
+int m=4; // really should be called mx, and a power of two.
 int Ngrids=2; // the following three arrays only work up to ngrids=3
 
 bool drawring=true;
@@ -45,8 +45,8 @@ for(int i=0; i < lambda.length; ++i) {
   size(pic,30cm,0);
   
   for(int G=0; G < Ngrids; ++G) {
-    n=n0;
-    if(i==0) n=n0*2^G;
+    n=m;
+    if(i==0) n=m*2^G;
     Invisible= G==0 ? 0 : floor(n/2);
     p=dotpen[G];
     fillpen=dotfillpen[G];
@@ -65,9 +65,9 @@ for(int i=0; i < lambda.length; ++i) {
     path semi=(1,0){N}..(0,1){W}..{S}(-1,0);
     for(int G=0; G < Ngrids; ++G) {
       int L=2^G;
-      real istart=G==0 ? 0 : quotient(n0,2);
+      real istart=G==0 ? 0 : quotient(m,2);
       real rad = istart*L;
-      int gmy=n0;
+      int gmy=m;
       real kmy=L*gmy;
       real stoprad=G ==glast ? sqrt(2)*kmy-L : kmy;
       

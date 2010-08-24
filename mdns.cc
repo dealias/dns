@@ -36,7 +36,7 @@ unsigned rezero=0;
 unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
-enum PRTYPE {AREA,COINCIDENT};
+enum PRTYPE {AREA,POINT};
 unsigned prtype=AREA;
 
 
@@ -134,14 +134,19 @@ public:
     void NLDimension();
     MDNS * parent;
     unsigned nfields;
-
+    bool lastgrid;
+    
+    unsigned mym1;
+    
     vector Sp; // Spectrum
+    unsigned shellsbelow, myshells;
+
 
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
 
   public:
     Grid();
-    Grid(unsigned, MDNS *);
+    Grid(unsigned, MDNS *, bool);
     Grid(MDNS *prob, unsigned g, const vector2& Y0);
     ~Grid();
     void AttachTo(MDNS *prob, const vector2 & Y);
@@ -152,13 +157,18 @@ public:
 
     array1<unsigned>::opt count;
     void setcount();
-    //unsigned extrashells;  
+    void setcountoverlap(array1<unsigned>::opt &);
+    //unsigned extrashells;
 
+    void settolast() {lastgrid=1;};
     unsigned getnshells() {return nshells;};
     unsigned getNx() {return Nx;};
     unsigned getmy() {return my;};
     unsigned getInvisible() {return Invisible;};
-    //    array2<Complex> * getwp() {return &w;};
+    void setshellsbelow(const unsigned i) {shellsbelow=i;};
+    unsigned getshellsbelow() {return shellsbelow;};
+    void setmyshells(const unsigned i) {myshells=i;};
+    unsigned getmyshells() {return myshells;};
     void settow(array2<Complex> & w0) {
       Set(w0,w);
       Dimension(w0,w);
@@ -172,7 +182,8 @@ public:
     void NonConservativeSource(const vector & Src, const vector & Y, double t);
     void LinearSource(const vector & Src, const vector & Y, double t);
     void Transfer(const vector2 & Src, const vector2 & Y);
-    void Spectrum(vector& S, const vector& w0);
+    void Spectrum(vector& S, const vector& w0);    
+    void SpectrumOverlap(vector& S);
 
     void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
     
@@ -200,7 +211,7 @@ public:
     return Nfields;
     //return (g == glast && spectrum) ? Nfields : 1;
   };
-  unsigned getNfields() {return Nfields;};
+  unsigned getNfields(unsigned g) {return Nfields;};
   unsigned getnshells(unsigned g) {
     return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
   };
@@ -220,6 +231,7 @@ public:
   void Transfer(const vector2& Src, const vector2& Y);
   void ExponentialSource(const vector2& Src, const vector2& Y, double t);
   void Stochastic(const vector2& Y, double t, double dt);
+  void Spectrum(vector& S, const vector& w0);
   
   void Project(unsigned ga);
   void Prolong(unsigned gb);
@@ -238,9 +250,28 @@ public:
 
   // Output functions
   Real getSpectrum(unsigned i) {
-    // FIXME
-    // the plan is to look at bundle shells from individual grids
-    return 0.0;
+    if(radix == 4) {
+      for(unsigned g=0; g < Ngrids; ++g) {
+	const unsigned nbelow=G[g]->getshellsbelow();
+	const unsigned last=nbelow+G[g]->getmyshells();
+
+	if (i <=  nbelow ||  i > last) {
+	  // this shell is not part of this grid
+	} else { // FIXME
+	  // two cases:
+	  
+	  // 1. the shell is only on grid g.
+	  
+	  
+	  // 2. the shell is between two grids.
+	}
+      }
+      return 0.0;
+    }
+
+  //cerr << "radix=1 spectrum still needs work" << endl; exit(1);
+  return 0.0;
+
   };
 
   void Computek(DynVector<unsigned>&);
@@ -277,12 +308,14 @@ void MDNS::Grid::loopwF(const FunctRRPtr F,int n,...)
 
 MDNS::Grid::Grid()
 {
+  lastgrid=0;
 }
 
-MDNS::Grid::Grid(unsigned g, MDNS * parent0) 
+MDNS::Grid::Grid(unsigned g, MDNS * parent0, bool islast=0) 
 {
   parent=parent0;
   myg=g;
+  lastgrid=islast;
   SetParams();
 }
 
@@ -304,7 +337,7 @@ MDNS::Grid::~Grid()
 void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
 {
   parent=prob;
-  nfields=parent->getNfields();
+  nfields=parent->getNfields(myg);
   w.Set(Y[nfields*myg+OMEGA]);
   Set(Sp,Y[nfields*myg+EK]);
 }
@@ -317,6 +350,7 @@ void MDNS::Grid::SetParams()
   k02=k0*k0;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
+  mym1=my-1;
   xorigin=mx-1;
 
   w.Dimension(Nx,my);
@@ -343,6 +377,7 @@ void MDNS::Grid::SetParams()
 void MDNS::Grid::InitialConditions(unsigned g)
 {
   myg=g;
+  //cout << Ngrids << endl; exit(1);
 
   // load vocabulary from global variables
   nuH=::nuH;
@@ -356,10 +391,9 @@ void MDNS::Grid::InitialConditions(unsigned g)
   nshells=0;
 
   if(spectrum) {
-    nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
+    nshells=lastgrid ? (unsigned) (hypot(mx-1,my-1)+0.5) : my;
     Dimension(Sp,nshells); // FIXME: allocated?
     for(unsigned i=0; i < nshells; i++)  Sp[i]=Complex(0.0,0.0);
-    setcount();
   }
 
   //  unsigned Nx0=Nx+xpad;//unused so far...
@@ -397,6 +431,11 @@ void MDNS::Grid::InitialConditions(unsigned g)
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
   InitialCondition->Set(w,Nx*my);
 
+
+  Allocate(count,nshells);
+  for(unsigned k=0; k < nshells; ++k) 
+    count[k]=0;
+    
   // FIXME: initialize spectrum to zero as well?
 
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
@@ -456,7 +495,6 @@ void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
   }
 }
 
-
 void MDNS::Grid::NonConservativeSource(const vector& source, const vector& w0, 
 				       double)
 {
@@ -476,24 +514,55 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 void MDNS::Grid::setcount()
 {
   if(spectrum) {
-    Allocate(count,nshells);
-    for(unsigned k=0; k < nshells; ++k) 
-      count[k]=0;
+    Real kbound=lastgrid ? hypot(mx,my)+1: mym1;
     for(unsigned i=0; i < Nx; i++) {
       const int I=(int) i-(int) xorigin;
       const int I2=I*I;
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(j > Invisible || I2 > Invisible2) {
+	if(j >= Invisible || I2 >= Invisible2) {
 	  const Real kint=sqrt(I2+j*j);
-	  count[(unsigned)(kint-0.5)] += 1;
+	  if(kint <= kbound) {
+	    count[(unsigned)(kint-0.5)] += 1;
+	  }
 	}
       }
     }
   }
 }
 
+void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
+{
+  if(spectrum) {
+    Real overlambda=1.0;
+    if(radix==4) overlambda=0.5;
+    Real kbound=mym1;
+    for(unsigned i=0; i < Nx; i++) {
+      const int I=(int) i-(int) xorigin;
+      const int I2=I*I;
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	if(j >= Invisible || I2 >= Invisible2) {
+	  const Real kint=sqrt(I2+j*j);
+	  if(kint-0.5 > kbound) {
+	    Count[(unsigned)(overlambda*(kint-0.5))] += 1; // FIXME: radix?
+	  }
+	}
+      }
+    }
+  }
+}
+
+void MDNS::Spectrum(vector& S, const vector& w0)
+{
+  G[grid]->Spectrum(S,w0);
+
+  if(grid != 0) {
+    // FIXME: if grid!=0, then this should take the previous grid's w0.
+    G[grid-1]->SpectrumOverlap(S);
+  }
+}
+
 void MDNS::Grid::Spectrum(vector& S, const vector& w0)
-{ // Compute instantaneous angular sum over each circular shell.
+{
   w.Set(w0);
   S.Load(Complex(0.0,0.0));
 
@@ -504,15 +573,44 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       if(j > Invisible || I2 > Invisible2) {
 	const Real kint=sqrt(I2+j*j);
-	const Real k2=k02*kint;
-	const Real overk=1.0/sqrt(k2);
+	const Real k=k0*kint;
+	const Real overk=1.0/k;
 	const Real w2=abs2(wi[j]);
-	S[(unsigned)(kint-0.5)].re += w2*overk; 
-	//S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
+	if(kint <= my) {
+	  S[(unsigned)(kint-0.5)].re += w2*overk; 
+	  //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
+	}
       }
     }
   }
 }
+
+void MDNS::Grid::SpectrumOverlap(vector& S)
+{
+  settow(w);
+  S.Load(Complex(0.0,0.0));
+
+  Real overlambda=1.0;
+  if(radix==4) overlambda=0.5;
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      if(j > Invisible || I2 > Invisible2) {
+	const Real kint=sqrt(I2+j*j);
+	const Real k=k0*kint;
+	const Real overk=1.0/k;
+	const Real w2=abs2(wi[j]);
+	if(kint > my) {
+	  S[(unsigned)(overlambda*kint-0.5)].re += w2*overk; 
+	  //S[(unsigned)(overlambda*kint-0.5)].im += nuk(k2)*w2; 
+	}
+      }
+    }
+  }
+}
+
 
 void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 {
@@ -531,8 +629,8 @@ void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
       }
     }
   }
-//  FunctRRPtr F = new Invariants;
-//  loopwF(F,3,&Z,&E,&P);
+  //  FunctRRPtr F = new Invariants;
+  //  loopwF(F,3,&Z,&E,&P);
 }
 
 /****** Vocabulary *****/
@@ -596,6 +694,7 @@ MDNS::~MDNS()
 
 //***** wrappers for output curves *****//
 Real curve_Spectrum(unsigned i) {return MDNSProblem->getSpectrum(i);}
+Real curve_nuk(unsigned i) {return 0.0;} // FIXME
 Real curve_k(unsigned i) {return MDNSProblem->getk(i);}
 
 void MDNS::InitialConditions()
@@ -612,27 +711,12 @@ void MDNS::InitialConditions()
   my=(Ny+1)/2;
 
   nshells=0;
-  /*
-  if(spectrum) {
-    unsigned lambda;
-    if(radix==1) lambda=1;
-    if(radix==4) lambda=2;
-    nshells=gm(my,0);
-    for(unsigned g=1; g < glast; ++g) {
-      nshells += gm(my,g) - gm(my,g-1)/lambda;
-    }
-    unsigned gmx=gm(mx,glast);
-    unsigned gmy=gm(my,glast);
-    //nshells += (unsigned) (hypot(gmx-1,gmy-1)+0.5*pow(lambda,glast) - gm(my,glast-1)/lambda);
-    nshells += (unsigned) (hypot(gmx-1,gmy-1) + 0.5*pow(lambda,glast) - gm(my,glast-1)/lambda);
-  }
-  */
 
   //  Allocate(spectra,nshells);
   //  for (unsigned i=0; i < nshells; ++i) spectra[i]=0.0;
 
   for(unsigned g=0; g < Ngrids; ++g) {
-    nfields=getNfields();
+    //nfields=getNfields(g);
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
     NY[nfields*g+TRANSFER]=0; // getnshells(g); FIXME 
     NY[nfields*g+EK]=getnshells(g);
@@ -643,12 +727,43 @@ void MDNS::InitialConditions()
   G.Allocate(Ngrids);
 
   for(unsigned g=0; g < Ngrids; ++g) {
-    G[g]=new Grid(g,this);
+    G[g]=new Grid(g,this,g==glast);
     G[g]->AttachTo(this,Y);
     G[g]->InitialConditions(g);
   }
   for (unsigned g=1; g< Ngrids; g++) 
-    Project(g);  
+    Project(g);
+
+  if(spectrum) {
+    for(unsigned g=0; g < Ngrids; ++g) {
+      G[g]->setcount();
+      if(g!=glast) 
+	G[g]->setcountoverlap(G[g+1]->count);
+    }
+  }
+    
+  if(spectrum) {
+    unsigned lambda;
+    if(radix==1) lambda=1;
+    if(radix==4) lambda=2;
+    unsigned nextra=gm(my,0);
+    nshells += nextra;
+    //cout << nextra << endl;
+    G[0]->setshellsbelow(0);
+    for(unsigned g=1; g < glast; ++g) {
+      nextra=gm(my,g) - gm(my,g-1)/lambda;
+      G[g]->setshellsbelow(nshells);
+      nshells += nextra;
+      //cout << nextra << endl;
+    }
+    unsigned gmx=gm(mx,glast);
+    unsigned gmy=gm(my,glast);
+    nextra=(unsigned) (hypot(gmx-1,gmy-1) + 0.5*pow(lambda,glast) 
+		       - gm(my,glast-1)/lambda);
+    G[glast]->setshellsbelow(nshells);
+    nshells += nextra;
+    //cout << nextra << endl;
+  }
 
   //***** output *****//
   open_output(fprolog,dirsep,"prolog",0);
@@ -815,7 +930,7 @@ void MDNS::Project(unsigned gb)
     */
     }
     
-    if(prtype==COINCIDENT) { // FIXME: check
+    if(prtype==POINT) { // FIXME: check
     unsigned xstart=bInvisible;
     unsigned xstop=bxorigin+bInvisible;
     unsigned I=1;
@@ -989,7 +1104,7 @@ void MDNS::Prolong(unsigned ga)
       }
     }
 
-    if(prtype==COINCIDENT) {
+    if(prtype==POINT) {
       const unsigned xstart=bInvisible; // FIXME: check
       const unsigned xstop=bxorigin+bInvisible;
       
@@ -1040,7 +1155,7 @@ void MDNS::Output(int it)
     open_output(fekvk,dirsep,buf.str().c_str(),0);
     out_curve(fekvk,t,"t");
     out_curve(fekvk,curve_Spectrum,"Ek",nshells);
-    out_curve(fekvk,curve_Spectrum,"nuk*Ek",nshells); // FIXME: replace with nuk
+    out_curve(fekvk,curve_nuk,"nuk*Ek",nshells);
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
   }
@@ -1109,7 +1224,7 @@ void MDNS::setcount()
 */
 
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
-{  
+{
   vector w0,source;
   Set(w0,Y[OMEGA]);
   Set(source,Src[EK]);
