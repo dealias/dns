@@ -135,13 +135,7 @@ public:
     MDNS * parent;
     unsigned nfields;
     bool lastgrid;
-    
-    unsigned mym1;
-    
-    vector Sp; // Spectrum
-    unsigned shellsbelow, myshells;
-
-
+    unsigned shellsbelow, myshells, mym1;
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
 
   public:
@@ -153,6 +147,7 @@ public:
     void SetParams();
     unsigned myg;
 
+    vector Sp; // Spectrum
     array2<Real> tildeB;
 
     array1<unsigned>::opt count;
@@ -212,7 +207,7 @@ public:
     //return (g == glast && spectrum) ? Nfields : 1;
   };
   unsigned getNfields(unsigned g) {return Nfields;};
-  unsigned getnshells(unsigned g) {
+  unsigned getnshells(unsigned g) { // FIXME: this is out-of-date, ie wrong
     return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
   };
 
@@ -250,21 +245,15 @@ public:
 
   // Output functions
   Real getSpectrum(unsigned i) {
-    if(radix == 4) {
+    return 1.0*i; // FIXME: temp
+    if(false && radix == 4) {
       for(unsigned g=0; g < Ngrids; ++g) {
+	const unsigned offset=g==0 ? 0 : my/2;
 	const unsigned nbelow=G[g]->getshellsbelow();
 	const unsigned last=nbelow+G[g]->getmyshells();
-
-	if (i <=  nbelow ||  i > last) {
-	  // this shell is not part of this grid
-	} else { // FIXME
-	  // two cases:
-	  
-	  // 1. the shell is only on grid g.
-	  
-	  
-	  // 2. the shell is between two grids.
-	}
+	if (i >=  nbelow &&  i < last) {
+	  return G[g]->Sp[i+offset-nbelow].re; // FIXME: out-of-bounds error
+	} // FIXME: should also divide by count here?  or in Spectrum?
       }
       return 0.0;
     }
@@ -340,6 +329,7 @@ void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
   nfields=parent->getNfields(myg);
   w.Set(Y[nfields*myg+OMEGA]);
   Set(Sp,Y[nfields*myg+EK]);
+  Dimension(Sp,nfields);
 }
 
 void MDNS::Grid::SetParams()
@@ -388,14 +378,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
   if(radix != 1 && radix != 4) 
     msg(ERROR,"only radix 1 (trivial) or 4 decimations enabled");
 
-  nshells=0;
-
-  if(spectrum) {
-    nshells=lastgrid ? (unsigned) (hypot(mx-1,my-1)+0.5) : my;
-    Dimension(Sp,nshells); // FIXME: allocated?
-    for(unsigned i=0; i < nshells; i++)  Sp[i]=Complex(0.0,0.0);
-  }
-
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
@@ -432,9 +414,19 @@ void MDNS::Grid::InitialConditions(unsigned g)
   InitialCondition->Set(w,Nx*my);
 
 
-  Allocate(count,nshells);
-  for(unsigned k=0; k < nshells; ++k) 
-    count[k]=0;
+  nshells=0;
+
+  if(spectrum) {
+    cout << "nshells=" << nshells << endl;
+    nshells=lastgrid ? (unsigned) (hypot(mx-1,my-1)+0.5) : my;
+    Dimension(Sp,nshells);
+    for(unsigned i=0; i < nshells; i++)  
+      Sp[i]=Complex(0.0,0.0);
+    
+    Allocate(count,nshells);
+    for(unsigned k=0; k < nshells; ++k) 
+      count[k]=0;
+  }
     
   // FIXME: initialize spectrum to zero as well?
 
@@ -469,7 +461,7 @@ void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
   //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
   //  cout << w << endl;
 
-  DNSBase::NonLinearSource(source,w,t); // FIXME: w0 here? uninitialied?
+  DNSBase::NonLinearSource(source,w,t);
 
   if(myg > 0) {
     //copy overlapping modes to wS
@@ -716,7 +708,7 @@ void MDNS::InitialConditions()
   //  for (unsigned i=0; i < nshells; ++i) spectra[i]=0.0;
 
   for(unsigned g=0; g < Ngrids; ++g) {
-    //nfields=getNfields(g);
+    nfields=getNfields(g);
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
     NY[nfields*g+TRANSFER]=0; // getnshells(g); FIXME 
     NY[nfields*g+EK]=getnshells(g);
@@ -740,21 +732,23 @@ void MDNS::InitialConditions()
       if(g!=glast) 
 	G[g]->setcountoverlap(G[g+1]->count);
     }
-  }
     
-  if(spectrum) {
     unsigned lambda;
     if(radix==1) lambda=1;
     if(radix==4) lambda=2;
-    unsigned nextra=gm(my,0);
+    unsigned nextra=gm(my,0)-1; // don't include the zero-shell
     nshells += nextra;
     //cout << nextra << endl;
     G[0]->setshellsbelow(0);
-    for(unsigned g=1; g < glast; ++g) {
-      nextra=gm(my,g) - gm(my,g-1)/lambda;
-      G[g]->setshellsbelow(nshells);
-      nshells += nextra;
-      //cout << nextra << endl;
+    G[0]->setmyshells(nextra);
+    if(Ngrids > 2) {
+      for(unsigned g=1; g < glast; ++g) {
+	nextra=gm(my,g) - gm(my,g-1)/lambda;
+	G[g]->setshellsbelow(nshells);
+	G[g]->setmyshells(nextra);
+	nshells += nextra;
+	//cout << nextra << endl;
+      }
     }
     unsigned gmx=gm(mx,glast);
     unsigned gmy=gm(my,glast);
@@ -762,6 +756,7 @@ void MDNS::InitialConditions()
 		       - gm(my,glast-1)/lambda);
     G[glast]->setshellsbelow(nshells);
     nshells += nextra;
+    G[glast]->setmyshells(nextra);
     //cout << nextra << endl;
   }
 
