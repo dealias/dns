@@ -207,8 +207,12 @@ public:
     //return (g == glast && spectrum) ? Nfields : 1;
   };
   unsigned getNfields(unsigned g) {return Nfields;};
-  unsigned getnshells(unsigned g) { // FIXME: this is out-of-date, ie wrong
-    return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+  unsigned getnshells(unsigned g) {
+    if(!spectrum)
+      return 0;
+    if(g==glast) 
+      return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+1.5);
+    return gm(my,g);
   };
 
   //array1<unsigned>::opt count;
@@ -245,19 +249,24 @@ public:
 
   // Output functions
   Real getSpectrum(unsigned i) {
-    //cout << "i=" << i << endl;
+    cout << "i=" << i << endl;
     //    return 1.0*i; // FIXME: temp
     if(radix == 4) {
-      unsigned lambda=2;
+      //unsigned lambda=2;
       for(unsigned g=0; g < Ngrids; ++g) {
-	//cout << "g=" << g << endl;
-	const unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
+	const unsigned offset=g==0 ? 0 : G[g]->getInvisible();
 	// FIXME: check
-	const unsigned nbelow=G[g]->getshellsbelow();
-	const unsigned last=nbelow+G[g]->getmyshells()-1;
-	if (i >=  nbelow &&  i < last) {
-	  //cout << G[g]->Sp[i+offset-nbelow].re << endl;
-	  return G[g]->Sp[i-nbelow].re; // FIXME: bounds error
+	const unsigned firstshell=G[g]->getshellsbelow();
+	const unsigned lastshell=firstshell+G[g]->getmyshells()-1;
+	if (i >=  firstshell &&  i <= lastshell) {
+	  unsigned index=i-offset;
+	  /*
+	  cout << "g=" << g << " first=" << firstshell << " last=" << lastshell
+	       << " offset=" << offset << endl;
+	  cout << "index is " << index << " of " << G[g]->Sp.Size() << endl;
+	  */
+	  cout << G[g]->Sp[index].re << endl;
+	  return G[g]->Sp[index].re; // FIXME: only returns zero. pointed right?
 	} // FIXME: should also divide by count here?  or in Spectrum?
       }
       return 0.0;
@@ -418,7 +427,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   nshells=0;
   if(spectrum) {
-    nshells=lastgrid ? (unsigned) (hypot(mx-1,my-1)+0.5) : my;
+    nshells=parent->getnshells(myg);
     Dimension(Sp,nshells);
     Sp.Load(Complex(0.0,0.0));
     Allocate(count,nshells);
@@ -568,7 +577,6 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
       }
     }
   }
-  cout << S << endl;
 }
 
 void MDNS::Grid::SpectrumOverlap(vector& S)
@@ -679,10 +687,7 @@ MDNS::~MDNS()
 }
 
 //***** wrappers for output curves *****//
-Real curve_Spectrum(unsigned i) {
-  cout << "i="<<i<< ", " <<MDNSProblem->getSpectrum(i) << endl; // FIXME: temp
-  return MDNSProblem->getSpectrum(i);
-}
+Real curve_Spectrum(unsigned i) {return MDNSProblem->getSpectrum(i);}
 Real curve_nuk(unsigned i) {return 0.0;} // FIXME
 Real curve_k(unsigned i) {return MDNSProblem->getk(i);}
 
