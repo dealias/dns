@@ -200,19 +200,15 @@ public:
   };
   array1<Grid *> G;
   
-
   enum Field {OMEGA,TRANSFER,EK,Nfields};
-  unsigned getnfields(unsigned g) {
-    return Nfields;
-    //return (g == glast && spectrum) ? Nfields : 1;
-  };
-  unsigned getNfields(unsigned g) {return Nfields;};
+  unsigned getnfields(unsigned g) {return Nfields;};
   unsigned getnshells(unsigned g) {
     if(!spectrum)
       return 0;
-    if(g==glast) 
-      return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+1.5);
-    return gm(my,g);
+    if(g==glast) {
+      return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+    }
+    return gm(my,g)-1;
   };
 
   //array1<unsigned>::opt count;
@@ -249,32 +245,27 @@ public:
 
   // Output functions
   Real getSpectrum(unsigned i) {
-    cout << "i=" << i << endl;
-    //    return 1.0*i; // FIXME: temp
     if(radix == 4) {
-      //unsigned lambda=2;
+      //      cout << "i="<<i << endl;
+      unsigned lambda=2;
       for(unsigned g=0; g < Ngrids; ++g) {
-	const unsigned offset=g==0 ? 0 : G[g]->getInvisible();
-	// FIXME: check
+	const unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
 	const unsigned firstshell=G[g]->getshellsbelow();
 	const unsigned lastshell=firstshell+G[g]->getmyshells()-1;
 	if (i >=  firstshell &&  i <= lastshell) {
-	  unsigned index=i-offset;
-	  /*
-	  cout << "g=" << g << " first=" << firstshell << " last=" << lastshell
-	       << " offset=" << offset << endl;
-	  cout << "index is " << index << " of " << G[g]->Sp.Size() << endl;
-	  */
-	  cout << G[g]->Sp[index].re << endl;
-	  return G[g]->Sp[index].re; // FIXME: only returns zero. pointed right?
-	} // FIXME: should also divide by count here?  or in Spectrum?
+	  unsigned index=i+offset-firstshell;
+// 	  cout << "G[g]->getmyshells()="<<G[g]->getmyshells() << endl;
+//  	  cout << "g=" << g << " first=" << firstshell << " last=" << lastshell
+//  	       << " offset=" << offset << endl;
+//  	  cout << "index is " << index << " of " << G[g]->Sp.Size() << endl;
+	  return G[g]->Sp[index].re;
+	  // FIXME: should also divide by count here?  or in Spectrum?
+	}
       }
       return 0.0;
     }
-
     msg(ERROR,"Only radix-4 spectrum is working right now.");
     return 0.0;
-
   };
 
   void Computek(DynVector<unsigned>&);
@@ -340,7 +331,7 @@ MDNS::Grid::~Grid()
 void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
 {
   parent=prob;
-  nfields=parent->getNfields(myg);
+  nfields=parent->getnfields(myg);
   w.Set(Y[nfields*myg+OMEGA]);
   Set(Sp,Y[nfields*myg+EK]);
 }
@@ -512,13 +503,15 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 void MDNS::Grid::setcount()
 {
   if(spectrum) {
-    Real kbound=lastgrid ? hypot(mx,my)+1: mym1;
+    Real kbound=lastgrid ? mx*my: my-0.5;
     for(unsigned i=0; i < Nx; i++) {
       const int I=(int) i-(int) xorigin;
       const int I2=I*I;
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	if(j >= Invisible || I2 >= Invisible2) {
 	  const Real kint=sqrt(I2+j*j);
+// 	  cout << "("<<I<<","<<j<<") " << kint << " vs " << kbound
+// 	       << " -> " << (unsigned)(kint-0.5) << endl;
 	  if(kint <= kbound) {
 	    count[(unsigned)(kint-0.5)] += 1;
 	  }
@@ -526,10 +519,12 @@ void MDNS::Grid::setcount()
       }
     }
   }
+  if(verbose > 1)  cout << count << endl;
 }
 
 void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 {
+
   if(spectrum) {
     Real overlambda=1.0;
     if(radix==4) overlambda=0.5;
@@ -541,6 +536,8 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 	if(j >= Invisible || I2 >= Invisible2) {
 	  const Real kint=sqrt(I2+j*j);
 	  if(kint-0.5 > kbound) {
+// 	    cout << "("<<I<<","<<j<<") " << kint << " vs " << kbound
+// 		 << " -> " << (unsigned)(overlambda*(kint-0.5)) << endl;
 	    Count[(unsigned)(overlambda*(kint-0.5))] += 1; // FIXME: radix?
 	  }
 	}
@@ -552,13 +549,14 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 void MDNS::Spectrum(vector& S, const vector& w0)
 {
   G[grid]->Spectrum(S,w0);
-  //  if(grid != 0) G[grid-1]->SpectrumOverlap(S); // FIXME: restore
+  if(grid != 0) G[grid-1]->SpectrumOverlap(S);
 }
 
 void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 {
   w.Set(w0);
 
+  Real kbound=lastgrid ? hypot(mx,my)+1: my-0.5;
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
@@ -569,7 +567,7 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 	const Real k=k0*kint;
 	const Real overk=1.0/k;
 	const Real w2=abs2(wi[j]);
-	if(kint <= my) {
+	if(kint <= kbound) {
 	  //cout << "("<<I<<","<<j<<") " << w2*overk << endl;
 	  S[(unsigned)(kint-0.5)].re += w2*overk;
 	  //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
@@ -581,7 +579,6 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 
 void MDNS::Grid::SpectrumOverlap(vector& S)
 {
-  return; // FIXME: temp
   settow(w);
 
   Real overlambda=1.0;
@@ -710,7 +707,7 @@ void MDNS::InitialConditions()
   //  for (unsigned i=0; i < nshells; ++i) spectra[i]=0.0;
 
   for(unsigned g=0; g < Ngrids; ++g) {
-    nfields=getNfields(g);
+    nfields=getnfields(g);
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
     NY[nfields*g+TRANSFER]=0; // getnshells(g); FIXME 
     NY[nfields*g+EK]=getnshells(g);
@@ -733,34 +730,35 @@ void MDNS::InitialConditions()
       G[g]->setcount();
       if(g!=glast) 
 	G[g]->setcountoverlap(G[g+1]->count);
+      
     }
     
-    unsigned lambda;
-    if(radix==1) lambda=1;
-    if(radix==4) lambda=2;
-    unsigned nextra=gm(my,0); // include the zero-shell
+    Real lambda;
+    if(radix==1) lambda=1.0;
+    if(radix==4) lambda=2.0;
+    unsigned nextra=gm(my,0)-1; // do not include the zero-shell
     nshells += nextra;
-    cout << "nextra="<<nextra << endl;
+    if(verbose >1) cout << "nextra="<<nextra << endl;
     G[0]->setshellsbelow(0);
     G[0]->setmyshells(nextra);
     if(Ngrids > 2) {
       for(unsigned g=1; g < glast; ++g) {
 	nextra=gm(my,g) - gm(my,g-1)/lambda;
-	G[g]->setshellsbelow(nshells); // FIXME: check
+	G[g]->setshellsbelow(nshells);
 	G[g]->setmyshells(nextra);
 	nshells += nextra;
-	cout << "nextra="<<nextra << endl;
+	if(verbose >1) cout << "nextra="<<nextra << endl;
       }
     }
     unsigned gmx=gm(mx,glast);
     unsigned gmy=gm(my,glast);
-    nextra=(unsigned) (hypot(gmx-1,gmy-1) + 0.5*pow(lambda,glast) 
-		       - gm(my,glast-1)/lambda);
-    G[glast]->setshellsbelow(nshells); // FIXME: check
+    nextra=(unsigned) (hypot(gmx-1,gmy-1) - gm(my,glast-1)/lambda);
+    G[glast]->setshellsbelow(nshells);
     nshells += nextra;
     G[glast]->setmyshells(nextra);
-    cout << "nextra="<<nextra << endl;
+    if(verbose >1) cout << "nextra="<<nextra << endl;
   }
+
 
   //***** output *****//
   open_output(fprolog,dirsep,"prolog",0);
@@ -1130,8 +1128,6 @@ void MDNS::Prolong(unsigned ga)
     cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
     cout <<"\n~B:\n" << G[gb]->tildeB << endl;
   }
-  // FIXME: copy stuff from spectra onto just onto lastgrid's Src[EK]
-  //  exit(1);
 }
 
 void MDNS::Initialize()
@@ -1228,7 +1224,6 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
   Set(source,Src[EK]);
   G[grid]->NonConservativeSource(source,w0,t);
   //Moments(Src,Y,t);
-  cout << Y[EK] << endl; // FIXME: temp
 }
 
 void MDNS::ExponentialSource(const vector2& Src, const vector2& Y, double t) 
