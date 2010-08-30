@@ -38,7 +38,7 @@ Real icalpha=1.0;
 Real icbeta=1.0;
 enum PRTYPE {AREA,POINT};
 unsigned prtype=AREA;
-
+bool overlap=false; // account for overlapping corners of spectrum?
 
 // global variables
 
@@ -246,7 +246,6 @@ public:
   // Output functions
   Real getSpectrum(unsigned i) {
     if(radix == 4) {
-      //      cout << "i="<<i << endl;
       unsigned lambda=2;
       for(unsigned g=0; g < Ngrids; ++g) {
 	const unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
@@ -254,12 +253,10 @@ public:
 	const unsigned lastshell=firstshell+G[g]->getmyshells()-1;
 	if (i >=  firstshell &&  i <= lastshell) {
 	  unsigned index=i+offset-firstshell;
-// 	  cout << "G[g]->getmyshells()="<<G[g]->getmyshells() << endl;
-//  	  cout << "g=" << g << " first=" << firstshell << " last=" << lastshell
-//  	       << " offset=" << offset << endl;
-//  	  cout << "index is " << index << " of " << G[g]->Sp.Size() << endl;
-	  return G[g]->Sp[index].re;
-	  // FIXME: should also divide by count here?  or in Spectrum?
+	  unsigned c=G[g]->count[index];
+	  if(c != 0) 
+	    return G[g]->Sp[index].re/c;
+	  return 0.0; // this should never happen
 	}
       }
       return 0.0;
@@ -524,8 +521,7 @@ void MDNS::Grid::setcount()
 
 void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 {
-
-  if(spectrum) {
+  if(spectrum && overlap) {
     Real overlambda=1.0;
     if(radix==4) overlambda=0.5;
     Real kbound=mym1;
@@ -579,29 +575,29 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 
 void MDNS::Grid::SpectrumOverlap(vector& S)
 {
-  settow(w);
-
-  Real overlambda=1.0;
-  if(radix==4) overlambda=0.5;
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(j > Invisible || I2 > Invisible2) {
-	const Real kint=sqrt(I2+j*j);
-	const Real k=k0*kint;
-	const Real overk=1.0/k;
-	const Real w2=abs2(wi[j]);
-	if(kint > my) {
-	  S[(unsigned)(overlambda*kint-0.5)].re += w2*overk; 
-	  //S[(unsigned)(overlambda*kint-0.5)].im += nuk(k2)*w2; 
+  if(spectrum && overlap) {
+    settow(w);
+    Real overlambda=1.0;
+    if(radix==4) overlambda=0.5;
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	if(j > Invisible || I2 > Invisible2) {
+	  const Real kint=sqrt(I2+j*j);
+	  const Real k=k0*kint;
+	  const Real overk=1.0/k;
+	  const Real w2=abs2(wi[j]);
+	  if(kint > my) {
+	    S[(unsigned)(overlambda*kint-0.5)].re += w2*overk; 
+	    //S[(unsigned)(overlambda*kint-0.5)].im += nuk(k2)*w2; 
+	  }
 	}
       }
     }
   }
 }
-
 
 void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 {
