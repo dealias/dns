@@ -120,7 +120,9 @@ public:
   MDNS();
   ~MDNS();
 
-  Real gk(unsigned g) {return k0*pow(sqrt((double) radix),g);};
+  Real gk(unsigned g) {
+    return k0*pow(sqrt((Real) radix),(Real) g);
+  };
 
   //***** Grid class based on DNSBase *****//
   class Grid : public DNSBase {
@@ -266,7 +268,27 @@ public:
   };
 
   void Computek(DynVector<unsigned>&);
-  Real getk(unsigned i) {return (Real) i;};
+  Real getk(unsigned i) {
+    if(radix==1)
+      return k0*i;
+    if(radix==4) {
+      unsigned lambda=2;
+      for(unsigned g=0; g < Ngrids; ++g) {
+	unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
+	unsigned firstshell=G[g]->getshellsbelow();
+	unsigned lastshell=firstshell+G[g]->getmyshells()-1;
+	if (i >=  firstshell &&  i <= lastshell) {
+	  unsigned index=i-firstshell+offset;
+	  Real sglambda=pow((Real) lambda,0.5*g);
+	  Real kc=gk(g)*index; // FIXME: this is actually kb, not kc.
+	  cout << "g="<<g<<" k0="<<gk(g) << " index=" << index;
+	  cout << " i=" << i << " kc=" << kc << endl;
+	  return kc; 
+	}
+      }
+    }
+    return 0.0; // this should never happen
+  };
 
   void FinalOutput();
   void Initialize();
@@ -748,7 +770,7 @@ void MDNS::InitialConditions()
     }
     unsigned gmx=gm(mx,glast);
     unsigned gmy=gm(my,glast);
-    nextra=(unsigned) (hypot(gmx-1,gmy-1) - gm(my,glast-1)/lambda);
+    nextra=(unsigned) (hypot(gmx-1,gmy-1)+0.5*lambda - gm(my,glast-1)/lambda);
     G[glast]->setshellsbelow(nshells);
     nshells += nextra;
     G[glast]->setmyshells(nextra);

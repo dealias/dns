@@ -7,7 +7,7 @@ pair[] R={(1,0),(1,0),exp(-pi*I/4),(1,0)};
 int m=4; // really should be called mx, and a power of two.
 int Ngrids=2; // the following three arrays only work up to ngrids=3
 
-bool drawring=true;
+//bool drawring=true;
 
 pen[] dotpen={black,blue,deepgreen};
 filltype[] dotfill={Fill,NoFill,NoFill};
@@ -57,7 +57,7 @@ for(int i=0; i < lambda.length; ++i) {
     drawdots();
   }
 
-  if(drawring) {
+  if(i==3) {
     // FIXME: this stuff really only applies to radix-4 grids
 
     int glast=Ngrids-1;
