@@ -1,6 +1,7 @@
 import math;
 include gettime;
 include param;
+include prolog;
 
 // Transfer components
 int NL=0;
@@ -67,9 +68,6 @@ real[][] transfer()
 void Ekavg()
 {
   Ek=0.5*moment2()[NL];
-  kc=sequence(1,Ek.length);
-  k=kc;
-
   k=Ek > 0 ? kc : null;
   Ek=Ek > 0 ? Ek : null;
 }
@@ -82,11 +80,10 @@ bool nextrun()
   run=substr(runs,lastpos,pos-lastpos);
   lastpos=pos > 0 ? pos+1 : -1;
   eval("include \""+rundir()+"param.asy\";",true);
+  
+  prolog();
+  k=kc;
 
-  int N=round(hypot((Nx-1)/2,(Ny-1)/2));  // overridden in EKavg
-  kc=sequence(1,N);
-  kb=kc-0.5;
-  kb.push(N+0.5);
 
   return true;
 }

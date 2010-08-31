@@ -258,6 +258,8 @@ public:
 	  unsigned c=G[g]->count[index];
 	  if(c != 0) 
 	    return G[g]->Sp[index].re/c;
+	  else
+	    cout << "excuse me, zero count!" << endl;
 	  return 0.0; // this should never happen
 	}
       }
@@ -268,7 +270,7 @@ public:
   };
 
   void Computek(DynVector<unsigned>&);
-  Real getk(unsigned i) {
+  Real getkb(unsigned i) {
     if(radix==1)
       return k0*i;
     if(radix==4) {
@@ -276,19 +278,20 @@ public:
       for(unsigned g=0; g < Ngrids; ++g) {
 	unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
 	unsigned firstshell=G[g]->getshellsbelow();
-	unsigned lastshell=firstshell+G[g]->getmyshells()-1;
+	unsigned lastshell=firstshell+G[g]->getmyshells();
+	if(g==glast) ++lastshell; // FIXME?
 	if (i >=  firstshell &&  i <= lastshell) {
 	  unsigned index=i-firstshell+offset;
-	  Real sglambda=pow((Real) lambda,0.5*g);
-	  Real kc=gk(g)*index; // FIXME: this is actually kb, not kc.
-	  cout << "g="<<g<<" k0="<<gk(g) << " index=" << index;
-	  cout << " i=" << i << " kc=" << kc << endl;
-	  return kc; 
+	  Real kc=gk(g)*(index + 0.5);
+// 	  cout << "g="<<g<<" k0="<<gk(g) << " index=" << index;
+// 	  cout << " i=" << i << " kc=" << kc << endl;
+	  return kc;
 	}
       }
     }
     return 0.0; // this should never happen
   };
+  Real getkc(unsigned i) {return 0.5*(getkb(i)+getkb(i+1));}
 
   void FinalOutput();
   void Initialize();
@@ -580,13 +583,14 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(j > Invisible || I2 > Invisible2) {
+      if(j >= Invisible || I2 >= Invisible2) {
 	const Real kint=sqrt(I2+j*j);
 	const Real k=k0*kint;
 	const Real overk=1.0/k;
 	const Real w2=abs2(wi[j]);
 	if(kint <= kbound) {
-	  //cout << "("<<I<<","<<j<<") " << w2*overk << endl;
+// 	  cout << "g=" << myg << ", E("<<I<<","<<j<<")=" << w2*overk
+// 	       << " index=" << (unsigned)(kint-0.5) << endl;
 	  S[(unsigned)(kint-0.5)].re += w2*overk;
 	  //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
 	}
@@ -704,7 +708,8 @@ MDNS::~MDNS()
 //***** wrappers for output curves *****//
 Real curve_Spectrum(unsigned i) {return MDNSProblem->getSpectrum(i);}
 Real curve_nuk(unsigned i) {return 0.0;} // FIXME
-Real curve_k(unsigned i) {return MDNSProblem->getk(i);}
+Real curve_kb(unsigned i) {return MDNSProblem->getkb(i);}
+Real curve_kc(unsigned i) {return MDNSProblem->getkc(i);}
 
 void MDNS::InitialConditions()
 {
@@ -780,8 +785,8 @@ void MDNS::InitialConditions()
 
   //***** output *****//
   open_output(fprolog,dirsep,"prolog",0);
-  out_curve(fprolog,curve_k,"kc",nshells);
-  out_curve(fprolog,curve_k,"kb",nshells);
+  out_curve(fprolog,curve_kb,"kb",nshells+1);
+  out_curve(fprolog,curve_kc,"kc",nshells);
   fprolog.close();
 
   tcount=0;

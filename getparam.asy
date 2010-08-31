@@ -1,6 +1,7 @@
 import graph;
 include getrun;
 include param;
+include prolog;
 
 file in;
 real[] t;
