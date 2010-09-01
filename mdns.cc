@@ -37,7 +37,7 @@ unsigned rezero=0;
 unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
-enum PRTYPE {AREA,POINT};
+enum PRTYPE {NOPR,AREA,POINT};
 unsigned prtype=AREA;
 bool overlap=false; // account for overlapping corners of spectrum?
 
@@ -222,14 +222,14 @@ public:
 
   // Source functions
   void Source(const vector2&, const vector2&, double);
-  void ConservativeSource(const vector2& Src, const vector2& Y, double t);
-  void NonConservativeSource(const vector2& Src, const vector2& Y, double t);
-  void LinearSource(const vector2& Src, const vector2& Y, double t);
-  void NonLinearSource(const vector2& Src, const vector2& Y, double t);
-  void Transfer(const vector2& Src, const vector2& Y);
-  void ExponentialSource(const vector2& Src, const vector2& Y, double t);
-  void Stochastic(const vector2& Y, double t, double dt);
-  void Spectrum(vector& S, const vector& w0);
+  void ConservativeSource(const vector2&, const vector2&, double);
+  void NonConservativeSource(const vector2&, const vector2&, double);
+  void LinearSource(const vector2&, const vector2&, double);
+  void NonLinearSource(const vector2&, const vector2&, double);
+  void Transfer(const vector2&, const vector2&);
+  void ExponentialSource(const vector2&, const vector2&, double);
+  void Stochastic(const vector2&, double, double);
+  void Spectrum(vector&, const vector&);
   
   void Project(unsigned ga);
   void Prolong(unsigned gb);
@@ -283,10 +283,10 @@ public:
 	if(g==glast) ++lastshell;
 	if (i >=  firstshell &&  i <= lastshell) {
 	  unsigned index=i-firstshell+offset;
-	  Real kc=gk(g)*(index + 0.5);
+	  Real kb=gk(g)*(index + 0.5);
 // 	  cout << "g="<<g<<" k0="<<gk(g) << " index=" << index;
-// 	  cout << " i=" << i << " kc=" << kc << endl;
-	  return kc;
+// 	  cout << " i=" << i << " kb=" << kb << endl;
+	  return kb;
 	}
       }
     }
@@ -444,9 +444,11 @@ void MDNS::Grid::InitialConditions(unsigned g)
   if(spectrum) {
     nshells=parent->getnshells(myg);
     Dimension(Sp,nshells);
-    Sp.Load(Complex(0.0,0.0));
     Allocate(count,nshells);
-    count.Load(0.0);
+    for(unsigned i=0; i < nshells; ++i) {
+      Sp[i]=Complex(0.0,0.0);
+      count[i]=0;
+    }
   }
     
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
@@ -465,63 +467,12 @@ void MDNS::Grid::NLDimension()
   G[1]=g1;
 }
 
-void MDNS::Grid::LinearSource(const vector& source, const vector& w0, double t)
-{
-  w.Set(w0);
-  f0.Set(source);
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector f0i=f0[i];
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
-      if(j >= Invisible || I2 >= Invisible2) {
-	f0i[j] -= nuk(k02*(I2+j*j))*wi[j];
-      }
-  }
-}
-
-void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
-				 double t)
-{
-  w.Set(w0);
-  f0.Set(source);
-
-  //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
-  //  cout << w << endl;
-
-  DNSBase::NonLinearSource(source,w,t);
-
-  if(myg > 0) {
-    //copy overlapping modes to wS
-    for(unsigned i=0; i < sNx; ++i) {
-      vector wi=w[i+xdiff];
-      vector wSi=wS[i];
-      for(unsigned j=0; j < smy; ++j)
-	wSi[j]=wi[j];
-    }
-    fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
-
-    // find the nonlinear interaction for small-small-small
-    smallDNSBase->NonLinearSource(SrcwS,wS,t); 
- 
-    // subtract small-small-small source
-    for(unsigned i=0; i < sNx; ++i) {
-      vector f0i=f0[i+xdiff];
-      vector SrcwSi=SrcwS[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < smy; ++j)
-	f0i[j] -= SrcwSi[j];
-    }
-    fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
-  }
-}
-
-void MDNS::Grid::NonConservativeSource(const vector& source, const vector& w0, 
+void MDNS::Grid::NonConservativeSource(const vector& Src, const vector& w0, 
 				       double)
 {
   if(spectrum) {
     vector S;
-    Set(S,source);
+    Set(S,Src);
     Dimension(S,nshells);
     Spectrum(S,w0);
   }
@@ -637,27 +588,6 @@ void MDNS::Grid::SpectrumOverlap(vector& S)
   }
 }
 
-void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
-{
-  w.Set(Y[OMEGA]);
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(j >= Invisible || I2 >= Invisible2) {
-	Real w2=abs2(wi[j]);
-	Real k2=k02*(I2+j*j);
-	Z += w2;
-	E += w2/k2;
-	P += w2*k2;
-      }
-    }
-  }
-  //  FunctRRPtr F = new Invariants;
-  //  loopwF(F,3,&Z,&E,&P);
-}
-
 /****** Vocabulary *****/
 MDNSVocabulary::MDNSVocabulary()
 {
@@ -700,7 +630,7 @@ MDNSVocabulary::MDNSVocabulary()
   INTEGRATOR(MultiIntegrator);
   VOCAB(Ngrids,1,INT_MAX,"Number of multispectral grids");
   VOCAB(radix,1,INT_MAX,"Radix number for grid decimation");
-  VOCAB(prtype,0,1,"Synchronization scheme (0=area, 1=coincident)");
+  VOCAB(prtype,0,2,"Synchronization scheme (0=none,1=area, 2=coincident)");
 }
 
 MDNS::MDNS() 
@@ -798,7 +728,7 @@ void MDNS::InitialConditions()
 
   //***** output *****//
   open_output(fprolog,dirsep,"prolog",0);
-  out_curve(fprolog,curve_kb,"kb",nshells+1);
+  out_curve(fprolog,curve_kb,"kb",spectrum ? nshells+1 : 0);
   out_curve(fprolog,curve_kc,"kc",nshells);
   fprolog.close();
 
@@ -813,7 +743,8 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
-  //return;
+  if(prtype==NOPR) 
+    return;
   if(verbose > 2) cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
@@ -986,7 +917,8 @@ void MDNS::Project(unsigned gb)
   
 void MDNS::Prolong(unsigned ga)
 {
-  //return;
+  if(prtype==NOPR)
+    return;
   if(verbose > 2) cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
 
@@ -1170,7 +1102,7 @@ void MDNS::Prolong(unsigned ga)
 
 void MDNS::Initialize()
 {
-  Mfevt << "#   t\t\t E\t\t\t Z" << endl;
+  Mfevt << "#   t\t\t E\t\t\t Z\t\t\t P" << endl;
 }
 
 void MDNS::Output(int it)
@@ -1202,11 +1134,33 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
   for(unsigned g=0; g < Ngrids; ++g) {
     // add up the individual invariants
     G[g]->ComputeInvariants(Y,tempE,tempZ,tempP);
-    Real scale=pow((double) radix,(double) g);
+    Real scale=prtype==AREA ? pow((double) radix,(double) g) : 1.0;
     E += scale*tempE;
     Z += scale*tempZ;
     P += scale*tempP;
+    return; // FIXME: temp
   }
+}
+
+void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
+{
+  w.Set(Y[OMEGA]);
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      if(j >= Invisible || I2 >= Invisible2) {
+	Real w2=abs2(wi[j]);
+	Real k2=k02*(I2+j*j);
+	Z += w2;
+	E += w2/k2;
+	P += w2*k2;
+      }
+    }
+  }
+  //  FunctRRPtr F = new Invariants;
+  //  loopwF(F,3,&Z,&E,&P);
 }
 
 void MDNS::FinalOutput()
@@ -1278,12 +1232,62 @@ void MDNS::LinearSource(const vector2& Src, const vector2& Y, double t)
   G[grid]->LinearSource(source,w0,t);
 }
 
+void MDNS::Grid::LinearSource(const vector& source, const vector& w0, double t)
+{
+  w.Set(w0);
+  f0.Set(source);
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector f0i=f0[i];
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+      if(j >= Invisible || I2 >= Invisible2) {
+	f0i[j] -= nuk(k02*(I2+j*j))*wi[j];
+      }
+  }
+}
+
 void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double t) 
 {
   vector w0,source;
   Set(w0,Y[OMEGA]);
   Set(source,Src[OMEGA]);
   G[grid]->NonLinearSource(source,w0,t);
+}
+
+void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
+{
+  w.Set(wY);
+  f0.Set(wSrc);
+
+  //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
+  //  cout << w << endl;
+
+  DNSBase::NonLinearSource(f0,w,t);
+
+  if(myg > 0) {
+    //copy overlapping modes to wS
+    for(unsigned i=0; i < sNx; ++i) {
+      vector wi=w[i+xdiff];
+      vector wSi=wS[i];
+      for(unsigned j=0; j < smy; ++j)
+	wSi[j]=wi[j];
+    }
+    fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
+
+    // find the nonlinear interaction for small-small-small
+    smallDNSBase->NonLinearSource(SrcwS,wS,t); 
+ 
+    // subtract small-small-small source
+    for(unsigned i=0; i < sNx; ++i) {
+      vector f0i=f0[i+xdiff];
+      vector SrcwSi=SrcwS[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < smy; ++j)
+	f0i[j] -= SrcwSi[j];
+    }
+    fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
+  }
 }
 
 void MDNS::Stochastic(const vector2& Y, double t, double dt) 
