@@ -21,6 +21,7 @@ const char *ic="Constant";
 const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
+Real k0=1.0;
 Real nuH=0.0, nuL=0.0;
 int pH=1;
 int pL=0;
@@ -91,11 +92,11 @@ class FunctRR {
 };
 typedef FunctRR* FunctRRPtr;
 
-unsigned gN(unsigned N, unsigned g) {// FIXME: should this be part of MDNS?
+unsigned gN(unsigned N, unsigned g) {// TODO: should this be part of MDNS?
   return radix == 1 ? pow(2,(int) g)*(N+1)-1 : N;
 };
 
-unsigned gm(unsigned m, unsigned g) { // FIXME: should this be part of MDNS?
+unsigned gm(unsigned m, unsigned g) { // TODO: should this be part of MDNS?
   return radix == 1 ? pow(2,(int) g)*m : m;
 };
 
@@ -279,7 +280,7 @@ public:
 	unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
 	unsigned firstshell=G[g]->getshellsbelow();
 	unsigned lastshell=firstshell+G[g]->getmyshells();
-	if(g==glast) ++lastshell; // FIXME?
+	if(g==glast) ++lastshell;
 	if (i >=  firstshell &&  i <= lastshell) {
 	  unsigned index=i-firstshell+offset;
 	  Real kc=gk(g)*(index + 0.5);
@@ -395,6 +396,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
   myg=g;
 
   // load vocabulary from global variables
+
   nuH=::nuH;
   nuL=::nuL;
 
@@ -447,8 +449,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
     count.Load(0.0);
   }
     
-  // FIXME: initialize spectrum to zero as well?
-
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 }
 
@@ -467,8 +467,18 @@ void MDNS::Grid::NLDimension()
 
 void MDNS::Grid::LinearSource(const vector& source, const vector& w0, double t)
 {
-  // FIXME: overcounts
-  DNSBase::LinearSource(source,w0,t);
+  w.Set(w0);
+  f0.Set(source);
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector f0i=f0[i];
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+      if(j >= Invisible || I2 >= Invisible2) {
+	f0i[j] -= nuk(k02*(I2+j*j))*wi[j];
+      }
+  }
 }
 
 void MDNS::Grid::NonLinearSource(const vector& source, const vector& w0,
@@ -549,6 +559,7 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
   if(spectrum && overlap) {
     Real overlambda=1.0;
     if(radix==4) overlambda=0.5;
+    unsigned weight=prtype==AREA ? radix : 1;
     Real kbound=mym1;
     for(unsigned i=0; i < Nx; i++) {
       const int I=(int) i-(int) xorigin;
@@ -559,7 +570,7 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 	  if(kint-0.5 > kbound) {
 // 	    cout << "("<<I<<","<<j<<") " << kint << " vs " << kbound
 // 		 << " -> " << (unsigned)(overlambda*(kint-0.5)) << endl;
-	    Count[(unsigned)(overlambda*(kint-0.5))] += 1; // FIXME: radix?
+	    Count[(unsigned)(overlambda*(kint-0.5))] += weight;
 	  }
 	}
       }
@@ -605,18 +616,19 @@ void MDNS::Grid::SpectrumOverlap(vector& S)
     settow(w);
     Real overlambda=1.0;
     if(radix==4) overlambda=0.5;
+    Real weight=prtype==AREA ? radix : 1.0;
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(j > Invisible || I2 > Invisible2) {
+	if(j >= Invisible || I2 >= Invisible2) {
 	  const Real kint=sqrt(I2+j*j);
 	  const Real k=k0*kint;
 	  const Real overk=1.0/k;
 	  const Real w2=abs2(wi[j]);
 	  if(kint > my) {
-	    S[(unsigned)(overlambda*kint-0.5)].re += w2*overk; 
+	    S[(unsigned)(overlambda*kint-0.5)].re += weight*w2*overk;
 	    //S[(unsigned)(overlambda*kint-0.5)].im += nuk(k2)*w2; 
 	  }
 	}
@@ -633,7 +645,7 @@ void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
     int I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(j > Invisible || I2 > Invisible2) { // FIXME: check bounds
+      if(j >= Invisible || I2 >= Invisible2) {
 	Real w2=abs2(wi[j]);
 	Real k2=k02*(I2+j*j);
 	Z += w2;
@@ -665,6 +677,7 @@ MDNSVocabulary::MDNSVocabulary()
   INITIALCONDITION(Constant);
   //  INITIALCONDITION(Equipartition); 
 
+  VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
   VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
@@ -719,7 +732,7 @@ void MDNS::InitialConditions()
   saveF=OMEGA;
   MultiProblem::InitialConditions(Ngrids);
   MProblem=this;
-  k0=1.0; // FIXME: this should eventually come from command-line.
+  k0=::k0;
 
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
@@ -732,7 +745,7 @@ void MDNS::InitialConditions()
   for(unsigned g=0; g < Ngrids; ++g) {
     nfields=getnfields(g);
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
-    NY[nfields*g+TRANSFER]=0; // getnshells(g); FIXME 
+    NY[nfields*g+TRANSFER]=0; // getnshells(g); // TODO
     NY[nfields*g+EK]=getnshells(g);
   }
 
@@ -948,26 +961,26 @@ void MDNS::Project(unsigned gb)
     */
     }
     
-    if(prtype==POINT) { // FIXME: check
-    unsigned xstart=bInvisible;
-    unsigned xstop=bxorigin+bInvisible;
-    unsigned I=1;
-    for(unsigned i=xstart; i < xstop; ++i) {
-      vector wai;
-      Set(wai,wa[I]);
-      Dimension(wai,aNx);
-      vector wbi;
-      Set(wbi,wb[i]);
-      Dimension(wbi,wb[i]);
-      for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j)
-	wbi[j]=wai[j+j];
-      I += 2;
+    if(prtype==POINT) {
+      unsigned xstart=bInvisible;
+      unsigned xstop=bxorigin+bInvisible;
+      unsigned I=1;
+      for(unsigned i=xstart; i < xstop; ++i) {
+	vector wai;
+	Set(wai,wa[I]);
+	Dimension(wai,aNx);
+	vector wbi;
+	Set(wbi,wb[i]);
+	Dimension(wbi,wb[i]);
+	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j)
+	  wbi[j]=wai[j+j];
+	I += 2;
+      }
     }
-  }
   }
 
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
-  //  exit(1);
+  //exit(1);
   //  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb);  // FIXME: messed up?
 }
   
@@ -1120,10 +1133,14 @@ void MDNS::Prolong(unsigned ga)
 	
 	}
       }
+      if(verbose > 2) {
+	cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
+	cout <<"\n~B:\n" << G[gb]->tildeB << endl;
+      }
     }
 
     if(prtype==POINT) {
-      const unsigned xstart=bInvisible; // FIXME: check
+      const unsigned xstart=bInvisible;
       const unsigned xstop=bxorigin+bInvisible;
       
       unsigned I=1;
@@ -1135,22 +1152,20 @@ void MDNS::Prolong(unsigned ga)
 	vector wbi;
 	Set(wbi,wb[i]);
 	Dimension(wbi,wb[i]);
-	
 	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
 	  //cout << "j="<<j<<endl;
 	  wai[j+j]=wbi[j];
 	}
 	I += 2;
       }
+      //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
+      //exit(1);
     }
   }
   
   //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
   // maybe only on the overlapping modes?
-  if(verbose > 2) {
-    cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
-    cout <<"\n~B:\n" << G[gb]->tildeB << endl;
-  }
+
 }
 
 void MDNS::Initialize()
@@ -1243,7 +1258,6 @@ void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 {
   vector w0,source;
   Set(w0,Y[OMEGA]);
-  Set(G[grid]->Sp,Y[EK]); // FIXME: temp?
   Set(source,Src[EK]);
   G[grid]->NonConservativeSource(source,w0,t);
   //Moments(Src,Y,t);
