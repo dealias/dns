@@ -57,6 +57,17 @@ public:
 
 //***** Forcing *****//
 ForcingBase *Forcing;
+class None : public ForcingBase {
+};
+class WhiteNoiseBanded : public ForcingBase {
+public:
+  const char *Name() {return "White-Noise Banded";}
+  void Force(array2<Complex> &w, const Complex& factor) {
+    cout << "This don't work none yet, not no-how" << endl;
+    exit(1);
+  }
+};
+
 
 //***** Global variables for MultiIntegrator.h *****//
 MultiProblem *MProblem;
@@ -259,9 +270,7 @@ public:
 	  unsigned c=G[g]->count[index];
 	  if(c != 0) 
 	    return G[g]->Sp[index].re/c;
-	  else
-	    cout << "excuse me, zero count!" << endl;
-	  return 0.0; // this should never happen
+	  return 0.0; // this should never happen?
 	}
       }
       return 0.0;
@@ -620,8 +629,8 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(force,(Complex) 0.0, (Complex) 0.0,"constant external force");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
-  //FORCING(None);
-  //FORCING(WhiteNoiseBanded);
+  FORCING(None);
+  FORCING(WhiteNoiseBanded);
 
   METHOD(MDNS); 
 
@@ -630,7 +639,7 @@ MDNSVocabulary::MDNSVocabulary()
   INTEGRATOR(MultiIntegrator);
   VOCAB(Ngrids,1,INT_MAX,"Number of multispectral grids");
   VOCAB(radix,1,INT_MAX,"Radix number for grid decimation");
-  VOCAB(prtype,0,2,"Synchronization scheme (0=none,1=area, 2=coincident)");
+  VOCAB(prtype,0,2,"Synchronization scheme (0=none,1=area, 2=point)");
 }
 
 MDNS::MDNS() 
@@ -1292,7 +1301,7 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
 
 void MDNS::Stochastic(const vector2& Y, double t, double dt) 
 {
-//  G[grid]->Stochastic(T,y,t,dt);
+  //G[grid]->Stochastic(T,y,t,dt);
 }
 
 /*

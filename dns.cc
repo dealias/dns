@@ -136,7 +136,6 @@ public:
   }
 };
 
-
 class WhiteNoiseBanded : public ForcingBase {
 public:
   const char *Name() {return "White-Noise Banded";}
