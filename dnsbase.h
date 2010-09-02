@@ -130,21 +130,15 @@ class DNSBase {
   void ComputeInvariants(array2<Complex> &w,Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
 
-  Real Spectrum(unsigned int i) {
+  Real Spectrum(unsigned i) {
     double c=count[i];
     return c > 0 ? T[i].re*twopi/c : 0.0;
   }
-
-  Real Dissipation(unsigned int i) {
-    return T[i].im;
-  }
-
-  Real Pi(unsigned int i) {
-    return T[i].re;
-  }
-  Real Eta(unsigned int i) {
-    return T[i].im;
-  }
+  Real Dissipation(unsigned i) {return T[i].im;}
+  Real Pi(unsigned i) {return T[i].re;}
+  Real Eta(unsigned i) {return T[i].im;}
+  Real kb(unsigned i) {return k0*(i+0.5);}
+  Real kc(unsigned i) {return k0*(i+1);}
 };
 
 //***** initial conditions *****//

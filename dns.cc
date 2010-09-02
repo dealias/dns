@@ -41,6 +41,7 @@ public:
   ~DNS();
   void InitialConditions();
   void Output(int);
+  oxstream fprolog;
 
   void IndexLimits(unsigned& start, unsigned& stop,
 		   unsigned& startT, unsigned& stopT,
@@ -233,6 +234,17 @@ DNS::~DNS()
   fftwpp::deleteAlign(block);
 }
 
+// wrapper for outcurve routines
+class cwrap{
+public:
+  static Real Spectrum(unsigned int i) {return DNSProblem->Spectrum(i);}
+  static Real Dissipation(unsigned int i) {return DNSProblem->Dissipation(i);}
+  static Real Pi(unsigned int i) {return DNSProblem->Pi(i);}
+  static Real Eta(unsigned int i) {return DNSProblem->Eta(i);}
+  static Real kb(unsigned int i) {return DNSProblem->kb(i);}
+  static Real kc(unsigned int i) {return DNSProblem->kc(i);}
+};
+
 void DNS::Initialize()
 {
   DNSBase::Initialize();
@@ -314,7 +326,7 @@ void DNS::InitialConditions()
   
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
-  if(dynamic && false) {
+  if(dynamic && false) { // FIXME: kludge
     Allocate(errmask,ny);
     for(unsigned i=0; i < ny; ++i)
       errmask[i]=1;
@@ -331,6 +343,11 @@ void DNS::InitialConditions()
     while(ftin >> t0, ftin.good()) tcount++;
     ftin.close();
   }
+
+  open_output(fprolog,dirsep,"prolog",0);
+  out_curve(fprolog,cwrap::kb,"kb",spectrum ? nshells+1 : 0);
+  out_curve(fprolog,cwrap::kc,"kc",nshells);
+  fprolog.close();
 
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
@@ -351,15 +368,6 @@ void DNS::InitialConditions()
   if(movie)
     open_output(fw,dirsep,"w");
 }
-
-// wrapper for outcurve routines
-class cwrap{
-public:
-  static Real Spectrum(unsigned int i) {return DNSProblem->Spectrum(i);}
-  static Real Dissipation(unsigned int i) {return DNSProblem->Dissipation(i);}
-  static Real Pi(unsigned int i) {return DNSProblem->Pi(i);}
-  static Real Eta(unsigned int i) {return DNSProblem->Eta(i);}
-};
 
 void DNS::Output(int it)
 {
