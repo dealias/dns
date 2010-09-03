@@ -31,6 +31,7 @@ unsigned rezero=0;
 unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
+Real k0=1.0;
 
 // other global variables:
 
@@ -41,6 +42,7 @@ public:
   ~DNS();
   void InitialConditions();
   void Output(int);
+  void FinalOutput();
   oxstream fprolog;
 
   void IndexLimits(unsigned& start, unsigned& stop,
@@ -204,6 +206,7 @@ DNSVocabulary::DNSVocabulary()
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
 
+  VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
   VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
@@ -237,7 +240,7 @@ DNS::~DNS()
 // wrapper for outcurve routines
 class cwrap{
 public:
-  static Real Spectrum(unsigned int i) {return DNSProblem->Spectrum(i);}
+  static Real Spectrum(unsigned int i) {return DNSProblem->getSpectrum(i);}
   static Real Dissipation(unsigned int i) {return DNSProblem->Dissipation(i);}
   static Real Pi(unsigned int i) {return DNSProblem->Pi(i);}
   static Real Eta(unsigned int i) {return DNSProblem->Eta(i);}
@@ -260,7 +263,7 @@ void DNS::InitialConditions()
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
-  k0=1.0;
+  k0=::k0;
   k02=k0*k0;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
@@ -416,4 +419,14 @@ void DNS::Output(int it)
     for(unsigned i=0; i < nshells; i++)
       S[i]=0.0;
   }
+}
+
+void DNS::FinalOutput()
+{
+  Real E,Z,P;
+  ComputeInvariants(w,E,Z,P);
+  cout << endl;
+  cout << "Energy = " << E << newl;
+  cout << "Enstrophy = " << Z << newl;
+  cout << "Palenstrophy = " << P << newl;
 }

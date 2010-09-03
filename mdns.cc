@@ -32,7 +32,6 @@ Real eta=0.0;
 Complex force=0.0;
 Real kforce=1.0;
 Real deltaf=1.0;
-unsigned movie=0;
 unsigned rezero=0;
 unsigned spectrum=1;
 Real icalpha=1.0;
@@ -40,6 +39,8 @@ Real icbeta=1.0;
 enum PRTYPE {NOPR,AREA,POINT};
 unsigned prtype=AREA;
 bool overlap=false; // account for overlapping corners of spectrum?
+// unused vocab variables to match dns
+unsigned movie=0;
 
 // global variables
 
@@ -267,9 +268,10 @@ public:
 	const unsigned lastshell=firstshell+G[g]->getmyshells()-1;
 	if (i >=  firstshell &&  i <= lastshell) {
 	  unsigned index=i+offset-firstshell;
-	  unsigned c=G[g]->count[index];
-	  if(c != 0) 
-	    return G[g]->Sp[index].re/c;
+	  double c=G[g]->count[index];
+	  if(c > 0.0)  {
+	    return G[g]->Sp[index].re*twopi/c;
+	  }
 	  return 0.0; // this should never happen?
 	}
       }
@@ -303,9 +305,9 @@ public:
   };
   Real getkc(unsigned i) {return 0.5*(getkb(i)+getkb(i+1));}
 
-  void FinalOutput();
   void Initialize();
   void Output(int it);
+  void FinalOutput();
 };
 
 //***** Global problem *****//
@@ -489,7 +491,7 @@ void MDNS::Grid::NonConservativeSource(const vector& Src, const vector& w0,
 
 void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 {
-  // FIXME
+  // TODO
 }
 
 void MDNS::Grid::setcount()
@@ -547,7 +549,8 @@ void MDNS::Spectrum(vector& S, const vector& w0)
 void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 {
   w.Set(w0);
-
+  for(unsigned K=0; K < nshells; K++)
+    S[K]=0.0;
   Real kbound=lastgrid ? hypot(mx,my)+1: my-0.5;
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
@@ -557,13 +560,10 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
       if(j >= Invisible || I2 >= Invisible2) {
 	const Real kint=sqrt(I2+j*j);
 	const Real k=k0*kint;
-	const Real overk=1.0/k;
 	const Real w2=abs2(wi[j]);
 	if(kint <= kbound) {
-// 	  cout << "g=" << myg << ", E("<<I<<","<<j<<")=" << w2*overk
-// 	       << " index=" << (unsigned)(kint-0.5) << endl;
-	  S[(unsigned)(kint-0.5)].re += w2*overk;
-	  //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // FIXME: nuk set?
+	  S[(unsigned)(kint-0.5)].re += w2/k;
+	  //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // TODO
 	}
       }
     }
@@ -605,7 +605,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB_NOLIMIT(ic,"Initial Condition");
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
-  //  VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
+  VOCAB_CONSTANT(movie,0,"Movie flag (off)");
   VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
@@ -659,7 +659,7 @@ MDNS::~MDNS()
 
 //***** wrappers for output curves *****//
 Real curve_Spectrum(unsigned i) {return MDNSProblem->getSpectrum(i);}
-Real curve_nuk(unsigned i) {return 0.0;} // FIXME
+Real curve_nuk(unsigned i) {return 0.0;} // TODO
 Real curve_kb(unsigned i) {return MDNSProblem->getkb(i);}
 Real curve_kc(unsigned i) {return MDNSProblem->getkc(i);}
 
@@ -689,7 +689,7 @@ void MDNS::InitialConditions()
   }
 
   Allocator(align); // allocate MultiIntegrator
-  
+
   G.Allocate(Ngrids);
 
   for(unsigned g=0; g < Ngrids; ++g) {
@@ -1138,7 +1138,6 @@ void MDNS::Output(int it)
 void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 {
   E=Z=P=0.0;
-
   Real tempE=0.0, tempZ=0.0, tempP=0.0;
   for(unsigned g=0; g < Ngrids; ++g) {
     // add up the individual invariants
@@ -1147,7 +1146,6 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
     E += scale*tempE;
     Z += scale*tempZ;
     P += scale*tempP;
-    return; // FIXME: temp
   }
 }
 

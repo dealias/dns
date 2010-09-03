@@ -130,7 +130,7 @@ class DNSBase {
   void ComputeInvariants(array2<Complex> &w,Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
 
-  Real Spectrum(unsigned i) {
+  Real getSpectrum(unsigned i) {
     double c=count[i];
     return c > 0 ? T[i].re*twopi/c : 0.0;
   }
