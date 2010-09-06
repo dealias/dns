@@ -24,9 +24,9 @@ What is particularly nice about two-dimensional turbulence is that the
 we can represent the velocity by the vorticity, which has only one
 non-zero component in two dimensions. The incompressible 2D Navier--Stokes
 equations are:
-\bec
-\theNS, \quad \v\del\cdot\v{u}=0.
-\eec
+\begin{dmath}
+  \theNS, \quad \v\del\cdot\v{u}=0.
+\end{dmath}
 The vorticity is defined as 
 $\v\omega = \del\times\v{u} = (\partial_x u_y - \partial_y u_x )\hat{\v{z}}$
 Taking the Fourier transform, we have the following governing equation:
@@ -171,7 +171,7 @@ interactions are only $\O\(\tau^1\)$.
 
 \begin{figure}[htbp]
   \begin{center}
-    \includegraphics{figures/lambda1}
+    \includegraphics[width=0.5\textwidth]{figures/lambda1}
     \caption{Radix-1 Decimated Grid.}
     \label{lambda1}
   \end{center}
@@ -193,14 +193,14 @@ to use a larger number of modes in the subgrid than in the undecimated grid.
 
 \begin{figure}[htbp]
   \begin{center}
-    \includegraphics{figures/lambdar2rot}
+    \includegraphics[width=0.5\textwidth]{figures/lambdar2rot}
     \caption{Radix-2 Decimated Grid.}
     \label{lambdar2rot}
   \end{center}
 \end{figure}
 \begin{figure}[htbp]
   \begin{center}
-    \includegraphics{figures/lambdar2}
+    \includegraphics[width=0.5\textwidth]{figures/lambdar2}
     \caption{Rotated Radix-2 Decimated Grid.}
     \label{lambdar2}
   \end{center}
@@ -225,18 +225,18 @@ require modes on opposite sides of the mode on the fully-resolved grid
 conserver energy and enstrophy pair-wise, as in figure~\ref{rad2cross}. 
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{figures/rad2cross}
+    \includegraphics[width=0.5\textwidth]{figures/rad2cross}
     \caption{Projection diagram.}
     \label{rad2cross}
   \end{center}
 \end{figure}
 Enstrophy conservation is guaranteed if 
 % FIXME: check this for correct indices
-\bec
-\alpha = \frac{k^2 -k_3^2}{ k_1^2 -k_3^2},
-\quad
-\beta = \frac{k^2 -k_2^2}{ k_0^2 -k_2^2}.
-\eec
+\begin{dmath}
+  \alpha = \frac{k^2 -k_3^2}{ k_1^2 -k_3^2},
+  \quad
+  \beta = \frac{k^2 -k_2^2}{ k_0^2 -k_2^2}.
+\end{dmath}
 This is possible if $k_1^2 \neq k_3^2$ and $k_0^2 \neq k_2^2$, which
 happens if mode $k$ is not on the $k_x$ or $k_y$ axis. %FIXME: what to do?
 
@@ -312,7 +312,7 @@ Fourier space, which automatically conserves both $E$ and $Z$.
 
 \begin{figure}[htb]
   \begin{center}
-    \includegraphics{figures/lambda2}
+    \includegraphics[width=0.5\textwidth]{figures/lambda2}
     \caption{Radix-4 Decimated Grid.}
     \label{lambda2}
   \end{center}
@@ -349,7 +349,7 @@ to the next preserves energy and enstrophy automatically.
 In case \ref{rowcol} (figure \ref{rad4row}) energy sent to smaller-$k$
 must be compensated by energy sent to larger-$k$ in order to conserve
 vorticity.  Let $E$ be the energy and $K^2E$ the enstrophy in the mode
-on the fully resolved grid. 
+on the fully resolved grid.
 \begin{figure}[htb]
   \begin{center}
     \includegraphics{figures/rad4row}
@@ -512,26 +512,81 @@ equation is just the projection onto a different decimated
 basis. Therefore, synchronizing the grids should be done using the
 same projection operator, the Fourier transform.
 
-OK, this section is really in flux.  Some points:
+The decimated modes have wavenumbers $\{e^{i k \cdot x}, k = \(2 i,2j\)\}$.
+Interpolation via Fourier transform is done as follows:
+\begin{dmath}
+  \text{fine grid} \xrightarrow{\text{fft}^{-1}} x\text{-space}.
+  \xrightarrow{\text{fft}} \text{decimated grid}
+\end{dmath}
+The fine grid to $x$-space transform is a bijection, but the transform
+to the decimated grid is not one-to-one, since we restricted to modes
+with even indices. The effect is to simply identify the coincident
+modes between grids, and copy the information between them.  The
+Fourier transform, used in justifying the scheme, can be avoided at
+the implimentation level.
+
+Let $\Omega_{\text{f}}$ denote wavenumbers on the fine frid, and
+$\Omega_{\text{c}}$ the wavenumbers on the coarse grid. Then we can
+consider the system to be $\Omega_{\text{f}} \cup \Omega_{\text{c}}$.
+The linear source and external forces are simple to account for.
+The nonlinear interaction is more complicated.  There are a number
+of cases.
 \begin{enumerate}
-\item If we accept the decimated modes as 
-  $\{e^{i k \cdot x}, k = \(2 i, 2j\)\}$, then the global interpolation
-  \begin{dmath}
-    \text{fine grid} \xrightarrow{\text{fft}^{-1}} x-\text{space} 
-    \xrightarrow{\text{fft}} \text{decimated grid}
-  \end{dmath}
-  just copies the even-indexed modes from the fine grid to the coarse grid. 
-  That is, we could just project/prolong by copying coincident modes.
-
-\item For symmetric symmetrization, does this mean that we can combine
-  the two grids? As in, we can just put all the modes on one oddly
-  shaped grid, transferring the source, with no
-  $(\text{high},\text{high})\rightarrow\text{low}$ nonlinear source
-  term for odd-indexed modes?  That would be awesome, but I'm not sure 
-  that I really believe it.
-  
-
+  \item 
+    $\Omega_{\text{f}} \times \Omega_{\text{f}}\rightarrow \Omega_{\text{f}}$\\
+    These interactions are included in the fine-grid nonlinear calculation.
+  \item 
+    $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$\\
+    These interactions are included in the coarse-grid nonlinear calculation.
+  \item 
+    $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{f}}$\\
+    Since the coarse grid contains only even modes, these modes only beat
+    to influence even modes on the fine grid.  These modes are also part
+    of the coarse grid.  Therefore, these interactions are part of
+    $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$.
+  \item
+    $\Omega_{\text{f}} \times \Omega_{\text{f}}\rightarrow \Omega_{\text{c}}$\\
+    This is a more complicated case. The even-even-to-even interaction
+    is included in the coarse-coarse interaction, and the even-odd-to-odd
+    interaction influences odd modes which are not part of the coarse grid.
+    But the odd$\times$odd$\rightarrow$even interaction still needs to
+    be taken into account, or we will decrease the coupling between the
+    two grids.
+    
+    Since the dimensions of the grids are odd, there is no bijection
+    between these interactions and those in 
+    $\Omega_{\text{c}}\cap \Omega_{\text{f}} \times 
+    \Omega_{\text{c}}\cap \Omega_{\text{f}}$, which would result in the 
+    interactions on the axes being double-counted. We might be able to
+    simply not high-pass filter the coarse nonlinear interaction, and 
+    elminate the double-counting by removing the interaction on the 
+    axes, which would just take two one-dimensional convolutions. 
+    (FIXME: check this.) This would be a simple enough calculation
+    as to be feasible without using a fast-convolution algorithm, which
+    might be unavailable for this geometry. (FIXME: check this)
+    
+  \item
+    $\Omega_{\text{f}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$\\
+    This odd terms are not part of the system, and the even terms are
+    part of the coarse-coarse interaction.
+  \item
+    $\Omega_{\text{f}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{f}}$\\
+    What about this?  Getting kind of feverish here.
 \end{enumerate}
+
+Transform-centric synchronization offers some interesting possibilities.
+Since we deal only with coincident modes, we can just copy the value 
+of the mode from one grid to another without having to make any
+approsimations.  This eliminates many ambiguities as compared with the
+``area''-based synchronization scheme. Also of note is that, after
+calculating the source term, and assuming that we maintain all nonlinear
+interaction for $\Omega_{\text{f}} \cup \Omega_{\text{c}}$, then the 
+combined system does not modify the ergodicity of the original system:
+we simply project the $x$-space system onto 
+$\Omega_{\text{f}} \cup \Omega_{\text{c}}$, which maintains ergodicity
+assuming that all modes are (well-enough?) connnected by the nonlinearity.
+So, we should be able to add source terms without ruining equipartition!
+FIXME: check.
 
 
 
