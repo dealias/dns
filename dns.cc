@@ -329,16 +329,6 @@ void DNS::InitialConditions()
   
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
-  if(dynamic && false) { // FIXME: kludge
-    Allocate(errmask,ny);
-    for(unsigned i=0; i < ny; ++i)
-      errmask[i]=1;
-
-    array2<int> omegamask(Nx,my,(int *) errmask+(Y[OMEGA]-y));
-    for(unsigned i=0; i <= xorigin; i++)
-      omegamask(i,0)=0;
-  }
-
   tcount=0;
   if(restart) {
     Real t0;
