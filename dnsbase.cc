@@ -92,13 +92,11 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   Forcing->Force(f0,T);
 }
 
-void DNSBase::Spectrum(vector& S, const vector& y)
+void DNSBase::Spectrum(vector& S, const vector& y) 
 {
   w.Set(y);
   for(unsigned K=0; K < nshells; K++)
-    S[K]=0.0;
-
-  // Compute instantaneous angular sum over each circular shell.
+    S[K]=Complex(0.0,0.0);
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;

@@ -277,7 +277,8 @@ public:
       }
       return 0.0;
     }
-    msg(ERROR,"Only radix-4 spectrum is working right now.");
+    msg(ERROR,"Only radix-4 spectrum is working right now."); 
+    exit(1);
     return 0.0;
   };
 
@@ -482,10 +483,9 @@ void MDNS::Grid::NonConservativeSource(const vector& Src, const vector& w0,
 				       double)
 {
   if(spectrum) {
-    vector S;
-    Set(S,Src);
-    Dimension(S,nshells);
-    Spectrum(S,w0);
+    Set(Sp,Src);
+    Dimension(Sp,nshells);
+    Spectrum(Sp,w0);
   }
 }
 
@@ -550,7 +550,7 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 {
   w.Set(w0);
   for(unsigned K=0; K < nshells; K++)
-    S[K]=0.0;
+    S[K]=Complex(0.0,0.0);
   Real kbound=lastgrid ? hypot(mx,my)+1: my-0.5;
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
