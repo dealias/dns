@@ -435,8 +435,39 @@ In the case that $n=2$, we can solve this explicitly:
 \end{dmath*}
 
 
+\subsubsection{Boundary modes}
+The boundary modes should be accounted for during synchronization: they
+are part of the overlapping set of modes, albeit only fractionally.
 
-Also, what about prolonging the boundary modes?
+The radix-2 and radix-4 cases present two boundary, coarse-grid modes
+that are not fully redundant with fine-grid modes.  In the radix-4
+case, we have one side of a row- or column-projection, as shown in
+figure~\ref{bpair}. In this case, the coarse-grid mode should
+represent half of the fine-grid mode. A problem arises in
+projection/prolongation, in that projecting onto the coarse grid
+should replace the state of the coarse modes with a state derived from
+the fine grid.  Since the coarse-grid mode isn't entirely determined
+by the fine grid, we can only ``half-replace'' the mode. A symmectric
+synchronization, i.e.\ rescaling, can get around this by just sending
+the appropriate fraction of the energy to the coarse-grid mode.  The
+problem remains of how to ensure that the grids are synchronized at
+the beginning of the time-step, but this should (?) be possible to do.
+
+
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics[width=0.4\textwidth]{figures/bpair.jpg}
+    \caption{half of a 2-to-1 interaction}
+    \label{bpair}
+  \end{center}
+\end{figure}
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics[width=0.4\textwidth]{figures/bquad.jpg}
+    \caption{half of a 4-to-1 interaction}
+    \label{bquad}
+  \end{center}
+\end{figure}
 
 %Also, see note 2010-06-24
 
@@ -476,7 +507,48 @@ people seem to like it.
     \label{symstep4}
   \end{center}
 \end{figure}
+Let $S_1$ be a set of modes, with $S_1\subset\Omega_1$, which corresponds
+to the set of modes $S_2\subset\Omega_2$. Let $E_i$ be the energy of the
+modes in $S_i$, $i=1,2$. At the beginning of the time step, $E_i(t)$ are
+all equal, wlog. Let $\D E_i$ denote the change in energy of the set
+$S_i$ from time $t$ to $t+\t$. We must scale the energies of the modes
+so that the change from each grid is accounted for. That is, for
+each mode $\w$, we need
+\begin{eqnarray}
+  \sum_{\w\in S_i}\half\abs{\widetilde\w(t+\t)}^2 = E_i 
+\end{eqnarray}
+to be scaled up so that
+\begin{eqnarray}
+  \sum_{\w\in S_i}\half\abs{\w(t+\t)}^2 
+  = E(t) + \sum_j \D E_j
+  = E_i(t+\t) + \sum_{j\neq i} \D E_j.
+\end{eqnarray}
+That is, each mode in $S_i$ must be scaled as:
+\begin{eqnarray}
+  \w(t+\t)=\widetilde\w(t+\t) \times
+  \sqrt{
+    \frac{E_i(t) + \sum_{j} \D E_j}{E_i(t+\t)}.
+  }
+\end{eqnarray}
+It is important that $E_i(t) + \sum_{j} \D E_j\geq 0$, because otherwise
+we would encounter a negative root, and the energy would become complex
+(to say nothing of branch-cut issues).  Since the energy change can
+be approximated as a polynomial in the time-step $\t$, we will be able
+to reduce the time-step so that the resulting energy is non-negative. This
+only takes a finite number of time-step reductions, because we eventually
+hit machine-precision, whereat a decrese in $\t$ so reduces the energy
+change as to be zero. FIXME: we can prove this.
 
+Synchronization via rescaling can be extended to more than two grids in
+a straightforward fashion: the sums above were left in a general format,
+so just add more grids. This may add restrictions on the timestep, since
+we can now have more than one grid removing energy from a corresponding 
+set of modes. It is worthwhile noting that this case was never observed 
+for shell models of turbulence, and happen only with probability 0 (or
+whatever the discrete analogue of zero probability is, probably something
+like machine precision or something like that).
+
+But what do we do with the phase? FIXME
 
 \subsection{Projection/Prolongation}
 \begin{figure}[htbp]
@@ -494,15 +566,15 @@ $||.||$ denote an (energy? enstrophy?) norm which maps a set of modes
 to the positive real axis. Assume that $||A(t)||=||B(t)||$ at time
 $t$. We advance, say, modes in $a$ to time $t+\t$. Since the modes in
 $A$ represent the same physical quantities as those in $B$, we need to
-impose the change from $A(t) \rightarrow \tilde{A}(t+\t)$ onto $B$. If
+impose the change from $A(t) \rightarrow \widetilde{A}(t+\t)$ onto $B$. If
 our norm is the energy of the modes, we can just set
 \begin{dmath}
-  \tilde{B}(t) = B(t) \times \frac{||\tilde{A}(t+\t)||}{||A(t)||}.
+  \widetilde{B}(t) = B(t) \times \frac{||\widetilde{A}(t+\t)||}{||A(t)||}.
 \end{dmath}
-Then we advance $\tilde{B}(t)$ to time $t+\t$:
-$\tilde{B}(t)\rightarrow B(t+\t)$.  This change must now be imposed on $A$:
+Then we advance $\widetilde{B}(t)$ to time $t+\t$:
+$\widetilde{B}(t)\rightarrow B(t+\t)$.  This change must now be imposed on $A$:
 \begin{dmath}
-  A(t+\t) = \tilde{A}(t+\t)\times \frac{||B(t+\t)||}{||\tilde{B}(t)||}.
+  A(t+\t) = \widetilde{A}(t+\t)\times \frac{||B(t+\t)||}{||\widetilde{B}(t)||}.
 \end{dmath}
 
 \subsubsection{Transform-centric rescaling}
@@ -571,7 +643,7 @@ of cases.
     part of the coarse-coarse interaction.
   \item
     $\Omega_{\text{f}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{f}}$\\
-    What about this?  Getting kind of feverish here.
+    What about this?
 \end{enumerate}
 
 Transform-centric synchronization offers some interesting possibilities.
@@ -588,7 +660,57 @@ assuming that all modes are (well-enough?) connnected by the nonlinearity.
 So, we should be able to add source terms without ruining equipartition!
 FIXME: check.
 
+The basic idea here is that, if we express the velocity field as a linear
+combination of modes in 
+\begin{eqnarray}
+  S\doteq\cup_i \Omega_i
+\end{eqnarray}
+but we only have the individual grids $\Omega_i$. The nonlinear interactions
+in $S$ are from the set
+\begin{eqnarray}
+  S\times S = \(\cup_i \Omega_i\)\times \(\cup_j \Omega_j\),
+\end{eqnarray}
+but we only have access to 
+\begin{eqnarray}
+  \cup_i\(\Omega_i \times \Omega_i\) 
+  \subsetneq 
+  \(\cup_i \Omega_i\)\times \(\cup_j \Omega_j\).
+\end{eqnarray}
+Options for dealing with this:
+\begin{enumerate}
+  \item ignore the missing interactions
+  \item strengthen some of the interactions to compensate for the
+    missing interactions, or
+  \item calculate the missing interactions.
+\end{enumerate}
 
+Ignoring things is often a perfectly reasonable way to deal with one's
+problems, at least as a first attempt, and this first option is
+somewhat enticing due to its ease of implementation.  However, some
+of the graphs of the spectra seem to show a bottleneck at the
+intergrid boundary, so this might not be something that we can simply
+overlook.  Later, more-resolved and statistically stationary simulations
+will shed more light on whether this is an actual problem.
 
+The second option might be ok; for the overlap, the missing odd modes
+can be replaced by the even modes (there isn't a bijection, but we're
+only off by a lower-dimensional array, which might still be accounted 
+for) and these triads can be strengthened. This shouldn't be an overly 
+difficult computation; at least it can be done as a convolution, and 
+perhaps even without having to do a separate convolution.
+
+The third option is quite appealling. At least for the low$\times$low
+interaction, since this can be done by a conventional padded fast
+convolution, keeping the aliases, which are just the missing terms. 
+The high$\times$high interactions can be done via a fast convolution
+only if we use a grid that keeps the missing low-wavenumber interactions
+and extends to reach high wavenumbers.  This misses the point of 
+the multispectral method entirely, as we end up just having a full grid.
+This might be something that we need to do either as a modified
+convolution, or simply by hand (i.e.\ not using a fast convolution method).
+The high$\times$low interactions face a similar problem. 
+
+All of this stuff needs looking into; the triad interaction puts an
+interesting restraing on the geometry.
 
 \end{document}
