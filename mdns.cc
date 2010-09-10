@@ -482,10 +482,10 @@ void MDNS::Grid::NonConservativeSource(const vector& Src, const vector& w0,
 				       double)
 {
   if(spectrum) {
-    vector SpSrc;
-    Set(SpSrc,Src);
-    Dimension(SpSrc,nshells);
-    Spectrum(SpSrc,w0);
+    vector SrcEK;
+    Set(SrcEK,Src);
+    Dimension(SrcEK,nshells);
+    Spectrum(SrcEK,w0);
   }
 }
 
@@ -542,17 +542,17 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 }
 */
 
-void MDNS::Spectrum(vector& S, const vector& w0)
+void MDNS::Spectrum(vector& SrcEK, const vector& w0)
 {
-  G[grid]->Spectrum(S,w0);
+  G[grid]->Spectrum(SrcEK,w0);
   //if(grid != 0) G[grid-1]->SpectrumOverlap(S);
 }
 
-void MDNS::Grid::Spectrum(vector& S, const vector& w0)
+void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
 {
   w.Set(w0);
   for(unsigned K=0; K < nshells; K++)
-    S[K]=Complex(0.0,0.0);
+    SrcEK[K]=Complex(0.0,0.0);
   Real kbound=lastgrid ? hypot(mx,my)+1: my-0.5;
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
@@ -564,8 +564,9 @@ void MDNS::Grid::Spectrum(vector& S, const vector& w0)
 	const Real k=k0*kint;
 	const Real w2=abs2(wi[j]);
 	if(kint <= kbound) {
-	  S[(unsigned)(kint-0.5)].re += w2/k;
-	  //S[(unsigned)(k-0.5)].im += nuk(k2)*w2; // TODO
+	  //SrcEK[(unsigned)(kint-0.5)].re = 1.0;
+	  SrcEK[(unsigned)(kint-0.5)].re += w2/k;
+	  //SrcEK[(unsigned)(k-0.5)].im += nuk(k2)*w2; // TODO
 	}
       }
     }
@@ -1219,10 +1220,10 @@ void MDNS::setcount()
 
 void MDNS::NonConservativeSource(const vector2& Src, const vector2& Y, double t)
 {
-  vector w0,source;
+  vector w0,SrcEK;
   Set(w0,Y[OMEGA]);
-  Set(source,Src[EK]);
-  G[grid]->NonConservativeSource(source,w0,t);
+  Set(SrcEK,Src[EK]);
+  G[grid]->NonConservativeSource(SrcEK,w0,t);
   //Moments(Src,Y,t);
 }
 
