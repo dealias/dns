@@ -37,6 +37,7 @@ unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
 enum PRTYPE {NOPR,AREA,POINT};
+int dorescale=false; // FIXME: this should be set to true once rescale works
 unsigned prtype=AREA;
 bool overlap=false; // account for overlapping corners of spectrum?
 // unused vocab variables to match dns
@@ -244,6 +245,7 @@ public:
   
   void Project(unsigned ga);
   void Prolong(unsigned gb);
+  int Rescale();
 
   void IndexLimits(unsigned int& start, unsigned int& stop,
 		   unsigned int& startT, unsigned int& stopT,
@@ -564,7 +566,6 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
 	const Real k=k0*kint;
 	const Real w2=abs2(wi[j]);
 	if(kint <= kbound) {
-	  //SrcEK[(unsigned)(kint-0.5)].re = 1.0;
 	  SrcEK[(unsigned)(kint-0.5)].re += w2/k;
 	  //SrcEK[(unsigned)(k-0.5)].im += nuk(k2)*w2; // TODO
 	}
@@ -645,6 +646,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(Ngrids,1,INT_MAX,"Number of multispectral grids");
   VOCAB(radix,1,INT_MAX,"Radix number for grid decimation");
   VOCAB(prtype,0,2,"Synchronization scheme (0=none,1=area, 2=point)");
+  VOCAB(dorescale,0,1,"Symmetric synchronization? (0=no, 1=hell yes!)");
 }
 
 MDNS::MDNS() 
@@ -703,7 +705,8 @@ void MDNS::InitialConditions()
     G[g]->InitialConditions(g);
   }
   for (unsigned g=1; g< Ngrids; g++) 
-    Project(g);
+    Project(g); // TODO: this may be deprecated by rescale
+  
 
   if(spectrum) {
     for(unsigned g=0; g < Ngrids; ++g) {
@@ -755,7 +758,7 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb) 
 {
-  if(prtype==NOPR) 
+  if(prtype==NOPR || dorescale==1) 
     return;
   if(verbose > 2) cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
@@ -929,7 +932,7 @@ void MDNS::Project(unsigned gb)
   
 void MDNS::Prolong(unsigned ga)
 {
-  if(prtype==NOPR)
+  if(prtype==NOPR || dorescale==1)
     return;
   if(verbose > 2) cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
@@ -1106,10 +1109,63 @@ void MDNS::Prolong(unsigned ga)
       //exit(1);
     }
   }
-  
   //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
   // maybe only on the overlapping modes?
+}
 
+int MDNS::Rescale()
+{
+  if(dorescale) {
+    // FIXME: not done yet
+    if(radix == 4 && prtype == POINT) {
+     // find the mode
+//       int xstart=-(Nx+1)/2;
+//       int xstop=(Nx+1)/2;
+      int xstart=-8;
+      int xstop=8;
+      cout << endl;
+      for(int I=0; I <= xstop; I += 2) {
+	cout << I << " ";
+	int gp=1;
+	for(unsigned g=1; g < Ngrids; ++g) {
+	  gp *= 2;
+	  if((I%gp)==0) {
+	    cout << I/gp << " " ;
+	  } else { // none of the latter grids are coincident
+	    g=Ngrids;
+	  }
+	}
+	cout << endl;
+      }
+      exit(1);
+
+      // find which grids it belongs to.
+
+      // scale it
+
+//       unsigned I=1;
+
+//       for(unsigned i=xstart; i < xstop; ++i) {
+// 	//cout << "i="<<i<<" I="<<I<<endl;
+// 	vector wai;
+// 	Set(wai,wa[I]);
+// 	Dimension(wai,aNx);
+// 	vector wbi;
+// 	Set(wbi,wb[i]);
+// 	Dimension(wbi,wb[i]);
+// 	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
+// 	  //cout << "j="<<j<<endl;
+// 	  wai[j+j]=wbi[j];
+// 	}
+// 	I += 2;
+//       }
+//       //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
+
+      return 0;
+    }
+    return 1; // failure; case not implimented
+  }
+  return 0; // success
 }
 
 void MDNS::Initialize()
