@@ -525,9 +525,24 @@ to be scaled up so that
 \end{eqnarray}
 That is, each mode in $S_i$ must be scaled as:
 \begin{eqnarray}
-  \w(t+\t)=\widetilde\w(t+\t) \times
-  \sqrt{
-    \frac{E_i(t) + \sum_{j} \D E_j}{E_i(t+\t)}.
+  \w(t+\t)&=&\widetilde\w(t+\t)
+  \sqrt{\frac{E_i(t) + \sum_{j} \D E_j}{E_i(t+\t)}}
+  \\
+  &=&\widetilde\w(t+\t) \sqrt{
+    \frac{\half\abs{\w(t)}^2 
+      + \sum_j\(\half\abs{\widetilde\w_j(t+\t)}^2  -  \half\abs{\w(t)}^2\)}
+         {\half\abs{\widetilde\w(t+\t)}^2}
+  }
+  \\
+  &=&\widetilde\w(t+\t) \sqrt{
+    \frac{\abs{\w(t)}^2 
+      + \sum_j\(\abs{\widetilde\w_j(t+\t)}^2  -  \abs{\w(t)}^2\)}
+         {\abs{\widetilde\w(t+\t)}^2}
+  }
+  \\
+  &=&\frac{\widetilde\w(t+\t)}{\abs{\widetilde\w(t+\t)}}
+ \sqrt{
+   \abs{\w(t)}^2 + \sum_j\(\abs{\widetilde\w_j(t+\t)}^2  -  \abs{\w(t)}^2\)
   }
 \end{eqnarray}
 It is important that $E_i(t) + \sum_{j} \D E_j\geq 0$, because otherwise
@@ -584,7 +599,8 @@ equation is just the projection onto a different decimated
 basis. Therefore, synchronizing the grids should be done using the
 same projection operator, the Fourier transform.
 
-The decimated modes have wavenumbers $\{e^{i k \cdot x}, k = \(2 i,2j\)\}$.
+The decimated modes have wavenumbers 
+$\{e^{i k \cdot x}, k \in 2\mathbb{Z}\times2\mathbb{Z}\}$.
 Interpolation via Fourier transform is done as follows:
 \begin{dmath}
   \text{fine grid} \xrightarrow{\text{fft}^{-1}} x\text{-space}.
