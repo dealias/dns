@@ -38,7 +38,7 @@ Real icalpha=1.0;
 Real icbeta=1.0;
 enum PRTYPE {NOPR,AREA,POINT};
 int dorescale=false; // FIXME: this should be set to true once rescale works
-unsigned prtype=AREA;
+unsigned prtype=POINT;
 bool overlap=false; // account for overlapping corners of spectrum?
 // unused vocab variables to match dns
 unsigned movie=0;
@@ -786,6 +786,7 @@ void MDNS::Project(unsigned gb)
 	wbi[j]=wai[j];
       }
     }
+    return;
   }
 
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
@@ -1118,13 +1119,27 @@ int MDNS::Rescale()
   if(dorescale) {
     // FIXME: not done yet
     if(radix == 4 && prtype == POINT) {
-     // find the mode
-//       int xstart=-(Nx+1)/2;
-//       int xstop=(Nx+1)/2;
+
+      // test code: access current vorticity field
+      for(unsigned g=0; g < Ngrids; ++g) {
+	array2<Complex> wg;
+	G[g]->settow(wg);
+	wg.Dimension(G[g]->getNx(),G[g]->getmy());
+	cout << "wg:" << endl;
+	cout << wg << endl;
+      }
+
+      // test code: access vorticity field at start of timestep
+      for(unsigned g=0; g < Ngrids; ++g) {
+	cout << Ysave[g] << endl; // FIXME: can't access Ysave.
+      }
+
+      // test code: find the index for the mode on each grid
       int xstart=-8;
       int xstop=8;
       cout << endl;
-      for(int I=0; I <= xstop; I += 2) {
+      //for(int I=0; I <= xstop; I += 2) { // FIXME: restore
+      for(int I=0; I <= xstop; I += 1) {
 	cout << I << " ";
 	int gp=1;
 	for(unsigned g=1; g < Ngrids; ++g) {
