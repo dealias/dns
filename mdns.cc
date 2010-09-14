@@ -1,3 +1,5 @@
+#include <typeinfo>
+
 #include "dnsbase.h"
 #include "MultiIntegrator.h"
 #include "Conservative.h"
@@ -673,6 +675,9 @@ Real curve_kc(unsigned i) {return MDNSProblem->getkc(i);}
 void MDNS::InitialConditions()
 {
   //***** Vocabulary *****//
+  if(typeid(*Integrator) != typeid(MultiIntegrator))
+    msg(ERROR,"MDNS requires integrator=MultiIntegrator");
+     
   Ngrids=::Ngrids;
   glast=Ngrids-1;
   saveF=OMEGA;
@@ -1130,12 +1135,12 @@ int MDNS::Rescale()
       }
 
       // test code: access vorticity field at start of timestep
-      for(unsigned g=0; g < Ngrids; ++g) {
-	cout << Ysave[g] << endl; // FIXME: can't access Ysave.
-      }
+//      for(unsigned g=0; g < Ngrids; ++g) {
+//	cout << Ysave[g] << endl; // FIXME: can't access Ysave.
+//      }
 
       // test code: find the index for the mode on each grid
-      int xstart=-8;
+//      int xstart=-8;
       int xstop=8;
       cout << endl;
       //for(int I=0; I <= xstop; I += 2) { // FIXME: restore
