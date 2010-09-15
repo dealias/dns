@@ -131,7 +131,7 @@ class DNSBase {
 
   array1<unsigned>::opt count;
   vector T; // Transfer
-  Real getSpectrum(unsigned i) {
+  virtual Real getSpectrum(unsigned i) {
     double c=count[i];
     return c > 0 ? T[i].re*twopi/c : 0.0; 
   }

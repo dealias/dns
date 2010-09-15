@@ -220,6 +220,11 @@ public:
   unsigned getnshells(unsigned g) {
     if(!spectrum)
       return 0;
+    if(radix==1) {
+      if(g != glast)
+	return 0;
+      return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+    }
     if(g==glast)
       return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
     return gm(my,g)-1;
@@ -279,7 +284,6 @@ public:
     }
     if(radix == 1) {
       // we can just get everything from the most "decimated" grid
-      cout << G[Ngrids-1]->getSpectrum(i)<< endl;
       return G[Ngrids-1]->getSpectrum(i);
     }
     msg(ERROR,"Only radix-1 and radix-4 spectra is working right now."); 
@@ -554,8 +558,13 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 
 void MDNS::Spectrum(vector& SrcEK, const vector& w0)
 {
-  G[grid]->Spectrum(SrcEK,w0);
-  //if(grid != 0) G[grid-1]->SpectrumOverlap(S);
+  if(radix == 1) {
+    if(grid == Ngrids-1)
+      G[grid]->DNSBase::Spectrum(SrcEK,w0);
+  } else {
+    G[grid]->Spectrum(SrcEK,w0);
+    //if(grid != 0) G[grid-1]->SpectrumOverlap(S);
+  }
 }
 
 void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
@@ -563,17 +572,34 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
   w.Set(w0);
   for(unsigned K=0; K < nshells; K++)
     SrcEK[K]=Complex(0.0,0.0);
-  Real kbound=lastgrid ? hypot(mx,my)+1: my-0.5;
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(j >= Invisible || I2 >= Invisible2) {
-	const Real kint=sqrt(I2+j*j);
-	const Real k=k0*kint;
-	const Real w2=abs2(wi[j]);
-	if(kint <= kbound) {
+  if(radix != 1) {
+    Real kbound=lastgrid ? hypot(mx,my)+1: my-0.5;
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	if(j >= Invisible || I2 >= Invisible2) {
+	  const Real kint=sqrt(I2+j*j);
+	  const Real k=k0*kint;
+	  const Real w2=abs2(wi[j]);
+	  if(kint <= kbound) {
+	    SrcEK[(unsigned)(kint-0.5)].re += w2/k;
+	    //SrcEK[(unsigned)(k-0.5)].im += nuk(k2)*w2; // TODO
+	  }
+	}
+      }
+    }
+  } else {
+    if(lastgrid) {
+      for(unsigned i=0; i < Nx; i++) {
+	int I=(int) i-(int) xorigin;
+	int I2=I*I;
+	vector wi=w[i];
+	for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	  const Real kint=sqrt(I2+j*j);
+	  const Real k=k0*kint;
+	  const Real w2=abs2(wi[j]);
 	  SrcEK[(unsigned)(kint-0.5)].re += w2/k;
 	  //SrcEK[(unsigned)(k-0.5)].im += nuk(k2)*w2; // TODO
 	}
