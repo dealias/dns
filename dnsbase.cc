@@ -123,6 +123,11 @@ void DNSBase::Stochastic(const vector2&Y, double, double dt)
 void DNSBase::Initialize()
 {
   fevt << "# t\tE\tZ\tP" << endl;
+  setcount();
+}
+
+void DNSBase::setcount()
+{
   if(spectrum) {
     for(unsigned i=0; i < nshells; i++)
       count[i]=0;

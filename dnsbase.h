@@ -38,10 +38,8 @@ class DNSBase {
   Real k02; // k0^2
   array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
-  vector T; // Transfer
 
   int tcount;
-  array1<unsigned>::opt count;
 
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
@@ -87,6 +85,7 @@ class DNSBase {
 
   void InitialConditions();
   void Initialize();
+  virtual void setcount();
   //  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);
@@ -130,9 +129,11 @@ class DNSBase {
   void ComputeInvariants(array2<Complex> &w,Real& E, Real& Z, Real& P);
   void Stochastic(const vector2& Y, double, double);
 
+  array1<unsigned>::opt count;
+  vector T; // Transfer
   Real getSpectrum(unsigned i) {
     double c=count[i];
-    return c > 0 ? T[i].re*twopi/c : 0.0;
+    return c > 0 ? T[i].re*twopi/c : 0.0; 
   }
   Real Dissipation(unsigned i) {return T[i].im;}
   Real Pi(unsigned i) {return T[i].re;}
