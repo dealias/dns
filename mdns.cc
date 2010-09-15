@@ -1,5 +1,4 @@
 #include <typeinfo>
-
 #include "dnsbase.h"
 #include "MultiIntegrator.h"
 #include "Conservative.h"
@@ -165,10 +164,8 @@ public:
     void SetParams();
     unsigned myg;
 
-    vector Sp; // Spectrum
     array2<Real> tildeB;
 
-    array1<unsigned>::opt count;
     void setcount();
     //void setcountoverlap(array1<unsigned>::opt &);
     //unsigned extrashells;
@@ -273,14 +270,19 @@ public:
 	  unsigned index=i+offset-firstshell;
 	  double c=G[g]->count[index];
 	  if(c > 0.0)  {
-	    return G[g]->Sp[index].re*twopi/c;
+	    return G[g]->T[index].re*twopi/c;
 	  }
 	  return 0.0; // this should never happen?
 	}
       }
       return 0.0;
     }
-    msg(ERROR,"Only radix-4 spectrum is working right now."); 
+    if(radix == 1) {
+      // we can just get everything from the most "decimated" grid
+      cout << G[Ngrids-1]->getSpectrum(i)<< endl;
+      return G[Ngrids-1]->getSpectrum(i);
+    }
+    msg(ERROR,"Only radix-1 and radix-4 spectra is working right now."); 
     exit(1);
     return 0.0;
   };
@@ -371,7 +373,7 @@ void MDNS::Grid::AttachTo(MDNS *prob, const vector2 & Y)
   parent=prob;
   nfields=parent->getnfields(myg);
   w.Set(Y[nfields*myg+OMEGA]);
-  Set(Sp,Y[nfields*myg+EK]);
+  Set(T,Y[nfields*myg+EK]);
 }
 
 void MDNS::Grid::SetParams()
@@ -458,10 +460,10 @@ void MDNS::Grid::InitialConditions(unsigned g)
   nshells=0;
   if(spectrum) {
     nshells=parent->getnshells(myg);
-    Dimension(Sp,nshells);
+    Dimension(T,nshells);
     Allocate(count,nshells);
     for(unsigned i=0; i < nshells; ++i) {
-      Sp[i]=Complex(0.0,0.0);
+      T[i]=Complex(0.0,0.0);
       count[i]=0;
     }
   }
@@ -501,23 +503,27 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 void MDNS::Grid::setcount()
 {
   if(spectrum) {
-    Real kbound=lastgrid ? mx*my: my-0.5;
-    for(unsigned i=0; i < Nx; i++) {
-      const int I=(int) i-(int) xorigin;
-      const int I2=I*I;
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(j >= Invisible || I2 >= Invisible2) {
-	  const Real kint=sqrt(I2+j*j);
-// 	  cout << "("<<I<<","<<j<<") " << kint << " vs " << kbound
-// 	       << " -> " << (unsigned)(kint-0.5) << endl;
-	  if(kint <= kbound) {
-	    count[(unsigned)(kint-0.5)] += 1;
+    if(radix == 4) {
+      Real kbound=lastgrid ? mx*my: my-0.5;
+      for(unsigned i=0; i < Nx; i++) {
+	const int I=(int) i-(int) xorigin;
+	const int I2=I*I;
+	for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	  if(j >= Invisible || I2 >= Invisible2) {
+	    const Real kint=sqrt(I2+j*j);
+	    // 	  cout << "("<<I<<","<<j<<") " << kint << " vs " << kbound
+	    // 	       << " -> " << (unsigned)(kint-0.5) << endl;
+	    if(kint <= kbound) {
+	      count[(unsigned)(kint-0.5)] += 1;
+	    }
 	  }
 	}
       }
-    }
+    } 
+    if(lastgrid && radix == 1)
+      DNSBase::setcount();
+    if(verbose > 1)  cout << count << endl;
   }
-  if(verbose > 1)  cout << count << endl;
 }
 
 /*
@@ -674,10 +680,11 @@ Real curve_kc(unsigned i) {return MDNSProblem->getkc(i);}
 
 void MDNS::InitialConditions()
 {
-  //***** Vocabulary *****//
+  // make sure we're actually using MultiIntegrator
   if(typeid(*Integrator) != typeid(MultiIntegrator))
     msg(ERROR,"MDNS requires integrator=MultiIntegrator");
-     
+
+  //***** Vocabulary *****//
   Ngrids=::Ngrids;
   glast=Ngrids-1;
   saveF=OMEGA;
@@ -1135,12 +1142,11 @@ int MDNS::Rescale()
       }
 
       // test code: access vorticity field at start of timestep
-//      for(unsigned g=0; g < Ngrids; ++g) {
-//	cout << Ysave[g] << endl; // FIXME: can't access Ysave.
-//      }
+      for(unsigned g=0; g < Ngrids; ++g) {
+	//cout << Ysave[g] << endl; // FIXME: can't access Ysave.
+      }
 
       // test code: find the index for the mode on each grid
-//      int xstart=-8;
       int xstop=8;
       cout << endl;
       //for(int I=0; I <= xstop; I += 2) { // FIXME: restore
