@@ -1,5 +1,5 @@
 % Hermitian in conv captions?
-% Need to reference tconv2; clarify 4096^2 vs. (2mx-1)(2my-1) etc.
+% Need to reference tconv2; 
 
 \documentclass[final]{siamltex}
 \usepackage[lined,algonl,boxed]{algorithm2e}
@@ -227,7 +227,7 @@ $\zeta_N^r=\zeta_{N/r}$ and $\zeta_N^N=1$.
 
 On taking $N=2m$ with $U_k=0$ for $k \ge m$, one can easily avoid
 looping over the unphysical zero Fourier modes by decimating in wavenumber:
-for $\ell=0,1,\ldots, m-1$:
+for $\ell=0,1,\ldots m-1$:
 \belc
 u_{2\ell}
 =\ds\sum_{k=0}^{m-1}\zeta_{2m}^{2\ell k} U_k
@@ -1060,7 +1060,7 @@ u_{2\ell +r}=\sum_{k=-m}^{m-1} \z_{2m}^{\ell k} \z_{4m}^{rk} U_k.
 \eec
 If we set $U_m=0$, the real components $u_{2\ell +r}$ can thus be computed
 by taking a complex-to-real transform of
-$\{\z_{4m}^{rk} U_k : k=0,\ldots, m\}$.
+$\{\z_{4m}^{rk} U_k : k=0,\ldots m\}$.
 
 The forwards transform is
 \be
