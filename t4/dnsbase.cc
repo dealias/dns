@@ -180,7 +180,8 @@ void DNSBase::Spectrum(vector& S, const vector& y)
 void DNSBase::Stochastic(const vector2&Y, double, double dt)
 {
   w.Set(Y[OMEGA]);
-  Forcing->Force(w,sqrt(2.0*dt)*crand_gauss());
+  Set(T,Y[TRANSFER]);
+  Forcing->Force(w,T,sqrt(2.0*dt)*crand_gauss());
 }
 
 //***** DNSBase Output routines *****//
