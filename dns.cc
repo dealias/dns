@@ -113,7 +113,7 @@ class None : public ForcingBase {
 class ConstantBanded : public ForcingBase {
 public:
   const char *Name() {return "Constant Banded";}
-  void Force(array2<Complex> &w, vector& T) {
+  void Force(array2<Complex> &w, vector& T, const Complex& factor) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
     unsigned xorigin=DNSProblem->getxorigin();
@@ -142,7 +142,7 @@ public:
 class WhiteNoiseBanded : public ForcingBase {
 public:
   const char *Name() {return "White-Noise Banded";}
-  void Force(array2<Complex> &w, const Complex& factor) {
+  void Force(array2<Complex> &w, vector& T, const Complex& factor) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
     unsigned xorigin=DNSProblem->getxorigin();

@@ -161,8 +161,11 @@ public:
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real k2=k02*(I2+j*j);
-	if(k2 > kmin2 && k2 < kmax2)
+	if(k2 > kmin2 && k2 < kmax2) {
+          T[(unsigned)(sqrt(k2)-0.5)].im += 
+            realproduct(Factor,wi[j])+0.5*abs2(Factor);
 	  wi[j] += Factor;
+        }
       }
     }
   }
