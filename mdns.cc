@@ -38,7 +38,7 @@ unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
 enum PRTYPE {NOPR,AREA,POINT};
-int dorescale=false; // FIXME: this should be set to true once rescale works
+int dorescale=false; // TODO: this should be set to true once rescale works
 unsigned prtype=POINT;
 bool overlap=false; // account for overlapping corners of spectrum?
 // unused vocab variables to match dns
@@ -710,6 +710,12 @@ void MDNS::InitialConditions()
   if(typeid(*Integrator) != typeid(MultiIntegrator))
     msg(ERROR,"MDNS requires integrator=MultiIntegrator");
 
+  // make sure that the options are cool:
+  if(radix==2) msg(ERROR,"radix-2 not implimented");
+  if(radix==1 && prtype==AREA) 
+    msg(ERROR,"radix-1 only works with pytpe=NONE (0) or POINT (2)");
+  
+
   //***** Vocabulary *****//
   Ngrids=::Ngrids;
   glast=Ngrids-1;
@@ -794,9 +800,9 @@ void MDNS::InitialConditions()
   mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
 }
 
-void MDNS::Project(unsigned gb) 
+void MDNS::Project(unsigned gb)
 {
-  if(prtype==NOPR || dorescale==1) 
+  if(prtype==NOPR || dorescale==1)
     return;
   if(verbose > 2) cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
@@ -1395,7 +1401,7 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
     fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
 
     // find the nonlinear interaction for small-small-small
-    smallDNSBase->NonLinearSource(SrcwS,wS,t); 
+    smallDNSBase->NonLinearSource(SrcwS,wS,t);
  
     // subtract small-small-small source
     for(unsigned i=0; i < sNx; ++i) {
