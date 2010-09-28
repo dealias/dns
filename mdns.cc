@@ -172,7 +172,7 @@ public:
       Dimension(w0,w);
     };
     //unsigned nshellbelow;
-
+  
     void InitialConditions(unsigned g);
     //Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
   
@@ -181,6 +181,7 @@ public:
     void LinearSource(const vector & Src, const vector & Y, double t);
     void Transfer(const vector2 & Src, const vector2 & Y);
     void Spectrum(vector& S, const vector& w0);    
+    void Stochastic(const vector2&, double, double);
     //void SpectrumOverlap(vector& S);
 
     void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
@@ -234,7 +235,7 @@ public:
   void ExponentialSource(const vector2&, const vector2&, double);
   void Stochastic(const vector2&, double, double);
   void Spectrum(vector&, const vector&);
-  
+
   void Project(unsigned ga);
   void Prolong(unsigned gb);
   int Rescale();
@@ -320,10 +321,11 @@ class None : public ForcingBase {
 class WhiteNoiseBanded : public ForcingBase {
 public:
   const char *Name() {return "White-Noise Banded";}
-  void Force(array2<Complex> &w, const Complex& factor) {
+  void Force(array2<Complex> &w, vector& T, const Complex& factor) {
     unsigned g=MDNSProblem->grid;
     unsigned Nx=MDNSProblem->G[g]->getNx();
-
+    cout << "I have seen the promised land!" << endl;
+    // FIXME: finish!
     exit(1);
     /*
 
@@ -450,7 +452,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
   myg=g;
 
   // load vocabulary from global variables
-
   nuH=::nuH;
   nuL=::nuL;
 
@@ -462,6 +463,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
+
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
 
@@ -757,6 +759,8 @@ void MDNS::InitialConditions()
   MProblem=this;
   k0=::k0;
 
+  Forcing=MDNS_Vocabulary.NewForcing(forcing);
+  
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
@@ -1449,7 +1453,15 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
 
 void MDNS::Stochastic(const vector2& gY, double t, double dt) 
 {
-  G[grid]->Stochastic(gY,y,t,dt);
+  G[grid]->Stochastic(gY,t,dt);
+}
+
+void MDNS::Grid::Stochastic(const vector2& gY, double t, double dt) 
+{
+  w.Set(gY[OMEGA]);
+  Set(T,gY[TRANSFER]);
+  cout << forcing << endl;
+  Forcing->Force(w,T,sqrt(2.0*dt)*crand_gauss());
 }
 
 /*
