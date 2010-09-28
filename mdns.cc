@@ -63,27 +63,6 @@ MultiProblem *MProblem;
 unsigned Ngrids=2;
 const char *subintegrator="rk4";
 
-// ***** Vocabulary ***** //
-class MDNSVocabulary : public VocabularyBase {
-public:
-  const char *Name() {return "MDNS";}
-  const char *Abbrev() {return "MDNS";}
-  MDNSVocabulary();
-
-  Table<InitialConditionBase> *InitialConditionTable;
-  InitialConditionBase *NewInitialCondition(const char *& key) {
-    return InitialConditionTable->Locate(key);
-  }
-
-  Table<ForcingBase> *ForcingTable;
-  ForcingBase *NewForcing(const char *& key) {
-    return ForcingTable->Locate(key);
-  }
-};
-
-MDNSVocabulary MDNS_Vocabulary;
-
-
 //***** Base class for functionoids *****//
 class FunctRR {
  public:
@@ -324,14 +303,9 @@ public:
   void Force(array2<Complex> &w, vector& T, const Complex& factor) {
     unsigned g=MDNSProblem->grid;
     unsigned Nx=MDNSProblem->G[g]->getNx();
-    cout << "I have seen the promised land!" << endl;
-    // FIXME: finish!
-    exit(1);
-    /*
-
-    unsigned my=DNSProblem->getmy();
-    unsigned xorigin=DNSProblem->getxorigin();
-    Real k02=DNSProblem->getk02();
+    unsigned my=MDNSProblem->G[g]->getmy();
+    unsigned xorigin=MDNSProblem->G[g]->getxorigin();
+    Real k02=MDNSProblem->G[g]->getk02();
     Real kmin=max(kforce-0.5*deltaf,0.0);
     Real kmin2=kmin*kmin;
     Real kmax=kforce+0.5*deltaf;
@@ -346,17 +320,36 @@ public:
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real k2=k02*(I2+j*j);
 	if(k2 > kmin2 && k2 < kmax2) {
-          T[(unsigned)(sqrt(k2)-0.5)].im += 
-            realproduct(Factor,wi[j])+0.5*abs2(Factor);
+	  // TODO: enable transfer
+	  // T[(unsigned)(sqrt(k2)-0.5)].im += 
+	  //   realproduct(Factor,wi[j])+0.5*abs2(Factor);
 	  wi[j] += Factor;
         }
       }
     }
-    */
-    cout << "This don't work none yet, not no-how" << endl;
-    exit(1);
   }
 };
+
+
+// ***** Vocabulary ***** //
+class MDNSVocabulary : public VocabularyBase {
+public:
+  const char *Name() {return "MDNS";}
+  const char *Abbrev() {return "MDNS";}
+  MDNSVocabulary();
+
+  Table<InitialConditionBase> *InitialConditionTable;
+  InitialConditionBase *NewInitialCondition(const char *& key) {
+    return InitialConditionTable->Locate(key);
+  }
+
+  Table<ForcingBase> *ForcingTable;
+  ForcingBase *NewForcing(const char *& key) {
+    return ForcingTable->Locate(key);
+  }
+};
+
+MDNSVocabulary MDNS_Vocabulary;
 
 // ***** Grid functions *****//
 void MDNS::Grid::loopwF(const FunctRRPtr F,int n,...)
@@ -699,13 +692,13 @@ MDNSVocabulary::MDNSVocabulary()
 
   VOCAB_NOLIMIT(forcing,"Forcing type");
   ForcingTable=new Table<ForcingBase>("forcing");
-
+  FORCING(None);
+  FORCING(WhiteNoiseBanded);
+  
   VOCAB(eta,0.0,REAL_MAX,"vorticity injection rate");
   VOCAB(force,(Complex) 0.0, (Complex) 0.0,"constant external force");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
-  FORCING(None);
-  FORCING(WhiteNoiseBanded);
 
   METHOD(MDNS); 
 
@@ -758,9 +751,8 @@ void MDNS::InitialConditions()
   MultiProblem::InitialConditions(Ngrids);
   MProblem=this;
   k0=::k0;
-
   Forcing=MDNS_Vocabulary.NewForcing(forcing);
-  
+
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
@@ -1459,8 +1451,8 @@ void MDNS::Stochastic(const vector2& gY, double t, double dt)
 void MDNS::Grid::Stochastic(const vector2& gY, double t, double dt) 
 {
   w.Set(gY[OMEGA]);
+  w.Dimension(Nx,my);
   Set(T,gY[TRANSFER]);
-  cout << forcing << endl;
   Forcing->Force(w,T,sqrt(2.0*dt)*crand_gauss());
 }
 
