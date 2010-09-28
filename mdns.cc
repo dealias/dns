@@ -58,20 +58,6 @@ public:
   }
 };
 
-//***** Forcing *****//
-ForcingBase *Forcing;
-class None : public ForcingBase {
-};
-class WhiteNoiseBanded : public ForcingBase {
-public:
-  const char *Name() {return "White-Noise Banded";}
-  void Force(array2<Complex> &w, const Complex& factor) {
-    cout << "This don't work none yet, not no-how" << endl;
-    exit(1);
-  }
-};
-
-
 //***** Global variables for MultiIntegrator.h *****//
 MultiProblem *MProblem;
 unsigned Ngrids=2;
@@ -163,6 +149,8 @@ public:
     void AttachTo(MDNS *prob, const vector2 & Y);
     void SetParams();
     unsigned myg;
+
+    
 
     array2<Real> tildeB;
 
@@ -322,6 +310,51 @@ public:
 
 //***** Global problem *****//
 MDNS *MDNSProblem;
+
+//***** Forcing *****//
+ForcingBase *Forcing;
+
+class None : public ForcingBase {
+};
+
+class WhiteNoiseBanded : public ForcingBase {
+public:
+  const char *Name() {return "White-Noise Banded";}
+  void Force(array2<Complex> &w, const Complex& factor) {
+    unsigned g=MDNSProblem->grid;
+    unsigned Nx=MDNSProblem->G[g]->getNx();
+
+    exit(1);
+    /*
+
+    unsigned my=DNSProblem->getmy();
+    unsigned xorigin=DNSProblem->getxorigin();
+    Real k02=DNSProblem->getk02();
+    Real kmin=max(kforce-0.5*deltaf,0.0);
+    Real kmin2=kmin*kmin;
+    Real kmax=kforce+0.5*deltaf;
+    Real kmax2=kmax*kmax;
+    
+    // TODO: only loop over modes with k in (kmin,kmax)
+    Complex Factor=factor*sqrt(2.0*eta);
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	Real k2=k02*(I2+j*j);
+	if(k2 > kmin2 && k2 < kmax2) {
+          T[(unsigned)(sqrt(k2)-0.5)].im += 
+            realproduct(Factor,wi[j])+0.5*abs2(Factor);
+	  wi[j] += Factor;
+        }
+      }
+    }
+    */
+    cout << "This don't work none yet, not no-how" << endl;
+    exit(1);
+  }
+};
 
 // ***** Grid functions *****//
 void MDNS::Grid::loopwF(const FunctRRPtr F,int n,...)
@@ -1372,11 +1405,11 @@ void MDNS::Grid::LinearSource(const vector& source, const vector& w0, double t)
   }
 }
 
-void MDNS::NonLinearSource(const vector2& Src, const vector2& Y, double t) 
+void MDNS::NonLinearSource(const vector2& gSrc, const vector2& gY, double t) 
 {
   vector w0,source;
-  Set(w0,Y[OMEGA]);
-  Set(source,Src[OMEGA]);
+  Set(w0,gY[OMEGA]);
+  Set(source,gSrc[OMEGA]);
   G[grid]->NonLinearSource(source,w0,t);
 }
 
@@ -1414,9 +1447,9 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
   }
 }
 
-void MDNS::Stochastic(const vector2& Y, double t, double dt) 
+void MDNS::Stochastic(const vector2& gY, double t, double dt) 
 {
-  //G[grid]->Stochastic(T,y,t,dt);
+  G[grid]->Stochastic(gY,y,t,dt);
 }
 
 /*
