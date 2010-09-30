@@ -90,6 +90,9 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   }
 
   Forcing->Force(f0,T);
+  
+  if(casimir)
+    CasimirTransfer(Src,Y);
 }
 
 void DNSBase::Spectrum(vector& S, const vector& y) 

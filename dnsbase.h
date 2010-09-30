@@ -1,5 +1,5 @@
-#ifndef __dns_h__
-#define __dns_h__ 1
+#ifndef __dnsbase_h__
+#define __dnsbase_h__ 1
 
 #include "options.h"
 #include "kernel.h"
@@ -17,6 +17,8 @@ using namespace fftwpp;
 using std::ostringstream;
 
 extern unsigned spectrum;
+extern unsigned casimir;
+
 extern int pH;
 extern int pL;
  
@@ -28,8 +30,9 @@ class DNSBase {
   Real nuH, nuL;
   static const int xpad,ypad;
   
+  enum Field {OMEGA,TRANSFER,TRANSFERN,EK};
+
   // derived variables:
-  enum Field {OMEGA,TRANSFER,EK};
   unsigned mx, my; // size of data arrays
   unsigned origin; // linear index of Fourier origin.
   unsigned xorigin; // horizontal index of Fourier origin.
@@ -56,6 +59,12 @@ class DNSBase {
   oxstream fwk,fw,fekvk,ftransfer;
   ofstream ft,fevt;
   
+  void CasimirTransfer(const vector2& Src, const vector2& Y);
+  ImplicitHTConvolution2 *TConvolution;
+  oxstream ftransferN;
+  Array2<Complex> f,g,h;
+  vector Tn;
+
  public:
   DNSBase() {}
   DNSBase(unsigned Nx, unsigned my, Real k0): Nx(Nx), my(my), k0(k0) {

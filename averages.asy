@@ -65,6 +65,11 @@ real[][] transfer()
   return getintegrals("transfer",T,Tmax,2);
 }
 
+real[][] transferN() 
+{
+  return getintegrals("transferN",T,Tmax,2);
+}
+
 void Ekavg()
 {
   Ek=0.5*moment2()[NL];

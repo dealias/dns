@@ -130,9 +130,10 @@ public:
       int I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	Real k2=k02*(I2+j*j);
+	unsigned k2int=I2+j*j;
+	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
-          T[(unsigned)(sqrt(k2)-0.5)].im += realproduct(force,wi[j]);
+          T[(unsigned)(sqrt(k2int)-0.5)].im += realproduct(force,wi[j]);
 	  wi[j] += force;
         }
       }
@@ -160,9 +161,10 @@ public:
       int I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	Real k2=k02*(I2+j*j);
+	unsigned k2int=I2+j*j;
+	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
-          T[(unsigned)(sqrt(k2)-0.5)].im += 
+          T[(unsigned)(sqrt(k2int)-0.5)].im += 
             realproduct(Factor,wi[j])+0.5*abs2(Factor);
 	  wi[j] += Factor;
         }

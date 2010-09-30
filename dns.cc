@@ -32,6 +32,7 @@ unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
 Real k0=1.0;
+unsigned casimir=0;
 
 // other global variables:
 
@@ -51,7 +52,7 @@ public:
     start=Start(OMEGA);
     stop=Stop(OMEGA);
     startT=Start(TRANSFER);
-    stopT=Stop(TRANSFER);
+    stopT=Stop(TRANSFERN);
     startM=Start(EK);
     stopM=Stop(EK);
   }
@@ -200,6 +201,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
   VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
+  VOCAB(casimir,0,1,"Casimir flag (0=off, 1=on)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
   METHOD(DNS);
@@ -278,6 +280,7 @@ void DNS::InitialConditions()
 
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
+  NY[TRANSFERN]=casimir ? nshells : 0;
   NY[EK]=nshells;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
@@ -365,6 +368,24 @@ void DNS::InitialConditions()
 
   if(movie)
     open_output(fw,dirsep,"w");
+  
+  if(casimir) {
+    Dimension(Tn,nshells);
+    
+    mkdir(Vocabulary->FileName(dirsep,"transferN"),0xFFFF);
+  
+    unsigned int Nx1=Nx+1;
+    unsigned int my1=my+1;
+    f.Allocate(Nx1,my1,-1,0,align);
+    g.Allocate(Nx1,my1,-1,0,align);
+    h.Allocate(Nx1,my1,-1,0,align);
+    
+    TConvolution=new fftwpp::ImplicitHTConvolution2(mx,my);
+    
+    Set(Tn,Y[TRANSFERN]);
+    for(unsigned i=0; i < nshells; i++)
+      Tn[i]=0.0;
+  }
 }
 
 void DNS::Output(int it)
@@ -400,6 +421,18 @@ void DNS::Output(int it)
     out_curve(ftransfer,cwrap::Eta,"Eta",nshells);
     ftransfer.close();
     if(!ftransfer) msg(ERROR,"Cannot write to file transfer");
+    
+    if(casimir) {
+      Set(T,Y[TRANSFERN]);
+      buf.str("");
+      buf << "transferN" << dirsep << "t" << tcount;
+      open_output(ftransferN,dirsep,buf.str().c_str(),0);
+      out_curve(ftransferN,t,"t");
+      out_curve(ftransferN,cwrap::Pi,"Pi",nshells);
+      out_curve(ftransferN,cwrap::Eta,"Eta",nshells);
+      ftransferN.close();
+      if(!ftransferN) msg(ERROR,"Cannot write to file transfer");
+    }
   }
 
   tcount++;

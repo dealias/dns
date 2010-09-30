@@ -35,6 +35,7 @@ Real kforce=1.0;
 Real deltaf=1.0;
 unsigned rezero=0;
 unsigned spectrum=1;
+unsigned casimir=0;
 Real icalpha=1.0;
 Real icbeta=1.0;
 enum PRTYPE {NOPR,AREA,POINT};
