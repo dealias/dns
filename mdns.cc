@@ -680,6 +680,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   VOCAB_CONSTANT(movie,0,"Movie flag (off)");
+  VOCAB_CONSTANT(casimir,0,"Compute Casimir invariants (off)");
   VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
