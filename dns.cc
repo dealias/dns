@@ -315,6 +315,7 @@ void DNS::InitialConditions()
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
 
   Allocate(count,nshells);
+  setcount();
 
   if(movie) {
     buffer.Dimension(Nx0,my0,block);
@@ -346,7 +347,7 @@ void DNS::InitialConditions()
   }
 
   open_output(fprolog,dirsep,"prolog",0);
-  out_curve(fprolog,cwrap::kb,"kb",spectrum ? nshells+1 : 0);
+  out_curve(fprolog,cwrap::kb,"kb",nshells+1);
   out_curve(fprolog,cwrap::kc,"kc",nshells);
   fprolog.close();
 
