@@ -184,7 +184,7 @@ public:
   };
   array1<Grid *> G;
   
-  enum Field {OMEGA,TRANSFER,EK,Nfields};
+  enum Field {OMEGA,TRANSFER,TRANSFERN,EK,Nfields};
   unsigned getnfields(unsigned g) {return Nfields;};
   unsigned getnshells(unsigned g) {
     if(!spectrum)
