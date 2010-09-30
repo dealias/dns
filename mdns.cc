@@ -772,6 +772,7 @@ void MDNS::InitialConditions()
     nfields=getnfields(g);
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
     NY[nfields*g+TRANSFER]=0; // getnshells(g); // TODO
+    NY[nfields*g+TRANSFERN]=0;
     NY[nfields*g+EK]=getnshells(g);
   }
 
