@@ -9,15 +9,19 @@ int pH=getint("High-wavenumber viscosity degree (power of Laplacian)",1);
 
 
 real  kd=0.0, k1=0.0, k2=0.0, eta=1.0;
+
 kd=getreal("kd");
-k1=getreal("k1");
-k2=getreal("k2");
+real kf=getreal("forcing wavenumber (kf)");
+real deltaf=getreal("range of forcing (deltaf)",1);
+
 eta=getreal("eta");
 
 real gamma=2.0/3.0;
 real lambda=gamma;
 
-real kf=0.5*(k1+k2);
+k1=max(0,kf-0.5*deltaf);
+k2=max(0,kf+0.5*deltaf);
+
 real epsilon=eta/kf^2;
 real zeta=k2*k2*epsilon/(1.0+(C2/C1)^(1.0/gamma))/kf^2;
 
