@@ -135,7 +135,7 @@ public:
     array2<Real> tildeB;
 
     void setcount();
-    //void setcountoverlap(array1<unsigned>::opt &);
+    void setcountoverlap(array1<unsigned>::opt &);
     //unsigned extrashells;
 
     void settolast() {lastgrid=1;};
@@ -162,7 +162,7 @@ public:
     void Transfer(const vector2 & Src, const vector2 & Y);
     void Spectrum(vector& S, const vector& w0);    
     void Stochastic(const vector2&, double, double);
-    //void SpectrumOverlap(vector& S);
+    void SpectrumOverlap(vector& S);
 
     void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
     
@@ -564,7 +564,6 @@ void MDNS::Grid::setcount()
   }
 }
 
-/*
 void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 {
   if(spectrum && overlap) {
@@ -588,16 +587,16 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
     }
   }
 }
-*/
 
 void MDNS::Spectrum(vector& SrcEK, const vector& w0)
 {
   if(radix == 1) {
-    if(grid == Ngrids-1)
+    if(grid == glast) {
       G[grid]->DNSBase::Spectrum(SrcEK,w0);
+    }    
   } else {
     G[grid]->Spectrum(SrcEK,w0);
-    //if(grid != 0) G[grid-1]->SpectrumOverlap(S);
+    if(grid != 0) G[grid-1]->SpectrumOverlap(SrcEK);
   }
 }
 
@@ -642,7 +641,6 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
   }
 }
 
-/*
 void MDNS::Grid::SpectrumOverlap(vector& S)
 {
   if(spectrum && overlap) {
@@ -669,7 +667,6 @@ void MDNS::Grid::SpectrumOverlap(vector& S)
     }
   }
 }
-*/
 
 /****** Vocabulary *****/
 MDNSVocabulary::MDNSVocabulary()
@@ -792,7 +789,7 @@ void MDNS::InitialConditions()
   if(spectrum) {
     for(unsigned g=0; g < Ngrids; ++g) {
       G[g]->setcount();
-      //if(g!=glast) G[g]->setcountoverlap(G[g+1]->count);
+      if(g!=glast) G[g]->setcountoverlap(G[g+1]->count);
     }
     
     Real lambda;
