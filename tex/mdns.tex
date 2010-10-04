@@ -618,48 +618,80 @@ $\Omega_{\text{c}}$ the wavenumbers on the coarse grid. Then we can
 consider the system to be $\Omega_{\text{f}} \cup \Omega_{\text{c}}$.
 The linear source and external forces are simple to account for.
 The nonlinear interaction is more complicated.  There are a number
-of cases.
+of cases:
 \begin{enumerate}
-  \item 
-    $\Omega_{\text{f}} \times \Omega_{\text{f}}\rightarrow \Omega_{\text{f}}$\\
-    These interactions are included in the fine-grid nonlinear calculation.
-  \item 
-    $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$\\
-    These interactions are included in the coarse-grid nonlinear calculation.
-  \item 
-    $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{f}}$\\
-    Since the coarse grid contains only even modes, these modes only beat
-    to influence even modes on the fine grid.  These modes are also part
-    of the coarse grid.  Therefore, these interactions are part of
-    $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$.
-  \item
-    $\Omega_{\text{f}} \times \Omega_{\text{f}}\rightarrow \Omega_{\text{c}}$\\
-    This is a more complicated case. The even-even-to-even interaction
-    is included in the coarse-coarse interaction, and the even-odd-to-odd
-    interaction influences odd modes which are not part of the coarse grid.
-    But the odd$\times$odd$\rightarrow$even interaction still needs to
-    be taken into account, or we will decrease the coupling between the
-    two grids.
+  \item interactions taken care of already:
+    \begin{itemize}
+    \item
+      $\Omega_{\text{f}} \times \Omega_{\text{f}}\rightarrow \Omega_{\text{f}}$
+      is included directly.
+    \item
+      $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$
+      is also included directly.
+    \item
+      $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{f}}$:
+      since the coarse grid contains only even modes, these modes only beat
+      to influence even modes on the fine grid.  These modes are also part
+      of the coarse grid.  Therefore, these interactions are part of
+      $\Omega_{\text{c}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$.
+    \item $\(\Omega_{\text{f}}\intersect \Omega_{\text{c}}\) \times
+      \Omega_{\text{c}} \rightarrow\Omega_{\text{c}}$: since the even
+      modes from the fine grid are also part of the coarse grid,
+      $\Omega_{\text{f,even}} \subset\Omega_{\text{c}}$ implies that
+      $\{\Omega_{\text{f,even}}\times \Omega_{\text{c}}\rightarrow
+      \Omega_{\text{c}}\} \subset \{\Omega_{\text{c}} \times
+      \Omega_{\text{c}} \rightarrow \Omega_{\text{c}}\}$.
+    \end{itemize}
+
+  \item interactions that aren't part of 
+    $\(\Omega_f\cup\Omega_c\) \times \(\Omega_f\cup\Omega_c\)$:
+    \begin{itemize}
+    \item $\(\Omega_{\text{f}}\backslash\Omega_{\text{c}}\)\times
+      \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$ can be
+      eliminated because odd modes from the fine grid beating modes on
+      the coarse grid will influence modes with odd index, which is
+      not part of the coarse grid.
+    \end{itemize}
+
+  \item and interactions that we need to recover:
+    \begin{itemize}
+    \item
+      $\Omega_{\text{f}} \times \Omega_{\text{f}}\rightarrow \Omega_{\text{c}}$:
+      the interactions that we are particularly concerned about are 
+      $$
+      \Omega_{\text{f}}\backslash\Omega_{\text{c}} 
+      \times \Omega_{\text{f}}\backslash\Omega_{\text{c}}
+      \rightarrow \Omega_{\text{c}}\backslash\Omega_{\text{f}}.
+      $$
+      These interactions have small-wavenumber odd modes beating to 
+      influence high-wavenumber even modes.  In a perverse twist of 
+      mathematics, this can easily be taken into account: these are exactly
+      the even-indexed aliases of the fine$\times$fine interaction.  They 
+      are calculated almost free-of-charge by performing a padded fast 
+      convolution and keeping track of the aliased interactions.
+      
+    \item 
+      $\(\Omega_{\text{f}}\backslash\Omega_{\text{c}}\)
+      \times \(\Omega_{\text{c}}\backslash\Omega_{\text{f}}\)
+      \rightarrow \Omega_{\text{f}}\backslash\Omega_{\text{c}}$ 
+      is non empty:
+      high-wavenumber even modes can beat with low-wavenumber odd modes
+      to influence low-wavenumber odd modes, which are part of the 
+      fine grid but not part of the coarse grid.
+
+      Since the dimensions of the grids are odd, there is no bijection
+      between these interactions and those in 
+      $\Omega_{\text{c}}\cap \Omega_{\text{f}} \times 
+      \Omega_{\text{c}}\cap \Omega_{\text{f}}$, which would result in the 
+      interactions on the axes being double-counted. We might be able to
+      simply not high-pass filter the coarse nonlinear interaction, and 
+      elminate the double-counting by removing the interaction on the 
+      axes, which would just take two one-dimensional convolutions. 
+      (FIXME: check this.) This would be a simple enough calculation
+      as to be feasible without using a fast-convolution algorithm, which
+      might be unavailable for this geometry. (FIXME: check this)
+    \end{itemize}
     
-    Since the dimensions of the grids are odd, there is no bijection
-    between these interactions and those in 
-    $\Omega_{\text{c}}\cap \Omega_{\text{f}} \times 
-    \Omega_{\text{c}}\cap \Omega_{\text{f}}$, which would result in the 
-    interactions on the axes being double-counted. We might be able to
-    simply not high-pass filter the coarse nonlinear interaction, and 
-    elminate the double-counting by removing the interaction on the 
-    axes, which would just take two one-dimensional convolutions. 
-    (FIXME: check this.) This would be a simple enough calculation
-    as to be feasible without using a fast-convolution algorithm, which
-    might be unavailable for this geometry. (FIXME: check this)
-    
-  \item
-    $\Omega_{\text{f}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{c}}$\\
-    This odd terms are not part of the system, and the even terms are
-    part of the coarse-coarse interaction.
-  \item
-    $\Omega_{\text{f}} \times \Omega_{\text{c}}\rightarrow \Omega_{\text{f}}$\\
-    What about this?
 \end{enumerate}
 
 Transform-centric synchronization offers some interesting possibilities.
