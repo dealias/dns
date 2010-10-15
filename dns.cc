@@ -154,8 +154,21 @@ public:
     Real kmax=kforce+0.5*deltaf;
     Real kmax2=kmax*kmax;
 
+    unsigned count=0;
+    // TODO: Move out of loop
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+       unsigned k2int=I2+j*j;
+       Real k2=k02*k2int;
+       if(k2 > kmin2 && k2 < kmax2)
+          ++count;
+      }
+    }
+
     // TODO: only loop over modes with k in (kmin,kmax)
-    Complex Factor=factor*sqrt(2.0*eta);
+    Complex Factor=drand()*factor*sqrt(2.0*eta)/count;
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
@@ -164,8 +177,9 @@ public:
 	unsigned k2int=I2+j*j;
 	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
-          T[(unsigned)(sqrt(k2int)-0.5)].im += 
-            realproduct(Factor,wi[j])+0.5*abs2(Factor);
+	  //T[(unsigned)(sqrt(k2int)-0.5)].im += 
+	  //realproduct(Factor,wi[j])+0.5*abs2(Factor);
+	  T[(unsigned)(sqrt(k2int)-0.5)].im += 2*abs2(Factor); //FIXME: justify
 	  wi[j] += Factor;
         }
       }
