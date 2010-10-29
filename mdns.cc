@@ -547,10 +547,8 @@ void MDNS::Grid::setcount()
 	const int I=(int) i-(int) xorigin;
 	const int I2=I*I;
 	for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	  if(j >= Invisible || I2 >= Invisible2) {
-	    const Real kint=sqrt(I2+j*j);
-	    // 	  cout << "("<<I<<","<<j<<") " << kint << " vs " << kbound
-	    // 	       << " -> " << (unsigned)(kint-0.5) << endl;
+	  const Real kint=sqrt(I2+j*j);
+	  if(kint >= Invisible) {
 	    if(kint <= kbound) {
 	      count[(unsigned)(kint-0.5)] += 1;
 	    }
@@ -612,8 +610,8 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
       int I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(j >= Invisible || I2 >= Invisible2) {
-	  const Real kint=sqrt(I2+j*j);
+	const Real kint=sqrt(I2+j*j);
+	if(kint >= Invisible) {
 	  const Real k=k0*kint;
 	  const Real w2=abs2(wi[j]);
 	  if(kint <= kbound) {
