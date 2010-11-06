@@ -61,8 +61,11 @@ public:
     NonConservativeSource(Src,Y,t);
   }
   
+  void Stochastic(const vector2&Y, double t, double dt) {
+    DNSBase::Stochastic(Y,t,dt);
+  }
+  
   void Initialize();
-
 };
 
 DNS *DNSProblem;
@@ -114,7 +117,7 @@ class None : public ForcingBase {
 class ConstantBanded : public ForcingBase {
 public:
   const char *Name() {return "Constant Banded";}
-  void Force(array2<Complex> &w, vector& T, const Complex& factor) {
+  void Force(array2<Complex> &w, vector& T, double dt) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
     unsigned xorigin=DNSProblem->getxorigin();
@@ -144,7 +147,7 @@ public:
 class WhiteNoiseBanded : public ForcingBase {
 public:
   const char *Name() {return "White-Noise Banded";}
-  void Force(array2<Complex> &w, vector& T, const Complex& factor) {
+  void Force(array2<Complex> &w, vector& T, double dt) {
     unsigned Nx=DNSProblem->getNx();
     unsigned my=DNSProblem->getmy();
     unsigned xorigin=DNSProblem->getxorigin();
@@ -166,9 +169,14 @@ public:
           ++count;
       }
     }
-
+    count *= 2.0; // Account for Hermitian conjugate modes.
+    
     // TODO: only loop over modes with k in (kmin,kmax)
-    Complex Factor=drand()*factor*sqrt(2.0*eta)/count;
+    Complex xi=crand_gauss();
+    Complex Fk=sqrt(2.0*eta)/count;
+    Complex fk=Fk*xi;
+    double sqrtdt=sqrt(dt);
+    Complex diff=sqrtdt*fk;
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
@@ -177,10 +185,9 @@ public:
 	unsigned k2int=I2+j*j;
 	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
-	  //T[(unsigned)(sqrt(k2int)-0.5)].im += 
-	  //realproduct(Factor,wi[j])+0.5*abs2(Factor);
-	  T[(unsigned)(sqrt(k2int)-0.5)].im += 2*abs2(Factor); //FIXME: justify
-	  wi[j] += Factor;
+	  T[(unsigned)(sqrt(k2int)-0.5)].im += 
+          realproduct(diff,wi[j])+0.5*abs2(diff);
+	  wi[j] += diff;
         }
       }
     }

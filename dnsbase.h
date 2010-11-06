@@ -142,7 +142,7 @@ class DNSBase {
   vector T; // Transfer
   virtual Real getSpectrum(unsigned i) {
     double c=count[i];
-    return c > 0 ? T[i].re*twopi/c : 0.0; 
+    return c > 0 ? T[i].re*twopi/c : 0.0;
   }
   Real Dissipation(unsigned i) {return T[i].im;}
   Real Pi(unsigned i) {return T[i].re;}

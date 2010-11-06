@@ -3,6 +3,10 @@ include gettime;
 include param;
 include prolog;
 
+// Spectral components
+int EK=0;
+int NU=1;
+
 // Transfer components
 int NL=0;
 int LIN=1;
@@ -72,7 +76,7 @@ real[][] transferN()
 
 void Ekavg()
 {
-  Ek=0.5*moment2()[NL];
+  Ek=0.5*moment2()[EK];
   k=Ek > 0 ? kc : null;
   Ek=Ek > 0 ? Ek : null;
 }

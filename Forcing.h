@@ -12,8 +12,7 @@ class ForcingBase {
   virtual const char *Name() {return "None";}
   virtual int Type() {return 0;}
   
-  virtual void Force(Array::array2<Complex> &w, vector& T,
-                     const Complex& factor=1.0) {}
+  virtual void Force(Array::array2<Complex> &w, vector& T, double dt=0.0) {}
 };
 
 extern ForcingBase *Forcing;

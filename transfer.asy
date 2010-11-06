@@ -6,31 +6,31 @@ scale(Log,Linear);
 pen p=linewidth(1);
 
 string Pitext="$\Pi$";
-string epstext="$\eta$";
+string etatext="$\eta$";
 
-real[] Pi,Epsilon;
+real[] Pi,Eta;
 real[][] M2,Tk;
 
 while(nextrun()) {
   gettime(n == 0);
   M2=moment2();
   Tk=transfer();
-  Pi=-partialsum(Tk[NL]);
+  Pi=-2.0*partialsum(Tk[NL]);
   Pi.insert(0,0);
-  Epsilon=reverse(partialsum(reverse(M2[LIN]-Tk[LIN])));
-  Epsilon.push(0);
+  Eta=2.0*reverse(partialsum(reverse(M2[NU]-Tk[LIN])));
+  Eta.push(0);
   kb[0]=k0;
   
   string runtext=" ("+run+")";
   draw(graph(kb,Pi),p+Pen(2*n+1),Pitext+runtext);
-  if(!all(Epsilon == 0)) 
-    draw(graph(kb,Epsilon),p+Pen(2*n)+dashed,epstext+runtext);
+  if(!all(Eta == 0)) 
+    draw(graph(kb,Eta),p+Pen(2*n)+dashed,etatext+runtext);
 };
 
 if(n == 1) {
   currentpicture.legend[0].label=Pitext;
   if(currentpicture.legend.length > 1)
-    currentpicture.legend[1].label=epstext;
+    currentpicture.legend[1].label=etatext;
 }
 
 xaxis("$k$",BottomTop,LeftTicks);

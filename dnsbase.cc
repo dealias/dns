@@ -76,7 +76,6 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   f0.Set(Src[OMEGA]);
 
   w.Set(Y[OMEGA]);
-  Var factor=sqrt(2.0*dt)*crand_gauss();
 
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
@@ -119,7 +118,7 @@ void DNSBase::Stochastic(const vector2&Y, double, double dt)
 {
   w.Set(Y[OMEGA]);
   Set(T,Y[TRANSFER]);
-  Forcing->Force(w,T,sqrt(2.0*dt)*crand_gauss());
+  Forcing->Force(w,T,dt);
 }
 
 //***** DNSBase Output routines *****//
