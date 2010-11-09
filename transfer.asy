@@ -15,9 +15,13 @@ while(nextrun()) {
   gettime(n == 0);
   M2=moment2();
   Tk=transfer();
-  Pi=-2.0*partialsum(Tk[NL]);
+
+  write("  Enstrophy injection rate=",2*sum(Tk[LIN]));
+  write("Enstrophy dissipation rate=",2*sum(M2[NU]));
+
+  Pi=-2*partialsum(Tk[NL]);
   Pi.insert(0,0);
-  Eta=2.0*reverse(partialsum(reverse(M2[NU]-Tk[LIN])));
+  Eta=2*reverse(partialsum(reverse(M2[NU]-Tk[LIN])));
   Eta.push(0);
   kb[0]=k0;
   

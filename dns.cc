@@ -173,7 +173,7 @@ public:
     
     // TODO: only loop over modes with k in (kmin,kmax)
     Complex xi=crand_gauss();
-    Complex Fk=sqrt(2.0*eta)/count;
+    Complex Fk=sqrt(2.0*eta/count);
     Complex fk=Fk*xi;
     double sqrtdt=sqrt(dt);
     Complex diff=sqrtdt*fk;
@@ -186,7 +186,7 @@ public:
 	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
 	  T[(unsigned)(sqrt(k2int)-0.5)].im += 
-          realproduct(diff,wi[j])+0.5*abs2(diff);
+            realproduct(diff,wi[j])+0.5*abs2(diff);
 	  wi[j] += diff;
         }
       }
