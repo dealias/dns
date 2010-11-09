@@ -9,8 +9,8 @@ vpath %.cc $(HOME)/fftw++
 INCL = -I. -I$(TRI) -I$(HOME)/nw -I$(HOME)/fftw++
 
 EXTRA = dnsbase fftw++ convolution casimir $(CORE) $(UTILS)
-FILES = mdns $(EXTRA)
-OTHER = dns 
+FILES = dns $(EXTRA)
+OTHER = mdns 
 
 LIB += -lfftw3
 

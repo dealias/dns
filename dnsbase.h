@@ -112,7 +112,7 @@ public:
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
     if(spectrum) Spectrum(Src[EK],Y[OMEGA]);
-    HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
+//    HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
   }
 
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
