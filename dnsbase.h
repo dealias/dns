@@ -23,7 +23,7 @@ extern int pH;
 extern int pL;
  
 class DNSBase {
- protected:
+protected:
   // Vocabulary:
   unsigned Nx;
   unsigned Ny;
@@ -65,7 +65,7 @@ class DNSBase {
   Array2<Complex> f,g,h;
   vector Tn;
 
- public:
+public:
   DNSBase() {}
   DNSBase(unsigned Nx, unsigned my, Real k0): Nx(Nx), my(my), k0(k0) {
     block=ComplexAlign(3*Nx*my);

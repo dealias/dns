@@ -163,9 +163,9 @@ public:
       int I=(int) i-(int) xorigin;
       int I2=I*I;
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-       unsigned k2int=I2+j*j;
-       Real k2=k02*k2int;
-       if(k2 > kmin2 && k2 < kmax2)
+        unsigned k2int=I2+j*j;
+        Real k2=k02*k2int;
+        if(k2 > kmin2 && k2 < kmax2)
           ++count;
       }
     }
