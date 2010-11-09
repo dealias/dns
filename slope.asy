@@ -14,7 +14,7 @@ while(nextrun()) {
   index=sequence(Ek.length-1);
   slope=log(Ek[index+1]/Ek[index])/log(k[index+1]/k[index]);
   kb0=kb[sequence(1,kb.length-2)];
-  real krmax=kb[kb.length-1]/sqrt(2);
+  real krmax=kb0[kb0.length-1]/sqrt(2);
   draw(graph(kb0,slope,kb0 <= krmax),p+Pen(n),run);
 }
 
