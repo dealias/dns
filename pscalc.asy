@@ -39,5 +39,5 @@ real nuL=(epsilon-zeta/(k2*k2))^(1.0-gamma)*(1.0+(C1/C2)^(1.0/gamma))/
 //real force=sqrt(epsilon/(pi*(k2*k2-k1*k1)));
 //write("force="+(string)force);
 
-write("nuH="+(string)nuH);
+write("nuH="+(string)nuH + "    (4nuH="+(string)4nuH+")");
 write("nuL="+(string)nuL);
