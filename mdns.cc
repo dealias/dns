@@ -1456,7 +1456,7 @@ void MDNS::Grid::Stochastic(const vector2& gY, double t, double dt)
   w.Set(gY[OMEGA]);
   w.Dimension(Nx,my);
   Set(T,gY[TRANSFER]);
-  Forcing->Force(w,T,sqrt(2.0*dt)*crand_gauss());
+  Forcing->Force(w,T,dt);
 }
 
 /*
