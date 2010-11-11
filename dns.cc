@@ -157,8 +157,8 @@ public:
     Real kmax=kforce+0.5*deltaf;
     Real kmax2=kmax*kmax;
 
-    unsigned count=0;
     // TODO: Move out of loop
+    unsigned count=0;
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
@@ -169,19 +169,21 @@ public:
           ++count;
       }
     }
-    count *= 2.0; // Account for Hermitian conjugate modes.
+    count *= 2; // Account for Hermitian conjugate modes.
     
-    // TODO: only loop over modes with k in (kmin,kmax)
     Complex xi=crand_gauss();
     Complex Fk=sqrt(2.0*eta/count);
     Complex fk=Fk*xi;
     double sqrtdt=sqrt(dt);
     Complex diff=sqrtdt*fk;
-    for(unsigned i=0; i < Nx; i++) {
+    // don't loop over modes outside of the forcing region
+    unsigned jmax=1+min(my,(unsigned) ceil(kmax/k0));
+    unsigned imin=xorigin-jmax, imax=xorigin+jmax;
+    for(unsigned i=imin; i <= imax; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
       vector wi=w[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      for(unsigned j=i <= xorigin ? 1 : 0; j < jmax; ++j) {
 	unsigned k2int=I2+j*j;
 	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
