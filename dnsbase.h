@@ -43,6 +43,7 @@ protected:
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
 
   int tcount;
+  Real etanorm;
 
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
@@ -91,6 +92,7 @@ public:
   Real getk0() {return k0;}
   Real getk02() {return k02;}
   unsigned getxorigin() {return xorigin;}
+  Real getetanorm() {return etanorm;}
 
   void InitialConditions();
   void Initialize();

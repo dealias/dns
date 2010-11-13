@@ -156,23 +156,10 @@ public:
     Real kmin2=kmin*kmin;
     Real kmax=kforce+0.5*deltaf;
     Real kmax2=kmax*kmax;
+    Real etanorm=DNSProblem->getetanorm();
 
-    // TODO: Move out of loop
-    unsigned count=0;
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-        unsigned k2int=I2+j*j;
-        Real k2=k02*k2int;
-        if(k2 > kmin2 && k2 < kmax2)
-          ++count;
-      }
-    }
-    count *= 2; // Account for Hermitian conjugate modes.
-    
     Complex xi=crand_gauss();
-    Complex Fk=sqrt(2.0*eta/count);
+    Complex Fk=sqrt(2.0*eta*etanorm);
     Complex fk=Fk*xi;
     double sqrtdt=sqrt(dt);
     Complex diff=sqrtdt*fk;
@@ -387,6 +374,27 @@ void DNS::InitialConditions()
   mkdir(Vocabulary->FileName(dirsep,"transfer"),0xFFFF);
 
   errno=0;
+
+  // set fcount, the number of forced modes.
+  {
+    unsigned fcount=0;
+    Real kmin=max(kforce-0.5*deltaf,0.0);
+    Real kmin2=kmin*kmin;
+    Real kmax=kforce+0.5*deltaf;
+    Real kmax2=kmax*kmax;
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	unsigned k2int=I2+j*j;
+	Real k2=k02*k2int;
+	if(k2 > kmin2 && k2 < kmax2)
+	  ++fcount;
+      }
+    }
+    fcount *= 2; // Account for Hermitian conjugate modes.
+    etanorm=1.0/((Real) fcount);
+  }
 
   if(output)
     open_output(fwk,dirsep,"wk");
