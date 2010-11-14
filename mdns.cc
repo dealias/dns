@@ -47,18 +47,6 @@ unsigned movie=0;
 
 // global variables
 
-//***** Initial Conditions *****//
-InitialConditionBase *InitialCondition;
-class Constant : public InitialConditionBase {
-public:
-  const char *Name() {return "Constant";}
-  void Set(Complex *w, unsigned n) {
-    for(unsigned i=0; i < n; i++) {
-      w[i]=Complex(icalpha,icbeta);
-    }
-  }
-};
-
 //***** Global variables for MultiIntegrator.h *****//
 MultiProblem *MProblem;
 unsigned Ngrids=2;
@@ -291,6 +279,49 @@ public:
 
 //***** Global problem *****//
 MDNS *MDNSProblem;
+
+
+//***** Initial Conditions *****//
+InitialConditionBase *InitialCondition;
+
+class Constant : public InitialConditionBase {
+public:
+  const char *Name() {return "Constant";}
+  void Set(Complex *w, unsigned n) {
+    for(unsigned i=0; i < n; i++) {
+      w[i]=Complex(icalpha,icbeta);
+    }
+  }
+};
+
+class Equipartition : public InitialConditionBase {
+public:
+  const char *Name() {return "Equipartition";}
+  void Set(Complex *w0, unsigned n) {
+    unsigned g=MDNSProblem->grid;
+    
+
+    unsigned Nx=MDNSProblem->G[g]->getNx();
+    unsigned my=MDNSProblem->G[g]->getmy();
+    unsigned xorigin=MDNSProblem->G[g]->getxorigin();
+    Real k0=MDNSProblem->G[g]->getk0();
+
+    array2<Complex> w(Nx,my,w0);
+    w(xorigin,0)=0;
+    Real k02=k0*k0;
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	Real k2=k02*(I2+j*j);
+        Real v=icalpha+icbeta*k2;
+        v=v ? sqrt(0.5*k2/v) : 0.0;
+	wi[j]=Complex(v,v);
+      }
+    }
+  }
+};
 
 //***** Forcing *****//
 ForcingBase *Forcing;
@@ -684,7 +715,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(icbeta,0.0,0.0,"initial condition parameter");
   INITIALCONDITION(Zero);
   INITIALCONDITION(Constant);
-  //  INITIALCONDITION(Equipartition); 
+  INITIALCONDITION(Equipartition); 
 
   VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
@@ -776,6 +807,7 @@ void MDNS::InitialConditions()
   G.Allocate(Ngrids);
 
   for(unsigned g=0; g < Ngrids; ++g) {
+    grid=g;
     G[g]=new Grid(g,this,g==glast);
     G[g]->AttachTo(this,Y);
     G[g]->InitialConditions(g);
