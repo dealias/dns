@@ -897,114 +897,12 @@ void MDNS::Project(unsigned gb)
     return;
   }
 
-  //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
-
   if(radix == 4) {
-
     if(prtype==AREA) {
-      const unsigned xstart=bInvisible;
-      const unsigned xstop=bxorigin+bInvisible;
-      
-      unsigned I=1;
-      for(unsigned i=xstart; i < xstop; ++i) {
-	//int I= 2*((int)i - (int)bxorigin)+axorigin;
-	
-	//cout << "i="<<i<<" I="<<I<<endl;
-	
-	vector wai, waim, waip;
-	Set(wai,wa[I]);
-	Set(waim,wa[I-1]);
-	Set(waip,wa[I+1]);
-	Dimension(wai,aNx);
-	Dimension(waim,aNx);
-	Dimension(waip,aNx);
-	
-	vector wbi;
-	Set(wbi,wb[i]);
-	Dimension(wbi,wb[i]);
-	
-	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-	  //cout << "j="<<j<<endl;
-	  Real B2=abs2(wbi[j]);
-	  
-	  const int aJ=2*j;
-	  const int aJp=aJ+1;
-	  const int aJm=aJ==0? aJp : aJ-1;
-	  
-	  // co-incident point 
-	  //wai[aJ]=Complex(I,aJ); // 00
-	  Real A2=abs2(wai[aJ]);
-	  
-	  // same row
-	  //waim[aJ]=Complex(I-1,aJ); // -0
-	  //waip[aJ]=Complex(I+1,aJ); // +0
-	  A2 += 0.5*(abs2(waim[aJ]) + abs2(waip[aJ]));
-	  
-	  // same column
-	  if(aJ) {  // 0-
-	    //wai[aJm]=Complex(I,aJm);
-	    A2 += 0.5*abs2(wai[aJm]);
-	  } else {
-	    //wa[2*axorigin-I][aJp]=Complex(-I,aJm);
-	    A2 += 0.5*abs2(wa[2*axorigin-I][aJp]);
-	  }
-	  //wai[aJp]=Complex(I,aJp); // 0+
-	  A2 += 0.5*abs2(wai[aJp]);
-	  
-	  // quad-projects:
-	  //waim[aJp]=Complex(I-1,aJp); // -+
-	  //waip[aJp]=Complex(I+1,aJp); // ++
-	  A2 += 0.25*(abs2(waim[aJp]) + abs2(waip[aJp]));
-	  if(aJ) { // -- and +-
-	    //waim[aJm]=Complex(I-1,aJm);
-	    //waip[aJm]=Complex(I+1,aJm);
-	    A2 += 0.25*(abs2(waim[aJm]) + abs2(waip[aJm]));
-	  } else {
-	    //wa[2*axorigin-I+1][aJm]=Complex(-I+1,aJm);
-	    //wa[2*axorigin-I-1][aJm]=Complex(-I-1,aJm);
-	    A2 += 0.25*(abs2(wa[2*axorigin-I+1][aJm]) +
-			abs2(wa[2*axorigin-I-1][aJm]));
-	  }
-	  
-	  A2 *= 0.25; // radix-4 correction
-	  if(B2) {
-	    wbi[j] *= sqrt(A2/B2);
-	    //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
-	  } else {
-	    cerr << "energy for mode (" << i << ","<<j << ") on grid "<< gb
-		 << " is zero in project."<<endl;
-	    exit(1); // FIXME: work out something better for this case.
-	  }
-	}
-	I += 2;
-      }
-      
-      
-      { // copy to tildeB
-	// TODO: make this a function?
-	G[gb]->tildeB.Load(0.0); // necessary?
-	const unsigned istop=2*bInvisible+1;
-	const unsigned jstop=bInvisible+1;
-	unsigned wi=(int) bxorigin-bInvisible;
-	for(unsigned i=0; i < istop; ++i) {
-	  array1<Real> tildeBi;
-	  tildeBi.Set(G[gb]->tildeB[i]);
-	  tildeBi.Dimension(jstop);
-	  vector wbi;
-	  Set(wbi,wb[wi]);
-	  Dimension(wbi,wb[wi]);
-	  ++wi;
-	  for(unsigned j=0; j < jstop; ++j)
-	    tildeBi[j]=abs2(wbi[j]);
-	  // TODO: some of these are redundant from Hermitian symmerty.
-	}
-      }
-      if(verbose > 2) {
-	cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
-	cout <<"\n~B:\n" << G[gb]->tildeB << endl;
-      }
+      cout << "area-type projection no longer implemented" << endl;
+      exit(1);
     }
-    
+
     if(prtype==POINT) {
       unsigned xstart=bInvisible;
       unsigned xstop=bxorigin+bInvisible;
@@ -1024,8 +922,7 @@ void MDNS::Project(unsigned gb)
   }
 
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
-  //exit(1);
-  //  HermitianSymmetrizeX(bNx,bmy,bxorigin,wb);  // FIXME: messed up?
+  //  exit(1);
 }
   
 void MDNS::Prolong(unsigned ga)
@@ -1066,122 +963,8 @@ void MDNS::Prolong(unsigned ga)
 
   if(radix == 4) {
     if(prtype==AREA) {
-      const unsigned xstart=bInvisible;
-      const unsigned xstop=bxorigin+bInvisible;
-
-      //cout << "xstart=" << xstart << "\nxstop=" << xstop << endl;
-      for(unsigned i=xstart; i < xstop; ++ i) {
-	const int I= 2*((int)i - (int)bxorigin)+axorigin;
-	const unsigned tildei=i+1-xstart;
-
-	// cout << "i="<<i << " I="<<I << " tildei=" << tildei << endl;
-
-	vector wai;
-	Set(wai,wa[I]);
-	Dimension(wai,wa[I]);
-	vector waip;
-	Set(waip,wa[I+1]);
-	Dimension(waip,wa[I+1]);
-	vector waim;
-	Set(waim,wa[I-1]);
-	Dimension(waim,wa[I-1]);
-      
-	array1<Real> tildeBim;
-	tildeBim.Set(G[gb]->tildeB[tildei-1]);
-	tildeBim.Dimension(G[gb]->tildeB[tildei-1]);
-	array1<Real> tildeBi;
-	tildeBi.Set(G[gb]->tildeB[tildei]);
-	tildeBi.Dimension(G[gb]->tildeB[tildei]);
-	array1<Real> tildeBip;
-	tildeBip.Set(G[gb]->tildeB[tildei+1]);
-	tildeBip.Dimension(G[gb]->tildeB[tildei+1]);
-
-	vector wbi;
-	Set(wbi,wb[i]);
-	Dimension(wbi,wb[i]);
-	vector wbim;
-	Set(wbim,wb[i-1]);
-	Dimension(wbim,wb[i-1]);
-	vector wbip;
-	Set(wbip,wb[i+1]);
-	Dimension(wbip,wb[i+1]);
-      
-	// possible optimization: only some of these need to be recalculate.
-	// most can be copied from one stage to the next, put into
-	// different positions.
-	// FIXME: figure out what to deal with division-by-zero case.
-	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-	  //cout << "j=" << j << endl;
-	  const unsigned aJ=j+j;
-	  const unsigned aJp=aJ+1;
-	  const bool jmOK=aJ > 0;
-	  const unsigned aJm=jmOK ? aJ-1 : aJp;
-
-	  const Real Bij=abs2(wbi[j]);
-	  const Real tildeBij=tildeBi[j];
-	
-	  const Real Bimj=abs2(wbim[j]);
-	  const Real tildeBimj=tildeBim[j];
-
-	  const Real Bipj=abs2(wbip[j]);
-	  const Real tildeBipj=tildeBip[j];
-
-	  const Real Bimjp=abs2(wbim[j+1]);
-	  const Real tildeBimjp=tildeBim[j+1];
-	
-	  const Real Bipjm=jmOK ? abs2(wbip[j-1]) :abs2(wb[2*bxorigin-i-1][1]);
-	  const Real tildeBipjm=jmOK ? tildeBip[j-1] :
-	    G[gb]->tildeB[dtilX-tildei-1][1];
-
-	  const Real Bijm=jmOK ? abs2(wbi[j-1]) : abs2(wb[2*bxorigin-i][1]);
-	  const Real tildeBijm=jmOK ? tildeBi[j-1] : 
-	    G[gb]->tildeB[dtilX-tildei][1];
-
-	  const Real Bimjm=jmOK ? abs2(wbim[j-1]) : abs2(wb[2*bxorigin-i+1][1]);
-	  const Real tildeBimjm=jmOK ? tildeBim[j-1] : 
-	    G[gb]->tildeB[dtilX-tildei+1][1];
-
-	  const Real Bipjp=abs2(wbip[j+1]);
-	  const Real tildeBipjp=tildeBip[j+1];
-
-	  const Real Bijp=abs2(wbip[j+1]);
-	  const Real tildeBijp=tildeBi[j+1];
-
-	  // co-incident point
-	  wai[aJ] *= sqrt(Bij/tildeBij);
-
-	  // same row
-	  waim[aJ] *= sqrt((Bimj+Bij)/(tildeBimj+tildeBij));
-	  //	cout << (Bimj+Bij)/(tildeBimj+tildeBij) << endl;
-	  waip[aJ] *= sqrt((Bij+Bipj)/(tildeBij+tildeBipj));
-
-	  // same column
-	  wai[aJm] *= sqrt((Bijm+Bij)/(tildeBijm+tildeBij));
-	  wai[aJp] *= sqrt((Bij+Bijp)/(tildeBij+tildeBijp));
-	
-	  // quad-prolongs:
-	  // --
-	  waim[aJm] *= sqrt((Bij+Bimj+Bimjm+Bijm)
-			    /(tildeBij+tildeBimj+tildeBimjm+tildeBijm));
-	  //	cout << (Bij+Bimj+Bimjm+Bijm)
-	  //	  /(tildeBij+tildeBimj+tildeBimjm+tildeBijm) << endl;
-
-	  // -+
-	  waim[aJ] *= sqrt((Bij+Bijp+Bimjp+Bimj)
-			   /(tildeBij+tildeBijp+tildeBimjp+tildeBimj));
-	  // +-
-	  waip[aJm] *= sqrt((Bij+Bijm+Bipjm+Bipj)
-			    /(tildeBij+tildeBijm+tildeBipjm+tildeBipj));
-	  // ++
-	  waip[aJm] *= sqrt((Bij+Bipj+Bipjp+Bijp)
-			    /(tildeBij+tildeBipj+tildeBipjp+tildeBijp));
-	
-	}
-      }
-      if(verbose > 2) {
-	cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
-	cout <<"\n~B:\n" << G[gb]->tildeB << endl;
-      }
+      cout << "area-type projection no longer implemented" << endl;
+      exit(1);
     }
 
     if(prtype==POINT) {
@@ -1207,8 +990,6 @@ void MDNS::Prolong(unsigned ga)
       //exit(1);
     }
   }
-  //HermitianSymmetrizeX(amx,G[ga]->getmy(),axorigin,wa); // FIXME: messed up?
-  // maybe only on the overlapping modes?
 }
 
 int MDNS::Rescale()
@@ -1328,6 +1109,7 @@ void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       if(j >= Invisible || I2 >= Invisible2) {
+	//	cout << "(" <<  i << "," << j << ")";
 	Real w2=abs2(wi[j]);
 	Real k2=k02*(I2+j*j);
 	Z += w2;
@@ -1335,7 +1117,9 @@ void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 	P += w2*k2;
       }
     }
+    //    cout << endl;
   }
+  //cout << "grid " << myg << " energy is " << E << endl;
   //  FunctRRPtr F = new Invariants;
   //  loopwF(F,3,&Z,&E,&P);
 }
