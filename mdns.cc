@@ -923,97 +923,86 @@ void MDNS::Project(unsigned gb)
 	Set(wbi,wb[i]);
 	Dimension(wbi,wb[i]);
 	
-      for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-	//cout << "j="<<j<<endl;
-	Real B2=abs2(wbi[j]);
-
- 	const int aJ=2*j;
-	const int aJp=aJ+1;
-	const int aJm=aJ==0? aJp : aJ-1;
-	
-	// co-incident point 
-	//wai[aJ]=Complex(I,aJ); // 00
-	Real A2=abs2(wai[aJ]);
-	
-	// same row
-	//waim[aJ]=Complex(I-1,aJ); // -0
-	//waip[aJ]=Complex(I+1,aJ); // +0
-	A2 += 0.5*(abs2(waim[aJ]) + abs2(waip[aJ]));
-
-	// same column
-	if(aJ) {  // 0-
-	  //wai[aJm]=Complex(I,aJm);
-	  A2 += 0.5*abs2(wai[aJm]);
-	} else {
-	  //wa[2*axorigin-I][aJp]=Complex(-I,aJm);
-	  A2 += 0.5*abs2(wa[2*axorigin-I][aJp]);
+	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
+	  //cout << "j="<<j<<endl;
+	  Real B2=abs2(wbi[j]);
+	  
+	  const int aJ=2*j;
+	  const int aJp=aJ+1;
+	  const int aJm=aJ==0? aJp : aJ-1;
+	  
+	  // co-incident point 
+	  //wai[aJ]=Complex(I,aJ); // 00
+	  Real A2=abs2(wai[aJ]);
+	  
+	  // same row
+	  //waim[aJ]=Complex(I-1,aJ); // -0
+	  //waip[aJ]=Complex(I+1,aJ); // +0
+	  A2 += 0.5*(abs2(waim[aJ]) + abs2(waip[aJ]));
+	  
+	  // same column
+	  if(aJ) {  // 0-
+	    //wai[aJm]=Complex(I,aJm);
+	    A2 += 0.5*abs2(wai[aJm]);
+	  } else {
+	    //wa[2*axorigin-I][aJp]=Complex(-I,aJm);
+	    A2 += 0.5*abs2(wa[2*axorigin-I][aJp]);
+	  }
+	  //wai[aJp]=Complex(I,aJp); // 0+
+	  A2 += 0.5*abs2(wai[aJp]);
+	  
+	  // quad-projects:
+	  //waim[aJp]=Complex(I-1,aJp); // -+
+	  //waip[aJp]=Complex(I+1,aJp); // ++
+	  A2 += 0.25*(abs2(waim[aJp]) + abs2(waip[aJp]));
+	  if(aJ) { // -- and +-
+	    //waim[aJm]=Complex(I-1,aJm);
+	    //waip[aJm]=Complex(I+1,aJm);
+	    A2 += 0.25*(abs2(waim[aJm]) + abs2(waip[aJm]));
+	  } else {
+	    //wa[2*axorigin-I+1][aJm]=Complex(-I+1,aJm);
+	    //wa[2*axorigin-I-1][aJm]=Complex(-I-1,aJm);
+	    A2 += 0.25*(abs2(wa[2*axorigin-I+1][aJm]) +
+			abs2(wa[2*axorigin-I-1][aJm]));
+	  }
+	  
+	  A2 *= 0.25; // radix-4 correction
+	  if(B2) {
+	    wbi[j] *= sqrt(A2/B2);
+	    //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
+	  } else {
+	    cerr << "energy for mode (" << i << ","<<j << ") on grid "<< gb
+		 << " is zero in project."<<endl;
+	    exit(1); // FIXME: work out something better for this case.
+	  }
 	}
-	//wai[aJp]=Complex(I,aJp); // 0+
-	A2 += 0.5*abs2(wai[aJp]);
-
-	// quad-projects:
-	//waim[aJp]=Complex(I-1,aJp); // -+
-	//waip[aJp]=Complex(I+1,aJp); // ++
-	A2 += 0.25*(abs2(waim[aJp]) + abs2(waip[aJp]));
-	if(aJ) { // -- and +-
-	  //waim[aJm]=Complex(I-1,aJm);
-	  //waip[aJm]=Complex(I+1,aJm);
-	  A2 += 0.25*(abs2(waim[aJm]) + abs2(waip[aJm]));
-	} else {
-	  //wa[2*axorigin-I+1][aJm]=Complex(-I+1,aJm);
-	  //wa[2*axorigin-I-1][aJm]=Complex(-I-1,aJm);
-	  A2 += 0.25*(abs2(wa[2*axorigin-I+1][aJm]) +
-		      abs2(wa[2*axorigin-I-1][aJm]));
-	}
-
-	A2 *= 0.25; // radix-4 correction
-	if(B2) {
-	  wbi[j] *= sqrt(A2/B2);
-	  //cout << "sqrt(A2/B2)=" << sqrt(A2/B2) << endl;
-	} else {
-	  cerr << "energy for mode (" << i << ","<<j << ") on grid "<< gb
-	       << " is zero in project."<<endl;
-	  exit(1); // FIXME: work out something better for this case.
+	I += 2;
+      }
+      
+      
+      { // copy to tildeB
+	// TODO: make this a function?
+	G[gb]->tildeB.Load(0.0); // necessary?
+	const unsigned istop=2*bInvisible+1;
+	const unsigned jstop=bInvisible+1;
+	unsigned wi=(int) bxorigin-bInvisible;
+	for(unsigned i=0; i < istop; ++i) {
+	  array1<Real> tildeBi;
+	  tildeBi.Set(G[gb]->tildeB[i]);
+	  tildeBi.Dimension(jstop);
+	  vector wbi;
+	  Set(wbi,wb[wi]);
+	  Dimension(wbi,wb[wi]);
+	  ++wi;
+	  for(unsigned j=0; j < jstop; ++j)
+	    tildeBi[j]=abs2(wbi[j]);
+	  // TODO: some of these are redundant from Hermitian symmerty.
 	}
       }
-      I += 2;
-    }
-
-    
-    { // copy to tildeB
-      // TODO: make this a function?
-      G[gb]->tildeB.Load(0.0); // necessary?
-      const unsigned istop=2*bInvisible+1;
-      const unsigned jstop=bInvisible+1;
-      unsigned wi=(int) bxorigin-bInvisible;
-      for(unsigned i=0; i < istop; ++i) {
-	array1<Real> tildeBi;
-	tildeBi.Set(G[gb]->tildeB[i]);
-	tildeBi.Dimension(jstop);
-	vector wbi;
-	Set(wbi,wb[wi]);
-	Dimension(wbi,wb[wi]);
-	++wi;
-	for(unsigned j=0; j < jstop; ++j)
-	  tildeBi[j]=abs2(wbi[j]);
-	// TODO: some of these are redundant from Hermitian symmerty.
+      if(verbose > 2) {
+	cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
+	cout <<"\n~B:\n" << G[gb]->tildeB << endl;
       }
-    }
-    if(verbose > 2) {
-      cout <<"wa:\n"<<wa<<endl << "wb:\n"<< wb;
-      cout <<"\n~B:\n" << G[gb]->tildeB << endl;
-    }
-    /*
-    for(unsigned i=0; i < aNx; i += 2) {
-      int I= (int) i - (int) bxorigin;
-      int bI=I/2;
-      unsigned bi=bI + bxorigin;
-      for(unsigned j= i < axorigin? 2 : 0; j <  amy; j +=2) {
-	unsigned bj=j/2;
-	Real bZ=abs2(wb[bi][bj]);
-      }
-    }
-    */
     }
     
     if(prtype==POINT) {
