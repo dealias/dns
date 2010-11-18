@@ -883,7 +883,7 @@ void MDNS::Project(unsigned gb)
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
 
-  G[ga]->settow(wa);
+  G[ga]->settow(wa); // FIXME: these point to the same thing!
   G[gb]->settow(wb);
 
   if(radix == 1) {
@@ -943,7 +943,7 @@ void MDNS::Prolong(unsigned ga)
   const unsigned bmy=G[gb]->getmy();
   const unsigned dx=bxorigin-axorigin;
 
-  const unsigned dtilX=bInvisible+bInvisible;
+
 
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
@@ -963,6 +963,7 @@ void MDNS::Prolong(unsigned ga)
 
   if(radix == 4) {
     if(prtype==AREA) {
+      //const unsigned dtilX=bInvisible+bInvisible;
       cout << "area-type projection no longer implemented" << endl;
       exit(1);
     }
@@ -1071,7 +1072,7 @@ void MDNS::Output(int it)
 
   ComputeInvariants(Y,E,Z,P);
   Mfevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
-    
+  
   if(spectrum) {
     ostringstream buf;
     buf << "ekvk" << dirsep << "t" << tcount; 
@@ -1103,23 +1104,28 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 {
   w.Set(Y[OMEGA]);
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(j >= Invisible || I2 >= Invisible2) {
-	//	cout << "(" <<  i << "," << j << ")";
-	Real w2=abs2(wi[j]);
-	Real k2=k02*(I2+j*j);
-	Z += w2;
-	E += w2/k2;
-	P += w2*k2;
+
+  if(myg == 0) {
+    // use DNSBase ComputeInvariants
+    DNSBase::ComputeInvariants(w,E,Z,P);
+  } else {
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	if(j > Invisible || I2 > Invisible2) {
+	  //	cout << "(" <<  i << "," << j << ")";
+	  Real w2=abs2(wi[j]);
+	  Real k2=k02*(I2+j*j);
+	  Z += w2;
+	  E += w2/k2;
+	  P += w2*k2;
+	}
       }
     }
-    //    cout << endl;
   }
-  //cout << "grid " << myg << " energy is " << E << endl;
+  //cout << "grid " << myg << " enstrophy is " << Z << endl;
   //  FunctRRPtr F = new Invariants;
   //  loopwF(F,3,&Z,&E,&P);
 }
@@ -1144,7 +1150,7 @@ void MDNS::ConservativeSource(const vector2& Src, const vector2& Y, double t)
 {
   NonLinearSource(Src,Y,t);
   Transfer(Src,Y);
-  LinearSource(Src,Y,t); // is this really a conservative source?
+  LinearSource(Src,Y,t);
 }
 
 /*
