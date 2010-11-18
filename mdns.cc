@@ -92,6 +92,10 @@ public:
   Real gk(unsigned g) {
     return k0*pow(sqrt((Real) radix),(Real) g);
   };
+  void settow(array2<Complex> & w, unsigned g) {
+    Set(w,mY[g][OMEGA]);
+    G[g]->Dimensiontow(w);
+  }
 
   //***** Grid class based on DNSBase *****//
   class Grid : public DNSBase {
@@ -135,10 +139,9 @@ public:
     unsigned getshellsbelow() {return shellsbelow;};
     void setmyshells(const unsigned i) {myshells=i;};
     unsigned getmyshells() {return myshells;};
-    void settow(array2<Complex> & w0) {
-      Set(w0,w);
+    void Dimensiontow(array2<Complex> & w0) {
       Dimension(w0,w);
-    };
+    }
     //unsigned nshellbelow;
   
     void InitialConditions(unsigned g);
@@ -673,7 +676,7 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
 void MDNS::Grid::SpectrumOverlap(vector& S)
 {
   if(spectrum && overlap) {
-    settow(w);
+    MDNSProblem->settow(w,myg); // FIXME: does settow work?
     Real overlambda=1.0;
     if(radix==4) overlambda=0.5;
     Real weight=prtype==AREA ? radix : 1.0;
@@ -812,9 +815,8 @@ void MDNS::InitialConditions()
     G[g]->AttachTo(this,Y);
     G[g]->InitialConditions(g);
   }
-  for (unsigned g=1; g< Ngrids; g++) 
-    Project(g); // TODO: this may be deprecated by rescale
-  
+  //for (unsigned g=1; g< Ngrids; g++) Project(g);
+  // mY not set here for Project to work?
 
   if(spectrum) {
     for(unsigned g=0; g < Ngrids; ++g) {
@@ -883,8 +885,8 @@ void MDNS::Project(unsigned gb)
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
 
-  G[ga]->settow(wa); // FIXME: these point to the same thing!
-  G[gb]->settow(wb);
+  Set(wa,mY[ga][OMEGA]);
+  Set(wb,mY[gb][OMEGA]);
 
   if(radix == 1) {
     for(unsigned int i=0; i < aNx; i++) {
@@ -894,7 +896,6 @@ void MDNS::Project(unsigned gb)
 	wbi[j]=wai[j];
       }
     }
-    return;
   }
 
   if(radix == 4) {
@@ -914,15 +915,17 @@ void MDNS::Project(unsigned gb)
 	vector wbi;
 	Set(wbi,wb[i]);
 	Dimension(wbi,wb[i]);
-	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j)
+	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
 	  wbi[j]=wai[j+j];
+	  //wbi[j]=Complex((double) i-(double) axorigin,1+j); //FIXME: temp
+	}
 	I += 2;
       }
     }
   }
-
+  //cout << "prolong:" << endl;
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
-  //  exit(1);
+  //exit(1);
 }
   
 void MDNS::Prolong(unsigned ga)
@@ -943,13 +946,10 @@ void MDNS::Prolong(unsigned ga)
   const unsigned bmy=G[gb]->getmy();
   const unsigned dx=bxorigin-axorigin;
 
-
-
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
-
-  G[ga]->settow(wa);
-  G[gb]->settow(wb);
+  Set(wa,mY[ga][OMEGA]);
+  Set(wb,mY[gb][OMEGA]);
 
   if(radix == 1) {
     for(unsigned int i=0; i < aNx; i++) {
@@ -984,13 +984,16 @@ void MDNS::Prolong(unsigned ga)
 	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
 	  //cout << "j="<<j<<endl;
 	  wai[j+j]=wbi[j];
+	  //wai[j+j]=Complex((double) i - (double) axorigin,j); // FIXME: temp
 	}
 	I += 2;
       }
-      //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
-      //exit(1);
     }
   }
+  //cout << "prolong:" << endl;
+  //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
+  //exit(1);
+
 }
 
 int MDNS::Rescale()
@@ -1002,7 +1005,7 @@ int MDNS::Rescale()
       // test code: access current vorticity field
       for(unsigned g=0; g < Ngrids; ++g) {
 	array2<Complex> wg;
-	G[g]->settow(wg);
+	settow(wg,g); // FIXME: does settow work?
 	wg.Dimension(G[g]->getNx(),G[g]->getmy());
 	cout << "wg:" << endl;
 	cout << wg << endl;
@@ -1230,7 +1233,7 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
 
   //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
   //  cout << w << endl;
-
+  
   DNSBase::NonLinearSource(f0,w,t);
 
   if(myg > 0) {
