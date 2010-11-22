@@ -168,7 +168,8 @@ void DNSBase::OutFrame(int)
   fw.flush();
 }
 
-void DNSBase::ComputeInvariants(array2<Complex> &w, Real& E, Real& Z, Real& P)
+void DNSBase::ComputeInvariants(const array2<Complex> &w, 
+				Real& E, Real& Z, Real& P)
 {
   E=Z=P=0.0;
   for(unsigned i=0; i < Nx; i++) {

@@ -137,7 +137,7 @@ public:
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
 
-  void ComputeInvariants(array2<Complex> &w,Real& E, Real& Z, Real& P);
+  virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);
   void Stochastic(const vector2& Y, double, double);
 
   array1<unsigned>::opt count;

@@ -75,7 +75,7 @@ private:
   unsigned mx, my; // size of data arrays
 
   unsigned glast;
-  void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
+  void ComputeInvariants(const vector2&, Real&, Real&, Real&);
   array2<Complex> wa, wb; // Vorticity field for projection/prolongation
   unsigned nshells;
   vector spectra;
@@ -154,9 +154,9 @@ public:
     void Spectrum(vector& S, const vector& w0);    
     void Stochastic(const vector2&, double, double);
     void SpectrumOverlap(vector& S);
-
-    void ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P);
-    
+  
+    void ComputeInvariants(const vector2 &,Real&,Real&,Real&);
+    void ComputeInvariants(const Array::array2<Complex> &,Real&, Real&, Real&);
     void coutw() {cout << "mygrid is "<<myg<<endl<< w << endl;}
   
     void loopwF(const FunctRRPtr,int n,...);
@@ -1107,8 +1107,13 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 {
   w.Set(Y[OMEGA]);
+  ComputeInvariants(w,E,Z,P);
+}
 
-  if(myg == 0) {
+void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w, 
+				   Real& E, Real& Z, Real& P)
+{ // FIXME: points to the same grid!!!!
+  if(myg == 0) { 
     // use DNSBase ComputeInvariants
     DNSBase::ComputeInvariants(w,E,Z,P);
   } else {
@@ -1233,7 +1238,7 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
 
   //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
   //  cout << w << endl;
-  
+  if (myg == 0) return; // FIXME: temp
   DNSBase::NonLinearSource(f0,w,t);
 
   if(myg > 0) {
