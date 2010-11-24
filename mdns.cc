@@ -525,7 +525,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
     for(unsigned i=0; i < 2*Invisible+1; ++i)
       tildeB[i][0]=0.0;
   }
-
+  
   InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
   InitialCondition->Set(w,Nx*my);
 
@@ -868,7 +868,7 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb)
 {
-  if(prtype==NOPR || dorescale==1)
+  if(dorescale==1)
     return;
   if(verbose > 2) cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
@@ -888,7 +888,15 @@ void MDNS::Project(unsigned gb)
   Set(wa,mY[ga][OMEGA]);
   Set(wb,mY[gb][OMEGA]);
 
-  if(radix == 1) {
+  { // FIXME: temp
+    double E=0,Z=0,P=0;
+    G[ga]->ComputeInvariants(wa,E,Z,P);
+    cout << "\n project: before\n" <<  Z << endl;
+    E=Z=P=0;
+    G[gb]->ComputeInvariants(wb,E,Z,P);
+    cout << Z << endl;
+  }
+  if(radix == 1 && prtype != NOPR) {
     for(unsigned int i=0; i < aNx; i++) {
       vector wai=wa[i];
       vector wbi=wb[i+dx];
@@ -923,14 +931,23 @@ void MDNS::Project(unsigned gb)
       }
     }
   }
-  //cout << "prolong:" << endl;
+  //cout << "project:" << endl;
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
+  { // FIXME: temp
+    double E=0,Z=0,P=0;
+    G[ga]->ComputeInvariants(wa,E,Z,P);
+    cout << "\n project: after\n" <<  Z << endl;
+    E=Z=P=0;
+    G[gb]->ComputeInvariants(wb,E,Z,P);
+    cout << Z << endl;
+  }
   //exit(1);
 }
   
 void MDNS::Prolong(unsigned ga)
 {
-  if(prtype==NOPR || dorescale==1)
+
+  if(dorescale==1)
     return;
   if(verbose > 2) cout << "prolong onto " << G[ga]->myg << endl;
   unsigned gb=ga+1;
@@ -951,7 +968,16 @@ void MDNS::Prolong(unsigned ga)
   Set(wa,mY[ga][OMEGA]);
   Set(wb,mY[gb][OMEGA]);
 
-  if(radix == 1) {
+  { // FIXME: temp
+    double E=0,Z=0,P=0;
+    G[ga]->ComputeInvariants(wa,E,Z,P);
+    cout << "\n prolong: before\n" <<  Z << endl;
+    E=Z=P=0;
+    G[gb]->ComputeInvariants(wb,E,Z,P);
+    cout << Z << endl;
+  }  
+
+  if(radix == 1 && prtype != NOPR) {
     for(unsigned int i=0; i < aNx; i++) {
       vector wai=wa[i];
       vector wbi=wb[i+dx];
@@ -989,7 +1015,16 @@ void MDNS::Prolong(unsigned ga)
 	I += 2;
       }
     }
-  }
+  }  
+
+  { // FIXME: temp
+    double E=0,Z=0,P=0;
+    G[ga]->ComputeInvariants(wa,E,Z,P);
+    cout << "\n prolong: after\n" <<  Z << endl;
+    E=Z=P=0;
+    G[gb]->ComputeInvariants(wb,E,Z,P);
+    cout << Z << endl;
+  }  
   //cout << "prolong:" << endl;
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
   //exit(1);
@@ -1074,6 +1109,7 @@ void MDNS::Output(int it)
   Real E,Z,P;
 
   ComputeInvariants(Y,E,Z,P);
+  cout << "output: " << Z << endl; // FIXME: temp
   Mfevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
   
   if(spectrum) {
@@ -1093,12 +1129,13 @@ void MDNS::Output(int it)
 void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 {
   E=Z=P=0.0;
-  Real tempE=0.0, tempZ=0.0, tempP=0.0;
   for(unsigned g=0; g < Ngrids; ++g) {
     // add up the individual invariants
+    Real tempE=0.0, tempZ=0.0, tempP=0.0;
     G[g]->ComputeInvariants(Y,tempE,tempZ,tempP);
     Real scale=prtype==AREA ? pow((double) radix,(double) g) : 1.0;
     E += scale*tempE;
+    cout << "grid " << g << " tempZ="<<tempZ << endl;
     Z += scale*tempZ;
     P += scale*tempP;
   }
@@ -1112,24 +1149,22 @@ void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
 
 void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w, 
 				   Real& E, Real& Z, Real& P)
-{ // FIXME: points to the same grid!!!!
-  if(myg == 0) { 
-    // use DNSBase ComputeInvariants
-    DNSBase::ComputeInvariants(w,E,Z,P);
-  } else {
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      vector wi=w[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(j > Invisible || I2 > Invisible2) {
-	  //	cout << "(" <<  i << "," << j << ")";
-	  Real w2=abs2(wi[j]);
-	  Real k2=k02*(I2+j*j);
-	  Z += w2;
-	  E += w2/k2;
-	  P += w2*k2;
-	}
+{
+  // FIXME: this always points at the same grid
+  // when called by MDNS::ComputeInvariants!
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    //cout << "\ni="<<i << ", j=";
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      if(j >= Invisible || I2 >= Invisible2) {
+	//cout << j<< " ";
+	Real w2=abs2(wi[j]);
+	Real k2=k02*(I2+j*j);
+	Z += w2;
+	E += w2/k2;
+	P += w2*k2;
       }
     }
   }
@@ -1216,10 +1251,11 @@ void MDNS::Grid::LinearSource(const vector& source, const vector& w0, double t)
     int I2=I*I;
     vector f0i=f0[i];
     vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       if(j >= Invisible || I2 >= Invisible2) {
 	f0i[j] -= nuk(k02*(I2+j*j))*wi[j];
       }
+    }
   }
 }
 
@@ -1238,7 +1274,7 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
 
   //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
   //  cout << w << endl;
-  if (myg == 0) return; // FIXME: temp
+
   DNSBase::NonLinearSource(f0,w,t);
 
   if(myg > 0) {
@@ -1263,6 +1299,17 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
     }
     fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
   }
+#if 0
+  Real sum=0.0;
+  for(unsigned i=0; i < Nx; ++i) {
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      Complex wij=wi[j];
+      sum += (f0[i][j]*conj(wij)).re;
+    }
+  }
+  cout << sum << endl;
+#endif
 }
 
 void MDNS::Stochastic(const vector2& gY, double t, double dt) 
