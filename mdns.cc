@@ -139,9 +139,7 @@ public:
     unsigned getshellsbelow() {return shellsbelow;};
     void setmyshells(const unsigned i) {myshells=i;};
     unsigned getmyshells() {return myshells;};
-    void Dimensiontow(array2<Complex> & w0) {
-      Dimension(w0,w);
-    }
+    void Dimensiontow(array2<Complex> & w0) {w0.Dimension(Nx,my);}
     //unsigned nshellbelow;
   
     void InitialConditions(unsigned g);
@@ -155,7 +153,6 @@ public:
     void Stochastic(const vector2&, double, double);
     void SpectrumOverlap(vector& S);
   
-    void ComputeInvariants(const vector2 &,Real&,Real&,Real&);
     void ComputeInvariants(const Array::array2<Complex> &,Real&, Real&, Real&);
     void coutw() {cout << "mygrid is "<<myg<<endl<< w << endl;}
   
@@ -357,7 +354,6 @@ public:
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
 	Real k2=k02*(I2+j*j);
 	if(j >= Invisible || I2 >= Invisible2) {
-	  // FIXME: make sure that the mode is visible
 	  if(k2 > kmin2 && k2 < kmax2) {
 	    // TODO: enable transfer
 	    // T[(unsigned)(sqrt(k2)-0.5)].im += 
@@ -888,7 +884,8 @@ void MDNS::Project(unsigned gb)
   Set(wa,mY[ga][OMEGA]);
   Set(wb,mY[gb][OMEGA]);
 
-  { // FIXME: temp
+#if 0
+  {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
     cout << "\n project: before\n" <<  Z << endl;
@@ -896,6 +893,7 @@ void MDNS::Project(unsigned gb)
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
   }
+#endif
   if(radix == 1 && prtype != NOPR) {
     for(unsigned int i=0; i < aNx; i++) {
       vector wai=wa[i];
@@ -925,7 +923,6 @@ void MDNS::Project(unsigned gb)
 	Dimension(wbi,wb[i]);
 	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
 	  wbi[j]=wai[j+j];
-	  //wbi[j]=Complex((double) i-(double) axorigin,1+j); //FIXME: temp
 	}
 	I += 2;
       }
@@ -933,7 +930,8 @@ void MDNS::Project(unsigned gb)
   }
   //cout << "project:" << endl;
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
-  { // FIXME: temp
+#if 0
+  {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
     cout << "\n project: after\n" <<  Z << endl;
@@ -941,6 +939,7 @@ void MDNS::Project(unsigned gb)
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
   }
+#endif
   //exit(1);
 }
   
@@ -968,14 +967,16 @@ void MDNS::Prolong(unsigned ga)
   Set(wa,mY[ga][OMEGA]);
   Set(wb,mY[gb][OMEGA]);
 
-  { // FIXME: temp
+#if 0
+  {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
     cout << "\n prolong: before\n" <<  Z << endl;
     E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
-  }  
+  }
+#endif
 
   if(radix == 1 && prtype != NOPR) {
     for(unsigned int i=0; i < aNx; i++) {
@@ -1010,14 +1011,14 @@ void MDNS::Prolong(unsigned ga)
 	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
 	  //cout << "j="<<j<<endl;
 	  wai[j+j]=wbi[j];
-	  //wai[j+j]=Complex((double) i - (double) axorigin,j); // FIXME: temp
 	}
 	I += 2;
       }
     }
   }  
 
-  { // FIXME: temp
+#if 0
+  {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
     cout << "\n prolong: after\n" <<  Z << endl;
@@ -1025,6 +1026,7 @@ void MDNS::Prolong(unsigned ga)
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
   }  
+#endif
   //cout << "prolong:" << endl;
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
   //exit(1);
@@ -1109,7 +1111,6 @@ void MDNS::Output(int it)
   Real E,Z,P;
 
   ComputeInvariants(Y,E,Z,P);
-  cout << "output: " << Z << endl; // FIXME: temp
   Mfevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
   
   if(spectrum) {
@@ -1132,26 +1133,23 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
   for(unsigned g=0; g < Ngrids; ++g) {
     // add up the individual invariants
     Real tempE=0.0, tempZ=0.0, tempP=0.0;
-    G[g]->ComputeInvariants(Y,tempE,tempZ,tempP);
+
+    //G[g]->ComputeInvariants(Y,tempE,tempZ,tempP);
+
+    array2<Complex> w0;
+    Set(w0,mY[g][OMEGA]);
+    G[g]->Dimensiontow(w0);
+    G[g]->ComputeInvariants(w0,tempE,tempZ,tempP);
     Real scale=prtype==AREA ? pow((double) radix,(double) g) : 1.0;
     E += scale*tempE;
-    cout << "grid " << g << " tempZ="<<tempZ << endl;
     Z += scale*tempZ;
     P += scale*tempP;
   }
 }
 
-void MDNS::Grid::ComputeInvariants(const vector2 & Y, Real& E, Real& Z, Real& P)
-{
-  w.Set(Y[OMEGA]);
-  ComputeInvariants(w,E,Z,P);
-}
-
 void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w, 
 				   Real& E, Real& Z, Real& P)
 {
-  // FIXME: this always points at the same grid
-  // when called by MDNS::ComputeInvariants!
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
