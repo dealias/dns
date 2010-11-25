@@ -21,7 +21,6 @@ while(nextrun()) {
   //  draw(graph(t,E,E > 0),p+Pen(3*n),Etext+runtext);
   //  draw(graph(t,Z,Z > 0),p+Pen(3*n+1),Ztext+runtext);
   //  draw(graph(t,P,P > 0),p+Pen(3*n+2),Ptext+runtext);
-  write(Z);
 }
 
 if(n == 1) {
