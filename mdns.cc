@@ -504,8 +504,8 @@ void MDNS::Grid::InitialConditions(unsigned g)
 
   if(myg > 0) { 
     // buffer for calculating small-small-small calculations
-    sNx=Invisible;
-    smx=smy=(Invisible+1)/2;
+    sNx=2*Invisible-1;
+    smx=smy=Invisible;
     sxorigin=(sNx+1)/2-1;
     unsigned nS=sNx*smy;
     xdiff=xorigin-sxorigin;
@@ -888,8 +888,9 @@ void MDNS::Project(unsigned gb)
   {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
-    cout << "\n project: before\n" <<  Z << endl;
-    E=Z=P=0;
+    cout << "\n project: before\n";
+    //cout <<  Z << endl;
+    //E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
   }
@@ -934,8 +935,9 @@ void MDNS::Project(unsigned gb)
   {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
-    cout << "\n project: after\n" <<  Z << endl;
-    E=Z=P=0;
+    cout << "\n project: after\n"; 
+    //cout << Z << endl;
+    //E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
   }
@@ -971,8 +973,9 @@ void MDNS::Prolong(unsigned ga)
   {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
-    cout << "\n prolong: before\n" <<  Z << endl;
-    E=Z=P=0;
+    cout << "\n prolong: before\n";
+    //cout <<  Z << endl;
+    //E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
   }
@@ -1021,8 +1024,9 @@ void MDNS::Prolong(unsigned ga)
   {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
-    cout << "\n prolong: after\n" <<  Z << endl;
-    E=Z=P=0;
+    cout << "\n prolong: after\n";
+    //cout <<  Z << endl;
+    //E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
   }  
@@ -1276,24 +1280,34 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
   DNSBase::NonLinearSource(f0,w,t);
 
   if(myg > 0) {
+    //cout << "copy overlapping modes to wS" << endl;
     //copy overlapping modes to wS
     for(unsigned i=0; i < sNx; ++i) {
       vector wi=w[i+xdiff];
       vector wSi=wS[i];
-      for(unsigned j=0; j < smy; ++j)
+      //cout << "i="<< i <<" ,i+xdiff=" <<i+xdiff ;
+      for(unsigned j=0; j < smy; ++j) {
 	wSi[j]=wi[j];
+	//cout << " " << j;
+      }
+      //cout << endl;
     }
     fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
 
     // find the nonlinear interaction for small-small-small
     smallDNSBase->NonLinearSource(SrcwS,wS,t);
  
+    //cout << "subtract small-small-small source" << endl;
     // subtract small-small-small source
     for(unsigned i=0; i < sNx; ++i) {
       vector f0i=f0[i+xdiff];
       vector SrcwSi=SrcwS[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < smy; ++j)
+      //cout << "i="<< i <<" ,i+xdiff=" <<i+xdiff ;
+      for(unsigned j=0; j < smy; ++j) {
 	f0i[j] -= SrcwSi[j];
+	//cout << " " << j;
+      }
+      //cout << endl;
     }
     fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
   }
@@ -1306,7 +1320,7 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
       sum += (f0[i][j]*conj(wij)).re;
     }
   }
-  cout << sum << endl;
+  cout << "multi-grid E conserved? " << sum << endl;
 #endif
 }
 
