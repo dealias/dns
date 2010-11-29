@@ -39,9 +39,10 @@ unsigned casimir=0;
 Real icalpha=1.0;
 Real icbeta=1.0;
 enum PRTYPE {NOPR,AREA,POINT};
-int dorescale=false; // TODO: this should be set to true once rescale works
 unsigned prtype=POINT;
+int dorescale=false; // TODO: this should be set to true once rescale works
 bool overlap=false; // account for overlapping corners of spectrum?
+bool circular=false; // include corner modes in spectrum?
 // unused vocab variables to match dns
 unsigned movie=0;
 
@@ -182,8 +183,9 @@ public:
 	return 0;
       return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
     }
-    if(g==glast)
-      return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+    if(circular) {
+      if(g==glast) return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+    }
     return gm(my,g)-1;
   };
 
@@ -225,7 +227,7 @@ public:
     if(radix == 4) {
       unsigned lambda=2;
       for(unsigned g=0; g < Ngrids; ++g) {
-	const unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
+	const unsigned offset=g==0 ? 0 : G[g]->getInvisible()-1;
 	const unsigned firstshell=G[g]->getshellsbelow();
 	const unsigned lastshell=firstshell+G[g]->getmyshells()-1;
 	if (i >=  firstshell &&  i <= lastshell) {
@@ -572,7 +574,7 @@ void MDNS::Grid::setcount()
 {
   if(spectrum) {
     if(radix == 4) {
-      Real kbound=lastgrid ? mx*my: my-0.5;
+      Real kbound=lastgrid && circular ? mx*my: my-0.5;
       for(unsigned i=0; i < Nx; i++) {
 	const int I=(int) i-(int) xorigin;
 	const int I2=I*I;
@@ -634,7 +636,8 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
   for(unsigned K=0; K < nshells; K++)
     SrcEK[K]=Complex(0.0,0.0);
   if(radix != 1) {
-    Real kbound=lastgrid ? hypot(mx,my)+1: my-0.5;
+    Real kbound=nshells-0.5; // FIXME: does this work?
+    //    Real kbound=lastgrid ? hypot(mx,my) : my-0.5;
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
@@ -839,7 +842,8 @@ void MDNS::InitialConditions()
     }
     unsigned gmx=gm(mx,glast);
     unsigned gmy=gm(my,glast);
-    nextra=(unsigned) (hypot(gmx-1,gmy-1)+0.5*lambda - gm(my,glast-1)/lambda);
+    //nextra=(unsigned) (hypot(gmx-1,gmy-1)+0.5*lambda - gm(my,glast-1)/lambda);
+    nextra=(unsigned) (getnshells(glast)-G[glast]->getInvisible()+1);
     G[glast]->setshellsbelow(nshells);
     nshells += nextra;
     G[glast]->setmyshells(nextra);
