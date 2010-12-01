@@ -7,7 +7,7 @@ void check(DynVector<int> & R2, const int r2)
 {
   bool found=false;
   int last=R2.Size();
-  for(int j=0; j < last ; ++j) {
+  for(int j=last-1; j >= 0 ; --j) {
     if(R2[j]==r2) {
       found=true;
       break;
