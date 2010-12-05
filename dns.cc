@@ -167,7 +167,7 @@ public:
     unsigned jmax=1+min(my,(unsigned) ceil(kmax/k0));
     unsigned imin=max(0,(int) xorigin - (int) jmax);
     unsigned imax=min(Nx,xorigin+jmax);
-    for(unsigned i=imin; i <= imax; i++) {
+    for(unsigned i=imin; i < imax; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
       vector wi=w[i];
