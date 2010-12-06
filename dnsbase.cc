@@ -135,18 +135,48 @@ void DNSBase::Spectrum(vector& S, const vector& y)
   w.Set(y);
   for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
-  // TODO: k2 needs only be computed over one octant.  optimize?
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
+
+  for(unsigned i=0; i < xorigin; i++) {
+    unsigned I=xorigin-i;
+    unsigned im=xorigin+xorigin-i;
+    unsigned I2=I*I;
+
     vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      unsigned k2int=I2+j*j;
-      Real k2=k02*k2int;
-      Real kind=sqrt(k2int);
-      Real k=sqrt(k2);
+    vector wim=w[im];
+
+    unsigned k2int=2*I2;
+    Real kint=sqrt((Real) k2int);
+    unsigned Sk=(unsigned)(k0*kint-0.5);
+    Real Wall=abs2(wi[I])+abs2(wim[I]);
+
+    // diagnols
+    S[Sk] += Complex(Wall/(k0*kint),nuk(k02*k2int)*Wall);
+    
+    const unsigned stop=I;
+    for(unsigned j=1; j < stop; ++j) {
+      k2int=(I2+j*j);
+      kint=sqrt((Real) k2int);
+      Sk=(unsigned)(k0*kint-0.5);
+
+      Wall=abs2(wi[j])+abs2(wim[j])+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
+
+      S[Sk] += Complex((Wall)/(k0*kint),nuk(k02*(I2+j*j))*Wall);
+    }
+  }
+
+  { // xorigin case
+    vector wi=w[xorigin];
+    for(unsigned j=1; j < my; ++j) {
       Real w2=abs2(wi[j]);
-      S[(unsigned)(kind-0.5)] += Complex(w2/k,nuk(k2)*w2);
+      S[j-1] += Complex(w2/(k0*j),nuk(k02*j*j));
+    }
+  }
+  
+  { // bottom-right case
+    for(unsigned i=xorigin+1; i < Nx; ++i) {
+      unsigned I=i-xorigin;
+      Real w2=abs2(w[i][0]);
+      S[I-1] += Complex(w2/(k0*I),nuk(k02*I*I));
     }
   }
 }
