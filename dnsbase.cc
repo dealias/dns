@@ -9,14 +9,49 @@ void DNSBase::LinearSource(const vector& wSrc, const vector& w0, double)
 {
   w.Set(w0);
   f0.Set(wSrc);
-  // TODO: this needs only be computed for one octant. optimize!
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector f0i=f0[i];
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
-      f0i[j] -= nuk(k02*(I2+j*j))*wi[j]; 
+  vector f0i, wi;
+  for(unsigned i=0; i < xorigin; i++) {
+    unsigned I=xorigin-i;
+    unsigned I2=I*I;
+    unsigned im=xorigin+xorigin-i;
+    
+    f0i=f0[i];
+    wi=w[i];
+    vector f0im=f0[im];
+    vector wim=w[im];
+    
+    // diagnols
+    Real nukk=nuk(k02*(I2+I2));
+    f0i[I] -= nukk*wi[I];
+    f0im[I] -= nukk*wim[I];
+    
+    const unsigned stop=I;
+    for(unsigned j=1; j < stop; ++j) {
+      nukk=nuk(k02*(I2+j*j));
+      // bottom-left
+      f0i[j] -= nukk*wi[j];
+      // bottom-right
+      f0im[j] -= nukk*wim[j];
+      // top-left
+      f0[xorigin-j][I] -= nukk*w[xorigin-j][I];
+      // top-right
+      f0[xorigin+j][I] -= nukk*w[xorigin+j][I];
+    }
+  }
+  
+  { // xorigin case
+    f0i=f0[xorigin];
+    wi=w[xorigin];
+    for(unsigned j=1; j < my; ++j) {
+      f0i[j] -= nuk(k02*(j*j))*wi[j];
+    }
+  }
+  
+  { // bottom-right case
+    for(unsigned i=xorigin; i < Nx; ++i) {
+      unsigned I=i-xorigin;
+      f0[i][0] -= nuk(k02*(I*I))*w[i][0]; 
+    }
   }
 }
 
