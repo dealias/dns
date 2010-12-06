@@ -9,14 +9,14 @@ void DNSBase::LinearSource(const vector& wSrc, const vector& w0, double)
 {
   w.Set(w0);
   f0.Set(wSrc);
-  vector f0i, wi;
+
   for(unsigned i=0; i < xorigin; i++) {
     unsigned I=xorigin-i;
     unsigned I2=I*I;
     unsigned im=xorigin+xorigin-i;
     
-    f0i=f0[i];
-    wi=w[i];
+    vector f0i=f0[i];
+    vector wi=w[i];
     vector f0im=f0[im];
     vector wim=w[im];
     
@@ -40,8 +40,8 @@ void DNSBase::LinearSource(const vector& wSrc, const vector& w0, double)
   }
   
   { // xorigin case
-    f0i=f0[xorigin];
-    wi=w[xorigin];
+    vector f0i=f0[xorigin];
+    vector wi=w[xorigin];
     for(unsigned j=1; j < my; ++j) {
       f0i[j] -= nuk(k02*(j*j))*wi[j];
     }
@@ -133,7 +133,7 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
 void DNSBase::Spectrum(vector& S, const vector& y) 
 {
   w.Set(y);
-  for(unsigned K=0; K < nshells; K++)
+  for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
   // TODO: k2 needs only be computed over one octant.  optimize?
   for(unsigned i=0; i < Nx; i++) {
