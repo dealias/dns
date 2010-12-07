@@ -113,6 +113,7 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
 
   w.Set(Y[OMEGA]);
 
+  // TODO: change loop to only be over quadrant (as in spectrum)
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
