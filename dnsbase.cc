@@ -64,7 +64,7 @@ void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
   f1(origin)=0.0;
   g0(origin)=0.0;
   g1(origin)=0.0;
-
+  // TODO: optimize?
   for(unsigned i=0; i < Nx; ++i) {
     Real kx=k0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
@@ -269,6 +269,7 @@ void DNSBase::OutFrame(int)
 void DNSBase::ComputeInvariants(const array2<Complex> &w, 
 				Real& E, Real& Z, Real& P)
 {
+  // TODO: optimize?
   E=Z=P=0.0;
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
