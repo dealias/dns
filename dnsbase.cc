@@ -169,7 +169,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     vector wi=w[xorigin];
     for(unsigned j=1; j < my; ++j) {
       Real w2=abs2(wi[j]);
-      S[j-1] += Complex(w2/(k0*j),nuk(k02*j*j));
+      S[j-1] += Complex(w2/(k0*j),w2*nuk(k02*j*j));
     }
   }
   
@@ -177,7 +177,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     for(unsigned i=xorigin+1; i < Nx; ++i) {
       unsigned I=i-xorigin;
       Real w2=abs2(w[i][0]);
-      S[I-1] += Complex(w2/(k0*I),nuk(k02*I*I));
+      S[I-1] += Complex(w2/(k0*I),w2*nuk(k02*I*I));
     }
   }
 }
