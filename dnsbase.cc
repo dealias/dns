@@ -105,26 +105,57 @@ void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
 
 void DNSBase::Transfer(const vector2& Src, const vector2& Y)
 {
-  Set(T,Src[TRANSFER]);
-
-  for(unsigned K=0; K < nshells; K++)
-    T[K]=0.0;
-  f0.Set(Src[OMEGA]);
-
   w.Set(Y[OMEGA]);
+  f0.Set(Src[OMEGA]);
+  Set(T,Src[TRANSFER]);
+  for(unsigned K=0; K < nshells; K++)
+    T[K]=Complex(0.0,0.0);
 
-  // TODO: change loop to only be over quadrant (as in spectrum)
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
+  for(unsigned i=0; i < xorigin; i++) {
+    unsigned I=xorigin-i;
+    unsigned im=xorigin+xorigin-i;
+    unsigned I2=I*I;
+    
     vector wi=w[i];
-    vector Si=f0[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real k=k0*sqrt(I2+j*j);
-      T[(unsigned)(k-0.5)].re += realproduct(Si[j],wi[j]);
+    vector wim=w[im];
+    vector fi=f0[i];
+    vector fim=f0[im];
+    
+    // diagnols
+    Real k=sqrt(k02*(I2+I2));
+    T[(unsigned)(k-0.5)].re += 
+      realproduct(fi[I],wi[I]) + realproduct(fim[I],wim[I]);
+   
+    const unsigned stop=I;
+    for(unsigned j=1; j < stop; ++j) {
+      unsigned jm=xorigin-j;
+      unsigned jp=xorigin+j;
+      Real k=sqrt(k02*(I2+j*j));
+      T[(unsigned)(k-0.5)].re += 
+	realproduct(fi[j],wi[j]) +
+	realproduct(fim[j],wim[j]) +
+	realproduct(f0[jm][I],w[jm][I]) +
+	realproduct(f0[jp][I],w[jp][I]);
     }
   }
 
+  { // xorigin case
+    vector wi=w[xorigin];
+    vector fi=f0[xorigin];
+    for(unsigned j=1; j < my; ++j) {
+      Real k=k0*j;
+      T[unsigned(k-0.5)].re += realproduct(fi[j],wi[j]);
+    }
+  }
+  
+  { // bottom-right case
+    for(unsigned i=xorigin+1; i < Nx; ++i) {
+      unsigned I=i-xorigin;
+      Real k=k0*I;
+      T[(unsigned)(k-0.5)].re += realproduct(f0[i][0],w[i][0]);
+    }
+  }
+  
   Forcing->Force(f0,T);
   
   if(casimir)
@@ -145,14 +176,13 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     vector wi=w[i];
     vector wim=w[im];
 
+    // diagnols
     unsigned k2int=2*I2;
     Real kint=sqrt((Real) k2int);
     unsigned Sk=(unsigned)(k0*kint-0.5);
     Real Wall=abs2(wi[I])+abs2(wim[I]);
-
-    // diagnols
     S[Sk] += Complex(Wall/(k0*kint),nuk(k02*k2int)*Wall);
-    
+
     const unsigned stop=I;
     for(unsigned j=1; j < stop; ++j) {
       k2int=(I2+j*j);
