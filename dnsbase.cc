@@ -5,6 +5,8 @@ const int DNSBase::ypad=1;
 
 //***** Source routines *****//
 
+static const double sqrt2=sqrt(2.0);
+
 void DNSBase::LinearSource(const vector& wSrc, const vector& w0, double)
 {
   w.Set(w0);
@@ -121,16 +123,14 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
     vector fim=f0[im];
     
     // diagonals
-    Real k=sqrt(2*I2*k02);
-    T[(unsigned)(k-0.5)].re += 
+    T[(unsigned)(sqrt2*I-0.5)].re += 
       realproduct(fi[I],wi[I]) + realproduct(fim[I],wim[I]);
    
     const unsigned stop=I;
     for(unsigned j=1; j < stop; ++j) {
       unsigned jm=xorigin-j;
       unsigned jp=xorigin+j;
-      Real k=sqrt((I2+j*j)*k02);
-      T[(unsigned)(k-0.5)].re += 
+      T[(unsigned)(sqrt((I2+j*j))-0.5)].re += 
 	realproduct(fi[j],wi[j]) +
 	realproduct(fim[j],wim[j]) +
 	realproduct(f0[jm][I],w[jm][I]) +
@@ -141,17 +141,12 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   // xorigin case
   vector wi=w[xorigin];
   vector fi=f0[xorigin];
-  for(unsigned j=1; j < my; ++j) {
-    Real k=k0*j;
-    T[unsigned(k-0.5)].re += realproduct(fi[j],wi[j]);
-  }
+  for(unsigned j=1; j < my; ++j)
+    T[j-1].re += realproduct(fi[j],wi[j]);
   
   // bottom right
-  for(unsigned i=xorigin+1; i < Nx; ++i) {
-    unsigned I=i-xorigin;
-    Real k=k0*I;
-    T[(unsigned)(k-0.5)].re += realproduct(f0[i][0],w[i][0]);
-  }
+  for(unsigned i=xorigin+1; i < Nx; ++i)
+    T[i-xorigin-1].re += realproduct(f0[i][0],w[i][0]);
   
   Forcing->Force(f0,T);
   
@@ -175,9 +170,8 @@ void DNSBase::Spectrum(vector& S, const vector& y)
 
     // diagonals
     unsigned k2=2*I2;
-    static double sqrt2=sqrt(2.0);
     Real k=sqrt2*I;
-    unsigned Sk=(unsigned)(k0*k-0.5);
+    unsigned Sk=(unsigned)(k-0.5);
     Real Wall=abs2(wi[I])+abs2(wim[I]);
     S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
 
@@ -185,7 +179,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     for(unsigned j=1; j < stop; ++j) {
       k2=(I2+j*j);
       k=sqrt((Real) k2);
-      Sk=(unsigned)(k0*k-0.5);
+      Sk=(unsigned)(k-0.5);
 
       Wall=abs2(wi[j])+abs2(wim[j])+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
 
