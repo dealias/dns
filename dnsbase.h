@@ -132,9 +132,9 @@ public:
     return nuk(k02*(i*i+j*j));
   }
 
-  // TODO: use a 1D lookup table on i^2+j^2.
-  // TODO: this only needs to be computed for the first octant. optimize?
-  Real nuk(Real k2) {
+  // TODO: consider using a lookup table on i2.
+  Real nuk(unsigned i2) {
+    double k2=i2*k02;
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
 
