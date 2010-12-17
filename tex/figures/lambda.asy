@@ -1,11 +1,13 @@
 size(16cm,0);
 
+// asy -f pdf -u "m=8" -u "Ngrids=3" lambda.asy
+
 string[] outnames={"lambda1","lambdar2","lambdar2rot","lambda2"};
 real[] lambda={1,sqrt(2),sqrt(2),2};
 pair[] R={(1,0),(1,0),exp(-pi*I/4),(1,0)};
 
 int m=4; // really should be called mx, and a power of two.
-int Ngrids=3; // the following three arrays only work up to ngrids=3
+int Ngrids=2; // the following three arrays only work up to ngrids=3
 
 //bool drawring=true;
 
@@ -58,7 +60,7 @@ for(int i=0; i < lambda.length; ++i) {
   }
 
   if(i==3) {
-    // FIXME: this stuff really only applies to radix-4 grids
+    // this stuff really only applies to radix-4 grids
 
     int glast=Ngrids-1;
     real radlast=0.5;
@@ -93,11 +95,17 @@ for(int i=0; i < lambda.length; ++i) {
 	pen[] pens={fpen,fpen};
 	draw(pic,paths,pens);
 	
-	draw(pic,scale(rad+L/2)*Semi,dotpen[G]+dashed);
+	//draw(pic,scale(rad+L/2)*Semi,dotpen[G]+dashed);
 	radlast=rad+L/2;
 	rad += L;
       }
-      dot(pic,p[1]);
+
+
+      int imax=floor(sqrt(2)*m);
+      for(int i=1; i <= imax; ++ i) {
+	draw(pic,scale(L*(i-0.5))*semi,dotpen[G]+dashed);
+      }
+      dot(pic,(L*(imax+0.5),0),invisible); // centres picture correctly
       /*
       int start=G==0? 0 : quotient(n0,L);
       real stop=G==glast ? ceil((kmax +1/2)/L) : n0-1;
