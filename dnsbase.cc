@@ -130,6 +130,7 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
     for(unsigned j=1; j < stop; ++j) {
       unsigned jm=xorigin-j;
       unsigned jp=xorigin+j;
+      // FIXME: changes with projection type
       T[(unsigned)(sqrt((I2+j*j))-0.5)].re += 
 	realproduct(fi[j],wi[j]) +
 	realproduct(fim[j],wim[j]) +
@@ -181,6 +182,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
       k=sqrt((Real) k2);
       Sk=(unsigned)(k-0.5);
 
+      // FIXME: different spectrum interpolations go here
       Wall=abs2(wi[j])+abs2(wim[j])+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
 
       S[Sk] += Complex(Wall/(k0*k),nuk(I2+j*j)*Wall);
@@ -219,16 +221,28 @@ void DNSBase::Initialize()
 
 void DNSBase::setcount()
 {
-  if(spectrum) {
+  switch(spectrum) {
+  case 1: // uninterpolated spectrum
     for(unsigned i=0; i < nshells; i++)
       count[i]=0;
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-        count[(unsigned)(sqrt(I2+j*j)-0.5)]++;
-      }
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      // FIXME: changes with spectrum type
+      // FIXME: optimize to work over quadrant
+      count[(unsigned)(sqrt(I2+j*j)-0.5)]++;
     }
+  }
+  break;
+ case 2: // interpolated spectrum
+   msg(ERROR,"interpolated spectrum not yet implemented");
+   // FIXME
+   break;
+ case 3: // discrete spectrum
+   msg(ERROR,"discrete spectrum not yet implemented");
+   // FIXME
+   break;
   }
 }
 

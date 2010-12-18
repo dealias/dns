@@ -34,8 +34,11 @@ void DNSBase::CasimirTransfer(const vector2& Src, const vector2& Y)
     int I2=I*I;
     vector fi=f[i];
     vector Si=f0[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      // FIXME: optimize to work over a quadrant
+      // FIXME: changes with spectrum type
       Tn[(unsigned)(sqrt(I2+j*j)-0.5)].re += realproduct(Si[j],fi[j]);
+    }
   }
 
   for(unsigned i=0; i < Nx; ++i) {
@@ -59,7 +62,10 @@ void DNSBase::CasimirTransfer(const vector2& Src, const vector2& Y)
     int I2=I*I;
     vector fi=f[i];
     vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      // FIXME: optimize to work over a quadrant
+      // FIXME: changes with spectrum type
       Tn[(unsigned)(sqrt(I2+j*j)-0.5)].re += 3.0*realproduct(wi[j],fi[j]);
+    }
   }
 }
