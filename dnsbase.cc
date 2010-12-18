@@ -225,13 +225,11 @@ void DNSBase::setcount()
   case 1: // uninterpolated spectrum
     for(unsigned i=0; i < nshells; i++)
       count[i]=0;
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      // FIXME: changes with spectrum type
-      // FIXME: optimize to work over quadrant
-      count[(unsigned)(sqrt(I2+j*j)-0.5)]++;
+  for(unsigned i=0; i < xorigin; i++) {
+    unsigned I=xorigin-i;
+    unsigned I2=I*I;
+    for(unsigned j=1; j < I; ++j) {
+      count[(unsigned)(sqrt(I2+j*j)-0.5)] += 4;
     }
   }
   break;
