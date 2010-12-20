@@ -1,6 +1,3 @@
-% Hermitian in conv captions?
-% Need to reference tconv2; clarify 4096^2 vs. (2mx-1)(2my-1) etc.
-
 \documentclass[final]{siamltex}
 \usepackage[lined,algonl,boxed]{algorithm2e}
 
@@ -547,7 +544,7 @@ inverse of \fftOpadBackwards({\sf f},{\sf u}).}
 \label{fft0padForwards}
 \end{function}
 
-\subsection{Hermitian convolution}
+\subsection{Centered Hermitian convolution}
 
 In this frequently encountered case (relevant to the pseudospectral
 method), each input vector is the Fourier transform of real-valued data;
@@ -561,7 +558,8 @@ the unsymmetrized physical data needs to be padded with at least $m-1$ zeros.
 Hermitian symmetry then requires us to pad the $m$ non-negative
 wavenumbers with at least $c\doteq\floor{m/2}$ zeros.
 The resulting $2/3$ padding ratio (for even $m$) turns out to work
-particularly well for developing implicitly dealiased Hermitian convolutions.
+particularly well for developing implicitly dealiased centered Hermitian
+convolutions.
 As in the centered case, we again choose the Fourier size to be $N=3m$.
 
 Given that $U_k=0$ for $k\ge m$, the backwards (complex-to-real) transform
@@ -577,8 +575,8 @@ We note that $w_{k,r}$ obeys the Hermitian symmetry
 $w_{k,r}=\conj{w_{m-k,r}}$, so that the Fourier transform
 $\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r}$ in \Eq{fft0backwardsA} will indeed
 be real valued. This allows us to build a backwards implicitly dealiased
-Hermitian transform using three complex-to-real Fourier transforms of the
-first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
+centered Hermitian transform using three complex-to-real Fourier transforms
+of the first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
 forwards transform is given by
 \bel
 {3m}U_k
@@ -617,9 +615,9 @@ $(-1)^j$ here since they will cancel during the real term-by-term multiplication
 of the two transformed input vectors.
 
 As seen in Fig.~\ref{timing1r}, the efficiency of the resulting implicitly
-dealiased Hermitian convolution is comparable to an explicit implementation.
-For each algorithm, we benchmark only those vector lengths that yield
-optimal performance.
+dealiased centered Hermitian convolution is comparable to an explicit
+implementation. For each algorithm, we benchmark only those vector lengths
+that yield optimal performance.
 
 To check the accuracy of our implementation, we used the test case
 $f_k=F e^{ik}$ and $g_k=G e^{ik}$ for $k=0,\ldots,m-1$,
@@ -818,7 +816,7 @@ Fig.~\ref{timing2r}, implicit padding again yields a dramatic improvement
 in speed.
 
 When $m_y$ is even, the memory usage for an implicitly dealiased
-$(2m_x-1)\times (2m_y-1)$ Hermitian convolution is
+$(2m_x-1)\times (2m_y-1)$ centered Hermitian convolution is
 $2(2m_x-1)m_y+2(m_x+1)m_y+2(m_y/2+1)=6m_xm_y+m_y+2$ complex words, compared
 with a minimum of $2(3m_x-2)(3m_y/2)=9m_xm_y-6m_y$ complex words required
 for an explicitly dealiased convolution.
@@ -868,9 +866,10 @@ length $m_y$.}\label{cconv2}
   }
   \Return \xf\;
 \caption{conv2({\sf f},{\sf g},{\sf u},{\sf v},{\sf U},{\sf V}) 
-returns an in-place implicitly dealiased convolution of $(2m_x-1)\times
-m_y$ matrices {\sf f} and {\sf g} using temporary $(m_x+1)\times m_y$ matrices 
-{\sf U} and~{\sf V} and vectors {\sf u} and {\sf v} of length~$m_y$.
+returns an in-place implicitly dealiased centered Hermitian convolution of
+$(2m_x-1)\times m_y$ matrices {\sf f} and {\sf g} using temporary
+$(m_x+1)\times m_y$ matrices {\sf U} and~{\sf V} and vectors {\sf u} and
+{\sf v} of length~$m_y$.
 }\label{conv2}
 \end{function}
 \end{minipage}
@@ -929,7 +928,7 @@ $4m_xm_ym_z+2m_y m_z+2m_z$ complex words, much less than the
 $16m_xm_ym_z$ complex words required by an explicit 
 convolution based on power-of-two transforms.
 
-A $(2m_x-1)\times (2m_y-1)\times (2m_1-1)$ implicit Hermitian 3D
+A $(2m_x-1)\times (2m_y-1)\times (2m_1-1)$ implicit centered Hermitian 3D
 convolution was also implemented in an analogous manner. It required
 $$
 6m_x(2m_y-1)m_z+2(m_y+1)m_z+2(m_z/2+1)=12m_xm_ym_z-6m_xm_z+2m_ym_z+m_z+2
@@ -1009,7 +1008,7 @@ which, for example, is required to compute the time evolution of the
 Casimir invariant $\int \w^4\,d\vx$ associated with the nonlinearity of
 two-dimensional incompressible flow expressed in terms of the scalar
 vorticity~$\w$~\cite{Bowman10}. The basic building blocks for this problem
-are again the centered Fourier transform and the Hermitian convolution.
+are again the centered Fourier transform and Hermitian convolution.
 
 \subsection{Implicit double-dealiased centered Fourier transform}
 \label{fft0bi}
@@ -1048,9 +1047,9 @@ requirements, it is straightforward to implement strided multivector
 versions of these algorithms.
 
 \subsection{Implicitly dealiased centered Hermitian 1D ternary convolution}
-Let us now consider a Hermitian ternary convolution with $N=4m$, where $m$ is a
-power of $2$. For explicit padding, one needs to pad the $m$ non-negative
-wavenumbers with $m+1$ zeros, for a total vector length of $2m+1$.
+Let us now consider a centered Hermitian ternary convolution with $N=4m$,
+where $m$ is a power of $2$. For explicit padding, one needs to pad the $m$
+non-negative wavenumbers with $m+1$ zeros, for a total vector length of $2m+1$.
 
 On decomposing $j=2\ell+r$, where
 $\ell=0,\ldots, 2m-1$ and $r\in\{0,1\}$, the backwards transform is given
@@ -1068,25 +1067,27 @@ The forwards transform is
 \sum_{\ell=0}^{2m-1} \zeta_{2m}^{-\ell k} u_{2\ell+r}
 \qquad k\no =-m+1,\ldots,m-1.
 \ee
-The resulting implicitly padded Hermitian ternary convolution,
+The resulting implicitly padded centered Hermitian ternary convolution,
 Procedure {\tt\ref{tconv}}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out of place.
 In Fig.~\ref{timing1t} we show that this algorithm is competitive with
-explicit padding. Procedure {\tt\ref{tconv}} requires $6(m+1)$ complex words of
+explicit padding. Function {\tt\ref{tconv}} requires $6(m+1)$ complex words of
 storage, slightly more than the $3(2m+1)=6m+3$ complex words needed for explicit
 padding.
 
 Just as for convolutions, the performance and memory benefits of
-dealiasing higher-order convolutions {\it via\/} implicit padding manifest themselves only in
-higher dimensions. For example, in Fig.~\ref{timing2t}, we observe 
-that an implicit $4096^2$ Hermitian ternary convolution is $2.28$ times
-faster than an explicit version.
-The memory usage for a $(2m_x-1)\times (2m_y-1)$ implicit Hermitian ternary
+dealiasing higher-order convolutions {\it via\/} implicit padding manifest
+themselves only in higher dimensions. For example, in Fig.~\ref{timing2t},
+we observe for $m_x=m_y=4096$ that the implicit $(2m_x-1)\times m_y$ centered
+Hermitian ternary convolution computed with Function~{\tt\ref{tconv2}} is
+$2.28$ times faster than an explicit version.
+The memory usage for a $(2m_x-1)\times m_y$ implicit centered Hermitian ternary
 convolution is $6\cdot 2m_x(m_y+1)+3(m_y+1)=12m_xm_y+12m_x+3m_y+3$ complex words,
 compared with $3\cdot 4m_x(2m_y+1)=24m_xm_y+12m_x$ complex words
-(using power-of-two transforms) for an explicit version. In contrast, a
-$4096^2$ $y$-pruned Hermitian ternary convolution requires the same amount
-of storage as, but is $1.42$ times faster than, an explicitly padded version.
+(using power-of-two transforms) for an explicit version. In contrast,
+the corresponding $y$-pruned convolution requires the
+same amount of storage as, but is $1.42$ times faster than, an explicitly
+padded version.
 
 \begin{figure}[htbp]
 \begin{minipage}{0.48\linewidth}
@@ -1118,9 +1119,10 @@ of storage as, but is $1.42$ times faster than, an explicitly padded version.
   }
   \Return f/(4m)\;
 \caption{tconv({\sf f},{\sf g},{\sf h},{\sf u},{\sf v},{\sf w}) computes
-an in-place implicitly dealiased ternary convolution of three centered
-Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
-{\sf u}, {\sf v}, and {\sf w}, each of length~$m+1$.}\label{tconv}
+an in-place implicitly dealiased centered Hermitian ternary convolution of
+three centered Hermitian vectors {\sf f}, {\sf g}, and {\sf h}, using three
+temporary vectors {\sf u}, {\sf v}, and {\sf w}, each of
+length~$m+1$.}\label{tconv}
 \end{function}
 \end{minipage}
 %
@@ -1142,8 +1144,8 @@ Hermitian vectors {\sf f}, {\sf g}, {\sf h}, using three temporary vectors
   }
   \Return \xf\;
 \caption{tconv2({\sf f},{\sf g},{\sf h}) 
-returns an in-place implicitly dealiased convolution of \hbox{$2m_x\times
-(m_y+1)$} matrices~{\sf f},~{\sf g}, and~{\sf h} using
+returns an in-place implicitly dealiased centered Hermitian ternary convolution
+of \hbox{$2m_x\times (m_y+1)$} matrices~{\sf f},~{\sf g}, and~{\sf h} using
 temporary \hbox{$2m_x\times (m_y+1)$} matrices~{\sf U}, {\sf V}, and~{\sf W} and
 vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 }\label{tconv2}
@@ -1156,7 +1158,7 @@ vectors {\sf u}, {\sf v} and~{\sf w} of length~$m_y+1$.
 \begin{center}
 \includegraphics{timing1t}
 \caption{Comparison of computation times for explicitly and implicitly
-dealiased complex in-place 1D ternary convolutions of length $m$.}
+dealiased centered Hermitian in-place 1D ternary convolutions of length $m$.}
 \phantomsection{}\label{timing1t}
 \end{center}
 \end{minipage}
