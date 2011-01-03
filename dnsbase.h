@@ -4,10 +4,12 @@
 #include "options.h"
 #include "kernel.h"
 #include "Array.h"
+#include "ArrayL.h"
 #include "fftw++.h"
 #include "convolution.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
+#include "heapsort.h"
 #include "Conservative.h"
 #include "Exponential.h"
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
@@ -31,6 +33,7 @@ protected:
   static const int xpad,ypad;
   
   enum Field {OMEGA,TRANSFER,TRANSFERN,EK};
+  enum SPEC {NOSPECTRUM, UNINTERP, INTERP, DISCRETE};
 
   // derived variables:
   unsigned mx, my; // size of data arrays
@@ -47,6 +50,10 @@ protected:
 
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
+  array1<unsigned> R2; //radii achieved for discrete spectrum
+  array2L<unsigned> kval; // for discrete spectrum
+  array2L<unsigned> area, areadown; // for interpolated spectrum
+
 
   array2<Complex> f0,f1,g0,g1;
   array2<Complex> buffer;
@@ -145,13 +152,19 @@ public:
   vector T; // Transfer
   virtual Real getSpectrum(unsigned i) {
     double c=count[i];
+    if(spectrum == DISCRETE)
+      return c > 0 ? T[i].re*twopi/c : 0.0;
     return c > 0 ? T[i].re*twopi/c : 0.0;
   }
   Real Dissipation(unsigned i) {return T[i].im;}
   Real Pi(unsigned i) {return T[i].re;}
   Real Eta(unsigned i) {return T[i].im;}
   Real kb(unsigned i) {return k0*(i+0.5);}
-  Real kc(unsigned i) {return k0*(i+1);}
+  Real kc(unsigned i) {
+    if(spectrum == DISCRETE) 
+      return k0*sqrt((Real) R2[i]);
+    return k0*(i+1);
+  }
 };
 
 //***** initial conditions *****//

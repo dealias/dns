@@ -172,19 +172,17 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     // diagonals
     unsigned k2=2*I2;
     Real k=sqrt2*I;
-    unsigned Sk=(unsigned)(k-0.5);
+    // TODO: replace Sk calculation with function pointer for efficiency?
+    unsigned Sk= spectrum == DISCRETE ?  kval[I][I] : (unsigned)(k-0.5);
     Real Wall=abs2(wi[I])+abs2(wim[I]);
     S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
-
+    
     const unsigned stop=I;
     for(unsigned j=1; j < stop; ++j) {
       k2=(I2+j*j);
       k=sqrt((Real) k2);
-      Sk=(unsigned)(k-0.5);
-
-      // FIXME: different spectrum interpolations go here
+      Sk= spectrum == DISCRETE ? kval[I][j] : (unsigned)(k-0.5);
       Wall=abs2(wi[j])+abs2(wim[j])+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
-
       S[Sk] += Complex(Wall/(k0*k),nuk(I2+j*j)*Wall);
     }
   }
@@ -192,15 +190,17 @@ void DNSBase::Spectrum(vector& S, const vector& y)
   // xorigin case
   vector wi=w[xorigin];
   for(unsigned j=1; j < my; ++j) {
+    unsigned Sk= spectrum == DISCRETE ? kval[j][0] : j-1;
     Real w2=abs2(wi[j]);
-    S[j-1] += Complex(w2/(k0*j),w2*nuk(j*j));
+    S[Sk] += Complex(w2/(k0*j),w2*nuk(j*j));
   }
-    
+  
   // bottom right
   for(unsigned i=xorigin+1; i < Nx; ++i) {
     unsigned I=i-xorigin;
+    unsigned Sk= spectrum == DISCRETE ? kval[I][0] : I-1;
     Real w2=abs2(w[i][0]);
-    S[I-1] += Complex(w2/(k0*I),w2*nuk(I*I));
+    S[Sk] += Complex(w2/(k0*I),w2*nuk(I*I));
   }
 }
 
@@ -222,24 +222,39 @@ void DNSBase::Initialize()
 void DNSBase::setcount()
 {
   switch(spectrum) {
-  case 1: // uninterpolated spectrum
+  case NOSPECTRUM:
+    break;
+  case UNINTERP: // uninterpolated spectrum
     for(unsigned i=0; i < nshells; i++)
       count[i]=0;
-  for(unsigned i=0; i < xorigin; i++) {
-    unsigned I=xorigin-i;
-    unsigned I2=I*I;
-    for(unsigned j=1; j < I; ++j) {
-      count[(unsigned)(sqrt(I2+j*j)-0.5)] += 4;
+    for(unsigned i=0; i < xorigin; i++) {
+      unsigned I=xorigin-i;
+      unsigned I2=I*I;
+      for(unsigned j=1; j < I; ++j) {
+	count[(unsigned)(sqrt(I2+j*j)-0.5)] += 4;
+      }
     }
-  }
-  break;
- case 2: // interpolated spectrum
+    break;
+ case INTERP: // interpolated spectrum
    msg(ERROR,"interpolated spectrum not yet implemented");
    // FIXME
    break;
- case 3: // discrete spectrum
-   msg(ERROR,"discrete spectrum not yet implemented");
-   // FIXME
+ case DISCRETE: // discrete spectrum
+   for(unsigned i=0; i < nshells; i++)
+     count[i]=0;
+   for(unsigned i=0; i < Nx; i++) {
+     unsigned I= xorigin > i ? xorigin-i : i-xorigin;
+     unsigned I2=I*I;
+     for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
+       unsigned r2=I2+j*j;
+       for(unsigned k=0; k < R2.Size(); ++k) {
+	 if(r2 == R2[k]) {
+	   count[k]++;
+	   break;
+	 }
+       }
+     }
+   }
    break;
   }
 }

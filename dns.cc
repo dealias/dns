@@ -1,4 +1,5 @@
 #include "dnsbase.h"
+#include "rvn.h"
 
 const double ProblemVersion=1.0;
 
@@ -288,8 +289,44 @@ void DNS::InitialConditions()
   my=(Ny+1)/2;
   xorigin=mx-1;
   origin=xorigin*my;
-  // FIXME: changes with spectrum type
-  nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
+  switch(spectrum) {
+  case NOSPECTRUM:
+    nshells=0;
+    break;
+  case UNINTERP:
+    nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
+    break;
+  case INTERP:
+    nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
+    break;
+  case DISCRETE:
+    // NB: assumes mx=my
+    {
+      DynVector<unsigned> tempR2;
+      array1<unsigned> tempnr(my);
+      findrads(tempR2,tempnr,my);
+      heapsort(tempR2);
+      Allocate(R2,tempR2.Size());
+      //Dimension(R2,tempR2.Size());
+      for(unsigned i=0; i < R2.Size(); ++i) R2[i]=tempR2[i];
+    }
+    nshells=R2.Size();
+    Allocate(kval,my*(my+1)/2);
+    kval.Dimension(my);
+    kval[0][0]=-1; // should not be used; not part of spectrum!
+    for(unsigned i=1; i < my; ++i) {
+      array1<unsigned> kvali=kval[i];
+      unsigned i2=i*i;
+      for(unsigned j=0; j <= i; ++j) {
+	unsigned k2=i2+j*j;
+	for(unsigned a=0; a < nshells; ++a) {
+	  if(R2[a] == k2)
+	    kval[i][j]=a;
+	}
+      }
+    }
+    break;
+  }
 
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
