@@ -137,7 +137,9 @@ public:
 	unsigned k2int=I2+j*j;
 	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
-          T[(unsigned)(sqrt(k2int)-0.5)].im += realproduct(force,wi[j]);
+	  unsigned Sk= spectrum==3 ? DNSProblem->getkval(I,j)
+	    :(unsigned)(sqrt(k2int)-0.5);
+          T[Sk].im += realproduct(force,wi[j]);
 	  wi[j] += force;
         }
       }
@@ -164,20 +166,25 @@ public:
     Complex fk=Fk*xi;
     double sqrtdt=sqrt(dt);
     Complex diff=sqrtdt*fk;
+
     // don't loop over modes outside of the forcing region
     unsigned jmax=1+min(my,(unsigned) ceil(kmax/k0));
     unsigned imin=max(0,(int) xorigin - (int) jmax);
     unsigned imax=min(Nx,xorigin+jmax);
+
     for(unsigned i=imin; i < imax; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
+      unsigned I= i > xorigin ? i - xorigin : xorigin - i;
+      unsigned I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < jmax; ++j) {
 	unsigned k2int=I2+j*j;
 	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
-	  T[(unsigned)(sqrt(k2int)-0.5)].im += 
-            realproduct(diff,wi[j])+0.5*abs2(diff);
+	  bool q1=I >= j;
+	  unsigned Sk= spectrum==3 
+	    ? DNSProblem->getkval(q1 ? I : j, q1 ? j : I)
+	    :(unsigned)(sqrt(k2int)-0.5);
+	  T[Sk].im += realproduct(diff,wi[j])+0.5*abs2(diff);
 	  wi[j] += diff;
         }
       }

@@ -123,15 +123,15 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
     vector fim=f0[im];
     
     // diagonals
-    T[(unsigned)(sqrt2*I-0.5)].re += 
-      realproduct(fi[I],wi[I]) + realproduct(fim[I],wim[I]);
+    unsigned Sk= spectrum == DISCRETE ?  kval[I][I] : (unsigned)(sqrt2*I-0.5);
+    T[Sk].re += realproduct(fi[I],wi[I]) + realproduct(fim[I],wim[I]);
    
     const unsigned stop=I;
     for(unsigned j=1; j < stop; ++j) {
       unsigned jm=xorigin-j;
       unsigned jp=xorigin+j;
-      // FIXME: changes with projection type
-      T[(unsigned)(sqrt((I2+j*j))-0.5)].re += 
+      Sk= spectrum == DISCRETE ? kval[I][j] : (unsigned)(sqrt((I2+j*j))-0.5);
+      T[Sk].re += 
 	realproduct(fi[j],wi[j]) +
 	realproduct(fim[j],wim[j]) +
 	realproduct(f0[jm][I],w[jm][I]) +
@@ -142,13 +142,15 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   // xorigin case
   vector wi=w[xorigin];
   vector fi=f0[xorigin];
-  for(unsigned j=1; j < my; ++j)
-    T[j-1].re += realproduct(fi[j],wi[j]);
-  
+  for(unsigned j=1; j < my; ++j) {
+    unsigned Sk= spectrum == DISCRETE ? kval[j][0] : j-1;
+    T[Sk].re += realproduct(fi[j],wi[j]);
+  }
   // bottom right
-  for(unsigned i=xorigin+1; i < Nx; ++i)
-    T[i-xorigin-1].re += realproduct(f0[i][0],w[i][0]);
-  
+  for(unsigned i=xorigin+1; i < Nx; ++i) {
+    unsigned Sk= spectrum == DISCRETE ? kval[i-xorigin][0] : i-xorigin-1;
+    T[Sk].re += realproduct(f0[i][0],w[i][0]);
+  }  
   Forcing->Force(f0,T);
   
   if(casimir)

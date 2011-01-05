@@ -100,6 +100,7 @@ public:
   Real getk02() {return k02;}
   unsigned getxorigin() {return xorigin;}
   Real getetanorm() {return etanorm;}
+  unsigned getkval(const unsigned i, const unsigned j) {return kval[i][j];}
 
   void InitialConditions();
   void Initialize();
@@ -157,7 +158,11 @@ public:
   Real Dissipation(unsigned i) {return T[i].im;}
   Real Pi(unsigned i) {return T[i].re;}
   Real Eta(unsigned i) {return T[i].im;}
-  Real kb(unsigned i) {return k0*(i+0.5);}
+  Real kb(unsigned i) {
+    if(spectrum == DISCRETE)
+      return i == 0 ? 0.5*k0 : k0*sqrt((Real) R2[i-1]);
+    return k0*(i+0.5);
+  }
   Real kc(unsigned i) {
     if(spectrum == DISCRETE) 
       return k0*sqrt((Real) R2[i]);
