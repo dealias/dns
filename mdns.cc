@@ -117,13 +117,11 @@ public:
   public:
     Grid();
     Grid(unsigned, MDNS *, bool);
-    Grid(MDNS *prob, unsigned g, const vector2& Y0);
     ~Grid();
-    void AttachTo(MDNS *prob, const vector2 & Y);
+    void AttachTo(MDNS*, const vector2&);
     void SetParams();
-    unsigned myg;
 
-    
+    unsigned myg;
 
     array2<Real> tildeB;
 
@@ -174,19 +172,36 @@ public:
   array1<Grid *> G;
   
   enum Field {OMEGA,TRANSFER,TRANSFERN,EK,Nfields};
+  enum SPEC {NOSPECTRUM, UNINTERP, INTERP, DISCRETE}; // copy from DNSBase
   unsigned getnfields(unsigned g) {return Nfields;};
   unsigned getnshells(unsigned g) {
-    if(!spectrum)
+    switch(spectrum) {
+    case NOSPECTRUM:
       return 0;
-    if(radix==1) {
-      if(g != glast)
-	return 0;
-      return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+      break;
+    case UNINTERP:
+      if(radix==1) {
+	if(g != glast)
+	  return 0;
+	return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+      }
+      if(circular) {
+	if(g==glast) return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+      }
+      return gm(my,g)-1;
+      break;
+    case INTERP:
+      msg(ERROR,"Interpolated spectrum not implemented");
+      return 0;
+      break;
+    case DISCRETE:
+      //FIXME
+      return nshells;
+      break;
+    default:
+      msg(ERROR,"Invalid spectral choice.");
+      return 0;
     }
-    if(circular) {
-      if(g==glast) return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
-    }
-    return gm(my,g)-1;
   };
 
   //array1<unsigned>::opt count;
@@ -423,12 +438,6 @@ MDNS::Grid::Grid(unsigned g, MDNS * parent0, bool islast=0)
   SetParams();
 }
 
-MDNS::Grid::Grid(MDNS *prob, unsigned g, const vector2 & Y)
-{
-  parent=prob;
-  w.Set(Y[OMEGA]);
-}
-
 MDNS::Grid::~Grid()
 {
   fftwpp::deleteAlign(block);
@@ -485,7 +494,9 @@ void MDNS::Grid::InitialConditions(unsigned g)
   // load vocabulary from global variables
   nuH=::nuH;
   nuL=::nuL;
+  InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
 
+  // check parameters
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
   if(radix != 1 && radix != 4) 
@@ -495,15 +506,14 @@ void MDNS::Grid::InitialConditions(unsigned g)
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
 
-
+  // allocate memory
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
-
   cout << "\nALLOCATING FFT BUFFERS" << endl;
-
   block=ComplexAlign(3*Nx*my);
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
   NLDimension();
-
+  InitialCondition->Set(w,Nx*my);
+  
   if(myg > 0) { 
     // buffer for calculating small-small-small calculations
     sNx=2*Invisible-1;
@@ -523,12 +533,21 @@ void MDNS::Grid::InitialConditions(unsigned g)
     for(unsigned i=0; i < 2*Invisible+1; ++i)
       tildeB[i][0]=0.0;
   }
-  
-  InitialCondition=MDNS_Vocabulary.NewInitialCondition(ic);
-  InitialCondition->Set(w,Nx*my);
 
+  // set up spectrum parameters
+  switch(spectrum) {
+  case NOSPECTRUM:
+    nshells=0;
+    break;
+  case UNINTERP:
+    nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
+    break;
+  }
   nshells=0;
+
+  // allocate spectral arrays
   if(spectrum) {
+    // FIXME:
     nshells=parent->getnshells(myg);
     Dimension(T,nshells);
     Allocate(count,nshells);
@@ -537,7 +556,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
       count[i]=0;
     }
   }
-    
+  
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 }
 
@@ -709,7 +728,8 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   VOCAB_CONSTANT(movie,0,"Movie flag (off)");
   VOCAB_CONSTANT(casimir,0,"Compute Casimir invariants (off)");
-  VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
+  VOCAB(spectrum,0,3,
+	"Spectrum flag (0=off, 1=uninterpolated, 2=interpolated, 3=discrete)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
   InitialConditionTable=new Table<InitialConditionBase>("initial condition");
@@ -769,33 +789,25 @@ Real curve_kc(unsigned i) {return MDNSProblem->getkc(i);}
 
 void MDNS::InitialConditions()
 {
-  // make sure we're actually using MultiIntegrator
+  // make sure that the options are cool: 
   if(typeid(*Integrator) != typeid(MultiIntegrator))
     msg(ERROR,"MDNS requires integrator=MultiIntegrator");
-
-  // make sure that the options are cool:
   if(radix==2) msg(ERROR,"radix-2 not implimented");
   if(radix==1 && prtype==AREA) 
     msg(ERROR,"radix-1 only works with pytpe=NONE (0) or POINT (2)");
   
-
   //***** Vocabulary *****//
   Ngrids=::Ngrids;
   glast=Ngrids-1;
   saveF=OMEGA;
-  MultiProblem::InitialConditions(Ngrids);
   MProblem=this;
   k0=::k0;
   Forcing=MDNS_Vocabulary.NewForcing(forcing);
-
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
-  nshells=0;
-
-  //  Allocate(spectra,nshells);
-  //  for (unsigned i=0; i < nshells; ++i) spectra[i]=0.0;
-
+  // set up MultiProblem
+  MultiProblem::InitialConditions(Ngrids);
   for(unsigned g=0; g < Ngrids; ++g) {
     nfields=getnfields(g);
     NY[nfields*g+OMEGA]=gN(Nx,g)*gm(my,g);
@@ -804,20 +816,19 @@ void MDNS::InitialConditions()
     NY[nfields*g+EK]=getnshells(g);
   }
 
-  Allocator(align); // allocate MultiIntegrator
-
+  // allocate MultiIntegrator and grids
+  Allocator(align); 
   G.Allocate(Ngrids);
-
   for(unsigned g=0; g < Ngrids; ++g) {
     grid=g;
     G[g]=new Grid(g,this,g==glast);
     G[g]->AttachTo(this,Y);
     G[g]->InitialConditions(g);
   }
-  //for (unsigned g=1; g< Ngrids; g++) Project(g);
-  // mY not set here for Project to work?
 
-  if(spectrum) {
+  // allocate spectrum arrays
+  if(spectrum) { 
+    // FIXME: allow for different spectra
     for(unsigned g=0; g < Ngrids; ++g) {
       G[g]->setcount();
       if(g!=glast) G[g]->setcountoverlap(G[g+1]->count);
@@ -827,7 +838,7 @@ void MDNS::InitialConditions()
     if(radix==1) lambda=1.0;
     if(radix==4) lambda=2.0;
     unsigned nextra=gm(my,0)-1; // do not include the zero-shell
-    nshells += nextra;
+    nshells = nextra;
     if(verbose >1) cout << "nextra="<<nextra << endl;
     G[0]->setshellsbelow(0);
     G[0]->setmyshells(nextra);
@@ -850,16 +861,16 @@ void MDNS::InitialConditions()
     if(verbose >1) cout << "nextra="<<nextra << endl;
   }
 
+  //for (unsigned g=1; g< Ngrids; g++) Project(g);
+  // mY not set here for Project to work?
 
-  //***** output *****//
+  // output
   open_output(fprolog,dirsep,"prolog",0);
   out_curve(fprolog,curve_kb,"kb",spectrum ? nshells+1 : 0);
   out_curve(fprolog,curve_kc,"kc",nshells);
   fprolog.close();
-
   tcount=0;
   //setcount();
-  
   open_output(Mfevt,dirsep,"evt");
   open_output(ft,dirsep,"t");
   if(!restart) remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
