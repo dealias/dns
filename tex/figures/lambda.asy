@@ -14,7 +14,7 @@ int Ngrids=2; // the following three arrays only work up to ngrids=3
 pen[] dotpen={black,blue,deepgreen};
 filltype[] dotfill={Fill,NoFill,NoFill};
 pen[] dotfillpen={black,invisible,invisible};
-int n;
+int n,G;
 path g;
 picture pic;
 pen p, fillpen;
@@ -32,8 +32,9 @@ void drawdots() {
       pair a=L*r*(i,j);
       g=scale(s)*unitcircle;
       if((j >= Invisible) || (abs(i) >= Invisible)) {
-	//label(pic,"("+(string) i +"," + (string) j+")",a,NE);
 	filldraw(pic,shift(a)*g,fillpen,p);
+	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
+	//label(pic,(string) (i*i+j*j),a,NE);
       } else {
 	filldraw(pic,shift(a)*g,fillpen,p+dashed);
       }
@@ -46,7 +47,7 @@ for(int i=0; i < lambda.length; ++i) {
   pic = new picture;
   size(pic,30cm,0);
   
-  for(int G=0; G < Ngrids; ++G) {
+  for(G=0; G < Ngrids; ++G) {
     n=m;
     if(i==0) n=m*2^G;
     Invisible= G==0 ? 0 : floor(n/2);

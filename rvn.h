@@ -43,10 +43,9 @@ void check_rvn(DynVector<unsigned> & R2, const unsigned r2,
     //cout << "found" << endl;
 }
 
-void findrads(DynVector<unsigned> &R2,   array1<unsigned> nr,
-	      const unsigned m)
+void findrads(DynVector<unsigned> &R2, array1<unsigned> nr, const unsigned m,
+	      const unsigned invis=0)
 {
-
   for(unsigned i=1; i < m; ++i) {
     //unsigned start=nr[(unsigned) floor(sqrt((i-1)/2))];
     double nrstart=floor(sqrt((i-1)/2));
@@ -56,7 +55,10 @@ void findrads(DynVector<unsigned> &R2,   array1<unsigned> nr,
       unsigned x2=x*x;
       unsigned ystopnow= i < x ? i : x;
       for(unsigned y= x == 0 ? 1 : 0; y <= ystopnow; ++y) {
-	check_rvn(R2,x2+y*y,start);
+	if(x >= invis || y >= invis) {
+	  //cout << "("<<x<<","<<y<<")"<<endl;
+	  check_rvn(R2,x2+y*y,start);
+	}
       }
     }
     nr[i]=R2.Size();
