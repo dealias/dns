@@ -328,7 +328,7 @@ void DNS::InitialConditions()
 	unsigned k2=i2+j*j;
 	for(unsigned a=0; a < nshells; ++a) {
 	  if(R2[a] == k2)
-	    kval[i][j]=a;
+	    kvali[j]=a;
 	}
       }
     }

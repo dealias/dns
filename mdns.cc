@@ -2,6 +2,9 @@
 #include "dnsbase.h"
 #include "MultiIntegrator.h"
 #include "Conservative.h"
+#include "rvn.h"
+#include "DynVector.h"
+#include "ArrayL.h"
 
 using namespace fftwpp;
 
@@ -42,7 +45,6 @@ enum PRTYPE {NOPR,AREA,POINT};
 unsigned prtype=POINT;
 int dorescale=false; // TODO: this should be set to true once rescale works
 bool overlap=false; // account for overlapping corners of spectrum?
-bool circular=false; // include corner modes in spectrum?
 // unused vocab variables to match dns
 unsigned movie=0;
 
@@ -175,6 +177,7 @@ public:
   enum SPEC {NOSPECTRUM, UNINTERP, INTERP, DISCRETE}; // copy from DNSBase
   unsigned getnfields(unsigned g) {return Nfields;};
   unsigned getnshells(unsigned g) {
+    // this function should only be used during initialization.
     switch(spectrum) {
     case NOSPECTRUM:
       return 0;
@@ -183,11 +186,10 @@ public:
       if(radix==1) {
 	if(g != glast)
 	  return 0;
-	return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
+	else
+	  return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
       }
-      if(circular) {
-	if(g==glast) return (unsigned) (hypot(gm(mx,g)-1,gm(my,g)-1)+0.5);
-      }
+
       return gm(my,g)-1;
       break;
     case INTERP:
@@ -195,14 +197,33 @@ public:
       return 0;
       break;
     case DISCRETE:
-      //FIXME
-      return nshells;
+      {
+	DynVector<unsigned> tempR2;
+	array1<unsigned> tempnr(my);
+	findrads(tempR2,tempnr,my,getInvisible(g));
+	cout << tempR2.Size() << endl; 
+	return tempR2.Size();
+      }
       break;
     default:
       msg(ERROR,"Invalid spectral choice.");
       return 0;
     }
   };
+  unsigned getInvisible(unsigned g) {
+    if(g == 0) 
+      return 0;
+
+    if(radix==1) 
+      return (gN(Nx,g)+1)/2;
+    
+    if(radix==2) 
+      msg(ERROR,"radix two case not implimented");
+      
+    // radix 4
+    return (gN(Nx,g-1)+1)/4;
+  };
+
 
   //array1<unsigned>::opt count;
   //void setcount();
@@ -240,7 +261,7 @@ public:
   // Output functions
   Real getSpectrum(unsigned i) {
     if(radix == 4) {
-      unsigned lambda=2;
+      //unsigned lambda=2; // FIXME: restor?
       for(unsigned g=0; g < Ngrids; ++g) {
 	const unsigned offset=g==0 ? 0 : G[g]->getInvisible()-1;
 	const unsigned firstshell=G[g]->getshellsbelow();
@@ -469,22 +490,8 @@ void MDNS::Grid::SetParams()
   w.Dimension(Nx,my);
   origin=xorigin*my;
   
-  if(myg == 0) {
-    Invisible=Invisible2=0;
-  } else {
-    if(radix==1) 
-      Invisible=my;
-
-    if(radix==2) {
-      cerr << "radix two case not implimented" << endl;
-      exit(1);
-    }
-
-    if(radix==4)
-      Invisible=gm(my,myg-1)/2;
-
-    Invisible2=Invisible*Invisible;
-  }
+  Invisible=parent->getInvisible(myg);
+  Invisible2=Invisible*Invisible;
 }
 
 void MDNS::Grid::InitialConditions(unsigned g)
@@ -542,18 +549,56 @@ void MDNS::Grid::InitialConditions(unsigned g)
   case UNINTERP:
     nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
     break;
+  case INTERP:
+    msg(ERROR,"Interpolated spectrum not yet enabled.");
+    break;
+  case DISCRETE:
+    {
+      DynVector<unsigned> tempR2;
+      array1<unsigned> tempnr(my);
+      findrads(tempR2,tempnr,my,Invisible);
+      heapsort(tempR2);
+      Allocate(R2,tempR2.Size());
+      //Dimension(R2,tempR2.Size());
+      for(unsigned i=0; i < R2.Size(); ++i) R2[i]=tempR2[i];
+
+    cout << R2 << endl;
+    cout << Invisible << endl;
+    nshells=R2.Size();
+    kval.Dimension(my);
+    kval.Allocate(my*(my+1)/2);
+    kval[0][0]=0; // NB: not part of spectrum!
+    for(unsigned i=1; i < my; ++i) {
+      //array1<unsigned> kvali=kval[i];
+      unsigned i2=i*i;
+      for(unsigned j=0; j <= i; ++j) {
+	if(i >= Invisible  || j >= Invisible) {
+	  unsigned k2=i2+j*j;
+	  for(unsigned a=0; a < nshells; ++a) {
+	    if(R2[a] == k2)
+	      kval[i][j]=a;
+	  }
+	} else {
+	  kval[i][j]=0;
+	}
+      }
+    }
+    cout << kval<<endl;
+    }
+    break;
+  default:
+    msg(ERROR,"Invalid spectrum type.");
+    break;
   }
-  nshells=0;
 
   // allocate spectral arrays
-  if(spectrum) {
-    // FIXME:
+  if(nshells != 0) {
     nshells=parent->getnshells(myg);
     Dimension(T,nshells);
     Allocate(count,nshells);
     for(unsigned i=0; i < nshells; ++i) {
       T[i]=Complex(0.0,0.0);
-      count[i]=0;
+      count[i]=0; //FIXME: does this go here?
     }
   }
   
@@ -591,25 +636,25 @@ void MDNS::Grid::Transfer(const vector2 & Src, const vector2 & Y)
 
 void MDNS::Grid::setcount()
 {
-  if(spectrum) {
-    if(radix == 4) {
-      Real kbound=lastgrid && circular ? mx*my: my-0.5;
-      for(unsigned i=0; i < Nx; i++) {
-	const int I=(int) i-(int) xorigin;
-	const int I2=I*I;
-	for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	  const Real kint=sqrt(I2+j*j);
-	  if(kint >= Invisible) {
-	    if(kint <= kbound) {
-	      count[(unsigned)(kint-0.5)] += 1;
-	    }
-	  }
-	}
-      }
-    } 
+  switch(spectrum) {
+  case NOSPECTRUM:
+    break;
+  case UNINTERP: 
+    if(radix == 4) 
+      DNSBase::setcountUNINTERP(Invisible);
     if(lastgrid && radix == 1)
-      DNSBase::setcount();
+      DNSBase::setcountUNINTERP(0);
     if(verbose > 1)  cout << count << endl;
+    break;
+  case INTERP:
+    msg(ERROR,"Interpolated spectrum not working right now.");
+    break;
+  case DISCRETE:
+    DNSBase::setcountR2(Invisible);
+    break;
+  default:
+    msg(ERROR,"Invalid spectrum choice.");
+    break;
   }
 }
 
@@ -796,7 +841,7 @@ void MDNS::InitialConditions()
   if(radix==1 && prtype==AREA) 
     msg(ERROR,"radix-1 only works with pytpe=NONE (0) or POINT (2)");
   
-  //***** Vocabulary *****//
+  // Vocabulary
   Ngrids=::Ngrids;
   glast=Ngrids-1;
   saveF=OMEGA;
@@ -851,8 +896,8 @@ void MDNS::InitialConditions()
 	if(verbose >1) cout << "nextra="<<nextra << endl;
       }
     }
-    unsigned gmx=gm(mx,glast);
-    unsigned gmy=gm(my,glast);
+    //unsigned gmx=gm(mx,glast); // FIXME: restore?
+    //unsigned gmy=gm(my,glast);
     //nextra=(unsigned) (hypot(gmx-1,gmy-1)+0.5*lambda - gm(my,glast-1)/lambda);
     nextra=(unsigned) (getnshells(glast)-G[glast]->getInvisible()+1);
     G[glast]->setshellsbelow(nshells);

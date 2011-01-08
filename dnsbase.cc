@@ -221,42 +221,53 @@ void DNSBase::Initialize()
   setcount();
 }
 
+void DNSBase::setcountUNINTERP(const unsigned Invis=0)
+{
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      const Real kint=sqrt(I2+j*j);
+      if(kint >= Invis) 
+	count[(unsigned)(kint-0.5)]++;
+    }
+  }
+}
+
+void DNSBase::setcountR2(const unsigned Invis=0)
+{
+  for(unsigned i=0; i < Nx; i++) {
+    unsigned I= xorigin > i ? xorigin-i : i-xorigin;
+    unsigned I2=I*I;
+    for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
+      if(I >= Invis || j >= Invis) {
+	unsigned r2=I2+j*j;
+	for(unsigned k=0; k < R2.Size(); ++k) {
+	  if(r2 == R2[k]) {
+	    count[k]++;
+	    break;
+	  }
+	}
+      }
+    }
+  }
+}
+
 void DNSBase::setcount()
 {
+  for(unsigned i=0; i < nshells; i++)
+    count[i]=0;
   switch(spectrum) {
   case NOSPECTRUM:
     break;
-  case UNINTERP: // uninterpolated spectrum
-    for(unsigned i=0; i < nshells; i++)
-      count[i]=0;
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	count[(unsigned)(sqrt(I2+j*j)-0.5)]++;
-      }
-    }
+  case UNINTERP:
+    setcountUNINTERP();
     break;
- case INTERP: // interpolated spectrum
+ case INTERP:
    msg(ERROR,"interpolated spectrum not yet implemented");
-   // FIXME
    break;
- case DISCRETE: // discrete spectrum
-   for(unsigned i=0; i < nshells; i++)
-     count[i]=0;
-   for(unsigned i=0; i < Nx; i++) {
-     unsigned I= xorigin > i ? xorigin-i : i-xorigin;
-     unsigned I2=I*I;
-     for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
-       unsigned r2=I2+j*j;
-       for(unsigned k=0; k < R2.Size(); ++k) {
-	 if(r2 == R2[k]) {
-	   count[k]++;
-	   break;
-	 }
-       }
-     }
-   }
+ case DISCRETE:
+   setcountR2();
    break;
   }
 }

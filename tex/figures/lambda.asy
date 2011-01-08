@@ -34,7 +34,7 @@ void drawdots() {
       if((j >= Invisible) || (abs(i) >= Invisible)) {
 	filldraw(pic,shift(a)*g,fillpen,p);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
-	//label(pic,(string) (i*i+j*j),a,NE);
+	label(pic,(string) ((4^G)*(i*i+j*j)),a,NE);
       } else {
 	filldraw(pic,shift(a)*g,fillpen,p+dashed);
       }
