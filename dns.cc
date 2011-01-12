@@ -219,8 +219,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
-  VOCAB(spectrum,0,3,
-	"Spectrum flag (0=off, 1=uninterpolated, 2=interpolated, 3=discrete)");
+  VOCAB(spectrum,0,3,"Spectrum flag (0=off, 1=binned, 2=interpolated, 3=raw)");
   VOCAB(casimir,0,1,"Casimir flag (0=off, 1=on)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
@@ -300,13 +299,13 @@ void DNS::InitialConditions()
   case NOSPECTRUM:
     nshells=0;
     break;
-  case UNINTERP:
+  case BINNED:
     nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
     break;
-  case INTERP:
+  case INTERPOLATED:
     nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
     break;
-  case DISCRETE:
+  case RAW:
     // NB: assumes mx=my
     {
       DynVector<unsigned> tempR2;

@@ -33,7 +33,7 @@ protected:
   static const int xpad,ypad;
   
   enum Field {OMEGA,TRANSFER,TRANSFERN,EK};
-  enum SPEC {NOSPECTRUM, UNINTERP, INTERP, DISCRETE};
+  enum SPEC {NOSPECTRUM, BINNED, INTERPOLATED, RAW}; 
 
   // derived variables:
   unsigned mx, my; // size of data arrays
@@ -161,12 +161,12 @@ public:
   Real Pi(unsigned i) {return T[i].re;}
   Real Eta(unsigned i) {return T[i].im;}
   Real kb(unsigned i) {
-    if(spectrum == DISCRETE)
+    if(spectrum == RAW)
       return i == 0 ? 0.5*k0 : k0*sqrt((Real) R2[i-1]);
     return k0*(i+0.5);
   }
   Real kc(unsigned i) {
-    if(spectrum == DISCRETE) 
+    if(spectrum == RAW) 
       return k0*sqrt((Real) R2[i]);
     return k0*(i+1);
   }

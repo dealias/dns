@@ -174,7 +174,8 @@ public:
   array1<Grid *> G;
   
   enum Field {OMEGA,TRANSFER,TRANSFERN,EK,Nfields};
-  enum SPEC {NOSPECTRUM, UNINTERP, INTERP, DISCRETE}; // copy from DNSBase
+  enum SPEC {NOSPECTRUM, BINNED, INTERPOLATED, RAW}; 
+  // copy from DNSBase
   unsigned getnfields(unsigned g) {return Nfields;};
   unsigned getnshells(unsigned g) {
     // this function should only be used during initialization.
@@ -182,7 +183,7 @@ public:
     case NOSPECTRUM:
       return 0;
       break;
-    case UNINTERP:
+    case BINNED:
       if(radix==1) {
 	if(g != glast)
 	  return 0;
@@ -192,11 +193,11 @@ public:
 
       return gm(my,g)-1;
       break;
-    case INTERP:
+    case INTERPOLATED:
       msg(ERROR,"Interpolated spectrum not implemented");
       return 0;
       break;
-    case DISCRETE:
+    case RAW:
       {
 	DynVector<unsigned> tempR2;
 	array1<unsigned> tempnr(my);
@@ -260,34 +261,54 @@ public:
 
   // Output functions
   Real getSpectrum(unsigned i) {
-    if(radix == 4) {
-      //unsigned lambda=2; // FIXME: restor?
-      for(unsigned g=0; g < Ngrids; ++g) {
-	const unsigned offset=g==0 ? 0 : G[g]->getInvisible()-1;
-	const unsigned firstshell=G[g]->getshellsbelow();
-	const unsigned lastshell=firstshell+G[g]->getmyshells()-1;
-	if (i >=  firstshell &&  i <= lastshell) {
-	  unsigned index=i+offset-firstshell;
-	  double c=G[g]->count[index];
-	  if(c > 0.0)  {
-	    return G[g]->T[index].re*twopi/c;
+    // FIXME: add spectral types
+    switch(spectrum) {
+    case BINNED:
+      if(radix == 4) {
+	//unsigned lambda=2; // FIXME: restor?
+	for(unsigned g=0; g < Ngrids; ++g) {
+	  const unsigned offset=g==0 ? 0 : G[g]->getInvisible()-1;
+	  const unsigned firstshell=G[g]->getshellsbelow();
+	  const unsigned lastshell=firstshell+G[g]->getmyshells()-1;
+	  if (i >=  firstshell &&  i <= lastshell) {
+	    unsigned index=i+offset-firstshell;
+	    double c=G[g]->count[index];
+	    if(c > 0.0)  {
+	      return G[g]->T[index].re*twopi/c;
+	    }
+	    return 0.0; // this should never happen?
 	  }
-	  return 0.0; // this should never happen?
 	}
+	return 0.0;
       }
-      return 0.0;
+      if(radix == 1) {
+	// we can just get everything from the most "decimated" grid
+	return G[Ngrids-1]->getSpectrum(i);
+      }
+      msg(ERROR,"Only radix-1 and radix-4 spectra are working right now."); 
+      exit(1);
+      
+      break;
+    case INTERPOLATED:
+      msg(ERROR,"Interpolated spectrum not done yet.");
+      break;
+    case RAW:
+      // find all spectra that correspond to MDNS::R2[i].
+      // return some sort of weighted average using G[g]->count 
+
+      // FIXME: do stuff here.
+      break;
+    default:
+      msg(ERROR,"Invalid spectrum choice.");
     }
-    if(radix == 1) {
-      // we can just get everything from the most "decimated" grid
-      return G[Ngrids-1]->getSpectrum(i);
-    }
-    msg(ERROR,"Only radix-1 and radix-4 spectra is working right now."); 
-    exit(1);
+    
+    msg(ERROR,"Something went really wrong with getSpectrum()");
     return 0.0;
   };
 
   void Computek(DynVector<unsigned>&);
   Real getkb(unsigned i) {
+    // FIXME: enable different spectral types.
     if(radix==1)
       return k0*i;
     if(radix==4) {
@@ -308,7 +329,10 @@ public:
     }
     return 0.0; // this should never happen
   };
-  Real getkc(unsigned i) {return 0.5*(getkb(i)+getkb(i+1));}
+  Real getkc(unsigned i) {
+    // FIXME: enable different spectral types.
+    return 0.5*(getkb(i)+getkb(i+1));
+  }
 
   void Initialize();
   void Output(int it);
@@ -546,13 +570,13 @@ void MDNS::Grid::InitialConditions(unsigned g)
   case NOSPECTRUM:
     nshells=0;
     break;
-  case UNINTERP:
+  case BINNED:
     nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
     break;
-  case INTERP:
+  case INTERPOLATED:
     msg(ERROR,"Interpolated spectrum not yet enabled.");
     break;
-  case DISCRETE:
+  case RAW:
     {
       DynVector<unsigned> tempR2;
       array1<unsigned> tempnr(my);
@@ -639,17 +663,17 @@ void MDNS::Grid::setcount()
   switch(spectrum) {
   case NOSPECTRUM:
     break;
-  case UNINTERP: 
+  case BINNED: 
     if(radix == 4) 
       DNSBase::setcountUNINTERP(Invisible);
     if(lastgrid && radix == 1)
       DNSBase::setcountUNINTERP(0);
     if(verbose > 1)  cout << count << endl;
     break;
-  case INTERP:
+  case INTERPOLATED:
     msg(ERROR,"Interpolated spectrum not working right now.");
     break;
-  case DISCRETE:
+  case RAW:
     DNSBase::setcountR2(Invisible);
     break;
   default:
@@ -684,13 +708,19 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 
 void MDNS::Spectrum(vector& SrcEK, const vector& w0)
 {
-  if(radix == 1) {
-    if(grid == glast) {
-      G[grid]->DNSBase::Spectrum(SrcEK,w0);
-    }    
-  } else {
+  switch(radix) {
+  case 1:
+    if(grid == glast) G[grid]->DNSBase::Spectrum(SrcEK,w0);
+    break;
+  case 2:
+    msg(ERROR,"radix-2 spectrum not implemented");
+    break;
+  case 4:
     G[grid]->Spectrum(SrcEK,w0);
     if(grid != 0) G[grid-1]->SpectrumOverlap(SrcEK);
+    break;
+  default:
+    msg(ERROR,"Invalid radix");
   }
 }
 
@@ -699,6 +729,8 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
   w.Set(w0);
   for(unsigned K=0; K < nshells; K++)
     SrcEK[K]=Complex(0.0,0.0);
+
+  // FIXME: enable different spectral types.
   if(radix != 1) {
     Real kbound=nshells-0.5; // FIXME: does this work?
     //    Real kbound=lastgrid ? hypot(mx,my) : my-0.5;
@@ -774,7 +806,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB_CONSTANT(movie,0,"Movie flag (off)");
   VOCAB_CONSTANT(casimir,0,"Compute Casimir invariants (off)");
   VOCAB(spectrum,0,3,
-	"Spectrum flag (0=off, 1=uninterpolated, 2=interpolated, 3=discrete)");
+	"Spectrum flag (0=off, 1=binned, 2=interpolated, 3=raw)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
   InitialConditionTable=new Table<InitialConditionBase>("initial condition");
@@ -871,9 +903,11 @@ void MDNS::InitialConditions()
     G[g]->InitialConditions(g);
   }
 
-  // allocate spectrum arrays
-  if(spectrum) { 
-    // FIXME: allow for different spectra
+  // calculate spectrum parameters
+  switch(spectrum) {
+  case NOSPECTRUM:
+    break;
+  case BINNED: {
     for(unsigned g=0; g < Ngrids; ++g) {
       G[g]->setcount();
       if(g!=glast) G[g]->setcountoverlap(G[g+1]->count);
@@ -904,6 +938,18 @@ void MDNS::InitialConditions()
     nshells += nextra;
     G[glast]->setmyshells(nextra);
     if(verbose >1) cout << "nextra="<<nextra << endl;
+    break;
+  }
+  case INTERPOLATED:
+    msg(ERROR,"Interpolated spectrum not working yet.");
+    break;
+  case RAW:
+    
+    // find all R2 achieved across all grids, put into an array.
+    // the length of this is gives MDNS::nshells or some such thing
+    
+    // FIXME: stuff goes here.
+    break;
   }
 
   //for (unsigned g=1; g< Ngrids; g++) Project(g);

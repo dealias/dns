@@ -123,14 +123,14 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
     vector fim=f0[im];
     
     // diagonals
-    unsigned Sk= spectrum == DISCRETE ?  kval[I][I] : (unsigned)(sqrt2*I-0.5);
+    unsigned Sk= spectrum == RAW ?  kval[I][I] : (unsigned)(sqrt2*I-0.5);
     T[Sk].re += realproduct(fi[I],wi[I]) + realproduct(fim[I],wim[I]);
    
     const unsigned stop=I;
     for(unsigned j=1; j < stop; ++j) {
       unsigned jm=xorigin-j;
       unsigned jp=xorigin+j;
-      Sk= spectrum == DISCRETE ? kval[I][j] : (unsigned)(sqrt((I2+j*j))-0.5);
+      Sk= spectrum == RAW ? kval[I][j] : (unsigned)(sqrt((I2+j*j))-0.5);
       T[Sk].re += 
 	realproduct(fi[j],wi[j]) +
 	realproduct(fim[j],wim[j]) +
@@ -143,12 +143,12 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   vector wi=w[xorigin];
   vector fi=f0[xorigin];
   for(unsigned j=1; j < my; ++j) {
-    unsigned Sk= spectrum == DISCRETE ? kval[j][0] : j-1;
+    unsigned Sk= spectrum == RAW ? kval[j][0] : j-1;
     T[Sk].re += realproduct(fi[j],wi[j]);
   }
   // bottom right
   for(unsigned i=xorigin+1; i < Nx; ++i) {
-    unsigned Sk= spectrum == DISCRETE ? kval[i-xorigin][0] : i-xorigin-1;
+    unsigned Sk= spectrum == RAW ? kval[i-xorigin][0] : i-xorigin-1;
     T[Sk].re += realproduct(f0[i][0],w[i][0]);
   }  
   Forcing->Force(f0,T);
@@ -175,7 +175,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     unsigned k2=2*I2;
     Real k=sqrt2*I;
     // TODO: replace Sk calculation with function pointer for efficiency?
-    unsigned Sk= spectrum == DISCRETE ?  kval[I][I] : (unsigned)(k-0.5);
+    unsigned Sk= spectrum == RAW ?  kval[I][I] : (unsigned)(k-0.5);
     Real Wall=abs2(wi[I])+abs2(wim[I]);
     S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
     
@@ -183,7 +183,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     for(unsigned j=1; j < stop; ++j) {
       k2=(I2+j*j);
       k=sqrt((Real) k2);
-      Sk= spectrum == DISCRETE ? kval[I][j] : (unsigned)(k-0.5);
+      Sk= spectrum == RAW ? kval[I][j] : (unsigned)(k-0.5);
       Wall=abs2(wi[j])+abs2(wim[j])+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
       S[Sk] += Complex(Wall/(k0*k),nuk(I2+j*j)*Wall);
     }
@@ -192,7 +192,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
   // xorigin case
   vector wi=w[xorigin];
   for(unsigned j=1; j < my; ++j) {
-    unsigned Sk= spectrum == DISCRETE ? kval[j][0] : j-1;
+    unsigned Sk= spectrum == RAW ? kval[j][0] : j-1;
     Real w2=abs2(wi[j]);
     S[Sk] += Complex(w2/(k0*j),w2*nuk(j*j));
   }
@@ -200,7 +200,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
   // bottom right
   for(unsigned i=xorigin+1; i < Nx; ++i) {
     unsigned I=i-xorigin;
-    unsigned Sk= spectrum == DISCRETE ? kval[I][0] : I-1;
+    unsigned Sk= spectrum == RAW ? kval[I][0] : I-1;
     Real w2=abs2(w[i][0]);
     S[Sk] += Complex(w2/(k0*I),w2*nuk(I*I));
   }
@@ -260,13 +260,13 @@ void DNSBase::setcount()
   switch(spectrum) {
   case NOSPECTRUM:
     break;
-  case UNINTERP:
+  case BINNED:
     setcountUNINTERP();
     break;
- case INTERP:
+ case INTERPOLATED:
    msg(ERROR,"interpolated spectrum not yet implemented");
    break;
- case DISCRETE:
+ case RAW:
    setcountR2();
    break;
   }
