@@ -590,7 +590,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
     cout << Invisible << endl;
     nshells=R2.Size();
     kval.Dimension(my);
-    kval.Allocate(my*(my+1)/2);
+    kval.Allocate(my);
     kval[0][0]=0; // NB: not part of spectrum!
     for(unsigned i=1; i < my; ++i) {
       //array1<unsigned> kvali=kval[i];
@@ -607,6 +607,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
 	}
       }
     }
+    cout << "grid " << myg << " kval:" << endl;
     cout << kval<<endl;
     }
     break;

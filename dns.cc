@@ -317,7 +317,7 @@ void DNS::InitialConditions()
       for(unsigned i=0; i < R2.Size(); ++i) R2[i]=tempR2[i];
     }
     nshells=R2.Size();
-    Allocate(kval,my*(my+1)/2);
+    Allocate(kval,my);
     kval.Dimension(my);
     kval[0][0]=-1; // should not be used; not part of spectrum!
     for(unsigned i=1; i < my; ++i) {
