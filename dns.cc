@@ -516,7 +516,7 @@ void DNS::Output(int it)
   tcount++;
   ft << t << endl;
 
-  if(rezero && it % rezero == 0 && spectrum) {
+  if(rezero && it % rezero == 0 && spectrum != NOSPECTRUM) {
     vector2 Y=Integrator->YVector();
     vector T=Y[TRANSFER];
     for(unsigned i=0; i < nshells; i++)

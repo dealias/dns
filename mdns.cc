@@ -146,13 +146,15 @@ public:
     void InitialConditions(unsigned g);
     //Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
   
-    void NonLinearSource(const vector & Src, const vector & Y, double t);
-    void NonConservativeSource(const vector & Src, const vector & Y, double t);
-    void LinearSource(const vector & Src, const vector & Y, double t);
-    void Transfer(const vector2 & Src, const vector2 & Y);
-    void Spectrum(vector& S, const vector& w0);    
+    void NonLinearSource(const vector &, const vector &, double);
+    void NonConservativeSource(const vector & , const vector &, double);
+    void LinearSource(const vector &, const vector &, double);
+    void Transfer(const vector2 &, const vector2 &);
+    void Spectrum(vector&, const vector&);
+    void SpectrumRad4(vector&, const vector&);
+    void SpectrumRad4BINNED(vector&, const vector&);
+    void SpectrumOverlapRad4BINNED(vector&);
     void Stochastic(const vector2&, double, double);
-    void SpectrumOverlap(vector& S);
   
     void ComputeInvariants(const Array::array2<Complex> &,Real&, Real&, Real&);
     void coutw() {cout << "mygrid is "<<myg<<endl<< w << endl;}
@@ -241,7 +243,8 @@ public:
   void Transfer(const vector2&, const vector2&);
   void ExponentialSource(const vector2&, const vector2&, double);
   void Stochastic(const vector2&, double, double);
-  void Spectrum(vector&, const vector&);
+  //void Spectrum(vector&, const vector&);
+  //void SpectrumRad4(vector&, const vector&);
 
   void Project(unsigned ga);
   void Prolong(unsigned gb);
@@ -685,6 +688,7 @@ void MDNS::Grid::setcount()
 
 void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
 {
+  // FIXME: include more spectral choices
   if(spectrum && overlap) {
     Real overlambda=1.0;
     if(radix==4) overlambda=0.5;
@@ -707,25 +711,47 @@ void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
   }
 }
 
-void MDNS::Spectrum(vector& SrcEK, const vector& w0)
+void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
 {
   switch(radix) {
   case 1:
-    if(grid == glast) G[grid]->DNSBase::Spectrum(SrcEK,w0);
+    if(lastgrid) DNSBase::Spectrum(SrcEK,w0);
     break;
   case 2:
     msg(ERROR,"radix-2 spectrum not implemented");
     break;
   case 4:
-    G[grid]->Spectrum(SrcEK,w0);
-    if(grid != 0) G[grid-1]->SpectrumOverlap(SrcEK);
+    SpectrumRad4(SrcEK,w0);
     break;
   default:
     msg(ERROR,"Invalid radix");
   }
 }
 
-void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
+void MDNS::Grid::SpectrumRad4(vector& SrcEK, const vector& w0)
+{
+  switch(spectrum) {
+  case NOSPECTRUM:
+    break;
+  case BINNED:
+    SpectrumRad4BINNED(SrcEK,w0);
+    if(myg != 0) SpectrumOverlapRad4BINNED(SrcEK);
+    break;
+  case INTERPOLATED:
+    msg(ERROR,"Interpolated spectrum not working yet.");
+    break;
+  case RAW:
+    cout << "grid "<<myg<< " spectrum:" << endl;
+    DNSBase::Spectrum(SrcEK,w0,Invisible); //FIXME
+    break;
+  default:
+    msg(ERROR,"Invalid spectrum");
+    exit(1);
+    break;
+  }
+}
+
+void MDNS::Grid::SpectrumRad4BINNED(vector& SrcEK, const vector& w0)
 {
   w.Set(w0);
   for(unsigned K=0; K < nshells; K++)
@@ -769,7 +795,7 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
   }
 }
 
-void MDNS::Grid::SpectrumOverlap(vector& S)
+void MDNS::Grid::SpectrumOverlapRad4BINNED(vector& S)
 {
   if(spectrum && overlap) {
     MDNSProblem->settow(w,myg); // FIXME: does settow work?

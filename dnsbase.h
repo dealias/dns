@@ -111,25 +111,25 @@ public:
   void FinalOutput();
   void OutFrame(int it);
 
-  virtual void Spectrum(vector& S, const vector& y);
-  void Transfer(const vector2& Src, const vector2& Y);
-  void NonLinearSource(const vector& Src, const vector& Y, double t);
-  void LinearSource(const vector& Src, const vector& Y, double t);
+  virtual void Spectrum(vector&, const vector&, unsigned Invis=0);
+  void Transfer(const vector2&, const vector2&);
+  void NonLinearSource(const vector& , const vector&, double);
+  void LinearSource(const vector& , const vector&, double);
 
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src[OMEGA],Y[OMEGA],t);
-    if(spectrum) Transfer(Src,Y);
+    if(spectrum != NOSPECTRUM) Transfer(Src,Y);
     LinearSource(Src[OMEGA],Y[OMEGA],t);
   }
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
-    if(spectrum) Spectrum(Src[EK],Y[OMEGA]);
+    if(spectrum != NOSPECTRUM) Spectrum(Src[EK],Y[OMEGA]);
 //    HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
   }
 
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src[OMEGA],Y[OMEGA],t);
-    if(spectrum) Transfer(Src,Y);
+    if(spectrum != NOSPECTRUM) Transfer(Src,Y);
     NonConservativeSource(Src,Y,t);
   }
   void Source(const vector2& Src, const vector2& Y, double t) {

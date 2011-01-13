@@ -157,7 +157,7 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
     CasimirTransfer(Src,Y);
 }
 
-void DNSBase::Spectrum(vector& S, const vector& y) 
+void DNSBase::Spectrum(vector& S, const vector& y, unsigned Invis)
 {
   w.Set(y);
   for(unsigned K=0; K < nshells; K++)    
@@ -171,34 +171,40 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     vector wi=w[i];
     vector wim=w[im];
 
-    // diagonals
-    unsigned k2=2*I2;
-    Real k=sqrt2*I;
-    // TODO: replace Sk calculation with function pointer for efficiency?
-    unsigned Sk= spectrum == RAW ?  kval[I][I] : (unsigned)(k-0.5);
-    Real Wall=abs2(wi[I])+abs2(wim[I]);
-    S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
+    unsigned start=1;
     
+    // diagonals
+    if(I >= Invis) {
+      Real k=sqrt2*I;
+      unsigned k2=2*I2;      
+      unsigned Sk= spectrum == RAW ?  kval[I][I] : (unsigned)(k-0.5);
+      Real Wall=abs2(wi[I])+abs2(wim[I]);
+      S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
+    } else {
+      start=Invis;
+    }
+
     const unsigned stop=I;
     for(unsigned j=1; j < stop; ++j) {
-      k2=(I2+j*j);
-      k=sqrt((Real) k2);
-      Sk= spectrum == RAW ? kval[I][j] : (unsigned)(k-0.5);
-      Wall=abs2(wi[j])+abs2(wim[j])+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
+      unsigned k2=(I2+j*j);
+      Real k=sqrt((Real) k2);
+      unsigned Sk= spectrum == RAW ? kval[I][j] : (unsigned)(k-0.5);
+      Real Wall=abs2(wi[j])+abs2(wim[j])
+	+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
       S[Sk] += Complex(Wall/(k0*k),nuk(I2+j*j)*Wall);
     }
   }
 
   // xorigin case
   vector wi=w[xorigin];
-  for(unsigned j=1; j < my; ++j) {
+  for(unsigned j=Invis == 0 ? 1 : Invis; j < my; ++j) {
     unsigned Sk= spectrum == RAW ? kval[j][0] : j-1;
     Real w2=abs2(wi[j]);
     S[Sk] += Complex(w2/(k0*j),w2*nuk(j*j));
   }
   
   // bottom right
-  for(unsigned i=xorigin+1; i < Nx; ++i) {
+  for(unsigned i=Invis == 0? xorigin+1 : xorigin + Invis; i < Nx; ++i) {
     unsigned I=i-xorigin;
     unsigned Sk= spectrum == RAW ? kval[I][0] : I-1;
     Real w2=abs2(w[i][0]);
