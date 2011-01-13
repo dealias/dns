@@ -221,7 +221,7 @@ void DNSBase::Initialize()
   setcount();
 }
 
-void DNSBase::setcountUNINTERP(const unsigned Invis=0)
+void DNSBase::setcountBINNED(const unsigned Invis=0)
 {
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
@@ -234,7 +234,7 @@ void DNSBase::setcountUNINTERP(const unsigned Invis=0)
   }
 }
 
-void DNSBase::setcountR2(const unsigned Invis=0)
+void DNSBase::setcountRAW(const unsigned Invis=0)
 {
   for(unsigned i=0; i < Nx; i++) {
     unsigned I= xorigin > i ? xorigin-i : i-xorigin;
@@ -261,13 +261,13 @@ void DNSBase::setcount()
   case NOSPECTRUM:
     break;
   case BINNED:
-    setcountUNINTERP();
+    setcountBINNED();
     break;
  case INTERPOLATED:
    msg(ERROR,"interpolated spectrum not yet implemented");
    break;
  case RAW:
-   setcountR2();
+   setcountRAW();
    break;
   }
 }

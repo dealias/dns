@@ -105,8 +105,8 @@ public:
   void InitialConditions();
   void Initialize();
   virtual void setcount();
-  void setcountUNINTERP(const unsigned);
-  void setcountR2(const unsigned);
+  void setcountBINNED(const unsigned);
+  void setcountRAW(const unsigned);
   //  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);

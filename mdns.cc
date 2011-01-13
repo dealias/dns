@@ -666,16 +666,16 @@ void MDNS::Grid::setcount()
     break;
   case BINNED: 
     if(radix == 4) 
-      DNSBase::setcountUNINTERP(Invisible);
+      DNSBase::setcountBINNED(Invisible);
     if(lastgrid && radix == 1)
-      DNSBase::setcountUNINTERP(0);
+      DNSBase::setcountBINNED(0);
     if(verbose > 1)  cout << count << endl;
     break;
   case INTERPOLATED:
     msg(ERROR,"Interpolated spectrum not working right now.");
     break;
   case RAW:
-    DNSBase::setcountR2(Invisible);
+    DNSBase::setcountRAW(Invisible);
     break;
   default:
     msg(ERROR,"Invalid spectrum choice.");
