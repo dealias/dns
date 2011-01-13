@@ -9,7 +9,6 @@
 #include "convolution.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
-#include "heapsort.h"
 #include "Conservative.h"
 #include "Exponential.h"
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
@@ -101,6 +100,7 @@ public:
   unsigned getxorigin() {return xorigin;}
   Real getetanorm() {return etanorm;}
   unsigned getkval(const unsigned i, const unsigned j) {return kval[i][j];}
+  unsigned getR2(const unsigned i) {return R2[i];}
 
   void InitialConditions();
   void Initialize();

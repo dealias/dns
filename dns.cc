@@ -311,7 +311,7 @@ void DNS::InitialConditions()
       DynVector<unsigned> tempR2;
       array1<unsigned> tempnr(my);
       findrads(tempR2,tempnr,my);
-      heapsort(tempR2);
+      tempR2.sort();
       Allocate(R2,tempR2.Size());
       //Dimension(R2,tempR2.Size());
       for(unsigned i=0; i < R2.Size(); ++i) R2[i]=tempR2[i];

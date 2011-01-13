@@ -35,7 +35,7 @@ void drawdots() {
 	filldraw(pic,shift(a)*g,fillpen,p);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
-	//label(pic,(string) ((4^G)*(i*i+j*j)),a,NE);
+	label(pic,(string) ((4^G)*(i*i+j*j)),a,NE);
       } else {
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
 	filldraw(pic,shift(a)*g,fillpen,p+dashed);

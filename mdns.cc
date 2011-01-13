@@ -204,7 +204,7 @@ public:
 	DynVector<unsigned> tempR2;
 	array1<unsigned> tempnr(my);
 	findrads(tempR2,tempnr,my,getInvisible(g));
-	cout << tempR2.Size() << endl; 
+	cout << tempR2.Size() << endl;
 	return tempR2.Size();
       }
       break;
@@ -567,7 +567,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
     for(unsigned i=0; i < 2*Invisible+1; ++i)
       tildeB[i][0]=0.0;
   }
-
+  
   // set up spectrum parameters
   switch(spectrum) {
   case NOSPECTRUM:
@@ -584,7 +584,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
       DynVector<unsigned> tempR2;
       array1<unsigned> tempnr(my);
       findrads(tempR2,tempnr,my,Invisible);
-      heapsort(tempR2);
+      tempR2.sort();
       Allocate(R2,tempR2.Size());
       //Dimension(R2,tempR2.Size());
       for(unsigned i=0; i < R2.Size(); ++i) R2[i]=tempR2[i];
@@ -971,7 +971,45 @@ void MDNS::InitialConditions()
     msg(ERROR,"Interpolated spectrum not working yet.");
     break;
   case RAW:
-    
+    {
+      cout << "for MDNS:" << endl;
+      DynVector<unsigned> tempR2;
+      unsigned g=0;
+      unsigned gnshells=G[g]->getnshells();
+
+      for(unsigned i=0; i < gnshells; ++i) {
+	tempR2.Push(G[g]->getR2(i));
+      }
+
+      unsigned lambda2= radix==1 ? 1 : 4;
+      // NB: radix==2 not implemented.
+
+      for(g=1; g < Ngrids; ++g) {
+	gnshells=G[g]->getnshells();
+	for(unsigned i=0; i < gnshells; ++i) {
+	  unsigned temp=lambda2*G[g]->getR2(i);
+	  nshells=tempR2.Size();
+	  bool found=false;
+	  for(unsigned j=0; j < nshells; ++j) {
+	    if(temp == tempR2[j]) found=true;
+	  }
+	  if(!found) {
+	    tempR2.Push(temp);
+	  }	    
+	}
+	lambda2 *= lambda2;
+      }
+      cout << tempR2<< endl;
+      
+      tempR2.sort();
+      cout << tempR2<< endl;
+      //std::qsort(tempR2,nshells,sizeof(unsigned int),);
+      //std::sort(*tempR2,*tempR2+tempR2.Size());
+      
+      cout << nshells << endl;
+
+    }
+    exit(1);
     // find all R2 achieved across all grids, put into an array.
     // the length of this is gives MDNS::nshells or some such thing
     
