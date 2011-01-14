@@ -240,14 +240,14 @@ void DNSBase::setcountBINNED(const unsigned Invis=0)
   }
 }
 
-void DNSBase::setcountRAW(const unsigned Invis=0)
+void DNSBase::setcountRAW(const unsigned Invis=0, const unsigned lambda2=1)
 {
   for(unsigned i=0; i < Nx; i++) {
     unsigned I= xorigin > i ? xorigin-i : i-xorigin;
     unsigned I2=I*I;
     for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
       if(I >= Invis || j >= Invis) {
-	unsigned r2=I2+j*j;
+	unsigned r2=lambda2*(I2+j*j);
 	for(unsigned k=0; k < R2.Size(); ++k) {
 	  if(r2 == R2[k]) {
 	    count[k]++;

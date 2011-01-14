@@ -106,7 +106,7 @@ public:
   void Initialize();
   virtual void setcount();
   void setcountBINNED(const unsigned);
-  void setcountRAW(const unsigned);
+  void setcountRAW(const unsigned, const unsigned);
   //  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);

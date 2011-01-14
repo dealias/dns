@@ -80,6 +80,7 @@ private:
   unsigned glast;
   void ComputeInvariants(const vector2&, Real&, Real&, Real&);
   array2<Complex> wa, wb; // Vorticity field for projection/prolongation
+  array1<unsigned> R2;
   unsigned nshells;
   vector spectra;
   ofstream Mfevt;
@@ -115,6 +116,7 @@ public:
     bool lastgrid;
     unsigned shellsbelow, myshells, mym1;
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
+    unsigned lambda, lambda2; // spacing factor
 
   public:
     Grid();
@@ -142,7 +144,9 @@ public:
     unsigned getmyshells() {return myshells;};
     void Dimensiontow(array2<Complex> & w0) {w0.Dimension(Nx,my);}
     //unsigned nshellbelow;
-  
+    unsigned getlambda() {return lambda;}
+    unsigned getlambda2() {return lambda2;}
+
     void InitialConditions(unsigned g);
     //Real gk(Real k, unsigned g) {return k*pow(sqrt((double) radix),g);};
   
@@ -296,44 +300,74 @@ public:
       msg(ERROR,"Interpolated spectrum not done yet.");
       break;
     case RAW:
-      // find all spectra that correspond to MDNS::R2[i].
-      // return some sort of weighted average using G[g]->count 
+      {
+	// TODO: optimize w. lookup table?
 
-      // FIXME: do stuff here.
+	unsigned k2=R2[i];
+	Real val=0.0;
+	unsigned c=0;
+	
+	for(unsigned g=0; g < Ngrids; ++g) {
+	  unsigned gnshells=G[g]->getnshells();
+	  for(unsigned j=0; j < gnshells ; ++ j) {
+	    if(G[g]->getR2(j) == k2) {
+	      c += G[g]->count[j];
+	      val += G[g]->T[j].re;
+	    }
+	  }
+	}
+	
+	return val/((Real) c);
+      }
       break;
     default:
       msg(ERROR,"Invalid spectrum choice.");
+      break;
     }
     
-    msg(ERROR,"Something went really wrong with getSpectrum()");
+    msg(ERROR,"Something went really wrong with MDNS::getSpectrum()");
     return 0.0;
   };
 
   void Computek(DynVector<unsigned>&);
   Real getkb(unsigned i) {
-    // FIXME: enable different spectral types.
-    if(radix==1)
-      return k0*i;
-    if(radix==4) {
-      unsigned lambda=2;
-      for(unsigned g=0; g < Ngrids; ++g) {
-	unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
-	unsigned firstshell=G[g]->getshellsbelow();
-	unsigned lastshell=firstshell+G[g]->getmyshells();
-	if(g==glast) ++lastshell;
-	if (i >=  firstshell &&  i <= lastshell) {
-	  unsigned index=i-firstshell+offset;
-	  Real kb=gk(g)*(index + 0.5);
-// 	  cout << "g="<<g<<" k0="<<gk(g) << " index=" << index;
-// 	  cout << " i=" << i << " kb=" << kb << endl;
-	  return kb;
+    switch(spectrum) {
+    case BINNED:
+      if(radix==1)
+	return k0*i;
+      if(radix==4) {
+	unsigned lambda=2;
+	for(unsigned g=0; g < Ngrids; ++g) {
+	  unsigned offset=g==0 ? 0 : G[g]->getInvisible()/lambda;
+	  unsigned firstshell=G[g]->getshellsbelow();
+	  unsigned lastshell=firstshell+G[g]->getmyshells();
+	  if(g==glast) ++lastshell;
+	  if (i >=  firstshell &&  i <= lastshell) {
+	    unsigned index=i-firstshell+offset;
+	    Real kb=gk(g)*(index + 0.5);
+	    // 	  cout << "g="<<g<<" k0="<<gk(g) << " index=" << index;
+	    // 	  cout << " i=" << i << " kb=" << kb << endl;
+	    return kb;
+	  }
 	}
       }
+    case INTERPOLATED:
+      msg(ERROR,"Interpolated spectrum not enabled");
+      break;
+    case RAW:
+      if(radix !=4) msg(ERROR,"only radix-4 case  with raw spectrum for now.");
+      return i == 0 ? 0.5*k0 : k0*sqrt((Real) R2[i-1]);
+      break;
+    default:
+      msg(ERROR,"error in getkb");
+      return 0.0; // this should never happen
     }
-    return 0.0; // this should never happen
+    msg(ERROR,"error in getkb");
+    return 0.0;
   };
   Real getkc(unsigned i) {
-    // FIXME: enable different spectral types.
+    if(spectrum == RAW) 
+      return k0*sqrt((Real) R2[i]);
     return 0.5*(getkb(i)+getkb(i+1));
   }
 
@@ -524,7 +558,7 @@ void MDNS::Grid::SetParams()
 void MDNS::Grid::InitialConditions(unsigned g)
 {
   myg=g;
-
+  
   // load vocabulary from global variables
   nuH=::nuH;
   nuL=::nuL;
@@ -539,6 +573,13 @@ void MDNS::Grid::InitialConditions(unsigned g)
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
+
+  lambda=1;
+  // NB: radix-2 lambda not implemented
+  if(radix == 4) {
+    for(unsigned i=0; i < myg; ++i) lambda *= 2;
+  }
+  lambda2=lambda*lambda;
 
   // allocate memory
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
@@ -587,31 +628,28 @@ void MDNS::Grid::InitialConditions(unsigned g)
       tempR2.sort();
       Allocate(R2,tempR2.Size());
       //Dimension(R2,tempR2.Size());
-      for(unsigned i=0; i < R2.Size(); ++i) R2[i]=tempR2[i];
-
-    cout << R2 << endl;
-    cout << Invisible << endl;
-    nshells=R2.Size();
-    kval.Dimension(my);
-    kval.Allocate(my);
-    kval[0][0]=0; // NB: not part of spectrum!
-    for(unsigned i=1; i < my; ++i) {
-      //array1<unsigned> kvali=kval[i];
-      unsigned i2=i*i;
-      for(unsigned j=0; j <= i; ++j) {
-	if(i >= Invisible  || j >= Invisible) {
-	  unsigned k2=i2+j*j;
-	  for(unsigned a=0; a < nshells; ++a) {
-	    if(R2[a] == k2)
-	      kval[i][j]=a;
+      for(unsigned i=0; i < R2.Size(); ++i) 
+	R2[i]=tempR2[i]*lambda2;
+      
+      nshells=R2.Size();
+      kval.Dimension(my);
+      kval.Allocate(my);
+      kval[0][0]=0; // NB: not part of spectrum!
+      for(unsigned i=1; i < my; ++i) {
+	//array1<unsigned> kvali=kval[i];
+	unsigned i2=i*i;
+	for(unsigned j=0; j <= i; ++j) {
+	  if(i >= Invisible  || j >= Invisible) {
+	    unsigned k2=lambda2*(i2+j*j);
+	    for(unsigned a=0; a < nshells; ++a) {
+	      if(R2[a] == k2)
+		kval[i][j]=a;
+	    }
+	  } else {
+	    kval[i][j]=0;
 	  }
-	} else {
-	  kval[i][j]=0;
 	}
       }
-    }
-    cout << "grid " << myg << " kval:" << endl;
-    cout << kval<<endl;
     }
     break;
   default:
@@ -629,6 +667,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
       count[i]=0; //FIXME: does this go here?
     }
   }
+  setcount();
   
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 }
@@ -678,7 +717,7 @@ void MDNS::Grid::setcount()
     msg(ERROR,"Interpolated spectrum not working right now.");
     break;
   case RAW:
-    DNSBase::setcountRAW(Invisible);
+    DNSBase::setcountRAW(Invisible,lambda2);
     break;
   default:
     msg(ERROR,"Invalid spectrum choice.");
@@ -741,7 +780,6 @@ void MDNS::Grid::SpectrumRad4(vector& SrcEK, const vector& w0)
     msg(ERROR,"Interpolated spectrum not working yet.");
     break;
   case RAW:
-    cout << "grid "<<myg<< " spectrum:" << endl;
     DNSBase::Spectrum(SrcEK,w0,Invisible); //FIXME
     break;
   default:
@@ -970,52 +1008,45 @@ void MDNS::InitialConditions()
   case INTERPOLATED:
     msg(ERROR,"Interpolated spectrum not working yet.");
     break;
-  case RAW:
-    {
-      cout << "for MDNS:" << endl;
-      DynVector<unsigned> tempR2;
-      unsigned g=0;
-      unsigned gnshells=G[g]->getnshells();
-
+  case RAW: {
+    DynVector<unsigned> tempR2;
+    unsigned g=0;
+    unsigned gnshells=G[g]->getnshells();
+    
+    for(unsigned i=0; i < gnshells; ++i) {
+      tempR2.Push(G[g]->getR2(i));
+    }
+    
+    // NB: radix==2 not implemented.
+    
+    for(g=1; g < Ngrids; ++g) {
+      gnshells=G[g]->getnshells();
       for(unsigned i=0; i < gnshells; ++i) {
-	tempR2.Push(G[g]->getR2(i));
-      }
-
-      unsigned lambda2= radix==1 ? 1 : 4;
-      // NB: radix==2 not implemented.
-
-      for(g=1; g < Ngrids; ++g) {
-	gnshells=G[g]->getnshells();
-	for(unsigned i=0; i < gnshells; ++i) {
-	  unsigned temp=lambda2*G[g]->getR2(i);
-	  nshells=tempR2.Size();
-	  bool found=false;
-	  for(unsigned j=0; j < nshells; ++j) {
-	    if(temp == tempR2[j]) found=true;
+	unsigned temp=G[g]->getR2(i);
+	nshells=tempR2.Size();
+	bool found=false;
+	for(unsigned j=0; j < tempR2.Size(); ++j) {
+	  if(temp == tempR2[j]) {
+	    found=true;
+	    break;
 	  }
-	  if(!found) {
-	    tempR2.Push(temp);
-	  }	    
 	}
-	lambda2 *= lambda2;
+	if(!found) {
+	  tempR2.Push(temp);
+	}	    
       }
-      cout << tempR2<< endl;
-      
-      tempR2.sort();
-      cout << tempR2<< endl;
-      //std::qsort(tempR2,nshells,sizeof(unsigned int),);
-      //std::sort(*tempR2,*tempR2+tempR2.Size());
-      
-      cout << nshells << endl;
 
     }
-    exit(1);
-    // find all R2 achieved across all grids, put into an array.
-    // the length of this is gives MDNS::nshells or some such thing
+    nshells=tempR2.Size();
     
-    // FIXME: stuff goes here.
+    tempR2.sort();
+    R2.Allocate(nshells);
+    for(unsigned i=0; i < nshells; ++i) 
+      R2[i]=tempR2[i];
+    //cout << "mdns:\n" << R2 << endl;
     break;
   }
+  } // switch(spectrum)
 
   //for (unsigned g=1; g< Ngrids; g++) Project(g);
   // mY not set here for Project to work?
