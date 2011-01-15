@@ -208,7 +208,7 @@ public:
 	DynVector<unsigned> tempR2;
 	array1<unsigned> tempnr(my);
 	findrads(tempR2,tempnr,my,getInvisible(g));
-	cout << tempR2.Size() << endl;
+	//cout << tempR2.Size() << endl;
 	return tempR2.Size();
       }
       break;
@@ -308,16 +308,22 @@ public:
 	unsigned c=0;
 	
 	for(unsigned g=0; g < Ngrids; ++g) {
+	  unsigned gm=G[g]->getmy();
+	  unsigned gm2=gm*gm;
 	  unsigned gnshells=G[g]->getnshells();
 	  for(unsigned j=0; j < gnshells ; ++ j) {
-	    if(G[g]->getR2(j) == k2) {
-	      c += G[g]->count[j];
-	      val += G[g]->T[j].re;
+	    if(G[g]->getR2(j) == k2 ) {
+	      if(k2 < gm2) {// circular
+		c += G[g]->count[j];
+		val += G[g]->T[j].re;
+	      }
 	    }
 	  }
 	}
 	
-	return val/((Real) c);
+	if(c!=0)
+	  return val/((Real) c);
+	else return 0.0;
       }
       break;
     default:
@@ -332,6 +338,9 @@ public:
   void Computek(DynVector<unsigned>&);
   Real getkb(unsigned i) {
     switch(spectrum) {
+    case NOSPECTRUM:
+      return 0;
+      break;
     case BINNED:
       if(radix==1)
 	return k0*i;
@@ -668,7 +677,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
     }
   }
   setcount();
-  
+
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 }
 
@@ -1107,11 +1116,13 @@ void MDNS::Project(unsigned gb)
     }
   }
 
+  
   if(radix == 4) {
     if(prtype==AREA) {
       cout << "area-type projection no longer implemented" << endl;
       exit(1);
     }
+
 
     if(prtype==POINT) {
       unsigned xstart=bInvisible;
@@ -1133,6 +1144,7 @@ void MDNS::Project(unsigned gb)
   }
   //cout << "project:" << endl;
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
+
 #if 0
   {
     double E=0,Z=0,P=0;
@@ -1511,7 +1523,9 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
       }
       //cout << endl;
     }
-    fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
+  
+    //fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
+
   }
 #if 0
   Real sum=0.0;
