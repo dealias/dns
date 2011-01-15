@@ -257,15 +257,28 @@ public:
   void IndexLimits(unsigned int& start, unsigned int& stop,
 		   unsigned int& startT, unsigned int& stopT,
 		   unsigned int& startM, unsigned int& stopM) {
-    // FIXME: this might not be set right for exponential integrators
-    start=Start(OMEGA);
-    stop=Stop(OMEGA);
-    startT=Start(TRANSFER);
-    stopT=Stop(TRANSFER);
-    startM=Start(EK);
-    stopM=Stop(EK);
-  }
+    //cout << "grid " << grid << endl;
+    unsigned fieldoffset=0;
+    for(unsigned g=1; g <= grid; ++g) {
+      fieldoffset += getnfields(g-1);
+    }
+    //cout << "fieldoffset=" << fieldoffset << endl;
+    unsigned offset=grid == 0 ? 0 : Stop(fieldoffset-1);
 
+    start=Start(fieldoffset+OMEGA)-offset;
+    stop=Stop(fieldoffset+OMEGA)-offset;
+    startT=Start(fieldoffset+TRANSFER)-offset;
+    stopT=Stop(fieldoffset+TRANSFER)-offset;
+    startM=Start(fieldoffset+EK)-offset;
+    stopM=Stop(fieldoffset+EK)-offset;
+    /*
+    cout << "IndexLimits: "
+	 << start << " " << stop << " " 
+	 << startT<< " " << stopT << " "
+	 << startM << " " << stopM << endl;
+    */
+  }
+  
   // Output functions
   Real getSpectrum(unsigned i) {
     // FIXME: add spectral types
@@ -966,6 +979,7 @@ void MDNS::InitialConditions()
     NY[nfields*g+TRANSFERN]=0;
     NY[nfields*g+EK]=getnshells(g);
   }
+  //cout << "NY= " << NY << endl;
 
   // allocate MultiIntegrator and grids
   Allocator(align); 
