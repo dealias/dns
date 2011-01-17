@@ -89,6 +89,7 @@ private:
   oxstream fprolog;
   Real k0;
   int tcount;
+  Real etanorm;
 public:
   MDNS();
   ~MDNS();
@@ -159,7 +160,7 @@ public:
     void SpectrumRad4BINNED(vector&, const vector&);
     void SpectrumOverlapRad4BINNED(vector&);
     void Stochastic(const vector2&, double, double);
-  
+    
     void ComputeInvariants(const Array::array2<Complex> &,Real&, Real&, Real&);
     void coutw() {cout << "mygrid is "<<myg<<endl<< w << endl;}
   
@@ -231,7 +232,6 @@ public:
     return (gN(Nx,g-1)+1)/4;
   };
 
-
   //array1<unsigned>::opt count;
   //void setcount();
 
@@ -247,6 +247,7 @@ public:
   void Transfer(const vector2&, const vector2&);
   void ExponentialSource(const vector2&, const vector2&, double);
   void Stochastic(const vector2&, double, double);
+  Real getetanorm() {return etanorm;}
   //void Spectrum(vector&, const vector&);
   //void SpectrumRad4(vector&, const vector&);
 
@@ -281,7 +282,6 @@ public:
   
   // Output functions
   Real getSpectrum(unsigned i) {
-    // FIXME: add spectral types
     switch(spectrum) {
     case BINNED:
       if(radix == 4) {
@@ -315,28 +315,33 @@ public:
     case RAW:
       {
 	// TODO: optimize w. lookup table?
-
 	unsigned k2=R2[i];
 	Real val=0.0;
 	unsigned c=0;
-	
 	for(unsigned g=0; g < Ngrids; ++g) {
 	  unsigned gm=G[g]->getmy();
-	  unsigned gm2=gm*gm;
+	  unsigned gm2=gm*gm*G[g]->getlambda2();
 	  unsigned gnshells=G[g]->getnshells();
 	  for(unsigned j=0; j < gnshells ; ++ j) {
-	    if(G[g]->getR2(j) == k2 ) {
-	      if(k2 < gm2) {// circular
+	    if(G[g]->getR2(j) == k2) {
+	      if(k2 < gm2 && j != 0) {// circular 
+		// j!=0 because I think the spectrum is messed up there.
+		// this is a fucking hack job.  FIXME
 		c += G[g]->count[j];
 		val += G[g]->T[j].re;
+	      //cout << k2 << " " << val << endl;
 	      }
 	    }
 	  }
 	}
+	//if(k2 == 64) val *=0.125; // FIXME: temp
+	//cout << k2 << " " << c << endl;
 	
-	if(c!=0)
-	  return val/((Real) c);
-	else return 0.0;
+	
+	if(c!=0) {
+	  return twopi*val/((Real) c);
+	}
+	return 0.0;
       }
       break;
     default:
@@ -453,7 +458,8 @@ class None : public ForcingBase {
 class WhiteNoiseBanded : public ForcingBase {
 public:
   const char *Name() {return "White-Noise Banded";}
-  void Force(array2<Complex> &w, vector& T, const Complex& factor) {
+  void Force(array2<Complex> &w, vector& T, double dt) {
+    // FIXME: combine with duplicate code in dns?
     unsigned g=MDNSProblem->grid;
     unsigned Nx=MDNSProblem->G[g]->getNx();
     unsigned my=MDNSProblem->G[g]->getmy();
@@ -466,8 +472,17 @@ public:
     unsigned Invisible=MDNSProblem->G[g]->getInvisible();
     int Invisible2=Invisible*Invisible;
 
+    Real etanorm=MDNSProblem->getetanorm();
+    Complex xi=crand_gauss();
+    Complex Fk=sqrt(2.0*eta*etanorm);
+    Complex fk=Fk*xi;
+    double sqrtdt=sqrt(dt);
+    Complex diff=sqrtdt*fk;
+
+    
     // TODO: only loop over modes with k in (kmin,kmax)
-    Complex Factor=factor*sqrt(2.0*eta);
+    //Complex Factor=factor*sqrt(2.0*eta);
+    
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
@@ -479,7 +494,7 @@ public:
 	    // TODO: enable transfer
 	    // T[(unsigned)(sqrt(k2)-0.5)].im += 
 	    //   realproduct(Factor,wi[j])+0.5*abs2(Factor);
-	    wi[j] += Factor;
+	    wi[j] += diff;
 	  }
 	}
       }
@@ -967,6 +982,10 @@ void MDNS::InitialConditions()
   MProblem=this;
   k0=::k0;
   Forcing=MDNS_Vocabulary.NewForcing(forcing);
+  
+  // FIXME: calculate etanorm
+  etanorm=1.0;
+
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
