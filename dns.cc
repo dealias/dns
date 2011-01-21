@@ -168,7 +168,7 @@ public:
     Complex diff=sqrtdt*fk;
 
     // don't loop over modes outside of the forcing region
-    unsigned jmax=1+min(my,(unsigned) ceil(kmax/k0));
+    unsigned jmax=min(my,(unsigned) ceil(kmax/k0)+1);
     unsigned imin=max(0,(int) xorigin - (int) jmax);
     unsigned imax=min(Nx,xorigin+jmax);
 
