@@ -185,7 +185,7 @@ void DNSBase::Spectrum(vector& S, const vector& y, unsigned Invis)
     }
 
     const unsigned stop=I;
-    for(unsigned j=Invis == 0 ? 1 : Invis; j < stop; ++j) {
+    for(unsigned j=start; j < stop; ++j) {
       unsigned k2=(I2+j*j);
       Real k=sqrt((Real) k2);
       unsigned Sk= spectrum == RAW ? kval[I][j] : (unsigned)(k-0.5);
