@@ -324,19 +324,13 @@ public:
 	  unsigned gnshells=G[g]->getnshells();
 	  for(unsigned j=0; j < gnshells ; ++ j) {
 	    if(G[g]->getR2(j) == k2) {
-	      if(k2 < gm2 && j != 0) {// circular 
-		// j!=0 because I think the spectrum is messed up there.
-		// this is a fucking hack job.  FIXME
-		c += G[g]->count[j];
+	      if(k2 < gm2) {// circular 
+		xc += G[g]->count[j];
 		val += G[g]->T[j].re;
-	      //cout << k2 << " " << val << endl;
 	      }
 	    }
 	  }
 	}
-	//if(k2 == 64) val *=0.125; // FIXME: temp
-	//cout << k2 << " " << c << endl;
-	
 	
 	if(c!=0) {
 	  return twopi*val/((Real) c);
@@ -671,7 +665,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
       nshells=R2.Size();
       kval.Dimension(my);
       kval.Allocate(my);
-      kval[0][0]=0; // NB: not part of spectrum!
+      kval.Load(-1);
       for(unsigned i=1; i < my; ++i) {
 	//array1<unsigned> kvali=kval[i];
 	unsigned i2=i*i;
@@ -683,7 +677,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
 		kval[i][j]=a;
 	    }
 	  } else {
-	    kval[i][j]=0;
+	    kval[i][j]=-1;
 	  }
 	}
       }
