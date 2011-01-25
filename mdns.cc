@@ -325,7 +325,7 @@ public:
 	  for(unsigned j=0; j < gnshells ; ++ j) {
 	    if(G[g]->getR2(j) == k2) {
 	      if(k2 < gm2) {// circular 
-		xc += G[g]->count[j];
+		c += G[g]->count[j];
 		val += G[g]->T[j].re;
 	      }
 	    }
