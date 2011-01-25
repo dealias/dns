@@ -1096,16 +1096,20 @@ void MDNS::InitialConditions()
       unsigned gNx=G[g]->getNx();
       unsigned gmy=G[g]->getmy();
       unsigned gxorigin=G[g]->getxorigin();
+      unsigned gInvisible=G[g]->getInvisible();
       Real gk02=G[g]->getk02();
 
+      // FIXME: loop should only be over visible modes.
+
       for(unsigned i=0; i < gNx; i++) {
-	int I=(int) i-(int) gxorigin;
-	int I2=I*I;
+	unsigned I= i > gxorigin ? i - gxorigin : gxorigin -1;
+	unsigned I2=I*I;
 	for(unsigned j=i <= gxorigin ? 1 : 0; j < gmy; ++j) {
 	  unsigned k2int=I2+j*j;
 	  Real k2=gk02*k2int;
-	  if(k2 > kmin2 && k2 < kmax2)
-	    ++fcount;
+	  if(I >= gInvisible || j >= gInvisible)
+	    if(k2 > kmin2 && k2 < kmax2)
+	      ++fcount;
 	}
       }
       fcount *= 2; // Account for Hermitian conjugate modes.
