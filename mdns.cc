@@ -977,9 +977,6 @@ void MDNS::InitialConditions()
   k0=::k0;
   Forcing=MDNS_Vocabulary.NewForcing(forcing);
   
-  // FIXME: calculate etanorm
-  etanorm=1.0;
-
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
@@ -1086,6 +1083,41 @@ void MDNS::InitialConditions()
 
   //for (unsigned g=1; g< Ngrids; g++) Project(g);
   // mY not set here for Project to work?
+
+
+  { // calculate etanorm
+    unsigned fcount=0;
+    Real kmin=max(kforce-0.5*deltaf,0.0);
+    Real kmin2=kmin*kmin;
+    Real kmax=kforce+0.5*deltaf;
+    Real kmax2=kmax*kmax;
+
+    for(unsigned g=0; g < Ngrids; ++g) {
+      unsigned gNx=G[g]->getNx();
+      unsigned gmy=G[g]->getmy();
+      unsigned gxorigin=G[g]->getxorigin();
+      Real gk02=G[g]->getk02();
+
+      for(unsigned i=0; i < gNx; i++) {
+	int I=(int) i-(int) gxorigin;
+	int I2=I*I;
+	for(unsigned j=i <= gxorigin ? 1 : 0; j < gmy; ++j) {
+	  unsigned k2int=I2+j*j;
+	  Real k2=gk02*k2int;
+	  if(k2 > kmin2 && k2 < kmax2)
+	    ++fcount;
+	}
+      }
+      fcount *= 2; // Account for Hermitian conjugate modes.
+      if(fcount != 0)
+	etanorm=1.0/((Real) fcount);
+      else {
+	cout << "foring domain not on grid!"<< endl;
+	etanorm=1.0;
+      }
+    }
+  }
+
 
   // output
   open_output(fprolog,dirsep,"prolog",0);
