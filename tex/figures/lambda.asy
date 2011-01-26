@@ -4,7 +4,7 @@ size(16cm,0);
 
 string[] outnames={"lambda1","lambdar2","lambdar2rot","lambda2"};
 real[] lambda={1,sqrt(2),sqrt(2),2};
-pair[] R={(1,0),(1,0),exp(-pi*I/4),(1,0)};
+pair[] R={(1,0),(1,0),exp(pi*I/4),(1,0)};
 int[] radices={1,2,2,4};
 
 int m=4; // really should be called mx, and a power of two.

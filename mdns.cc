@@ -25,6 +25,7 @@ const char *ic="Constant";
 const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
+int circular=0;
 Real nlfactor=1.0;
 Real k0=1.0;
 Real nuH=0.0, nuL=0.0;
@@ -157,6 +158,7 @@ public:
     void LinearSource(const vector &, const vector &, double);
     void Transfer(const vector2 &, const vector2 &);
     void Spectrum(vector&, const vector&);
+    void SpectrumRad2(vector&, const vector&);
     void SpectrumRad4(vector&, const vector&);
     void SpectrumRad4BINNED(vector&, const vector&);
     void SpectrumOverlapRad4BINNED(vector&);
@@ -227,7 +229,7 @@ public:
       return (gN(Nx,g)+1)/2;
     
     if(radix==2) 
-      msg(ERROR,"radix two case not implimented");
+      return (gN(Nx,g-1)+1)/2;
       
     // radix 4
     return (gN(Nx,g-1)+1)/4;
@@ -377,7 +379,8 @@ public:
       msg(ERROR,"Interpolated spectrum not enabled");
       break;
     case RAW:
-      if(radix !=4) msg(ERROR,"only radix-4 case  with raw spectrum for now.");
+      if(radix !=4 && radix !=2) 
+	msg(ERROR,"only radix-4 case  with raw spectrum for now.");
       return i == 0 ? 0.5*k0 : k0*sqrt((Real) R2[i-1]);
       break;
     default:
@@ -599,8 +602,6 @@ void MDNS::Grid::InitialConditions(unsigned g)
   // check parameters
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
   if(Nx != Ny) msg(ERROR,"Nx and Ny must be equal");
-  if(radix != 1 && radix != 4) 
-    msg(ERROR,"only radix-1 (trivial) or radix-4 decimations enabled");
 
   //  unsigned Nx0=Nx+xpad;//unused so far...
   //  unsigned Ny0=Ny+ypad; //unused so far...
@@ -789,13 +790,29 @@ void MDNS::Grid::Spectrum(vector& SrcEK, const vector& w0)
     if(lastgrid) DNSBase::Spectrum(SrcEK,w0);
     break;
   case 2:
-    msg(ERROR,"radix-2 spectrum not implemented");
+    SpectrumRad2(SrcEK,w0);
     break;
   case 4:
     SpectrumRad4(SrcEK,w0);
     break;
   default:
     msg(ERROR,"Invalid radix");
+  }
+}
+
+void MDNS::Grid::SpectrumRad2(vector& SrcEK, const vector& w0)
+{
+  switch(spectrum) {
+  case NOSPECTRUM:
+    break;
+  case RAW:
+    msg(ERROR,"TODO: fix rad-2 raw spectrum");
+    //DNSBase::Spectrum(SrcEK,w0,Invisible);
+    break;
+  default:
+    msg(ERROR,"Invalid spectrum: only NOSPECTRUM and RAW available");
+    exit(1);
+    break;
   }
 }
 
@@ -967,7 +984,7 @@ void MDNS::InitialConditions()
   // make sure that the options are cool: 
   if(typeid(*Integrator) != typeid(MultiIntegrator))
     msg(ERROR,"MDNS requires integrator=MultiIntegrator");
-  if(radix==2) msg(ERROR,"radix-2 not implimented");
+  //if(radix==2) msg(ERROR,"radix-2 not implimented");
   if(radix==1 && prtype==AREA) 
     msg(ERROR,"radix-1 only works with pytpe=NONE (0) or POINT (2)");
   
@@ -1181,6 +1198,45 @@ void MDNS::Project(unsigned gb)
     }
   }
 
+
+  if(radix == 2) {
+    if(prtype == AREA) 
+      msg(ERROR,"area-type projection not implemented with radix-2 grids.");
+    if(prtype == POINT) {
+      bool iodd=false;
+      //wa.Load(0.0);
+      //wb.Load(0.0);
+      int aistop=(int)aNx;
+      int ajstop=(int)amy;
+
+      for(int ai=0; ai < aistop; ++ai) {
+	int aI = (int) ai- (int) axorigin;
+	vector wai;
+	Set(wai,wa[ai]);
+	Dimension(wai,aNx);
+	iodd=!iodd;
+	int start=iodd ? 1 : 0;
+	//if(ai < (int)axorigin) start +=2;
+	for(int aj=start; aj < ajstop; aj+=2) {
+	  //wai[aj]=Complex(aI,aj);
+	  int bI=((int)aI+(int)aj)/2;
+	  int bj=((int)aj-(int)aI)/2;
+	  if(bj >= 0) {
+	    //cout << "("<<bI << "," << bj << ")" << endl;
+	    //wb[bI+bxorigin][bj]=Complex(aI,aj);
+	    wb[bI+bxorigin][bj]=wai[aj];
+	  } else {
+	    //complex conjugate case
+	    //cout << "("<<-bI << "," << -bj << ")" << endl;
+	    //wb[(int)bxorigin-(int)bI][-bj]=Complex(aI,aj); 
+	    wb[(int)bxorigin-(int)bI][-bj]=Complex(wai[aj].re,-wai[aj].im);
+	  }
+	}
+      }
+      fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
+      //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
+    }
+  }
   
   if(radix == 4) {
     if(prtype==AREA) {
