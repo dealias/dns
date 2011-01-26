@@ -5,6 +5,7 @@ size(16cm,0);
 string[] outnames={"lambda1","lambdar2","lambdar2rot","lambda2"};
 real[] lambda={1,sqrt(2),sqrt(2),2};
 pair[] R={(1,0),(1,0),exp(-pi*I/4),(1,0)};
+int[] radices={1,2,2,4};
 
 int m=4; // really should be called mx, and a power of two.
 int Ngrids=2; // the following three arrays only work up to ngrids=3
@@ -15,6 +16,7 @@ pen[] dotpen={black,blue,deepgreen};
 filltype[] dotfill={Fill,NoFill,NoFill};
 pen[] dotfillpen={black,invisible,invisible};
 int n,G;
+int radix;
 path g;
 picture pic;
 pen p, fillpen;
@@ -26,16 +28,27 @@ usersetting();
 
 int Invisible;
 
+bool visible(int i, int j, int Invisible) {
+  if(radix==1 || radix == 4)
+    if((abs(j) >= Invisible) || (abs(i) >= Invisible))
+      return true;
+  if(radix==2)
+    if(abs(i) + abs(j)  >= Invisible)
+      return true;
+  return false;
+}
+
 void drawdots() {
   for(int i=-n+1; i <n; ++i) {
     for(int j= i >= 0? 0 : 1; j <n; ++j) {
+      //for(int j=-n+1; j <n; ++j) {
       pair a=L*r*(i,j);
       g=scale(s)*unitcircle;
-      if((j >= Invisible) || (abs(i) >= Invisible)) {
+      if(visible(i,j,Invisible)) {
 	filldraw(pic,shift(a)*g,fillpen,p);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
-	label(pic,(string) ((4^G)*(i*i+j*j)),a,NE);
+	//label(pic,(string) ((4^G)*(i*i+j*j)),a,NE);
       } else {
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
 	filldraw(pic,shift(a)*g,fillpen,p+dashed);
@@ -49,11 +62,13 @@ void drawdots() {
 for(int i=0; i < lambda.length; ++i) {
   pic = new picture;
   size(pic,30cm,0);
+  radix=radices[i];
   
   for(G=0; G < Ngrids; ++G) {
     n=m;
     if(i==0) n=m*2^G;
     Invisible= G==0 ? 0 : floor(n/2);
+    if(radix==2) Invisible= G==0 ? 0 : n;
     p=dotpen[G];
     fillpen=dotfillpen[G];
     F=dotfill[G];
@@ -61,10 +76,17 @@ for(int i=0; i < lambda.length; ++i) {
     L=lambda[i]^G;
     s=(G+1)*0.1;
     drawdots();
+    
+    if(radix==2) {// centers picture correctly
+      dot(pic,(n*L,0),invisible);
+      dot(pic,(-n*L,0),invisible); 
+      dot(pic,(0,n*L),invisible);
+      dot(pic,(0,-n*L),invisible); 
+    }
+    
   }
-
-  if(i==3) {
-    // this stuff really only applies to radix-4 grids
+  
+  if(radix==4) {
 
     int glast=Ngrids-1;
     real radlast=0.5;
