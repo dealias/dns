@@ -1326,11 +1326,46 @@ void MDNS::Prolong(unsigned ga)
     }
   }
 
+  if(radix == 2) {
+    if(prtype == AREA) 
+      msg(ERROR,"area-type projection not implemented with radix-2 grids.");
+
+    if(prtype == POINT) {
+      
+      // FIXME: temp
+      wa.Load(1.0);
+      wb.Load(0.0);
+      
+      int bistop=(int) bNx;
+      for(int bi=0; bi < bistop; ++bi) {
+	vector wbi;
+	Set(wbi,wb[bi]);
+	Dimension(wbi,bNx);
+	int bI=bi-(int) bxorigin;
+	int bjstop=(int)bInvisible-abs(bI);
+	for(int bj=bi < (int) bxorigin ? 1 : 0; bj < bjstop; ++bj) {
+	  int aI=bI-bj;
+	  int aj=bI+bj;
+	  if(aj > 0) {
+	    //cout << "(" << aI+(int)axorigin << "," << aj  << ")" << endl;
+	    //wa[aI+axorigin][aj]=Complex(bI,bj);
+	    wa[aI+axorigin][aj]=wbi[bj];
+	  } else {
+	    //complex conjugate case
+	    //wa[axorigin-aI][-aj]=Complex(bI,bj);
+	    wa[axorigin-aI][-aj]=Complex(wbi[bj].re,wbi[bj].im);
+	    
+	  }
+	}
+      }
+      fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
+      //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
+    }
+  }
+
   if(radix == 4) {
     if(prtype==AREA) {
-      //const unsigned dtilX=bInvisible+bInvisible;
-      cout << "area-type projection no longer implemented" << endl;
-      exit(1);
+      msg(ERROR,"area-type projection no longer implemented");
     }
 
     if(prtype==POINT) {
@@ -1353,7 +1388,7 @@ void MDNS::Prolong(unsigned ga)
 	I += 2;
       }
     }
-  }  
+  }
 
 #if 0
   {
