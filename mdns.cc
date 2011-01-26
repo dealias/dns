@@ -25,6 +25,7 @@ const char *ic="Constant";
 const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
+Real nlfactor=1.0;
 Real k0=1.0;
 Real nuH=0.0, nuL=0.0;
 int pH=1;
@@ -937,6 +938,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(radix,1,INT_MAX,"Radix number for grid decimation");
   VOCAB(prtype,0,2,"Synchronization scheme (0=none,1=area, 2=point)");
   VOCAB(dorescale,0,1,"Symmetric synchronization? (0=no, 1=hell yes!)");
+  VOCAB(nlfactor,0.0,REAL_MAX,"subgrid nonlinear rescaling factor exponent.");
 }
 
 MDNS::MDNS() 
@@ -1587,8 +1589,11 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
       //cout << endl;
     }
   
-    //fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
-
+    // rescale nonlinear term to account for missing interactions
+    if(nlfactor != 0.0) {
+      Real fact=pow((double)radix,nlfactor*myg); 
+      f0 *= fact;
+    }
   }
 #if 0
   Real sum=0.0;
