@@ -90,6 +90,8 @@ void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
   Convolution->convolve(F,G);
   f0(origin)=0.0;
   
+  killmodes(f0);
+  killmodes(w);
 #if 0
   Real sum=0.0;
   for(unsigned i=0; i < Nx; ++i) {
@@ -250,7 +252,12 @@ void DNSBase::setcountRAW(const unsigned Invis=0, const unsigned lambda2=1)
 	unsigned r2=lambda2*(I2+j*j);
 	for(unsigned k=0; k < R2.Size(); ++k) {
 	  if(r2 == R2[k]) {
-	    count[k]++;
+	    if(circular) {
+	      if(r2 < my*my) 
+		count[k]++;
+	    }
+	    else
+	      count[k]++;
 	    break;
 	  }
 	}

@@ -18,6 +18,7 @@ const char *ic="Equipartition";
 const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
+int circular=1;
 Real nuH=0.0, nuL=0.0;
 int pH=1;
 int pL=0;
@@ -218,6 +219,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB_NOLIMIT(ic,"Initial Condition");
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
+  VOCAB(circular,0,1,"zero-out modes in corner regions?");
   VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
   VOCAB(spectrum,0,3,"Spectrum flag (0=off, 1=binned, 2=interpolated, 3=raw)");
   VOCAB(casimir,0,1,"Casimir flag (0=off, 1=on)");
@@ -383,6 +385,7 @@ void DNS::InitialConditions()
   w.Set(Y[OMEGA]);
   InitialCondition->Set(w,NY[OMEGA]);
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
+  killmodes(w);
 
   Set(T,Y[TRANSFER]);
   for(unsigned i=0; i < nshells; i++)

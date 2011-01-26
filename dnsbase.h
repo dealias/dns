@@ -22,7 +22,9 @@ extern unsigned casimir;
 
 extern int pH;
 extern int pL;
- 
+
+extern int circular;
+
 class DNSBase {
 protected:
   // Vocabulary:
@@ -170,6 +172,24 @@ public:
       return k0*sqrt((Real) R2[i]);
     return k0*(i+1);
   }
+  
+  void killmodes(array2<Complex> &A) {
+    if(circular) {
+      unsigned m2=my*my;
+      for(unsigned i=0; i < Nx; ++i) {
+	vector Ai=A[i];
+	unsigned I= i > xorigin ? i-xorigin : xorigin-i; 
+	unsigned I2=I*I;
+	unsigned start=(unsigned) floor(sqrt(m2-I2));
+	start=0;
+	for(unsigned j=start; j < my; ++j) {
+	  if(I2+j*j >= m2)
+	    Ai[j]=0.0;
+	}
+      }
+    }
+  }
+
 };
 
 //***** initial conditions *****//
