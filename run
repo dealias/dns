@@ -1,0 +1,3 @@
+#!/bin/csh -f
+set pwd=$PWD
+$pwd/runfg $* &

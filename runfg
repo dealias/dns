@@ -1,0 +1,6 @@
+#!/bin/csh -f
+set pwd=$PWD
+cd $PWD
+nice +19
+#setenv TMP_DIR /tmp/$USER
+$PWD/triad run=$* | tee -a $1/log
