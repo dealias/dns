@@ -255,6 +255,9 @@ public:
   //void SpectrumRad4(vector&, const vector&);
 
   void Project(unsigned ga);
+  void Projectrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int,
+			bool overwrite=true);
+  void Prolongrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
   void Prolong(unsigned gb);
   int Rescale();
 
@@ -624,22 +627,34 @@ void MDNS::Grid::InitialConditions(unsigned g)
   
   if(myg > 0) { 
     // buffer for calculating small-small-small calculations
-    sNx=2*Invisible-1;
-    smx=smy=Invisible;
-    sxorigin=(sNx+1)/2-1;
+    
+    Real sk0=k0;
+    if(radix==2) {
+      sNx=gN(::Nx,myg-1);
+      smx=smy=(sNx+1)/2;
+      sk0=k0/sqrt(2.0);
+    } else {
+      sNx=2*Invisible-1;
+      smx=smy=Invisible;
+      sxorigin=(sNx+1)/2-1;
+    }
+
     unsigned nS=sNx*smy;
+      
     xdiff=xorigin-sxorigin;
 
     wSblock=fftwpp::ComplexAlign(nS);
     SrcwSblock=fftwpp::ComplexAlign(nS);
     wS.Dimension(sNx,smy,wSblock);
     SrcwS.Dimension(sNx,smy,SrcwSblock);
-    smallDNSBase=new DNSBase(sNx,smy,k0); // TODO: share memory block
+    smallDNSBase=new DNSBase(sNx,smy,sk0); // TODO: share memory block
 
-    tildeB.Dimension(2*Invisible+1,Invisible+1);
-    Allocate(tildeB,(2*Invisible+1)*(Invisible+1));
-    for(unsigned i=0; i < 2*Invisible+1; ++i)
-      tildeB[i][0]=0.0;
+    if(prtype==AREA) {
+      tildeB.Dimension(2*Invisible+1,Invisible+1);
+      Allocate(tildeB,(2*Invisible+1)*(Invisible+1));
+      for(unsigned i=0; i < 2*Invisible+1; ++i)
+	tildeB[i][0]=0.0;
+    }
   }
   
   // set up spectrum parameters
@@ -1203,47 +1218,15 @@ void MDNS::Project(unsigned gb)
     if(prtype == AREA) 
       msg(ERROR,"area-type projection not implemented with radix-2 grids.");
     if(prtype == POINT) {
-      bool iodd=false;
-      //wa.Load(0.0);
-      //wb.Load(0.0);
-      int aistop=(int)aNx;
-      int ajstop=(int)amy;
-
-      for(int ai=0; ai < aistop; ++ai) {
-	int aI = (int) ai- (int) axorigin;
-	vector wai;
-	Set(wai,wa[ai]);
-	Dimension(wai,aNx);
-	iodd=!iodd;
-	int start=iodd ? 1 : 0;
-	//if(ai < (int)axorigin) start +=2;
-	for(int aj=start; aj < ajstop; aj+=2) {
-	  //wai[aj]=Complex(aI,aj);
-	  int bI=((int)aI+(int)aj)/2;
-	  int bj=((int)aj-(int)aI)/2;
-	  if(bj >= 0) {
-	    //cout << "("<<bI << "," << bj << ")" << endl;
-	    //wb[bI+bxorigin][bj]=Complex(aI,aj);
-	    wb[bI+bxorigin][bj]=wai[aj];
-	  } else {
-	    //complex conjugate case
-	    //cout << "("<<-bI << "," << -bj << ")" << endl;
-	    //wb[(int)bxorigin-(int)bI][-bj]=Complex(aI,aj); 
-	    wb[(int)bxorigin-(int)bI][-bj]=Complex(wai[aj].re,-wai[aj].im);
-	  }
-	}
-      }
-      fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
-      //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
+      Projectrad2point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     }
   }
-  
+
   if(radix == 4) {
     if(prtype==AREA) {
       cout << "area-type projection no longer implemented" << endl;
       exit(1);
     }
-
 
     if(prtype==POINT) {
       unsigned xstart=bInvisible;
@@ -1278,6 +1261,60 @@ void MDNS::Project(unsigned gb)
   }
 #endif
   //exit(1);
+}
+
+void ComplexSet(Complex &a, Complex b) {a=b;}
+void ComplexSubfrom(Complex &a, Complex b) {a-=b;}
+
+void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible,
+			    bool overwrite)
+{
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+  bool iodd=false;
+  //wa.Load(Complex(1.0,1.0));
+  //wb.Load(0.0);
+  
+  void (*op)(Complex&,Complex)=overwrite ? &ComplexSet : &ComplexSubfrom;
+
+  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
+  for(int ai=0; ai < aNx; ++ai) {
+    int aI=ai-axorigin;
+    vector wai;
+    Set(wai,wa[ai]);
+    Dimension(wai,aNx);
+    iodd=!iodd;
+    int start=iodd ? 1 : 0;
+    if(ai < axorigin && start==0) start=2;
+    for(int aj=start; aj < amy; aj+=2) {
+      //wai[aj]=Complex(aI,aj);
+      int bI=(aI+aj)/2;
+      int bj=(aj-aI)/2;
+      if(bj >= 0) {
+	//cout << "(" << aI+axorigin << "," << aj << ")->"
+	//<< "(" << bI+bxorigin << "," << bj << ")" << endl;
+	//wb[bI+bxorigin][bj]=Complex(aI,aj);
+	//wb[bI+bxorigin][bj]=wai[aj];
+	//cout << wai[aj] << " ";
+	op(wb[bI+bxorigin][bj],wai[aj]);
+	//ComplexSet(wb[bI+bxorigin][bj],wai[aj]);
+	//cout << wb[bI+bxorigin][bj] << endl;
+      } else {
+	//complex conjugate case
+	//cout << "(" << aI+axorigin << "," << aj << ")->"
+	//<< "(" << bxorigin-bI  << "," << -bj << ")*" << endl;
+	//wb[bxorigin-bI][-bj]=Complex(aI,aj); 
+	//wb[bxorigin-bI][-bj]=Complex(wai[aj].re,-wai[aj].im);
+	//cout <<Complex(wai[aj].re,-wai[aj].im) << " ";
+	op(wb[bxorigin-bI][-bj],Complex(wai[aj].re,-wai[aj].im));
+	//cout << wb[bxorigin-bI][-bj] << endl;
+	//ComplexSet(wb[bxorigin-bI][-bj],wai[aj]);
+      }
+    }
+  }
+  fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
+  //cout << "wa\n"<<wa << "wb\n"<<wb << endl;
 }
   
 void MDNS::Prolong(unsigned ga)
@@ -1331,35 +1368,7 @@ void MDNS::Prolong(unsigned ga)
       msg(ERROR,"area-type projection not implemented with radix-2 grids.");
 
     if(prtype == POINT) {
-      
-      // FIXME: temp
-      wa.Load(1.0);
-      wb.Load(0.0);
-      
-      int bistop=(int) bNx;
-      for(int bi=0; bi < bistop; ++bi) {
-	vector wbi;
-	Set(wbi,wb[bi]);
-	Dimension(wbi,bNx);
-	int bI=bi-(int) bxorigin;
-	int bjstop=(int)bInvisible-abs(bI);
-	for(int bj=bi < (int) bxorigin ? 1 : 0; bj < bjstop; ++bj) {
-	  int aI=bI-bj;
-	  int aj=bI+bj;
-	  if(aj > 0) {
-	    //cout << "(" << aI+(int)axorigin << "," << aj  << ")" << endl;
-	    //wa[aI+axorigin][aj]=Complex(bI,bj);
-	    wa[aI+axorigin][aj]=wbi[bj];
-	  } else {
-	    //complex conjugate case
-	    //wa[axorigin-aI][-aj]=Complex(bI,bj);
-	    wa[axorigin-aI][-aj]=Complex(wbi[bj].re,wbi[bj].im);
-	    
-	  }
-	}
-      }
-      fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
-      //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
+      Prolongrad2point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     }
   }
 
@@ -1405,6 +1414,44 @@ void MDNS::Prolong(unsigned ga)
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
   //exit(1);
 
+}
+
+void MDNS::Prolongrad2point(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+{
+  //wa.Load(1.0);
+  //wb.Load(0.0);
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+
+  fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,axorigin,wb);
+  int bistop=(int) bNx;
+  for(int bi=0; bi < bistop; ++bi) {
+    vector wbi;
+    Set(wbi,wb[bi]);
+    Dimension(wbi,bNx);
+    int bI=bi-(int) bxorigin;
+    int bjstop=(int)bInvisible-abs(bI);
+    for(int bj=bi < (int) bxorigin ? 1 : 0; bj < bjstop; ++bj) {
+      int aI=bI-bj;
+      int aj=bI+bj;
+      if(aj > 0) {
+	//cout << "(" << bI+(int)bxorigin << "," << bj  << ")->"
+	//<< "(" << aI+(int)axorigin << "," << aj  << ")" << endl;
+	//wa[aI+axorigin][aj]=Complex(bI,bj);
+	wa[aI+axorigin][aj]=wbi[bj];
+      } else {
+	//cout << "(" << bI+(int)axorigin << "," << bj  << ")->"
+	//<< "(" << (int)axorigin-aI << "," << -aj  << ")*" << endl;
+	//complex conjugate case
+	//wa[axorigin-aI][-aj]=Complex(bI,bj);
+	wa[axorigin-aI][-aj]=Complex(wbi[bj].re,-wbi[bj].im);
+	
+      }
+    }
+  }
+  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
+  //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
 }
 
 int MDNS::Rescale()
@@ -1648,44 +1695,41 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
   //  cout << w << endl;
 
   DNSBase::NonLinearSource(f0,w,t);
-
-  if(myg > 0) {
-    //cout << "copy overlapping modes to wS" << endl;
-    //copy overlapping modes to wS
-    for(unsigned i=0; i < sNx; ++i) {
-      vector wi=w[i+xdiff];
-      vector wSi=wS[i];
-      //cout << "i="<< i <<" ,i+xdiff=" <<i+xdiff ;
-      for(unsigned j=0; j < smy; ++j) {
-	wSi[j]=wi[j];
-	//cout << " " << j;
-      }
-      //cout << endl;
-    }
-    fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
-
-    // find the nonlinear interaction for small-small-small
-    smallDNSBase->NonLinearSource(SrcwS,wS,t);
  
-    //cout << "subtract small-small-small source" << endl;
-    // subtract small-small-small source
-    for(unsigned i=0; i < sNx; ++i) {
-      vector f0i=f0[i+xdiff];
-      vector SrcwSi=SrcwS[i];
-      //cout << "i="<< i <<" ,i+xdiff=" <<i+xdiff ;
-      for(unsigned j=0; j < smy; ++j) {
-	f0i[j] -= SrcwSi[j];
-	//cout << " " << j;
-      }
-      //cout << endl;
-    }
+  if(myg > 0) {
+    if(radix==2) {
+      wS.Load(0.0);
+      parent->Prolongrad2point(wS,sNx,smy,w,Nx,my,Invisible);
+      smallDNSBase->NonLinearSource(SrcwS,wS,t);
+      parent->Projectrad2point(SrcwS,sNx,smy,f0,Nx,my,Invisible,false);
   
-    // rescale nonlinear term to account for missing interactions
+    } else { //radix is 1 or 4
+      for(unsigned i=0; i < sNx; ++i) {
+	vector wi=w[i+xdiff];
+	vector wSi=wS[i];
+	for(unsigned j=0; j < smy; ++j)
+	  wSi[j]=wi[j];
+      }
+      fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
+      
+      smallDNSBase->NonLinearSource(SrcwS,wS,t);
+      
+      for(unsigned i=0; i < sNx; ++i) {
+	vector f0i=f0[i+xdiff];
+	vector SrcwSi=SrcwS[i];
+	//cout << "i="<< i <<" ,i+xdiff=" <<i+xdiff ;
+	for(unsigned j=0; j < smy; ++j)
+	  f0i[j] -= SrcwSi[j];
+      }
+      
+    }
+    
     if(nlfactor != 0.0) {
       Real fact=pow((double)radix,nlfactor*myg); 
       f0 *= fact;
     }
   }
+    
 #if 0
   Real sum=0.0;
   for(unsigned i=0; i < Nx; ++i) {
