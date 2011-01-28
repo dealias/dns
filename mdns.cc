@@ -1568,22 +1568,40 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
   }
 }
 
+
 void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w, 
 				   Real& E, Real& Z, Real& P)
 {
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    //cout << "\ni="<<i << ", j=";
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      if(j >= Invisible || I2 >= Invisible2) {
-	//cout << j<< " ";
-	Real w2=abs2(wi[j]);
-	Real k2=k02*(I2+j*j);
-	Z += w2;
-	E += w2/k2;
-	P += w2*k2;
+  if(radix != 2) {
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      //cout << "\ni="<<i << ", j=";
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	if(j >= Invisible || I2 >= Invisible2) {
+	  //cout << j<< " ";
+	  Real w2=abs2(wi[j]);
+	  Real k2=k02*(I2+j*j);
+	  Z += w2;
+	  E += w2/k2;
+	  P += w2*k2;
+	}
+      }
+    }
+  } else {
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	if(abs(I) + j >= Invisible) {
+	  Real w2=abs2(wi[j]);
+	  Real k2=k02*(I2+j*j);
+	  Z += w2;
+	  E += w2/k2;
+	  P += w2*k2;
+	}
       }
     }
   }
