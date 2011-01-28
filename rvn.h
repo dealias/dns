@@ -64,4 +64,27 @@ void findrads(DynVector<unsigned> &R2, array1<unsigned> nr, const unsigned m,
     nr[i]=R2.Size();
   }
 }
+
+
+void findradsradix2(DynVector<unsigned> &R2, array1<unsigned> nr, const unsigned m,
+	      const unsigned invis=0)
+{
+  for(unsigned i=1; i < m; ++i) {
+    //unsigned start=nr[(unsigned) floor(sqrt((i-1)/2))];
+    double nrstart=floor(sqrt((i-1)/2));
+    unsigned start=nr[nrstart > 1 ? (unsigned) nrstart -1 : 0];
+    start=0; // FIXME: restore and optimize.
+    for(unsigned x=i-1; x <= i; ++x) {
+      unsigned x2=x*x;
+      unsigned ystopnow= i < x ? i : x;
+      for(unsigned y= x == 0 ? 1 : 0; y <= ystopnow; ++y) {
+	if(x + y >= invis) {
+	  //cout << "("<<x<<","<<y<<")"<<endl;
+	  check_rvn(R2,x2+y*y,start);
+	}
+      }
+    }
+    nr[i]=R2.Size();
+  }
+}
 #endif
