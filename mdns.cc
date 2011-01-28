@@ -66,11 +66,11 @@ class FunctRR {
 typedef FunctRR* FunctRRPtr;
 
 unsigned gN(unsigned N, unsigned g) {// TODO: should this be part of MDNS?
-  return radix == 1 ? pow(2,(int) g)*(N+1)-1 : N;
+  return radix != 4 ? pow(2,(int) g)*(N+1)-1 : N;
 };
 
 unsigned gm(unsigned m, unsigned g) { // TODO: should this be part of MDNS?
-  return radix == 1 ? pow(2,(int) g)*m : m;
+  return radix != 4 ? pow(2,(int) g)*m : m;
 };
 
 
@@ -212,11 +212,11 @@ public:
     case RAW:
       {
 	DynVector<unsigned> tempR2;
-	array1<unsigned> tempnr(my);
+	array1<unsigned> tempnr(gm(my,g));
 	if(radix == 2)
-	  findradsradix2(tempR2,tempnr,my,getInvisible(g));
+	  findradsradix2(tempR2,tempnr,gm(my,g),getInvisible(g));
 	else
-	  findrads(tempR2,tempnr,my,getInvisible(g));
+	  findrads(tempR2,tempnr,gm(my,g),getInvisible(g));
 	//cout << tempR2.Size() << endl;
 	return tempR2.Size();
       }
