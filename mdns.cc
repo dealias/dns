@@ -67,10 +67,12 @@ typedef FunctRR* FunctRRPtr;
 
 unsigned gN(unsigned N, unsigned g) {// TODO: should this be part of MDNS?
   return radix != 4 ? pow(2,(int) g)*(N+1)-1 : N;
+  //  return radix == 1 ? pow(2,(int) g)*(N+1)-1 : N;
 };
 
 unsigned gm(unsigned m, unsigned g) { // TODO: should this be part of MDNS?
   return radix != 4 ? pow(2,(int) g)*m : m;
+  //return radix == 1 ? pow(2,(int) g)*m : m;
 };
 
 
@@ -296,7 +298,6 @@ public:
     switch(spectrum) {
     case BINNED:
       if(radix == 4) {
-	//unsigned lambda=2; // FIXME: restor?
 	for(unsigned g=0; g < Ngrids; ++g) {
 	  const unsigned offset=g==0 ? 0 : G[g]->getInvisible()-1;
 	  const unsigned firstshell=G[g]->getshellsbelow();
@@ -615,12 +616,11 @@ void MDNS::Grid::InitialConditions(unsigned g)
   //  unsigned Ny0=Ny+ypad; //unused so far...
   //  int my0=Ny0/2+1; //unused so far...
 
-  lambda=1;
-  // NB: radix-2 lambda not implemented
-  if(radix == 4) {
-    for(unsigned i=0; i < myg; ++i) lambda *= 2;
-  }
-  lambda2=lambda*lambda;
+  lambda2=1;
+  for(unsigned i=0; i < myg; ++i) 
+    lambda2 *= radix;
+  lambda=sqrt(lambda2);
+
 
   // allocate memory
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
@@ -824,10 +824,13 @@ void MDNS::Grid::setcountRAWrad2()
     }
   }
 }
+void pout(int i, int j)
+{
+  cout << "(" << i << "," << j << ")";
+}
 
 void MDNS::Grid::SpectrumRAWrad2(vector& S, const vector& y)
 {
-  
   w.Set(y);
   for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
@@ -851,12 +854,16 @@ void MDNS::Grid::SpectrumRAWrad2(vector& S, const vector& y)
       unsigned Sk= spectrum == RAW ?  kval[I][I] : (unsigned)(k-0.5);
       Real Wall=abs2(wi[I])+abs2(wim[I]);
       S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
-    } else {
-
     }
 
-    unsigned start=Invisible==0 ? 1 : Invisible-I;
-    const unsigned stop=I;
+    unsigned start;
+    if(Invisible == 0) {
+      start=0;
+    } else {
+      start=max(1,(int) Invisible-(int) I);
+    }
+   
+    unsigned stop=I;
     for(unsigned j=start; j < stop; ++j) {
       unsigned k2=(I2+j*j);
       Real k=sqrt((Real) k2);
@@ -867,6 +874,7 @@ void MDNS::Grid::SpectrumRAWrad2(vector& S, const vector& y)
     }
   }
 
+  
   // xorigin case
   vector wi=w[xorigin];
   for(unsigned j=Invis == 0 ? 1 : Invis; j < my; ++j) {
@@ -882,7 +890,7 @@ void MDNS::Grid::SpectrumRAWrad2(vector& S, const vector& y)
     Real w2=abs2(w[i][0]);
     S[Sk] += Complex(w2/(k0*I),w2*nuk(I*I));
   }
-
+  
 }
 
 void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
@@ -933,7 +941,10 @@ void MDNS::Grid::SpectrumRad2(vector& SrcEK, const vector& w0)
   case NOSPECTRUM:
     break;
   case RAW:
-    SpectrumRAWrad2(SrcEK,w0);
+    if(myg==0)
+      DNSBase::Spectrum(SrcEK,w0);
+    else
+      SpectrumRAWrad2(SrcEK,w0);
     break;
   default:
     msg(ERROR,"Invalid spectrum: only NOSPECTRUM and RAW available");
@@ -1194,9 +1205,7 @@ void MDNS::InitialConditions()
     for(unsigned i=0; i < gnshells; ++i) {
       tempR2.Push(G[g]->getR2(i));
     }
-    
-    // NB: radix==2 not implemented.
-    
+        
     for(g=1; g < Ngrids; ++g) {
       gnshells=G[g]->getnshells();
       for(unsigned i=0; i < gnshells; ++i) {
@@ -1213,7 +1222,6 @@ void MDNS::InitialConditions()
 	  tempR2.Push(temp);
 	}	    
       }
-
     }
     nshells=tempR2.Size();
     
@@ -1221,7 +1229,6 @@ void MDNS::InitialConditions()
     R2.Allocate(nshells);
     for(unsigned i=0; i < nshells; ++i) 
       R2[i]=tempR2[i];
-    //cout << "mdns:\n" << R2 << endl;
     break;
   }
   } // switch(spectrum)

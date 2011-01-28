@@ -48,11 +48,11 @@ void drawdots() {
 	filldraw(pic,shift(a)*g,fillpen,p);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
-	//label(pic,(string) ((4^G)*(i*i+j*j)),a,NE);
+	label(pic,(string) ((radix^G)*(i*i+j*j)),a,NE);
       } else {
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
 	filldraw(pic,shift(a)*g,fillpen,p+dashed);
-	//label(pic,(string) ((4^G)*(i*i+j*j)),a,NE);
+	//label(pic,(string) ((radix^G)*(i*i+j*j)),a,NE);
       }
     }
   }
@@ -66,9 +66,12 @@ for(int i=0; i < lambda.length; ++i) {
   
   for(G=0; G < Ngrids; ++G) {
     n=m;
-    if(i==0) n=m*2^G;
+    if(radix != 4) n=m*2^G;
     Invisible= G==0 ? 0 : floor(n/2);
-    if(radix==2) Invisible= G==0 ? 0 : n;
+    if(radix==2) {
+      
+      Invisible= G==0 ? 0 : floor(n/2);
+    }
     p=dotpen[G];
     fillpen=dotfillpen[G];
     F=dotfill[G];
