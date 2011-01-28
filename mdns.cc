@@ -26,7 +26,7 @@ const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
 int circular=0;
-Real nlfactor=1.0;
+Real nlfactor=0.0;
 Real k0=1.0;
 Real nuH=0.0, nuL=0.0;
 int pH=1;
