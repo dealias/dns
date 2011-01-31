@@ -49,6 +49,10 @@ protected:
   int tcount;
   Real etanorm;
 
+  unsigned (DNSBase::*Sindex)(unsigned, unsigned, Real); 
+  unsigned SkBIN(unsigned I, unsigned j, Real k) {return (unsigned)(k-0.5);}
+  unsigned SkRAW(unsigned I, unsigned j, Real k) {return  kval[I][j];}
+  
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
   array1<unsigned> R2; //radii achieved for discrete spectrum
@@ -74,8 +78,28 @@ protected:
   Array2<Complex> f,g,h;
   vector Tn;
 
+  void setSindex() {
+    switch(spectrum) {
+    case NOSPECTRUM:
+      Sindex=NULL;
+      break;
+    case BINNED:
+      Sindex=&DNSBase::SkBIN;
+      break;
+    case INTERPOLATED:
+      msg(ERROR,"Interpolated spectrum not done yet.");
+      break;
+    case RAW:
+      Sindex=&DNSBase::SkRAW;
+      break;
+    default:
+      msg(ERROR,"Invalid choice of spectrum.");
+    }
+  }
+
+
 public:
-  DNSBase() {}
+  DNSBase() {setSindex();}
   DNSBase(unsigned Nx, unsigned my, Real k0): Nx(Nx), my(my), k0(k0) {
     block=ComplexAlign(3*Nx*my);
     mx=(Nx+1)/2;
@@ -91,6 +115,8 @@ public:
     G[0]=g0;
     G[1]=g1;
     Convolution=new ImplicitHConvolution2(mx,my,2);
+  
+    setSindex();
   }
   virtual ~DNSBase() {}
 

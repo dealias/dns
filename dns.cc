@@ -181,11 +181,13 @@ public:
 	unsigned k2int=I2+j*j;
 	Real k2=k02*k2int;
 	if(k2 > kmin2 && k2 < kmax2) {
-	  bool q1=I >= j;
-	  unsigned Sk= spectrum==3 
-	    ? DNSProblem->getkval(q1 ? I : j, q1 ? j : I)
-	    :(unsigned)(sqrt(k2int)-0.5);
-	  T[Sk].im += realproduct(diff,wi[j])+0.5*abs2(diff);
+	  if(spectrum != 0) { // TODO: this could be optimized.
+	    bool q1=I >= j;
+	    unsigned Sk= spectrum==3 
+	      ? DNSProblem->getkval(q1 ? I : j, q1 ? j : I)
+	      :(unsigned)(sqrt(k2int)-0.5);
+	    T[Sk].im += realproduct(diff,wi[j])+0.5*abs2(diff);
+	  }
 	  wi[j] += diff;
         }
       }
