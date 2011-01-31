@@ -123,6 +123,38 @@ public:
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
     unsigned lambda, lambda2; // spacing factor
 
+    // bounds for spectrum loops
+    virtual unsigned diagstart() {
+      if(Invisible == 0)
+	return 1;
+      if(circular)
+	return (unsigned) Invisible/(sqrt(2.0)*lambda);
+      if(radix == 2)
+	return Invisible/2;
+      return Invisible; // radix 1 or 4
+    }
+    virtual unsigned mainjstart(unsigned I) {
+      if(Invisible == 0)
+	return 1;
+      if(circular)
+	return (unsigned) ceil(sqrt(Invisible2-I*I));
+      if(radix == 2)
+	return Invisible-I;
+      if(I >= Invisible)
+	return 1;
+      return Invisible;
+    }
+    virtual unsigned xoriginstart() {
+      if(Invisible == 0)
+	return 1;
+      return Invisible;
+    }
+    virtual unsigned bottomstart() {
+      if(Invisible == 0)
+	return 1;
+      return Invisible;
+    }
+
   public:
     Grid();
     Grid(unsigned, MDNS *, bool);
@@ -966,7 +998,7 @@ void MDNS::Grid::SpectrumRad4(vector& SrcEK, const vector& w0)
     msg(ERROR,"Interpolated spectrum not working yet.");
     break;
   case RAW:
-    DNSBase::Spectrum(SrcEK,w0,Invisible); //FIXME
+    DNSBase::Spectrum(SrcEK,w0);
     break;
   default:
     msg(ERROR,"Invalid spectrum");
@@ -1058,6 +1090,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB_CONSTANT(casimir,0,"Compute Casimir invariants (off)");
   VOCAB(spectrum,0,3,
 	"Spectrum flag (0=off, 1=binned, 2=interpolated, 3=raw)");
+  VOCAB(circular,0,1,"kill corner modes?");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
   InitialConditionTable=new Table<InitialConditionBase>("initial condition");

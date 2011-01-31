@@ -219,7 +219,7 @@ public:
       return (unsigned) ceil(my/sqrt(2.0));
     return mx;
   }
-  virtual unsigned mainjstart() {return 1;}
+  virtual unsigned mainjstart(unsigned I) {return 1;}
   virtual unsigned mainjstop(unsigned I) {
     if(circular) 
       return min(I,(unsigned) ceil(sqrt(my*my-I*I)));

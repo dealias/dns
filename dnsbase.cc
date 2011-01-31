@@ -144,7 +144,7 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
     vector fim=f0[im];
 
     const unsigned stop=mainjstop(I);
-    for(unsigned j=mainjstart(); j < stop; ++j) {
+    for(unsigned j=mainjstart(I); j < stop; ++j) {
       unsigned Sk=(this->*Sindex)(I,j,sqrt((I2+j*j)));
       unsigned jm=xorigin-j;
       unsigned jp=xorigin+j;
@@ -210,7 +210,7 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     vector wim=w[im];
 
     const unsigned stop=mainjstop(I);
-    for(unsigned j=mainjstart(); j < stop; ++j) {
+    for(unsigned j=mainjstart(I); j < stop; ++j) {
       unsigned k2=(I2+j*j);
       Real k=sqrt((Real) k2);
       unsigned Sk=(this->*Sindex)(I,j,k);
