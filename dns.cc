@@ -18,7 +18,7 @@ const char *ic="Equipartition";
 const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
-int circular=1;
+int circular=0;
 Real nuH=0.0, nuL=0.0;
 int pH=1;
 int pL=0;

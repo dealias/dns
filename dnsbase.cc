@@ -114,28 +114,40 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   for(unsigned K=0; K < nshells; K++)
     T[K]=Complex(0.0,0.0);
 
-  for(unsigned i=0; i < xorigin; i++) {
-    unsigned I=xorigin-i;
-    unsigned im=xorigin+xorigin-i;
-    unsigned I2=I*I;
+  unsigned mx=(Nx+1)/2;
+
+  // diagonals
+  unsigned stop=diagstop();
+  for(unsigned I=diagstart(); I < stop; I++) {
+    unsigned i=xorigin+I;
+    unsigned im=xorigin-I;
     
     vector wi=w[i];
     vector wim=w[im];
     vector fi=f0[i];
     vector fim=f0[im];
-    
-    // diagonals
-    
-    unsigned Sk=(this->*Sindex)(I,I,sqrt2*I);
-    //unsigned Sk= spectrum == RAW ?  kval[I][I] : (unsigned)(sqrt2*I-0.5);
+
+    Real k=sqrt2*I;
+    unsigned Sk=(this->*Sindex)(I,I,k);
     T[Sk].re += realproduct(fi[I],wi[I]) + realproduct(fim[I],wim[I]);
-   
-    const unsigned stop=I;
-    for(unsigned j=1; j < stop; ++j) {
+  }
+
+  // main case
+  for(unsigned I=1; I < mx; I++) { // FIXME: add bounds here too?
+    unsigned i=xorigin+I;
+    unsigned im=xorigin-I;
+    unsigned I2=I*I;
+
+    vector wi=w[i];
+    vector wim=w[im];
+    vector fi=f0[i];
+    vector fim=f0[im];
+
+    const unsigned stop=mainjstop(I);
+    for(unsigned j=mainjstart(); j < stop; ++j) {
+      unsigned Sk=(this->*Sindex)(I,j,sqrt((I2+j*j)));
       unsigned jm=xorigin-j;
       unsigned jp=xorigin+j;
-      Sk=(this->*Sindex)(I,j,sqrt((I2+j*j)));
-      //Sk= spectrum == RAW ? kval[I][j] : (unsigned)(sqrt((I2+j*j))-0.5);
       T[Sk].re += 
 	realproduct(fi[j],wi[j]) +
 	realproduct(fim[j],wim[j]) +
@@ -147,53 +159,58 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   // xorigin case
   vector wi=w[xorigin];
   vector fi=f0[xorigin];
-  for(unsigned j=1; j < my; ++j) {
-    //unsigned Sk= spectrum == RAW ? kval[j][0] : j-1;
+  stop=xoriginstop();
+  for(unsigned j=xoriginstart(); j < stop; ++j) {
     unsigned Sk=(this->*Sindex)(j,0,j);
     T[Sk].re += realproduct(fi[j],wi[j]);
   }
+  
   // bottom right
-  for(unsigned i=xorigin+1; i < Nx; ++i) {
-    //unsigned Sk= spectrum == RAW ? kval[i-xorigin][0] : i-xorigin-1;
-    unsigned I=i-xorigin;
+  stop=bottomstop();
+  for(unsigned I=bottomstart(); I < stop; I++) {
+    unsigned i=I+xorigin;
     unsigned Sk=(this->*Sindex)(I,0,I);
     T[Sk].re += realproduct(f0[i][0],w[i][0]);
-  }  
-  Forcing->Force(f0,T);
-  
-  if(casimir)
-    CasimirTransfer(Src,Y);
+  }
 }
 
-void DNSBase::Spectrum(vector& S, const vector& y, unsigned Invis)
+void DNSBase::Spectrum(vector& S, const vector& y)
 {
   w.Set(y);
   for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
 
-  for(unsigned i=0; i < xorigin; i++) {
-    unsigned I=xorigin-i;
-    unsigned im=xorigin+I;
+  unsigned mx=(Nx+1)/2;
+
+  // diagonals
+  unsigned stop=diagstop();
+  for(unsigned I=diagstart(); I < stop; I++) {
+    unsigned i=xorigin+I;
+    unsigned im=xorigin-I;
     unsigned I2=I*I;
 
     vector wi=w[i];
     vector wim=w[im];
 
-    unsigned start=1;
-    
-    // diagonals
-    if(I >= Invis) {
-      Real k=sqrt2*I;
-      unsigned k2=2*I2;
-      unsigned Sk=(this->*Sindex)(I,I,k);
-      Real Wall=abs2(wi[I])+abs2(wim[I]);
-      S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
-    } else {
-      start=Invis;
-    }
+    Real k=sqrt2*I;
+    unsigned k2=2*I2;
+    unsigned Sk=(this->*Sindex)(I,I,k);
+    Real Wall=abs2(wi[I])+abs2(wim[I]);
+    S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
 
-    const unsigned stop=I;
-    for(unsigned j=start; j < stop; ++j) {
+  }
+
+  // main case
+  for(unsigned I=1; I < mx; I++) { // FIXME: add bounds here too?
+    unsigned i=xorigin+I;
+    unsigned im=xorigin-I;
+    unsigned I2=I*I;
+
+    vector wi=w[i];
+    vector wim=w[im];
+
+    const unsigned stop=mainjstop(I);
+    for(unsigned j=mainjstart(); j < stop; ++j) {
       unsigned k2=(I2+j*j);
       Real k=sqrt((Real) k2);
       unsigned Sk=(this->*Sindex)(I,j,k);
@@ -205,7 +222,9 @@ void DNSBase::Spectrum(vector& S, const vector& y, unsigned Invis)
 
   // xorigin case
   vector wi=w[xorigin];
-  for(unsigned j=Invis == 0 ? 1 : Invis; j < my; ++j) {
+  //for(unsigned j=Invis == 0 ? 1 : Invis; j < my; ++j) {
+  stop=xoriginstop();
+  for(unsigned j=xoriginstart(); j < stop; ++j) {
     //unsigned Sk= spectrum == RAW ? kval[j][0] : j-1;
     unsigned Sk=(this->*Sindex)(j,0,j);
     Real w2=abs2(wi[j]);
@@ -213,8 +232,10 @@ void DNSBase::Spectrum(vector& S, const vector& y, unsigned Invis)
   }
   
   // bottom right
-  for(unsigned i=Invis == 0? xorigin+1 : xorigin + Invis; i < Nx; ++i) {
-    unsigned I=i-xorigin;
+  //for(unsigned i=Invis == 0? xorigin+1 : xorigin + Invis; i < Nx; ++i) {
+  stop=bottomstop();
+  for(unsigned I=bottomstart(); I < stop; I++) {
+    unsigned i=I+xorigin;
     //unsigned Sk= spectrum == RAW ? kval[I][0] : I-1;
     unsigned Sk=(this->*Sindex)(I,0,I);
     Real w2=abs2(w[i][0]);
@@ -261,7 +282,7 @@ void DNSBase::setcountRAW(const unsigned Invis=0, const unsigned lambda2=1)
 	for(unsigned k=0; k < R2.Size(); ++k) {
 	  if(r2 == R2[k]) {
 	    if(circular) {
-	      if(r2 < my*my) 
+	      if(r2 <= my*my) 
 		count[k]++;
 	    }
 	    else

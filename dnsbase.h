@@ -139,7 +139,7 @@ public:
   void FinalOutput();
   void OutFrame(int it);
 
-  virtual void Spectrum(vector&, const vector&, unsigned Invis=0);
+  virtual void Spectrum(vector&, const vector&);
   void Transfer(const vector2&, const vector2&);
   void NonLinearSource(const vector& , const vector&, double);
   void LinearSource(const vector& , const vector&, double);
@@ -175,7 +175,7 @@ public:
     double k2=i2*k02;
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
-
+  
   virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);
   void Stochastic(const vector2& Y, double, double);
 
@@ -205,16 +205,30 @@ public:
       for(unsigned i=0; i < Nx; ++i) {
 	vector Ai=A[i];
 	unsigned I= i > xorigin ? i-xorigin : xorigin-i; 
-	unsigned I2=I*I;
-	unsigned start=(unsigned) floor(sqrt(m2-I2));
-	start=0;
+	unsigned start=(unsigned) ceil(sqrt(m2-I*I));
 	for(unsigned j=start; j < my; ++j) {
-	  if(I2+j*j >= m2)
-	    Ai[j]=0.0;
+	  Ai[j]=0.0;
 	}
       }
     }
   }
+
+  virtual unsigned diagstart() {return 1;}
+  virtual unsigned diagstop() {
+    if(circular) 
+      return (unsigned) ceil(my/sqrt(2.0));
+    return mx;
+  }
+  virtual unsigned mainjstart() {return 1;}
+  virtual unsigned mainjstop(unsigned I) {
+    if(circular) 
+      return min(I,(unsigned) ceil(sqrt(my*my-I*I)));
+    return I;
+  }
+  virtual unsigned xoriginstart() {return 1;}
+  virtual unsigned xoriginstop() {return my;}
+  virtual unsigned bottomstart() {return 1;}
+  virtual unsigned bottomstop() {return mx;}
 
 };
 
