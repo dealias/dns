@@ -1,4 +1,4 @@
-size(16cm,0);
+size(32cm,0);
 
 // asy -f pdf -u "m=8" -u "Ngrids=3" lambda.asy
 
@@ -15,6 +15,7 @@ int Ngrids=2; // the following three arrays only work up to ngrids=3
 pen[] dotpen={black,blue,deepgreen};
 filltype[] dotfill={Fill,NoFill,NoFill};
 pen[] dotfillpen={black,invisible,invisible};
+bool circular=true;
 int n,G;
 int radix;
 path g;
@@ -23,23 +24,44 @@ pen p, fillpen;
 real L, s;
 pair r;
 filltype F;
-
+int nold=0;
 usersetting();
+
+real size=20cm;
+if(m==8)
+  size=30cm;
+if(m==16)
+  size=70cm;
+
 
 int Invisible;
 
 bool visible(int i, int j, int Invisible) {
-  if(radix==1 || radix == 4)
-    if((abs(j) >= Invisible) || (abs(i) >= Invisible))
-      return true;
-  if(radix==2)
-    if(abs(i) + abs(j)  >= Invisible)
-      return true;
+  if(circular) {
+    real a=max((nold-1.0),0);
+    real cutoff=a*a/radix;
+    if(Invisible ==0)
+      return (i*i+j*j <= (n-1)*(n-1));
+    if(radix==2) {
+      return (i*i+j*j <= (n-1)*(n-1))&& ((i*i+j*j) > cutoff);
+    }
+    if(radix==4) {
+      return (i*i+j*j <= (n-1)*(n-1))&& ((i*i+j*j) > cutoff);
+    }
+  } else {
+    if(radix==1 || radix == 4)
+      if((abs(j) >= Invisible) || (abs(i) >= Invisible))
+	return true;
+    if(radix==2)
+      if(abs(i) + abs(j)  >= Invisible)
+	return true;
+  }
   return false;
 }
 
-void drawdots() {
+void drawdots() {  
   for(int i=-n+1; i <n; ++i) {
+    //for(int i=0; i <n; ++i) {
     for(int j= i >= 0? 0 : 1; j <n; ++j) {
       //for(int j=-n+1; j <n; ++j) {
       pair a=L*r*(i,j);
@@ -48,7 +70,7 @@ void drawdots() {
 	filldraw(pic,shift(a)*g,fillpen,p);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE);
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
-	label(pic,(string) ((radix^G)*(i*i+j*j)),a,NE);
+	label(pic,(string) ((radix^G)*(i*i+j*j)),a,NE,p);
       } else {
 	//label(pic,"("+(string) i +"," + (string) j+")",a,NE,dotfillpen[G]);
 	filldraw(pic,shift(a)*g,fillpen,p+dashed);
@@ -61,15 +83,14 @@ void drawdots() {
 
 for(int i=0; i < lambda.length; ++i) {
   pic = new picture;
-  size(pic,30cm,0);
+  size(pic,size,0);
   radix=radices[i];
-  
+  nold=0;
   for(G=0; G < Ngrids; ++G) {
     n=m;
     if(radix != 4) n=m*2^G;
     Invisible= G==0 ? 0 : floor(n/2);
     if(radix==2) {
-      
       Invisible= G==0 ? 0 : floor(n/2);
     }
     p=dotpen[G];
@@ -86,10 +107,10 @@ for(int i=0; i < lambda.length; ++i) {
       dot(pic,(0,n*L),invisible);
       dot(pic,(0,-n*L),invisible); 
     }
-    
+    nold=n;
   }
   
-  if(radix==4) {
+  if(radix==4 && false) {
 
     int glast=Ngrids-1;
     real radlast=0.5;
