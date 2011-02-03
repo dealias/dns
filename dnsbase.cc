@@ -197,11 +197,10 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     unsigned Sk=(this->*Sindex)(I,I,k);
     Real Wall=abs2(wi[I])+abs2(wim[I]);
     S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
-
   }
 
   // main case
-  for(unsigned I=1; I < mx; I++) { // FIXME: add bounds here too?
+  for(unsigned I=1; I < mx; I++) {
     unsigned i=xorigin+I;
     unsigned im=xorigin-I;
     unsigned I2=I*I;
@@ -258,35 +257,30 @@ void DNSBase::Initialize()
   setcount();
 }
 
-void DNSBase::setcountBINNED(const unsigned Invis=0)
+void DNSBase::setcountBINNED()
 {
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       const Real kint=sqrt(I2+j*j);
-      if(kint >= Invis) 
+      if(isvisible(i,j)) // FIXME
 	count[(unsigned)(kint-0.5)]++;
     }
   }
 }
 
-void DNSBase::setcountRAW(const unsigned Invis=0, const unsigned lambda2=1)
+void DNSBase::setcountRAW(unsigned lambda2)
 {
   for(unsigned i=0; i < Nx; i++) {
     unsigned I= xorigin > i ? xorigin-i : i-xorigin;
     unsigned I2=I*I;
     for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
-      if(I >= Invis || j >= Invis) {
+      if(isvisible(I,j)){
 	unsigned r2=lambda2*(I2+j*j);
 	for(unsigned k=0; k < R2.Size(); ++k) {
 	  if(r2 == R2[k]) {
-	    if(circular) {
-	      if(r2 <= my*my) 
-		count[k]++;
-	    }
-	    else
-	      count[k]++;
+	    count[k]++;
 	    break;
 	  }
 	}

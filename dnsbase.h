@@ -96,7 +96,22 @@ protected:
       msg(ERROR,"Invalid choice of spectrum.");
     }
   }
-
+  
+  void check_rvn(DynVector<unsigned> & R2, const unsigned r2, 
+		 const unsigned first)  {
+    bool found=false;
+    
+    unsigned last=R2.Size();
+    for(unsigned j=first; j < last; ++j) {
+      if(r2 == R2[j]) {
+	found=true;
+	break;
+      }
+    }
+    if(!found)
+      R2.Push(r2);
+  }
+  
 
 public:
   DNSBase() {setSindex();}
@@ -133,8 +148,8 @@ public:
   void InitialConditions();
   void Initialize();
   virtual void setcount();
-  void setcountBINNED(const unsigned);
-  void setcountRAW(const unsigned, const unsigned);
+  void setcountBINNED();
+  void setcountRAW(unsigned lambda2=1);
   //  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);
@@ -198,7 +213,28 @@ public:
       return k0*sqrt((Real) R2[i]);
     return k0*(i+1);
   }
-  
+
+  void findrads(DynVector<unsigned> &R2, array1<unsigned> nr, 
+		unsigned m=0, Real lambda=0, unsigned Invisible=0)
+  {
+    for(unsigned i=1; i < my; ++i) {
+      //unsigned start=nr[(unsigned) floor(sqrt((i-1)/2))];
+      double nrstart=floor(sqrt((i-1)/2));
+      unsigned start=nr[nrstart > 1 ? (unsigned) nrstart -1 : 0];
+      start=0; // FIXME: restore and optimize.
+      for(unsigned x=i-1; x <= i; ++x) {
+	unsigned x2=x*x;
+	unsigned ystopnow= i < x ? i : x;
+	for(unsigned y= x == 0 ? 1 : 0; y <= ystopnow; ++y) {
+	  if(isvisible(x,y,m,lambda,Invisible)) {
+	    check_rvn(R2,x2+y*y,start);
+	  }
+	}
+      }
+      nr[i]=R2.Size();
+    }
+  }
+
   void killmodes(array2<Complex> &A) {
     if(circular) {
       unsigned m2=my*my;
@@ -213,16 +249,23 @@ public:
     }
   }
 
+  virtual bool isvisible(unsigned I, unsigned j, 
+			 unsigned m=0, Real lambda=0, unsigned Invsible=0) {
+    if(circular) 
+      return I*I + j*j <= my*my;
+    return true;
+  }
+
   virtual unsigned diagstart() {return 1;}
   virtual unsigned diagstop() {
     if(circular) 
-      return (unsigned) ceil(my/sqrt(2.0));
+      return (unsigned) ceil((my-1)/sqrt(2.0));
     return mx;
   }
   virtual unsigned mainjstart(unsigned I) {return 1;}
   virtual unsigned mainjstop(unsigned I) {
     if(circular) 
-      return min(I,(unsigned) ceil(sqrt(my*my-I*I)));
+      return min(I,(unsigned) ceil(sqrt((my-1)*(my-1)-I*I)));
     return I;
   }
   virtual unsigned xoriginstart() {return 1;}

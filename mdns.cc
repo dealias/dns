@@ -2,7 +2,6 @@
 #include "dnsbase.h"
 #include "MultiIntegrator.h"
 #include "Conservative.h"
-#include "rvn.h"
 #include "DynVector.h"
 #include "ArrayL.h"
 
@@ -122,13 +121,18 @@ public:
     unsigned shellsbelow, myshells, mym1;
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
     unsigned lambda, lambda2; // spacing factor
+    
+    bool isvisible(unsigned I, unsigned j){
+      return parent->isvisible(I,j,myg);
+    }
 
     // bounds for spectrum loops
     virtual unsigned diagstart() {
       if(Invisible == 0)
 	return 1;
-      if(circular)
-	return (unsigned) Invisible/(sqrt(2.0)*lambda);
+      if(circular) {
+	return (unsigned) ceil(((Real) Invisible)/sqrt(2.0));
+      }
       if(radix == 2)
 	return Invisible/2;
       return Invisible; // radix 1 or 4
@@ -136,8 +140,10 @@ public:
     virtual unsigned mainjstart(unsigned I) {
       if(Invisible == 0)
 	return 1;
-      if(circular)
-	return (unsigned) ceil(sqrt(Invisible2-I*I));
+      if(circular) {
+	Real a=Invisible-1.0/sqrt(radix);
+	return (unsigned) ceil(sqrt(a*a-I*I));
+      }
       if(radix == 2)
 	return Invisible-I;
       if(I >= Invisible)
@@ -168,8 +174,7 @@ public:
 
     void setcount();
     void setcountoverlap(array1<unsigned>::opt &);
-    void setcountRAWrad2();
-    void SpectrumRAWrad2(vector&,const vector&);
+    void setInvisible(unsigned a) {Invisible=a;};
     //unsigned extrashells;
 
     void settolast() {lastgrid=1;};
@@ -202,7 +207,7 @@ public:
     
     void ComputeInvariants(const Array::array2<Complex> &,Real&, Real&, Real&);
     void coutw() {cout << "mygrid is "<<myg<<endl<< w << endl;}
-  
+    
     void loopwF(const FunctRRPtr,int n,...);
     /*
     class Invariants : public FunctRR {
@@ -218,6 +223,59 @@ public:
     */
   };
   array1<Grid *> G;
+  
+  bool isvisible(unsigned I, unsigned j, unsigned g) {
+    unsigned m=(gN(::Nx,g)+1)/2;
+    unsigned Invisible=getInvisible(g);
+    if(Invisible==0) {
+      if(circular)
+	return ((I*I + j*j) <= (m-1)*(m-1));
+      return true;
+    }
+    if(circular) {
+      unsigned k2=I*I + j*j;
+      Real a=Invisible-1.0; // FIXME: should look more like lamba.asy
+      return (k2 >= a*a) && (k2 <= (m-1)*(m-1));
+    }
+    if(radix == 2)
+      return I + j >= Invisible;
+    return I >= Invisible || j >= Invisible;
+    return true;
+  };
+  
+
+  void check_rvn(DynVector<unsigned> & R2, const unsigned r2, 
+		 const unsigned first)  {
+    bool found=false;
+    
+    unsigned last=R2.Size();
+    for(unsigned j=first; j < last; ++j) {
+      if(r2 == R2[j]) {
+	found=true;
+	break;
+      }
+    }
+    if(!found)
+      R2.Push(r2);
+  }
+  
+  void findrads(DynVector<unsigned> &R2, array1<unsigned> nr, unsigned g)  {
+    unsigned m=(gN(::Nx,g)+1)/2;
+    for(unsigned i=1; i < m; ++i) {
+      unsigned start=0; // TODO: calculate better
+      for(unsigned x=i-1; x <= i; ++x) {
+	unsigned x2=x*x;
+	unsigned ystopnow=min(i,x);
+	for(unsigned y= x == 0 ? 1 : 0; y <= ystopnow; ++y) {
+	  if(isvisible(x,y,g)) {
+	    //cout << "("<<x<<","<<y<<")"<<endl;
+	    check_rvn(R2,x2+y*y,start);
+	  }
+	}
+      }
+      nr[i]=R2.Size();
+    }
+  }
   
   enum Field {OMEGA,TRANSFER,TRANSFERN,EK,Nfields};
   enum SPEC {NOSPECTRUM, BINNED, INTERPOLATED, RAW}; 
@@ -247,11 +305,7 @@ public:
       {
 	DynVector<unsigned> tempR2;
 	array1<unsigned> tempnr(gm(my,g));
-	if(radix == 2)
-	  findradsradix2(tempR2,tempnr,gm(my,g),getInvisible(g));
-	else
-	  findrads(tempR2,tempnr,gm(my,g),getInvisible(g));
-	//cout << tempR2.Size() << endl;
+	findrads(tempR2,tempnr,g);
 	return tempR2.Size();
       }
       break;
@@ -709,52 +763,32 @@ void MDNS::Grid::InitialConditions(unsigned g)
     {
       DynVector<unsigned> tempR2;
       array1<unsigned> tempnr(my);
-      if(radix == 2) 
-	findradsradix2(tempR2,tempnr,my,Invisible);
-      else 
-	findrads(tempR2,tempnr,my,Invisible);
+      parent->findrads(tempR2,tempnr,g);
       tempR2.sort();
       Allocate(R2,tempR2.Size());
       //Dimension(R2,tempR2.Size());
       for(unsigned i=0; i < R2.Size(); ++i) 
 	R2[i]=tempR2[i]*lambda2;
-      
+
       nshells=R2.Size();
       kval.Dimension(my);
       kval.Allocate(my);
-      kval.Load(-1);
-      if(radix == 2) {
-	for(unsigned I=0; I < mx; ++I) {
-	  unsigned I2=I*I;
-	  for(unsigned j=0; j <= I; ++j) {
-	    if(I + j >= Invisible) {
-	      unsigned k2=lambda2*(I2+j*j);
-	      for(unsigned a=0; a < nshells; ++a) {
-		if(R2[a] == k2)
-		  kval[I][j]=a;
-	      }
-	    } else {
-	      kval[I][j]=-1;
-	    }
-	  }
-	}
-      } else {
-	for(unsigned i=1; i < my; ++i) {
-	  //array1<unsigned> kvali=kval[i];
-	  unsigned i2=i*i;
-	  for(unsigned j=0; j <= i; ++j) {
-	    if(i >= Invisible  || j >= Invisible) {
-	      unsigned k2=lambda2*(i2+j*j);
-	      for(unsigned a=0; a < nshells; ++a) {
-		if(R2[a] == k2)
-		  kval[i][j]=a;
-	      }
-	    } else {
-	      kval[i][j]=-1;
+      kval.Load((unsigned) -1);
+      for(unsigned I=0; I < mx; ++I) {
+	unsigned I2=I*I;
+	for(unsigned j=0; j <= I; ++j) {
+	  unsigned k2=lambda2*(I2+j*j);
+	  for(unsigned a=0; a < nshells; ++a) {
+	    if(R2[a] == k2){
+	      kval[I][j]=a;
+	      //cout << k2 << "," << a << endl;
 	    }
 	  }
 	}
       }
+      //cout << "nshells:" << nshells << endl;
+      //cout << "R2:\n" << R2 << endl;
+      //cout << "kval\n" << kval << endl;
     }
     break;
   default:
@@ -813,19 +847,16 @@ void MDNS::Grid::setcount()
     break;
   case BINNED: 
     if(radix == 4) 
-      DNSBase::setcountBINNED(Invisible);
+      DNSBase::setcountBINNED();
     if(lastgrid && radix == 1)
-      DNSBase::setcountBINNED(0);
+      DNSBase::setcountBINNED();
     if(verbose > 1)  cout << count << endl;
     break;
   case INTERPOLATED:
     msg(ERROR,"Interpolated spectrum not working right now.");
     break;
   case RAW:
-    if(radix == 2)
-      setcountRAWrad2();
-    else
-      DNSBase::setcountRAW(Invisible,lambda2);
+    DNSBase::setcountRAW();
     break;
   default:
     msg(ERROR,"Invalid spectrum choice.");
@@ -833,96 +864,9 @@ void MDNS::Grid::setcount()
   }
 }
 
-void MDNS::Grid::setcountRAWrad2()
-{
-  for(unsigned i=0; i < Nx; i++) {
-    unsigned I= xorigin > i ? xorigin-i : i-xorigin;
-    unsigned I2=I*I;
-    for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
-      if(I+j >= Invisible) {
-	unsigned r2=lambda2*(I2+j*j);
-	for(unsigned k=0; k < R2.Size(); ++k) {
-	  if(r2 == R2[k]) {
-	    if(circular) {
-	      if(r2 < my*my) 
-		count[k]++;
-	    }
-	    else
-	      count[k]++;
-	    break;
-	  }
-	}
-      }
-    }
-  }
-}
 void pout(int i, int j)
 {
   cout << "(" << i << "," << j << ")";
-}
-
-void MDNS::Grid::SpectrumRAWrad2(vector& S, const vector& y)
-{
-  w.Set(y);
-  for(unsigned K=0; K < nshells; K++)    
-    S[K]=Complex(0.0,0.0);
-
-  Real sqrt2=sqrt(2.0);
-  unsigned Invis=Invisible;
-
-  for(unsigned i=0; i < xorigin; i++) {
-    unsigned I=xorigin-i;
-    unsigned im=xorigin+I;
-    unsigned I2=I*I;
-
-    vector wi=w[i];
-    vector wim=w[im];
-
-    
-    // diagonals
-    if(I+I >= Invis) {
-      Real k=sqrt2*I;
-      unsigned k2=2*I2;      
-      unsigned Sk= spectrum == RAW ?  kval[I][I] : (unsigned)(k-0.5);
-      Real Wall=abs2(wi[I])+abs2(wim[I]);
-      S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
-    }
-
-    unsigned start;
-    if(Invisible == 0) {
-      start=0;
-    } else {
-      start=max(1,(int) Invisible-(int) I);
-    }
-   
-    unsigned stop=I;
-    for(unsigned j=start; j < stop; ++j) {
-      unsigned k2=(I2+j*j);
-      Real k=sqrt((Real) k2);
-      unsigned Sk= spectrum == RAW ? kval[I][j] : (unsigned)(k-0.5);
-      Real Wall=abs2(wi[j])+abs2(wim[j])
-	+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
-      S[Sk] += Complex(Wall/(k0*k),nuk(I2+j*j)*Wall);
-    }
-  }
-
-  
-  // xorigin case
-  vector wi=w[xorigin];
-  for(unsigned j=Invis == 0 ? 1 : Invis; j < my; ++j) {
-    unsigned Sk= spectrum == RAW ? kval[j][0] : j-1;
-    Real w2=abs2(wi[j]);
-    S[Sk] += Complex(w2/(k0*j),w2*nuk(j*j));
-  }
-  
-  // bottom right
-  for(unsigned i=Invis == 0? xorigin+1 : xorigin + Invis; i < Nx; ++i) {
-    unsigned I=i-xorigin;
-    unsigned Sk= spectrum == RAW ? kval[I][0] : I-1;
-    Real w2=abs2(w[i][0]);
-    S[Sk] += Complex(w2/(k0*I),w2*nuk(I*I));
-  }
-  
 }
 
 void MDNS::Grid::setcountoverlap(array1<unsigned>::opt &Count)
@@ -973,10 +917,7 @@ void MDNS::Grid::SpectrumRad2(vector& SrcEK, const vector& w0)
   case NOSPECTRUM:
     break;
   case RAW:
-    if(myg==0)
-      DNSBase::Spectrum(SrcEK,w0);
-    else
-      SpectrumRAWrad2(SrcEK,w0);
+    DNSBase::Spectrum(SrcEK,w0);
     break;
   default:
     msg(ERROR,"Invalid spectrum: only NOSPECTRUM and RAW available");

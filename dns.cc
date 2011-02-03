@@ -1,5 +1,4 @@
 #include "dnsbase.h"
-#include "rvn.h"
 
 const double ProblemVersion=1.0;
 
@@ -314,7 +313,7 @@ void DNS::InitialConditions()
     {
       DynVector<unsigned> tempR2;
       array1<unsigned> tempnr(my);
-      findrads(tempR2,tempnr,my);
+      findrads(tempR2,tempnr);
       tempR2.sort();
       Allocate(R2,tempR2.Size());
       //Dimension(R2,tempR2.Size());
