@@ -1,6 +1,4 @@
 #!/bin/csh -f
-set pwd=$PWD
-cd $PWD
 nice +19
 #setenv TMP_DIR /tmp/$USER
-$PWD/dns run=$* | tee -a $1/log
+./dns run=$* | tee -a $1/log

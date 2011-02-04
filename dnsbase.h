@@ -154,10 +154,10 @@ public:
   void FinalOutput();
   void OutFrame(int it);
 
-  virtual void Spectrum(vector&, const vector&);
-  void Transfer(const vector2&, const vector2&);
-  void NonLinearSource(const vector& , const vector&, double);
-  void LinearSource(const vector& , const vector&, double);
+  virtual void Spectrum(vector& S, const vector& y);
+  void Transfer(const vector2& Src, const vector2& Y);
+  void NonLinearSource(const vector& Src, const vector& Y, double t);
+  void LinearSource(const vector& Src, const vector& Y, double t);
 
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src[OMEGA],Y[OMEGA],t);
@@ -190,7 +190,7 @@ public:
     double k2=i2*k02;
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
-  
+
   virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);
   void Stochastic(const vector2& Y, double, double);
 
@@ -272,7 +272,6 @@ public:
   virtual unsigned xoriginstop() {return my;}
   virtual unsigned bottomstart() {return 1;}
   virtual unsigned bottomstop() {return mx;}
-
 };
 
 //***** initial conditions *****//
