@@ -174,11 +174,26 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   }
 }
 
+// FIXME: temp
+void bogoS(vector& S,Complex wij)
+{
+  // finds what index to put it in, does the calculation, puts it there.
+  S[0]=wij;
+}
+
 void DNSBase::Spectrum(vector& S, const vector& y)
 {
   w.Set(y);
   for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
+
+  // FIXME: temp
+  /*
+  Hloop loop(Nx,my,k0) ;
+  loop.Sloop(S,w,&bogoS);
+  cout << S << endl;
+  exit(1);
+  */
 
   unsigned mx=(Nx+1)/2;
 

@@ -25,6 +25,39 @@ extern int pL;
 
 extern int circular;
 
+class Hloop{
+ private:
+  unsigned Nx, my;
+  unsigned mx, xorigin;
+  Real k0;
+  //unsigned (*Sindex)(unsigned, unsigned, Real);
+  //void (*fptr)(Complex&,Complex&);
+ public:
+  Hloop() {};
+  Hloop(unsigned Nx0, unsigned my0, Real k00) {
+    Nx=Nx0;
+    my=my0;
+    k0=k00;
+    mx=(Nx+1)/2;
+    xorigin=mx-1;
+  };
+  ~Hloop() {};
+
+  // loop over the Hermitian-symmetric array2 w, calculate
+  // something, put it into the appropriate index of S.
+  void Sloop(vector& S, const array2<Complex> w,
+	     void (*fptr)(vector&,Complex)) {
+    for(unsigned i=0; i < Nx; ++i) {
+      vector wi=w[i];
+      for(unsigned j=i > xorigin ? 1 : 0; j < my; ++j) {
+	// TODO: add visible/invisible modes
+	fptr(S,wi[j]);
+      }
+    }
+  }
+
+};
+
 class DNSBase {
 protected:
   // Vocabulary:
