@@ -175,11 +175,6 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
 }
 
 // FIXME: temp
-void bogoS(vector& S,Complex wij)
-{
-  // finds what index to put it in, does the calculation, puts it there.
-  S[0]=wij;
-}
 
 void DNSBase::Spectrum(vector& S, const vector& y)
 {
@@ -187,16 +182,12 @@ void DNSBase::Spectrum(vector& S, const vector& y)
   for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
 
-  // FIXME: temp
-  /*
-  Hloop loop(Nx,my,k0) ;
-  loop.Sloop(S,w,&bogoS);
-  cout << S << endl;
-  exit(1);
-  */
+  #if 0
+  Hloop loop(this); // could be moved to base class?
+  loop.Sloop(S,w,&DNSBase::SpectrumDiag,&DNSBase::SpectrumMain,
+	     &DNSBase::SpectrumAxes);
 
-  unsigned mx=(Nx+1)/2;
-
+  #else
   // diagonals
   unsigned stop=diagstop();
   for(unsigned I=diagstart(); I < stop; I++) {
@@ -255,6 +246,8 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     Real w2=abs2(w[i][0]);
     S[Sk] += Complex(w2/(k0*I),w2*nuk(I*I));
   }
+  #endif
+
 }
 
 void DNSBase::Stochastic(const vector2&Y, double, double dt)

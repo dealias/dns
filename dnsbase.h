@@ -25,39 +25,6 @@ extern int pL;
 
 extern int circular;
 
-class Hloop{
- private:
-  unsigned Nx, my;
-  unsigned mx, xorigin;
-  Real k0;
-  //unsigned (*Sindex)(unsigned, unsigned, Real);
-  //void (*fptr)(Complex&,Complex&);
- public:
-  Hloop() {};
-  Hloop(unsigned Nx0, unsigned my0, Real k00) {
-    Nx=Nx0;
-    my=my0;
-    k0=k00;
-    mx=(Nx+1)/2;
-    xorigin=mx-1;
-  };
-  ~Hloop() {};
-
-  // loop over the Hermitian-symmetric array2 w, calculate
-  // something, put it into the appropriate index of S.
-  void Sloop(vector& S, const array2<Complex> w,
-	     void (*fptr)(vector&,Complex)) {
-    for(unsigned i=0; i < Nx; ++i) {
-      vector wi=w[i];
-      for(unsigned j=i > xorigin ? 1 : 0; j < my; ++j) {
-	// TODO: add visible/invisible modes
-	fptr(S,wi[j]);
-      }
-    }
-  }
-
-};
-
 class DNSBase {
 protected:
   // Vocabulary:
@@ -167,6 +134,29 @@ public:
     setSindex();
   }
   virtual ~DNSBase() {}
+
+  void SpectrumDiag(vector& S,Complex wij,Complex wimj,unsigned I)
+  {
+    // FIXME: make sqrt(2.0) static
+    unsigned I2=I*I;
+    Real Wall=abs2(wij)+abs2(wimj);
+    Real k=sqrt(2.0)*I;
+    S[(this->*Sindex)(I,I,k)] += Complex(Wall/(k0*k),nuk(I2+I2)*Wall);
+  }    
+
+  void SpectrumMain(vector& S,Complex w0,Complex w1,Complex w2,Complex w3,
+		    unsigned I,unsigned j) {
+    Real Wall=abs2(w1)+abs2(w2)+abs2(w2)+abs2(w3);
+    unsigned k2=I*I+j*j;
+    Real k=sqrt(k2);
+    S[(this->*Sindex)(I,j,k)] += Complex(Wall/(k0*k),nuk(k2)*Wall);
+  }
+
+  void SpectrumAxes(vector& S,Complex w0,Complex w1,unsigned I) {
+    Real Wall=abs2(w0)+abs2(w1);
+    S[(this->*Sindex)(I,0,I)] += Complex(Wall/(k0*I),nuk(I*I)*Wall);
+    
+  }
 
   unsigned getNx() {return Nx;}
   unsigned getmx() {return mx;}
@@ -318,5 +308,63 @@ public:
       w[i]=0.0;
   }
 };
+
+//***** loop class *****//
+
+class Hloop{
+ private:
+  unsigned Nx, my, mx, xorigin;
+  DNSBase *parent;
+ public:
+  Hloop() {};
+  Hloop(DNSBase *parent0) {
+    parent=parent0;
+    Nx=parent->getNx();
+    my=parent->getmy();
+    mx=parent->getmx();
+    xorigin=parent->getxorigin();
+  };
+  ~Hloop() {};
+  
+  virtual bool isvisible(unsigned i, unsigned j) {return true;}
+
+  // loop over the Hermitian-symmetric array2 w, calculate
+  // something, put it into the appropriate index of S, a spectrum-like array
+  void Sloop(vector& S, const array2<Complex> w,
+	     void (DNSBase::*dfp)(vector&,Complex,Complex,unsigned),
+	     void (DNSBase::*mfp)(vector&,Complex,Complex,Complex,Complex,unsigned,unsigned),
+	     void (DNSBase::*afp)(vector&,Complex,Complex,unsigned)) {
+
+    // diagnols
+    for(unsigned I=1; I < mx; I++) {
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      (parent->*dfp)(S,wi[I],wim[I],I);
+    }
+    
+    // main case
+    for(unsigned I=1; I < mx; I++) {
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      for(unsigned j=i >= xorigin ? 1 : 0; j < I; ++j) {
+	(parent->*mfp)(S,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],I,j);
+      }
+    }
+    
+    // vertical and horizontal axes
+    // assumes mx=my;
+    assert(mx==my);
+    vector wi=w[xorigin];
+    for(unsigned I=1; I < my; ++I) {
+      (parent->*afp)(S,wi[I],w[xorigin+I][0],I);
+    }
+  }
+  
+};
+
 
 #endif
