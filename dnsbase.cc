@@ -1,5 +1,5 @@
 #include "dnsbase.h"
-bool loopy=true;
+#define loopy 1
 
 const int DNSBase::xpad=1;
 const int DNSBase::ypad=1;
@@ -115,64 +115,8 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   for(unsigned K=0; K < nshells; K++)
     T[K]=Complex(0.0,0.0);
 
-  unsigned mx=(Nx+1)/2;
-
-  // diagonals
-  unsigned stop=diagstop();
-  for(unsigned I=diagstart(); I < stop; I++) {
-    unsigned i=xorigin+I;
-    unsigned im=xorigin-I;
-    
-    vector wi=w[i];
-    vector wim=w[im];
-    vector fi=f0[i];
-    vector fim=f0[im];
-
-    Real k=sqrt2*I;
-    unsigned Sk=(this->*Sindex)(I,I,k);
-    T[Sk].re += realproduct(fi[I],wi[I]) + realproduct(fim[I],wim[I]);
-  }
-
-  // main case
-  for(unsigned I=1; I < mx; I++) { // FIXME: add bounds here too?
-    unsigned i=xorigin+I;
-    unsigned im=xorigin-I;
-    unsigned I2=I*I;
-
-    vector wi=w[i];
-    vector wim=w[im];
-    vector fi=f0[i];
-    vector fim=f0[im];
-
-    const unsigned stop=mainjstop(I);
-    for(unsigned j=mainjstart(I); j < stop; ++j) {
-      unsigned Sk=(this->*Sindex)(I,j,sqrt((I2+j*j)));
-      unsigned jm=xorigin-j;
-      unsigned jp=xorigin+j;
-      T[Sk].re += 
-	realproduct(fi[j],wi[j]) +
-	realproduct(fim[j],wim[j]) +
-	realproduct(f0[jm][I],w[jm][I]) +
-	realproduct(f0[jp][I],w[jp][I]);
-    }
-  }
-
-  // xorigin case
-  vector wi=w[xorigin];
-  vector fi=f0[xorigin];
-  stop=xoriginstop();
-  for(unsigned j=xoriginstart(); j < stop; ++j) {
-    unsigned Sk=(this->*Sindex)(j,0,j);
-    T[Sk].re += realproduct(fi[j],wi[j]);
-  }
-  
-  // bottom right
-  stop=bottomstop();
-  for(unsigned I=bottomstart(); I < stop; I++) {
-    unsigned i=I+xorigin;
-    unsigned Sk=(this->*Sindex)(I,0,I);
-    T[Sk].re += realproduct(f0[i][0],w[i][0]);
-  }
+  Hloop loop(this); // could be moved to base class?
+  loop.Tloop(T,w,f0,&DNSBase::TransferAxesDiag,&DNSBase::TransferMain);
 }
 
 // FIXME: temp
@@ -183,72 +127,8 @@ void DNSBase::Spectrum(vector& S, const vector& y)
   for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
 
-  if(loopy) {
   Hloop loop(this); // could be moved to base class?
-  loop.Sloop(S,w,&DNSBase::SpectrumDiag,&DNSBase::SpectrumMain,
-	     &DNSBase::SpectrumAxes);
-  } else {
-  // diagonals
-  unsigned stop=diagstop();
-  for(unsigned I=diagstart(); I < stop; I++) {
-    unsigned i=xorigin+I;
-    unsigned im=xorigin-I;
-    unsigned I2=I*I;
-
-    vector wi=w[i];
-    vector wim=w[im];
-
-    Real k=sqrt2*I;
-    unsigned k2=2*I2;
-    unsigned Sk=(this->*Sindex)(I,I,k);
-    Real Wall=abs2(wi[I])+abs2(wim[I]);
-    S[Sk] += Complex(Wall/(k0*k),nuk(k2)*Wall);
-  }
-
-  // main case
-  for(unsigned I=1; I < mx; I++) {
-    unsigned i=xorigin+I;
-    unsigned im=xorigin-I;
-    unsigned I2=I*I;
-
-    vector wi=w[i];
-    vector wim=w[im];
-
-    const unsigned stop=mainjstop(I);
-    for(unsigned j=mainjstart(I); j < stop; ++j) {
-      unsigned k2=(I2+j*j);
-      Real k=sqrt((Real) k2);
-      unsigned Sk=(this->*Sindex)(I,j,k);
-      Real Wall=abs2(wi[j])+abs2(wim[j])
-	+abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]);
-      S[Sk] += Complex(Wall/(k0*k),nuk(I2+j*j)*Wall);
-    }
-  }
-
-  // xorigin case
-  vector wi=w[xorigin];
-  //for(unsigned j=Invis == 0 ? 1 : Invis; j < my; ++j) {
-  stop=xoriginstop();
-  for(unsigned j=xoriginstart(); j < stop; ++j) {
-    //unsigned Sk= spectrum == RAW ? kval[j][0] : j-1;
-    unsigned Sk=(this->*Sindex)(j,0,j);
-    Real w2=abs2(wi[j]);
-    S[Sk] += Complex(w2/(k0*j),w2*nuk(j*j));
-  }
-  
-  // bottom right
-  //for(unsigned i=Invis == 0? xorigin+1 : xorigin + Invis; i < Nx; ++i) {
-  stop=bottomstop();
-  for(unsigned I=bottomstart(); I < stop; I++) {
-    unsigned i=I+xorigin;
-    //unsigned Sk= spectrum == RAW ? kval[I][0] : I-1;
-    unsigned Sk=(this->*Sindex)(I,0,I);
-    Real w2=abs2(w[i][0]);
-    S[Sk] += Complex(w2/(k0*I),w2*nuk(I*I));
-  }
-
-  } 
-
+  loop.Sloop(S,w,&DNSBase::SpectrumAxesDiag,&DNSBase::SpectrumMain);
 }
 
 void DNSBase::Stochastic(const vector2&Y, double, double dt)
@@ -282,10 +162,9 @@ void DNSBase::setcountBINNED()
 void DNSBase::setcountRAW(unsigned lambda2)
 {
   if(loopy) {
-    cout << "loopy!" << endl;
+    //cout << "loopy!" << endl;
     Hloop loop(this); // could be moved to base class?
-    loop.Cloop(count,
-	       &DNSBase::CountDiag,&DNSBase::CountMain,&DNSBase::CountAxes);
+    loop.Cloop(count,&DNSBase::CountAxesDiag,&DNSBase::CountMain);
   } else {
     for(unsigned i=0; i < nshells; ++i)
       count[i]=0;
@@ -307,8 +186,6 @@ void DNSBase::setcountRAW(unsigned lambda2)
       }
     }
   }
-  cout << count << endl;
-  
 }
 
 void DNSBase::setcount()
