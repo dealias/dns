@@ -1,11 +1,12 @@
 #include "dnsbase.h"
+bool loopy=true;
 
 const int DNSBase::xpad=1;
 const int DNSBase::ypad=1;
 
 //***** Source routines *****//
 
-static const double sqrt2=sqrt(2.0);
+//static const double sqrt2=sqrt(2.0);
 
 void DNSBase::LinearSource(const vector& wSrc, const vector& w0, double)
 {
@@ -182,12 +183,11 @@ void DNSBase::Spectrum(vector& S, const vector& y)
   for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
 
-  #if 0
+  if(loopy) {
   Hloop loop(this); // could be moved to base class?
   loop.Sloop(S,w,&DNSBase::SpectrumDiag,&DNSBase::SpectrumMain,
 	     &DNSBase::SpectrumAxes);
-
-  #else
+  } else {
   // diagonals
   unsigned stop=diagstop();
   for(unsigned I=diagstart(); I < stop; I++) {
@@ -246,7 +246,8 @@ void DNSBase::Spectrum(vector& S, const vector& y)
     Real w2=abs2(w[i][0]);
     S[Sk] += Complex(w2/(k0*I),w2*nuk(I*I));
   }
-  #endif
+
+  } 
 
 }
 
@@ -280,21 +281,34 @@ void DNSBase::setcountBINNED()
 
 void DNSBase::setcountRAW(unsigned lambda2)
 {
-  for(unsigned i=0; i < Nx; i++) {
-    unsigned I= xorigin > i ? xorigin-i : i-xorigin;
-    unsigned I2=I*I;
-    for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
-      if(isvisible(I,j)){
-	unsigned r2=lambda2*(I2+j*j);
-	for(unsigned k=0; k < R2.Size(); ++k) {
-	  if(r2 == R2[k]) {
-	    count[k]++;
-	    break;
+  if(loopy) {
+    cout << "loopy!" << endl;
+    Hloop loop(this); // could be moved to base class?
+    loop.Cloop(count,
+	       &DNSBase::CountDiag,&DNSBase::CountMain,&DNSBase::CountAxes);
+  } else {
+    for(unsigned i=0; i < nshells; ++i)
+      count[i]=0;
+    
+
+    for(unsigned i=0; i < Nx; i++) {
+      unsigned I= xorigin > i ? xorigin-i : i-xorigin;
+      unsigned I2=I*I;
+      for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
+	if(isvisible(I,j)){
+	  unsigned r2=lambda2*(I2+j*j);
+	  for(unsigned k=0; k < R2.Size(); ++k) {
+	    if(r2 == R2[k]) {
+	      count[k]++;
+	      break;
+	    }
 	  }
 	}
       }
     }
   }
+  cout << count << endl;
+  
 }
 
 void DNSBase::setcount()

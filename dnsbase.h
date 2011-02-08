@@ -13,6 +13,9 @@
 #include "Exponential.h"
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
 
+static const double sqrt2=sqrt(2.0);
+
+
 using namespace Array;
 using namespace fftwpp;
 using std::ostringstream;
@@ -135,15 +138,22 @@ public:
   }
   virtual ~DNSBase() {}
 
-  void SpectrumDiag(vector& S,Complex wij,Complex wimj,unsigned I)
-  {
-    // FIXME: make sqrt(2.0) static
+  void CountDiag(array1<unsigned>::opt &C, unsigned I)  {
+    C[(this->*Sindex)(I,I,sqrt2*I)] += 2;
+  }
+  void CountMain(array1<unsigned>::opt &C, unsigned I, unsigned j) {
+    C[(this->*Sindex)(I,j,sqrt(I*I+j*j))] += 4;
+  }
+  void CountAxes(array1<unsigned>::opt &C,unsigned I) {
+    C[(this->*Sindex)(I,0,I)] += 2;
+  }
+
+  void SpectrumDiag(vector& S,Complex wij,Complex wimj,unsigned I)  {
     unsigned I2=I*I;
     Real Wall=abs2(wij)+abs2(wimj);
-    Real k=sqrt(2.0)*I;
+    Real k=sqrt2*I;
     S[(this->*Sindex)(I,I,k)] += Complex(Wall/(k0*k),nuk(I2+I2)*Wall);
   }    
-
   void SpectrumMain(vector& S,Complex w0,Complex w1,Complex w2,Complex w3,
 		    unsigned I,unsigned j) {
     Real Wall=abs2(w1)+abs2(w2)+abs2(w2)+abs2(w3);
@@ -151,11 +161,9 @@ public:
     Real k=sqrt(k2);
     S[(this->*Sindex)(I,j,k)] += Complex(Wall/(k0*k),nuk(k2)*Wall);
   }
-
   void SpectrumAxes(vector& S,Complex w0,Complex w1,unsigned I) {
     Real Wall=abs2(w0)+abs2(w1);
     S[(this->*Sindex)(I,0,I)] += Complex(Wall/(k0*I),nuk(I*I)*Wall);
-    
   }
 
   unsigned getNx() {return Nx;}
@@ -310,6 +318,17 @@ public:
 };
 
 //***** loop class *****//
+typedef void (DNSBase::*vcc)(vector&,Complex,Complex,unsigned);
+typedef void (DNSBase::*vcccc)(vector&,Complex,Complex,Complex,Complex,
+			       unsigned,unsigned);
+typedef void (DNSBase::*T4c)(vector&,Complex,Complex,Complex,Complex,
+			       unsigned);
+typedef void (DNSBase::*v8c)(vector&,
+			     Complex,Complex,Complex,Complex,
+			     Complex,Complex,Complex,Complex,
+			     unsigned,unsigned);
+typedef void (DNSBase::*Uu)(array1<unsigned>::opt&,unsigned);
+typedef void (DNSBase::*Uuu)(array1<unsigned>::opt&,unsigned,unsigned);
 
 class Hloop{
  private:
@@ -327,13 +346,10 @@ class Hloop{
   ~Hloop() {};
   
   virtual bool isvisible(unsigned i, unsigned j) {return true;}
-
+  
   // loop over the Hermitian-symmetric array2 w, calculate
   // something, put it into the appropriate index of S, a spectrum-like array
-  void Sloop(vector& S, const array2<Complex> w,
-	     void (DNSBase::*dfp)(vector&,Complex,Complex,unsigned),
-	     void (DNSBase::*mfp)(vector&,Complex,Complex,Complex,Complex,unsigned,unsigned),
-	     void (DNSBase::*afp)(vector&,Complex,Complex,unsigned)) {
+  void Sloop(vector& S, const array2<Complex> w,vcc dfp,vcccc mfp,vcc afp) {
 
     // diagnols
     for(unsigned I=1; I < mx; I++) {
@@ -350,7 +366,7 @@ class Hloop{
       unsigned im=xorigin-I;
       vector wi=w[i];
       vector wim=w[im];
-      for(unsigned j=i >= xorigin ? 1 : 0; j < I; ++j) {
+      for(unsigned j=1; j < I; ++j) {
 	(parent->*mfp)(S,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],I,j);
       }
     }
@@ -362,6 +378,55 @@ class Hloop{
     for(unsigned I=1; I < my; ++I) {
       (parent->*afp)(S,wi[I],w[xorigin+I][0],I);
     }
+  }
+
+  // FIXME: needs f0 as well
+  void Tloop(vector& S, const array2<Complex> w, const array2<Complex> f0,
+	     T4c dfp, v8c mfp, T4c afp) {
+    // FIXME: enable
+    // diagnols
+    for(unsigned I=1; I < mx; I++) {
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      vector f0i=f0[i];
+      vector f0im=f0[im];
+      (parent->*dfp)(S,wi[I],wim[I],f0i[I],f0im[I],I);
+    }
+    
+    // main case
+    for(unsigned I=1; I < mx; I++) {
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      vector f0i=f0[i];
+      vector f0im=f0[im];
+      for(unsigned j=1; j < I; ++j) {
+	(parent->*mfp)(S,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I]
+		       f0i[j],f0im[j],f0[xorigin-j][I],f0[xorigin+j][I],I,j);
+      }
+    }
+    
+    // vertical and horizontal axes
+    // assumes mx=my;
+    assert(mx==my);
+    vector wi=w[xorigin];
+    vector f0i=f0[xorigin];
+    for(unsigned I=1; I < my; ++I) {
+      //(parent->*afp)(S,wi[I],w[xorigin+I][0],I);
+    }
+  }
+
+  void Cloop(array1<unsigned>::opt &C, Uu dfp,Uuu mfp,Uu afp) {
+    for(unsigned I=1; I < mx; I++) { 
+      (parent->*dfp)(C,I); //diagonals
+      (parent->*afp)(C,I); // axes
+    }
+    for(unsigned I=1; I < mx; I++)
+      for(unsigned j=1; j < I; ++j)
+	(parent->*mfp)(C,I,j);
   }
   
 };
