@@ -309,15 +309,13 @@ void DNS::InitialConditions()
     nshells=(unsigned) (hypot(mx-1,my-1)+0.5);
     break;
   case RAW:
-    // NB: assumes mx=my
     {
       DynVector<unsigned> tempR2;
-      array1<unsigned> tempnr(my);
-      findrads(tempR2,tempnr);
-      tempR2.sort();
-      Allocate(R2,tempR2.Size());
-      //Dimension(R2,tempR2.Size());
-      for(unsigned i=0; i < R2.Size(); ++i) R2[i]=tempR2[i];
+      Hloop loop(this);
+      loop.Rloop(tempR2);
+      R2.Allocate(tempR2.Size());
+      for(unsigned i=0; i < R2.Size(); ++i) 
+	R2[i]=tempR2[i];
     }
     nshells=R2.Size();
     Allocate(kval,my);

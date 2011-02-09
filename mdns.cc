@@ -283,6 +283,11 @@ public:
   unsigned getnfields(unsigned g) {return Nfields;};
   unsigned getnshells(unsigned g) {
     // this function should only be used during initialization.
+
+    Hloop loop;
+    loop.Cloop(count,&DNSBase::CountAxesDiag,&DNSBase::CountMain);
+    
+    
     switch(spectrum) {
     case NOSPECTRUM:
       return 0;

@@ -415,6 +415,25 @@ class Hloop{
       }
     }
   }
+
+  void Rloop(DynVector<unsigned> &R2) {
+    DynVector<unsigned> temp;
+    for(unsigned I=1; I < mx; I++) {
+      unsigned I2=I*I;
+      temp.Push(I2);
+      temp.Push(2*I2);
+      for(unsigned j=1; j < I; ++j) {
+	temp.Push(I2+j*j);
+      }
+    }
+    temp.sort();
+    R2.Push(temp[0]);
+    unsigned last=0;
+    for(unsigned i=1; i < temp.Size(); ++i) {
+      if(temp[i] != R2[last])
+	R2[++last]=temp[i];
+    }
+  }
   
 };
 

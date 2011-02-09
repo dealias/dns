@@ -1,5 +1,4 @@
 #include "dnsbase.h"
-#define loopy 1
 
 const int DNSBase::xpad=1;
 const int DNSBase::ypad=1;
@@ -161,31 +160,8 @@ void DNSBase::setcountBINNED()
 
 void DNSBase::setcountRAW(unsigned lambda2)
 {
-  if(loopy) {
-    //cout << "loopy!" << endl;
-    Hloop loop(this); // could be moved to base class?
-    loop.Cloop(count,&DNSBase::CountAxesDiag,&DNSBase::CountMain);
-  } else {
-    for(unsigned i=0; i < nshells; ++i)
-      count[i]=0;
-    
-
-    for(unsigned i=0; i < Nx; i++) {
-      unsigned I= xorigin > i ? xorigin-i : i-xorigin;
-      unsigned I2=I*I;
-      for(unsigned j= i < xorigin?  1 : 0; j < my; ++j) {
-	if(isvisible(I,j)){
-	  unsigned r2=lambda2*(I2+j*j);
-	  for(unsigned k=0; k < R2.Size(); ++k) {
-	    if(r2 == R2[k]) {
-	      count[k]++;
-	      break;
-	    }
-	  }
-	}
-      }
-    }
-  }
+  Hloop loop(this); // could be moved to base class?
+  loop.Cloop(count,&DNSBase::CountAxesDiag,&DNSBase::CountMain);
 }
 
 void DNSBase::setcount()
