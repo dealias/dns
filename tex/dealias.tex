@@ -112,7 +112,7 @@ requires three transforms and hence $\fr{9}{2}Km\log_2 m$ operations.
 Alternatively, phase shift dealiasing~\cite{Patterson71,Canuto06} can be used
 to cancel out the aliasing errors between two convolutions with
 different phase shifts. However, this second technique is rarely used in
-practice since in addition to doubling the memory requirements, it is
+practice since, in addition to doubling the memory requirements, it is
 computationally more expensive, requiring $6K m\log_2 m$ operations for a 
 centered Hermitian convolution.
 
@@ -150,7 +150,7 @@ conventional explicitly padded convolution, the additional temporary
 memory need not be contiguous with the user data.  In a
 multidimensional context, this external work buffer can be reused for
 other low dimensional convolutions.  As a result, in $d$ dimensions an
-implicitly dealised convolution asymptotically uses $1/2^{d-1}$ of the
+implicitly dealiased convolution asymptotically uses $1/2^{d-1}$ of the
 storage space needed for an explicitly padded convolution. When the
 Fourier origin is centered in the domain, memory usage is reduced to
 $(2/3)^{d-1}$ of the conventional amount.  If saving memory alone were
@@ -173,7 +173,7 @@ deferring the computation of the inner transforms to a standard library
 routine. But this also restricts the set of available platform-dependent
 algorithms that can be used at the highest level. Fortunately, several 
 notable features of our algorithm help to offset this disadvantage. First, if
-the goal is to  produce a convolution, bit-reversal for the hand-optimized
+the goal is to  produce a convolution, bit reversal for the hand-optimized
 outermost subdivision is unnecessary: the scrambled Fourier subtransforms of the
 two input vectors can be multiplied together as they are produced
 (perhaps while still accessible in the cache). Second, the implicit
@@ -192,7 +192,7 @@ padded convolutions for both general and Hermitian inputs.
 We describe how implicit padding may be
 applied to compute the discrete Fourier transform of an input
 vector padded beyond an arbitrary fraction~$p/q$ of its length. 
-Building on these one-dimensional algorithms, implicitly-padded
+Building on these one-dimensional algorithms, implicitly padded
 convolutions are implemented for two- and three-dimensional input 
 in Section~\ref{multid}. Finally, in Section~\ref{hyperconv}, we
 show for both general and Hermitian data how implicit padding may be used to
@@ -208,16 +208,16 @@ The Fourier origin for standard convolutions is located at the first
 (zero) index of the array.
 Therefore, input data vectors of length~$m$ must be padded with zeros to
 length $N\ge 2m-1$ to prevent modes with wavenumber $m-1$ from beating
-together to contaminating mode~$N=0\mod N$. However, since FFT sizes with
+together to contaminate mode~$N=0\mod N$. However, since FFT sizes with
 small prime factors in practice yield the most efficient implementations,
 it is normally desirable to extend the padding to $N=2m$.
 
 In terms of the $N$th primitive root of unity, $\zeta_N\doteq \exp\(2 \pi
-i/N\)$, (here $\doteq$ is used to emphasize a definition), the unnormalized backwards
+i/N\)$ (here $\doteq$ is used to emphasize a definition), the unnormalized backwards
 discrete Fourier transform of a complex vector
-$\{U_k: k=0,\ldots,N\}$ may be written
+$\{U_k: k=0,\ldots,N\}$ may be written as
 $$
-u_j\doteq\sum_{k=0}^{N-1}\zeta_N^{jk} U_k\qquad j=0,\ldots,N-1.
+u_j\doteq\sum_{k=0}^{N-1}\zeta_N^{jk} U_k,\qquad j=0,\ldots,N-1.
 $$
 The fast Fourier transform method exploits the properties that
 $\zeta_N^r=\zeta_{N/r}$ and $\zeta_N^N=1$.
@@ -246,12 +246,12 @@ finally transformed again to Fourier space using the (scaled) forward transform
 =\sum_{\ell=0}^{m-1}\zeta_{2m}^{-k2\ell} u_{2\ell}
 +\sum_{\ell=0}^{m-1}\zeta_{2m}^{-k(2\ell+1)} u_{2\ell+1}\endl
 &=&\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell}
-+\zeta_{2m}^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell+1}
++\zeta_{2m}^{-k}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{2\ell+1},
 \qquad k\no=0,\ldots,m-1.\label{cconv1forwards}
 \een
 The implicitly padded transforms described by~\Eqs{cconv1backwards}
 and~\hEq{cconv1forwards} are implemented as
-Procedure~{\tt\ref{fftpadBackwards}} and Function~{\tt\ref{fftpadForwards}}.
+Procedure~{\tt\ref{fftpadBackwards}} and~{\tt\ref{fftpadForwards}}.
 These algorithms are combined in Function~{\tt\ref{cconv}} to 
 compute a dealiased convolution of unpadded length~$m$ using
 two arrays of size~$m$ as input vectors instead of one array of size $2m$.
@@ -369,7 +369,7 @@ $2m$-padded backwards Fourier transform values of a vector
 {\sf f} of length $m$ in {\sf f} and an auxiliary vector~{\sf u} of length $m$.}\label{fftpadBackwards}
 \end{procedure}
 \def\fftpadBackwards{{\tt fftpadBackwards}}
-\begin{function}[H]
+\begin{procedure}[H]
   \KwIn{vector \xf, vector \xu}
   \KwOut{vector \xf}
   $\xf \leftarrow \fft(\xf)$\;
@@ -380,7 +380,7 @@ $2m$-padded backwards Fourier transform values of a vector
   \Return f/(2m)\;
   \caption{fftpadForwards({\sf f},{\sf u}) returns the
 inverse of \fftpadBackwards({\sf f},{\sf u}).}\label{fftpadForwards} 
-\end{function}
+\end{procedure}
 %
 \end{minipage}
 \begin{minipage}{0.49\linewidth}
@@ -474,7 +474,7 @@ U_0&if $k=0$,\cr
 \eel
 The forwards transform is then
 \bel
-{3m}U_k=\sum_{r=-1}^{1}\zeta_{3m}^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
+{3m}U_k=\sum_{r=-1}^{1}\zeta_{3m}^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r},
 \qquad k\no =-m+1,\ldots,m-1.\label{fft0forwards}
 \eel
 The use of the remainder $r=-1$ instead of $r=2$ allows us to exploit
@@ -490,7 +490,7 @@ A_k\doteq \zeta_{3m}^k\(\Re U_k+\zeta_3^{-1} \Re U_{k-m}\),
 B_k\doteq i\zeta_{3m}^k\(\Im U_k+\zeta_3^{-1} \Im U_{k-m}\),
 \ee
 \eg
-where $\zeta_3^{-1}=\(-\half,-\fr{\sqrt{3}}{2}\)$, so that for $k > 0$,
+where $\zeta_3^{-1}=(-\half,-\fr{\sqrt{3}}{2})$, so that for $k > 0$,
 $w_{k,1}=A_k+B_k$ and $w_{k,-1}=\conj{A_k-B_k}$.
 The resulting transforms,
 Procedures {\tt\ref{fft0padBackwards}} and {\tt\ref{fft0padForwards}},
@@ -522,7 +522,7 @@ $3m$-padded centered backwards Fourier transform values of a vector {\sf f} of l
 $2m-1$ in {\sf f} and an auxiliary vector~{\sf u} of length $m+1$.}\label{fft0padBackwards}
 \end{procedure}
 
-\begin{function}[htbp]
+\begin{procedure}[htbp]
   \KwIn{vector \xf, vector \xu}
   \KwOut{vector \xf}
 
@@ -542,7 +542,7 @@ $2m-1$ in {\sf f} and an auxiliary vector~{\sf u} of length $m+1$.}\label{fft0pa
   \caption{fft0padForwards({\sf f},{\sf u}) returns the
 inverse of \fftOpadBackwards({\sf f},{\sf u}).}
 \label{fft0padForwards}
-\end{function}
+\end{procedure}
 
 \subsection{Centered Hermitian convolution}
 
@@ -580,7 +580,7 @@ of the first $c+1$ components of $w_{k,r}$ (one for each $r\in\{-1,0,1\}$). The
 forwards transform is given by
 \bel
 {3m}U_k
-=\sum_{r=-1}^{1}\zeta_{3m}^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r}
+=\sum_{r=-1}^{1}\zeta_{3m}^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-\ell k} u_{3\ell+r},
 \qquad k\no =0,\ldots,m-1.\label{fft0forwardsB}
 \eel
 Since $u_{3\ell+r}$ is real, a real-to-complex transform can be used to
@@ -702,7 +702,7 @@ an in-place implicitly dealiased convolution of centered Hermitian vectors
     $\xf[2c-1-k] \leftarrow \xA+\xB$\;
   }
   \caption{build({\sf f},{\sf u}) builds the FFT arrays
-required for Procedure~{\tt\ref{conv}} from an unpadded vector {\sf f} of length
+required for Function~{\tt\ref{conv}} from an unpadded vector {\sf f} of length
 $2c$ into {\sf f} and an auxiliary vector~{\sf u} of length
 $c+1$.}\label{build}
 \end{procedure}
@@ -728,9 +728,9 @@ dealiased centered Hermitian in-place 1D convolutions of length $m$.}
 \end{center}
 \end{figure}
 
-\subsection{General Padding}\label{pq}
+\subsection{General padding}\label{pq}
 Implicit padding corresponding to an arbitrary~$p/q$ rule is also
-possible. Suppose that $pm$ data modes are zero-padded to $N=qm$, where $p$
+possible. Suppose that $pm$ data modes are zero padded to $N=qm$, where $p$
 and $q$ are relatively prime. One decomposes $j=q\ell+r$, where
 $\ell=0,\dots,m-1$ and $r=0,\dots,q-1$.
 Similarly, one expresses $k=t m+s$, where $t=0,\dots,p-1$ and $s=0,\dots, m-1$:
@@ -747,7 +747,7 @@ Likewise, the forward implicit transform
 $$
 {qm}U_k
 =\sum_{\ell=0}^{m-1}\sum_{r=0}^{q-1} \zeta_{qm}^{-(q\ell+r)k} u_{q\ell+r}
-=\sum_{r=0}^{q-1}\zeta_{qm}^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{q\ell+r}
+=\sum_{r=0}^{q-1}\zeta_{qm}^{-rk}\sum_{\ell=0}^{m-1}\zeta_m^{-k\ell} u_{q\ell+r},
 \qquad k\no =0,\ldots,pm-1
 $$
 also requires $q$ Fourier transforms of length $m$. Again, the computational
@@ -757,13 +757,13 @@ savings for a one-dimensional transform is marginal.
 The algorithms developed in Section~\ref{1d} can be used as building
 blocks to construct efficient implicitly padded higher-dimensional convolutions.
 \subsection{Complex 2D convolution}
-The implicitly padded 2D convolution shown in Algorithm {\tt\ref{cconv2}} 
+The implicitly padded 2D convolution shown in Function {\tt\ref{cconv2}} 
 is designed for data stored with a stride of one in the $y$
 direction. Efficient multivector versions of Procedures {\tt\ref{fft0padBackwards}}
 and {\tt\ref{fft0padForwards}} are used for the transform in the $x$ direction;
 this allows a single $\zeta_{3m}^k$ factor to be applied to a consecutive
 column of data at constant $x$. In principle, one could also develop a
-multivector version of Procedure~{\tt\ref{cconv}} to perform simultaneous
+multivector version of Function~{\tt\ref{cconv}} to perform simultaneous
 convolutions in the $y$ direction, but our timing tests indicate that this
 would only slightly enhance the overall performance (since the data for constant
 $y$ is not stored consecutively in memory) and would prevent the 1D convolution
@@ -795,15 +795,15 @@ when a 2D convolution is expressed directly in terms of 1D transforms: as
 observed in Fig.~\ref{timing2c}, while a $1024^2$ $y$-pruned explicit
 convolution is $1.26$ times faster than a conventional explicit
 implementation, the pruned method becomes $1.80$ times {\it slower} for the
-$8192^2$ case. Our implicitly dealised convolution is also subject
+$8192^2$ case. Our implicitly dealiased convolution is also subject
 to these same optimization losses, but the savings due to implicit padding,
 out-of-place subtransforms, the neglect of high-level bit reversal, and the
 immediate convolution of constant $x$ columns (while still possibly in
 cache) outweigh these losses.
 
 Because the same temporary arrays $u$ and $v$ are used for each column
-of the convolution, the memory requirements are $4m_xm_y+2m_y$ complex
-words, much less than the $8m_xm_y$ complex words needed for an
+of the convolution, the memory requirement is $4m_xm_y+2m_y$ complex
+words, far less than the $8m_xm_y$ complex words needed for an
 explicitly padded convolution.
 
 \subsection{Centered Hermitian 2D convolution}
@@ -896,10 +896,10 @@ dealiased complex in-place 3D convolutions of size $m^3$.}
 %
 \end{figure}
 
-\subsection{2D Pseudospectral Application}
+\subsection{2D pseudospectral application}
 In our implementation, we allow the
 convolution inputs to be arrays of vectors, $f_i$ and~$g_i$ ($i=1,\ldots,M$),
-interpreting in Procedures~{\tt\ref{cconv}},~{\tt\ref{conv}},
+interpreting in Functions~{\tt\ref{cconv}},~{\tt\ref{conv}},
 and~{\tt\ref{tconv}}, the product $f * g$ as the element-by-element
 dot product $\sum_i f_i * g_i$.
 Convolving $M$ input data blocks simultaneously like this enables, for example,
@@ -915,16 +915,16 @@ can be computed efficiently with the call
 ${\tt conv2}(i k_x\w,i k_y\w,i k_y \w/k^2,-ik_x\w/k^2,{\sf u},{\sf v})$,
 where {\sf u} and {\sf v} are work arrays.
 
-\subsection{Complex and Centered Hermitian 3D convolutions}
+\subsection{Complex and centered Hermitian 3D convolutions}
 
-The decoupling of the 2D work arrays in Procedure~{\tt\ref{cconv2}}
+The decoupling of the 2D work arrays in Function~{\tt\ref{cconv2}}
 facilitates the construction of an efficient 3D implicit complex convolution,
-as described in Procedure~{\tt\ref{cconv3}}. As shown in
+as described in Function~{\tt\ref{cconv3}}. As shown in
 Fig.~\ref{timing3c}, an implicit
 $256^3$ convolution is $2.38$ times faster than the explicit version, while
 an $xz$-pruned version is only $1.24$ times faster. The memory usage of an
 implicitly padded 3D $m_x\times m_y\times m_z$ convolution is
-$4m_xm_ym_z+2m_y m_z+2m_z$ complex words, much less than the
+$4m_xm_ym_z+2m_y m_z+2m_z$ complex words, far less than the
 $16m_xm_ym_z$ complex words required by an explicit 
 convolution based on power-of-two transforms.
 
@@ -982,7 +982,7 @@ scrambled signed~$4m$-padded centered backwards Fourier transform values of a
 vector {\sf f} of length~$2m$ in {\sf f} and an auxiliary vector~{\sf u} of
 length $2m$.}\label{fft0tpadBackwards}
 \end{procedure}
-\begin{function}[H]
+\begin{procedure}[H]
   \KwIn{vector \xf, vector \xu}
   \KwOut{vector \xf}
   $\xf \leftarrow \fft(\xf)$\;
@@ -994,7 +994,7 @@ length $2m$.}\label{fft0tpadBackwards}
   \caption{fft0tpadForwards({\sf f},{\sf u}) returns the
 inverse of Procedure \fftOtpadBackwards({\sf f},{\sf u}).}
 \label{fft0tpadForwards}
-\end{function}
+\end{procedure}
 \end{minipage}
 \end{figure}
 
@@ -1007,7 +1007,7 @@ $$
 which, for example, is required to compute the time evolution of the
 Casimir invariant $\int \w^4\,d\vx$ associated with the nonlinearity of
 two-dimensional incompressible flow expressed in terms of the scalar
-vorticity~$\w$~\cite{Bowman10}. The basic building blocks for this problem
+vorticity~$\w$. The basic building blocks for this problem
 are again the centered Fourier transform and Hermitian convolution.
 
 \subsection{Implicit double-dealiased centered Fourier transform}
@@ -1029,17 +1029,16 @@ u_{2\ell +r}\no=\sum_{k=-m}^{m-1}\z_{2m}^{\ell k} \z_{4m}^{rk} U_k
 =(-1)^\ell i^{-r}\sum_{k=0}^{2m-1}\z_{2m}^{\ell k} \z_{4m}^{rk} U_{k-m}.
 \label{fft0tbackwards}
 \eel
-The forwards transform is then given by
+The forwards transform is then given for $k=-m+1,\ldots,m-1$ by
 \bel
 {4m}U_k=\sum_{r=0}^{1}\zeta_{4m}^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\ell+r}
-\qquad k\no =-m+1,\ldots,m-1
 =\sum_{r=0}^{1}\zeta_{4m}^{-r(k'-m)}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell (k'-m)} u_{2\ell+r}
-=\sum_{r=0}^{1}\zeta_{4m}^{-rk'}i^r\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k'}(-1)^\ell u_{2\ell+r}
+=\sum_{r=0}^{1}\zeta_{4m}^{-rk'}i^r\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k'}(-1)^\ell u_{2\ell+r},
 \qquad k'\no =1,\ldots,2m-1.\label{fft0tforwards}
 \eel
 For a ternary convolution, the product of the three factors $(-1)^\ell$
 (one for each input vector) arising from \Eq{fft0tbackwards}
-and the factor $(-1)^\ell$ in \Eq{fft0tforwards} cancel.
+and the factor $(-1)^\ell$ in \Eq{fft0tforwards} cancels.
 Procedures {\tt\ref{fft0tpadBackwards}} and {\tt\ref{fft0tpadForwards}}
 each have an operation count asymptotic to $4Km\log_2 m$. As they
 operate fully in place on their arguments, with no additional storage
@@ -1064,11 +1063,11 @@ $\{\z_{4m}^{rk} U_k : k=0,\ldots, m\}$.
 The forwards transform is
 \be
 {4m}U_k=\sum_{r=0}^{1}\zeta_{4m}^{-rk}
-\sum_{\ell=0}^{2m-1} \zeta_{2m}^{-\ell k} u_{2\ell+r}
+\sum_{\ell=0}^{2m-1} \zeta_{2m}^{-\ell k} u_{2\ell+r},
 \qquad k\no =-m+1,\ldots,m-1.
 \ee
 The resulting implicitly padded centered Hermitian ternary convolution,
-Procedure {\tt\ref{tconv}}, has an operation count of $8Km\log_2 m$. 
+Function {\tt\ref{tconv}}, has an operation count of $8Km\log_2 m$. 
 Five of the eight required Fourier transforms can be done out of place.
 In Fig.~\ref{timing1t} we show that this algorithm is competitive with
 explicit padding. Function {\tt\ref{tconv}} requires $6(m+1)$ complex words of
@@ -1185,7 +1184,7 @@ significantly enhanced performance by as much as a factor of $2$.
 The savings in memory use, obtained by computing the Fourier transformed
 data in blocks rather than all at once, was equally significant:
 asymptotically, as $m_x\goesto\infty$, an implicit complex convolution
-requires one-half of the memory needed for a zero padded convolution in two
+requires one-half of the memory needed for a zero-padded convolution in two
 dimensions and one-quarter in three dimensions. In the centered Hermitian
 case, the memory use in two dimensions is $2/3$ of the amount used for an
 explicit convolution and $4/9$ of the corresponding storage requirement in
@@ -1202,7 +1201,7 @@ is dictated by external criteria, implicit padding effectively expands the
 available set of efficient convolution sizes to include integral powers
 of~$2$, a case of practical significance.
 Canuto \etal~\cite[p.136]{Canuto06} point out that if only a
-power-of-two transform is available for a centered convolution, zero
+power-of-two transform were available for a centered convolution, zero
 padding a vector of length $m=2^k$  would require a transform size of $2m$,
 yielding an even slightly higher operation count, $6Km\log_2(2m)$, than the $6K
 m\log_2m$ operations required for phase-shift dealiasing. The availability
@@ -1230,7 +1229,7 @@ straightforward exercise.
 
 % LocalWords:  dealiasing dealias Hermitian FFTW FFT priori mU tconv xq xk
 % LocalWords:  nonperiodic FFTs noncentered subtransforms pre ffttpadBackwards
-% LocalWords:  unpadded dealised th unnormalized jk kU kj cconv ffttpadForwards
+% LocalWords:  unpadded th unnormalized jk kU kj cconv ffttpadForwards Comput
 % LocalWords:  textit fft crfft rcfft padBackwards padForwards tpadBackwards
 % LocalWords:  tpadForwards xf xFk xA xB xg xw xC xD xF xG xS xT xU xV SIMD rk
 % LocalWords:  fftpadBackwards fftpadForwards backwardsB strided conv Buneman
