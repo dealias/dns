@@ -153,9 +153,11 @@ public:
     Real Wall=abs2(wd0)+abs2(wd1);
     Real k=sqrt2*I;
     S[(this->*Sindex)(I,I,k)] += Complex(Wall/(k0*k),nuk(I2+I2)*Wall);
+    //S[kval[I][I]] += Complex(Wall/(k0*k),nuk(2*I2)*Wall);
     // axes
     Wall=abs2(wa0)+abs2(wa1);
     S[(this->*Sindex)(I,0,I)] += Complex(Wall/(k0*I),nuk(I2)*Wall);
+    //S[kval[I][0]] += Complex(Wall/(k0*I),nuk(I2)*Wall);
   }    
   void SpectrumMain(vector& S,Complex w0,Complex w1,Complex w2,Complex w3,
 		    unsigned I,unsigned j) {
@@ -163,21 +165,25 @@ public:
     unsigned k2=I*I+j*j;
     Real k=sqrt(k2);
     S[(this->*Sindex)(I,j,k)] += Complex(Wall/(k0*k),nuk(k2)*Wall);
+    //S[kval[I][j]] += Complex(Wall/(k0*k),nuk(k2)*Wall);
   }
 
   void TransferAxesDiag(vector& T,
 			Complex wd0,Complex wd1,Complex wa0,Complex wa1,
 			Complex fd0,Complex fd1,Complex fa0,Complex fa1,
 			unsigned I)  {
-    T[(this->*Sindex)(I,I,sqrt2*I)] += 
-      realproduct(wd0,fd0) + realproduct(wd1,fd1);
+    //T[kval[I][I]] += realproduct(wd0,fd0) + realproduct(wd1,fd1);
+    //T[kval[I][0]] += realproduct(wa0,fa0) + realproduct(wa1,fa1);
+    
+    T[(this->*Sindex)(I,I,sqrt2*I)]+=realproduct(wd0,fd0)+ realproduct(wd1,fd1);
     T[(this->*Sindex)(I,0,I)] += realproduct(wa0,fa0) + realproduct(wa1,fa1);
-  }    
+  }
   void TransferMain(vector& T,
 		    Complex w0,Complex w1,Complex w2,Complex w3,
 		    Complex f0,Complex f1,Complex f2,Complex f3,
 		    unsigned I,unsigned j) {
     T[(this->*Sindex)(I,j,sqrt(I*I+j*j))] 
+      //T[kval[I][j]]
       += realproduct(w0,f0) + realproduct(w1,f1) 
       +  realproduct(w2,f2) + realproduct(w3,f3);
   }
@@ -367,31 +373,37 @@ class Hloop{
   // loop over the Hermitian-symmetric array2 w, calculate
   // something, put it into the appropriate index of S, a spectrum-like array
   void Sloop(vector& S, const array2<Complex> w,Sad  adfp, Sm mfp) {
+    vector wx=w[xorigin];
     for(unsigned I=1; I < mx; I++) {
       unsigned i=xorigin+I;
       unsigned im=xorigin-I;
       vector wi=w[i];
       vector wim=w[im];
+      vector wxi=w[xorigin+I];
       for(unsigned j=1; j < I; ++j)
 	(parent->*mfp)(S,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],I,j);
-      (parent->*adfp)(S,wi[I],wim[I],w[xorigin][I],w[xorigin+I][0],I);
+      (parent->*adfp)(S,wi[I],wim[I],wx[I],wxi[0],I);
     }
   }
 
-  void Tloop(vector& T, const array2<Complex> w, const array2<Complex> f0,
+  void Tloop(vector& T, const array2<Complex> w, const array2<Complex> f,
 	     Tad adfp, Tm mfp) {
+    vector wx=w[xorigin];
+    vector fx=f[xorigin];
     for(unsigned I=1; I < mx; I++) {
       unsigned i=xorigin+I;
       unsigned im=xorigin-I;
       vector wi=w[i];
       vector wim=w[im];
-      vector f0i=f0[i];
-      vector f0im=f0[im];
+      vector fi=f[i];
+      vector fim=f[im];
       for(unsigned j=1; j < I; ++j)
-	(parent->*mfp)(T,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
-		       f0i[j],f0im[j],f0[xorigin-j][I],f0[xorigin+j][I],I,j);
-      (parent->*adfp)(T,wi[I],wim[I],w[xorigin][I],w[xorigin+I][0],
-		      f0i[I],f0im[I],f0[xorigin][I],f0[xorigin+I][0],I);
+	(parent->*mfp)(T,
+		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
+		       fi[j],fim[j],f[xorigin-j][I],f[xorigin+j][I],I,j);
+      (parent->*adfp)(T,
+		      wi[I],wim[I],wx[I],w[xorigin+I][0],
+		      fi[I],fim[I],fx[I],f[xorigin+I][0],I);
     }
   }
 
