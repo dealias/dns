@@ -239,7 +239,7 @@ This requires computing two subtransforms, each of size $m$,
 for an overall computational scaling of order $2m\log_2 m=N\log_2 m$.
 
 The odd and even terms of the convolution can then be computed separately
-(without the need for a bit reversal stage), multiplied term-by-term, and
+(without the need for a bit reversal stage), multiplied term by term, and
 finally transformed again to Fourier space using the (scaled) forward transform
 \ben
 2mU_k&=&\sum_{j=0}^{2m-1}\zeta_{2m}^{-kj} u_j
@@ -458,12 +458,12 @@ that only two of the three subtransforms of length $m$ need to be retained.
 Suppose then that $U_k=0$ for $k\ge m$.
 On decomposing $j=(3\ell+r)\mod N$, where $r\in\{-1,0,1\}$, the 
 substitution $k'=m+k$ allows us to write the backwards transform as
-\bel
+\belc
 u_{3\ell +r}\no=\sum_{k=-m+1}^{m-1}\z_m^{\ell k} \z_{3m}^{rk} U_k
 =\sum_{k'=1}^{m-1}\z_m^{\ell k'} \z_{3m}^{r(k'-m)} U_{k'-m}
 +\sum_{k=0}^{m-1}\z_m^{\ell k} \z_{3m}^{rk} U_k
 =\sum_{k=0}^{m-1}\z_m^{\ell k} w_{k,r},\label{fft0backwardsA}
-\eel
+\eelc
 where
 \bel
 w_{k,r}\doteq
@@ -598,7 +598,7 @@ For simplicity, we document here only the practically important
 case $m=2c$; minor changes are required to implement the case $m=2c+1$.
 We see in Function~{\tt\ref{conv}} that seven out of the nine Fourier
 transforms can be performed out of place using the same amount of memory,
-$2(\floor{N/2}+1)=6c+2$, as would be used to compute a centered Hermitian
+$2(\floor{N/2}+1)=6c+2$ words, as would be used to compute a centered Hermitian
 convolution with explicit padding. 
 
 To facilitate an in-place implementation of the
@@ -1023,12 +1023,12 @@ a power of $2$ and $N=4m$, with $U_k=0$ for $k=-m$ and $k\ge m$.
 
 On decomposing $j=2\ell+r$, where $\ell=0,\ldots, 2m-1$ and $r\in\{0,1\}$,
 we find on substituting $k'=k+m$ that
-\bel
+\belc
 u_{2\ell +r}\no=\sum_{k=-m}^{m-1}\z_{2m}^{\ell k} \z_{4m}^{rk} U_k
 =\sum_{k'=0}^{2m-1}\z_{2m}^{\ell (k'-m)} \z_{4m}^{r(k'-m)} U_{k'-m}
 =(-1)^\ell i^{-r}\sum_{k=0}^{2m-1}\z_{2m}^{\ell k} \z_{4m}^{rk} U_{k-m}.
 \label{fft0tbackwards}
-\eel
+\eelc
 The forwards transform is then given for $k=-m+1,\ldots,m-1$ by
 \bel
 {4m}U_k=\sum_{r=0}^{1}\zeta_{4m}^{-rk}\sum_{\ell=0}^{2m-1}\zeta_{2m}^{-\ell k} u_{2\ell+r}
