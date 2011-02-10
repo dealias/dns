@@ -62,7 +62,6 @@ protected:
   array2L<unsigned> kval; // for discrete spectrum
   array2L<unsigned> area, areadown; // for interpolated spectrum
 
-
   array2<Complex> f0,f1,g0,g1;
   array2<Complex> buffer;
   Complex *F[2];
@@ -115,7 +114,6 @@ protected:
       R2.Push(r2);
   }
   
-
 public:
   DNSBase() {setSindex();}
   DNSBase(unsigned Nx, unsigned my, Real k0): Nx(Nx), my(my), k0(k0) {
@@ -138,29 +136,154 @@ public:
   }
   virtual ~DNSBase() {}
 
-  void CountAxesDiag(array1<unsigned>::opt &C, unsigned I)  {
-    C[(this->*Sindex)(I,I,sqrt2*I)] += 2;
+  void CountAxes(array1<unsigned>::opt &C, unsigned I)  {
     C[(this->*Sindex)(I,0,I)] += 2;
+  }
+  void CountDiag(array1<unsigned>::opt &C, unsigned I)  {
+    C[(this->*Sindex)(I,I,sqrt2*I)] += 2;
   }
   void CountMain(array1<unsigned>::opt &C, unsigned I, unsigned j) {
     C[(this->*Sindex)(I,j,sqrt(I*I+j*j))] += 4;
   }
 
-  void SpectrumAxesDiag(vector& S,Complex wd0,Complex wd1,
-			Complex wa0,Complex wa1,unsigned I)  {
-    // diagonals
+  void LinearAxes(unsigned I,
+		  Complex wa0,Complex wa1,Complex& fa0,Complex& fa1)  {
+    Real nukk=nuk(I*I);
+    fa0 -= nukk*wa0;
+    fa1 -= nukk*wa1;
+  }
+  void LinearDiag(unsigned I,
+		  Complex wd0,Complex wd1,Complex& fd0,Complex& fd1)  {
+    Real nukk=nuk(2*(I*I));
+    fd0 -= nukk*wd0;
+    fd1 -= nukk*wd1;
+  }
+  void LinearMain(unsigned I,unsigned j,
+		  Complex w0,Complex w1,Complex w2,Complex w3,
+		  Complex& f0,Complex& f1,Complex& f2,Complex& f3) {
+    Real nukk=nuk(I*I+j*j);
+    f0 -= nukk*w0;
+    f1 -= nukk*w1;
+    f2 -= nukk*w2;
+    f3 -= nukk*w3;
+  }
+
+  void NonLinearAxes(unsigned I,
+		     Complex wa,Complex wb,
+		     Complex& f0a,Complex& f0b,
+		     Complex& f1a,Complex& f1b,
+		     Complex& g0a,Complex& g0b,
+		     Complex& g1a,Complex& g1b)  {
+    Real k2inv=1.0/(k02*(I*I));
+
+    // wx[I]
+    Real ky=k0*I;
+    Complex kyw=Complex(-ky*wa.im,ky*wa.re);
+    f0a=0;
+    f1a=kyw;
+    g0a=k2inv*kyw;
+    g1a=0;
+
+    // w[xorigin+I][0]
+    Real kx=k0*I;
+    Complex kxw=Complex(-kx*wb.im,kx*wb.re);
+    f0b=kxw;
+    f1b=0;
+    g0b=0;
+    g1b=-k2inv*kxw;
+  }
+
+  void NonLinearDiag(unsigned I,
+		     Complex wa,Complex wb,
+		     Complex& f0a,Complex& f0b,
+		     Complex& f1a,Complex& f1b,
+		     Complex& g0a,Complex& g0b,
+		     Complex& g1a,Complex& g1b)  {
+    Real k2inv=1.0/(k02*(2*I*I));
+
+    // wi[I]
+    Real kx=k0*I;
+    Real ky=k0*I;
+    Complex kxw=Complex(-kx*wa.im,kx*wa.re);
+    Complex kyw=Complex(-ky*wa.im,ky*wa.re);
+    f0a=kxw;
+    f1a=kyw;
+    g0a=k2inv*kyw;
+    g1a=-k2inv*kxw;
+
+    // wim[I]
+    kx=-kx;
+    kxw=Complex(-kx*wb.im,kx*wb.re);
+    kyw=Complex(-ky*wb.im,ky*wb.re);
+    f0b=kxw;
+    f1b=kyw;
+    g0b=k2inv*kyw;
+    g1b=-k2inv*kxw;
+  }
+
+  void NonLinearMain(unsigned I,unsigned j,
+		     Complex wa,Complex wb,Complex wc,Complex wd,
+		     Complex& f0a,Complex& f0b,Complex& f0c,Complex& f0d,
+		     Complex& f1a,Complex& f1b,Complex& f1c,Complex& f1d,
+		     Complex& g0a,Complex& g0b,Complex& g0c,Complex& g0d,
+		     Complex& g1a,Complex& g1b,Complex& g1c,Complex& g1d) {
+    Real k2inv=1.0/(k02*(I*I+j*j));
+
+    // a wi[j]
+    Real kx=k0*I;
+    Real ky=k0*j;
+    Complex kxw=Complex(-kx*wa.im,kx*wa.re);
+    Complex kyw=Complex(-ky*wa.im,ky*wa.re);
+    f0a=kxw;
+    f1a=kyw;
+    g0a=k2inv*kyw;
+    g1a=-k2inv*kxw;
+
+    // b wim[j]
+    kx=-k0*I;
+    kxw=Complex(-kx*wb.im,kx*wb.re);
+    kyw=Complex(-ky*wb.im,ky*wb.re);
+    f0b=kxw;
+    f1b=kyw;
+    g0b=k2inv*kyw;
+    g1b=-k2inv*kxw;
+
+    // c w[xorigin-j][I]
+    kx=-k0*j;
+    ky=k0*I;
+    kxw=Complex(-kx*wc.im,kx*wc.re);
+    kyw=Complex(-ky*wc.im,ky*wc.re);
+    f0c=kxw;;
+    f1c=kyw;
+    g0c=k2inv*kyw;
+    g1c=-k2inv*kxw;
+
+    // d w[xorigin+j][I]
+    kx=-kx;
+    kxw=Complex(-kx*wd.im,kx*wd.re);
+    kyw=Complex(-ky*wd.im,ky*wd.re);
+    f0d=kxw;
+    f1d=kyw;
+    g0d=k2inv*kyw;
+    g1d=-k2inv*kxw;
+  }
+
+
+  void SpectrumAxes(unsigned I,vector& S,Complex wa0,Complex wa1)  {
+    unsigned I2=I*I;
+    Real Wall=abs2(wa0)+abs2(wa1);
+    S[(this->*Sindex)(I,0,I)] += Complex(Wall/(k0*I),nuk(I2)*Wall);
+    //S[kval[I][0]] += Complex(Wall/(k0*I),nuk(I2)*Wall);
+  }
+  void SpectrumDiag(unsigned I, vector& S,Complex wd0,Complex wd1)  {
     unsigned I2=I*I;
     Real Wall=abs2(wd0)+abs2(wd1);
     Real k=sqrt2*I;
     S[(this->*Sindex)(I,I,k)] += Complex(Wall/(k0*k),nuk(I2+I2)*Wall);
     //S[kval[I][I]] += Complex(Wall/(k0*k),nuk(2*I2)*Wall);
-    // axes
-    Wall=abs2(wa0)+abs2(wa1);
-    S[(this->*Sindex)(I,0,I)] += Complex(Wall/(k0*I),nuk(I2)*Wall);
-    //S[kval[I][0]] += Complex(Wall/(k0*I),nuk(I2)*Wall);
   }    
-  void SpectrumMain(vector& S,Complex w0,Complex w1,Complex w2,Complex w3,
-		    unsigned I,unsigned j) {
+  void SpectrumMain(unsigned I,unsigned j, vector& S,
+		    Complex w0,Complex w1,Complex w2,Complex w3) {
     Real Wall=abs2(w1)+abs2(w2)+abs2(w2)+abs2(w3);
     unsigned k2=I*I+j*j;
     Real k=sqrt(k2);
@@ -168,20 +291,19 @@ public:
     //S[kval[I][j]] += Complex(Wall/(k0*k),nuk(k2)*Wall);
   }
 
-  void TransferAxesDiag(vector& T,
-			Complex wd0,Complex wd1,Complex wa0,Complex wa1,
-			Complex fd0,Complex fd1,Complex fa0,Complex fa1,
-			unsigned I)  {
-    //T[kval[I][I]] += realproduct(wd0,fd0) + realproduct(wd1,fd1);
+  void TransferAxes(unsigned I, vector& T,
+		    Complex wa0,Complex wa1,Complex fa0,Complex fa1)  {
     //T[kval[I][0]] += realproduct(wa0,fa0) + realproduct(wa1,fa1);
-    
-    T[(this->*Sindex)(I,I,sqrt2*I)]+=realproduct(wd0,fd0)+ realproduct(wd1,fd1);
     T[(this->*Sindex)(I,0,I)] += realproduct(wa0,fa0) + realproduct(wa1,fa1);
   }
-  void TransferMain(vector& T,
+  void TransferDiag(unsigned I,vector& T,
+		    Complex wd0,Complex wd1,Complex fd0,Complex fd1)  {
+    //T[kval[I][I]] += realproduct(wd0,fd0) + realproduct(wd1,fd1);
+    T[(this->*Sindex)(I,0,I)] += realproduct(wd0,fd0) + realproduct(wd1,fd1);
+  }
+  void TransferMain(unsigned I,unsigned j, vector& T,
 		    Complex w0,Complex w1,Complex w2,Complex w3,
-		    Complex f0,Complex f1,Complex f2,Complex f3,
-		    unsigned I,unsigned j) {
+		    Complex f0,Complex f1,Complex f2,Complex f3) {
     T[(this->*Sindex)(I,j,sqrt(I*I+j*j))] 
       //T[kval[I][j]]
       += realproduct(w0,f0) + realproduct(w1,f1) 
@@ -202,7 +324,7 @@ public:
   void Initialize();
   virtual void setcount();
   void setcountBINNED();
-  void setcountRAW(unsigned lambda2=1);
+  void setcountRAW();
   //  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);
@@ -340,89 +462,90 @@ public:
 };
 
 //***** loop class *****//
-typedef void (DNSBase::*Sad)(vector&,Complex,Complex,Complex,Complex,unsigned);
-typedef void (DNSBase::*Sm)(vector&,Complex,Complex,Complex,Complex,
-			    unsigned,unsigned);
-typedef void (DNSBase::*Tad)(vector&,
-			     Complex,Complex,Complex,Complex,
-			     Complex,Complex,Complex,Complex,unsigned);
-typedef void (DNSBase::*Tm)(vector&,
-			     Complex,Complex,Complex,Complex,
-			     Complex,Complex,Complex,Complex,
-			     unsigned,unsigned);
-typedef void (DNSBase::*Cad)(array1<unsigned>::opt&,unsigned);
+typedef void (DNSBase::*Ca)(array1<unsigned>::opt&,unsigned);
 typedef void (DNSBase::*Cm)(array1<unsigned>::opt&,unsigned,unsigned);
+
+typedef void (DNSBase::*Sa)(unsigned,vector&,Complex,Complex);
+typedef void (DNSBase::*Sm)(unsigned,unsigned,
+			    vector&,Complex,Complex,Complex,Complex);
+
+typedef void (DNSBase::*Ta)(unsigned,vector&,Complex,Complex,Complex,Complex);
+typedef void (DNSBase::*Tm)(unsigned,unsigned,vector&,
+			    Complex,Complex,Complex,Complex,
+			    Complex,Complex,Complex,Complex);
+
+typedef void (DNSBase::*La)(unsigned,Complex,Complex,Complex&,Complex&);
+typedef void (DNSBase::*Lm)(unsigned,unsigned,
+			    Complex,Complex,Complex,Complex,
+			    Complex&,Complex&,Complex&,Complex&);
+
+typedef void (DNSBase::*Na)(unsigned,Complex,Complex,
+			    Complex&,Complex&,
+			    Complex&,Complex&,
+			    Complex&,Complex&,
+			    Complex&,Complex&);
+typedef void (DNSBase::*Nm)(unsigned,unsigned,
+			    Complex,Complex,Complex,Complex,
+			    Complex&,Complex&,Complex&,Complex&,
+			    Complex&,Complex&,Complex&,Complex&,
+			    Complex&,Complex&,Complex&,Complex&,
+			    Complex&,Complex&,Complex&,Complex&);
 
 class Hloop{
  private:
-  unsigned Nx, my, mx, xorigin;
+  unsigned N, m, xorigin;
   DNSBase *parent;
+  unsigned radix, Invisible, m2;
+  bool subgrid;
  public:
-  Hloop() {};
+  Hloop() {radix=1; subgrid=false; Invisible=0;}
   Hloop(DNSBase *parent0) {
+    setparams(parent0);
+    radix=1;
+    subgrid=false;
+    Invisible=0;
+  }
+  Hloop(unsigned N0) {
+    setparams(N);
+    radix=1;
+    subgrid=false;
+    Invisible=0;
+  }
+  ~Hloop() {}
+
+  void setparams(unsigned N0) {
+    N=N0;
+    m=(N+1)/2;
+    xorigin=m-1;
+    m2=(m-1)*(m-1);
+  }
+  void setparams(DNSBase *parent0) {
     parent=parent0;
-    Nx=parent->getNx();
-    my=parent->getmy();
-    mx=parent->getmx();
+    N=parent->getNx();
+    m=parent->getmx();
     xorigin=parent->getxorigin();
-  };
-  ~Hloop() {};
-  
+    m2=(m-1)*(m-1);
+  }
+  void setradix(unsigned radix0) {radix=radix0;}
+  void makesubgrid() {subgrid=true;}
+  void setInvisible(unsigned inv) {Invisible=inv;}
+
+  bool doaxes(unsigned I2) {return circular ? I2 <= m2: true;}
+  bool dodiag(unsigned I2) {return circular ? 2*I2 <= m2: true;}
+  unsigned jstop(unsigned I) {
+    return  circular ? min((int)I,(int) ceil(sqrt(m2-I*I))) : I;
+  }
+
   virtual bool isvisible(unsigned i, unsigned j) {return true;}
   
-  // loop over the Hermitian-symmetric array2 w, calculate
-  // something, put it into the appropriate index of S, a spectrum-like array
-  void Sloop(vector& S, const array2<Complex> w,Sad  adfp, Sm mfp) {
-    vector wx=w[xorigin];
-    for(unsigned I=1; I < mx; I++) {
-      unsigned i=xorigin+I;
-      unsigned im=xorigin-I;
-      vector wi=w[i];
-      vector wim=w[im];
-      vector wxi=w[xorigin+I];
-      for(unsigned j=1; j < I; ++j)
-	(parent->*mfp)(S,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],I,j);
-      (parent->*adfp)(S,wi[I],wim[I],wx[I],wxi[0],I);
-    }
-  }
-
-  void Tloop(vector& T, const array2<Complex> w, const array2<Complex> f,
-	     Tad adfp, Tm mfp) {
-    vector wx=w[xorigin];
-    vector fx=f[xorigin];
-    for(unsigned I=1; I < mx; I++) {
-      unsigned i=xorigin+I;
-      unsigned im=xorigin-I;
-      vector wi=w[i];
-      vector wim=w[im];
-      vector fi=f[i];
-      vector fim=f[im];
-      for(unsigned j=1; j < I; ++j)
-	(parent->*mfp)(T,
-		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
-		       fi[j],fim[j],f[xorigin-j][I],f[xorigin+j][I],I,j);
-      (parent->*adfp)(T,
-		      wi[I],wim[I],wx[I],w[xorigin+I][0],
-		      fi[I],fim[I],fx[I],f[xorigin+I][0],I);
-    }
-  }
-
-  void Cloop(array1<unsigned>::opt &C, Cad adfp, Cm mfp) {
-    for(unsigned I=1; I < mx; I++) {
-      (parent->*adfp)(C,I);
-      for(unsigned j=1; j < I; ++j) {
-	(parent->*mfp)(C,I,j);
-      }
-    }
-  }
-
   void Rloop(DynVector<unsigned> &R2) {
     DynVector<unsigned> temp;
-    for(unsigned I=1; I < mx; I++) {
+    for(unsigned I=1; I < m; I++) {
       unsigned I2=I*I;
-      temp.Push(I2);
-      temp.Push(2*I2);
-      for(unsigned j=1; j < I; ++j) {
+      if(doaxes(I2)) temp.Push(I2);
+      if(dodiag(I2)) temp.Push(2*I2);
+      unsigned stop =jstop(I);
+      for(unsigned j=1; j < stop; ++j) {
 	temp.Push(I2+j*j);
       }
     }
@@ -434,6 +557,135 @@ class Hloop{
 	R2[++last]=temp[i];
     }
   }
+
+  void Cloop(array1<unsigned>::opt &C, Ca afp, Ca dfp, Cm mfp) {
+    for(unsigned I=1; I < m; I++) {
+      unsigned I2=I*I;
+      if(doaxes(I2)) (parent->*afp)(C,I);
+      if(dodiag(I2)) (parent->*dfp)(C,I);
+      unsigned stop =jstop(I);
+      for(unsigned j=1; j < stop; ++j) {
+	(parent->*mfp)(C,I,j);
+      }
+    }
+  }
+
+  // loop over the Hermitian-symmetric array2 w, calculate
+  // something, put it into the appropriate index of S, a spectrum-like array
+  void Sloop(vector& S, const array2<Complex> w,Sa  afp,Sa  dfp, Sm mfp) {
+    vector wx=w[xorigin];
+    for(unsigned I=1; I < m; I++) {
+      unsigned I2=I*I;
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      vector wxi=w[xorigin+I];
+      unsigned stop =jstop(I);
+      for(unsigned j=1; j < stop; ++j)
+	(parent->*mfp)(I,j,S,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I]);
+      if(doaxes(I2)) (parent->*afp)(I,S,wx[I],wxi[0]);
+      if(dodiag(I2)) (parent->*dfp)(I,S,wi[I],wim[I]);
+    }
+  }
+  
+  void Tloop(vector& T, const array2<Complex> w, const array2<Complex> f,
+	     Ta afp, Ta dfp, Tm mfp) {
+    vector wx=w[xorigin];
+    vector fx=f[xorigin];
+    for(unsigned I=1; I < m; I++) {
+      unsigned I2=I*I;
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      vector fi=f[i];
+      vector fim=f[im];
+      unsigned stop =jstop(I);
+      for(unsigned j=1; j < stop; ++j) {
+	(parent->*mfp)(I,j,T,
+		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
+		       fi[j],fim[j],f[xorigin-j][I],f[xorigin+j][I]);
+      }
+      if(doaxes(I2))
+	(parent->*afp)(I,T,wx[I],w[xorigin+I][0],fx[I],f[xorigin+I][0]);
+      if(dodiag(I2))
+	(parent->*dfp)(I,T,wi[I],wim[I],fi[I],fim[I]);
+    }
+  }
+
+  void Nloop(const array2<Complex> w, 
+	     array2<Complex> f0, array2<Complex> f1, 
+	     array2<Complex> g0, array2<Complex> g1,
+	     Na afp, Na dfp, Nm mfp) {
+    vector wx=w[xorigin];
+    vector f0x=f0[xorigin];
+    vector f1x=f1[xorigin];
+    vector g0x=g0[xorigin];
+    vector g1x=g1[xorigin];
+    for(unsigned I=1; I < m; I++) {
+      unsigned I2=I*I;
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      vector f0i=f0[i];
+      vector f0im=f0[im];
+      vector f1i=f1[i];
+      vector f1im=f1[im];
+      vector g0i=g0[i];
+      vector g0im=g0[im];
+      vector g1i=g1[i];
+      vector g1im=g1[im];
+      unsigned stop =jstop(I);
+      for(unsigned j=1; j < stop; ++j) {
+	(parent->*mfp)(I,j,
+		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
+		       f0i[j],f0im[j],f0[xorigin-j][I],f0[xorigin+j][I],
+		       f1i[j],f1im[j],f1[xorigin-j][I],f1[xorigin+j][I],
+		       g0i[j],g0im[j],g0[xorigin-j][I],g0[xorigin+j][I],
+		       g1i[j],g1im[j],g1[xorigin-j][I],g1[xorigin+j][I]);
+      }
+      if(doaxes(I2))
+	(parent->*afp)(I,wx[I],w[xorigin+I][0],
+		       f0x[I],f0[xorigin+I][0],
+		       f1x[I],f1[xorigin+I][0],
+		       g0x[I],g0[xorigin+I][0],
+		       g1x[I],g1[xorigin+I][0]);
+      if(dodiag(I2))
+	(parent->*dfp)(I,wi[I],wim[I],
+		       f0i[I],f0im[I],
+		       f1i[I],f1im[I],
+		       g0i[I],g0im[I],
+		       g1i[I],g1im[I]);
+    }
+  }
+  
+  void Lloop(const array2<Complex> w, array2<Complex> f,
+	     La afp, La dfp, Lm mfp) {
+    vector wx=w[xorigin];
+    vector fx=f[xorigin];
+    for(unsigned I=1; I < m; I++) {
+      unsigned I2=I*I;
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      vector fi=f[i];
+      vector fim=f[im];
+      unsigned stop =jstop(I);
+      for(unsigned j=1; j < stop; ++j) {
+	(parent->*mfp)(I,j,
+		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
+		       fi[j],fim[j],f[xorigin-j][I],f[xorigin+j][I]);
+      }
+      if(doaxes(I2))
+	(parent->*afp)(I,wx[I],w[xorigin+I][0],fx[I],f[xorigin+I][0]);
+      if(dodiag(I2))
+	(parent->*dfp)(I,wi[I],wim[I],fi[I],fim[I]);
+    }
+  }
+
   
 };
 

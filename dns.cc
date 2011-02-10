@@ -42,7 +42,9 @@ class DNS : public DNSBase, public ProblemBase {
 public:
   DNS();
   ~DNS();
+  
   void InitialConditions();
+  
   void Output(int);
   void FinalOutput();
   oxstream fprolog;
@@ -57,6 +59,9 @@ public:
     startM=Start(EK);
     stopM=Stop(EK);
   }
+  
+private:
+
   void Source(const vector2& Src, const vector2& Y, double t) {
     ConservativeSource(Src,Y,t);
     NonConservativeSource(Src,Y,t);
@@ -298,6 +303,7 @@ void DNS::InitialConditions()
   my=(Ny+1)/2;
   xorigin=mx-1;
   origin=xorigin*my;
+  
   switch(spectrum) {
   case NOSPECTRUM:
     nshells=0;
@@ -357,8 +363,7 @@ void DNS::InitialConditions()
   unsigned int Nx0=Nx+xpad;
   unsigned int Ny0=Ny+ypad;
   int my0=Ny0/2+1;
-  if(movie)
-    nbuf=max(nbuf,Nx0*my0);
+  if(movie) nbuf=max(nbuf,Nx0*my0);
 
   block=fftwpp::ComplexAlign(nbuf);
   f1.Dimension(Nx,my,block);

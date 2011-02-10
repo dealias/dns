@@ -64,12 +64,12 @@ class FunctRR {
 };
 typedef FunctRR* FunctRRPtr;
 
-unsigned gN(unsigned N, unsigned g) {// TODO: should this be part of MDNS?
+// TODO: should these be part of MDNS?
+unsigned gN(unsigned N, unsigned g) {
   return radix != 4 ? pow(2,(int) g)*(N+1)-1 : N;
   //  return radix == 1 ? pow(2,(int) g)*(N+1)-1 : N;
 };
-
-unsigned gm(unsigned m, unsigned g) { // TODO: should this be part of MDNS?
+unsigned gm(unsigned m, unsigned g) {
   return radix != 4 ? pow(2,(int) g)*m : m;
   //return radix == 1 ? pow(2,(int) g)*m : m;
 };
@@ -122,6 +122,8 @@ public:
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
     unsigned lambda, lambda2; // spacing factor
     
+    Hloop loop;
+
     bool isvisible(unsigned I, unsigned j){
       return parent->isvisible(I,j,myg);
     }
@@ -259,6 +261,7 @@ public:
       R2.Push(r2);
   }
   
+  // FIXME: deprecated
   void findrads(DynVector<unsigned> &R2, array1<unsigned> nr, unsigned g)  {
     unsigned m=(gN(::Nx,g)+1)/2;
     for(unsigned i=1; i < m; ++i) {
@@ -283,11 +286,6 @@ public:
   unsigned getnfields(unsigned g) {return Nfields;};
   unsigned getnshells(unsigned g) {
     // this function should only be used during initialization.
-
-    Hloop loop;
-    loop.Cloop(count,&DNSBase::CountAxesDiag,&DNSBase::CountMain);
-    
-    
     switch(spectrum) {
     case NOSPECTRUM:
       return 0;
@@ -310,8 +308,10 @@ public:
       {
 	DynVector<unsigned> tempR2;
 	array1<unsigned> tempnr(gm(my,g));
-	findrads(tempR2,tempnr,g);
-	return tempR2.Size();
+	Hloop loop;
+	loop.setparams(gN(::Nx,g));
+	loop.Rloop(tempR2);
+    	return tempR2.Size();
       }
       break;
     default:
@@ -1589,7 +1589,7 @@ int MDNS::Rescale()
 	cout << endl;
       }
       exit(1);
-
+    
       // find which grids it belongs to.
 
       // scale it

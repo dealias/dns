@@ -11,49 +11,9 @@ void DNSBase::LinearSource(const vector& wSrc, const vector& w0, double)
 {
   w.Set(w0);
   f0.Set(wSrc);
-
-  for(unsigned i=0; i < xorigin; i++) {
-    unsigned I=xorigin-i;
-    unsigned I2=I*I;
-    unsigned im=xorigin+I;
-    
-    vector f0i=f0[i];
-    vector wi=w[i];
-    vector f0im=f0[im];
-    vector wim=w[im];
-    
-    // diagonals
-    Real nukk=nuk(2*I2);
-    f0i[I] -= nukk*wi[I];
-    f0im[I] -= nukk*wim[I];
-    
-    const unsigned stop=I;
-    for(unsigned j=1; j < stop; ++j) {
-      nukk=nuk(I2+j*j);
-      // bottom left
-      f0i[j] -= nukk*wi[j];
-      // bottom right
-      f0im[j] -= nukk*wim[j];
-      // top left
-      unsigned jm=xorigin-j;
-      f0[jm][I] -= nukk*w[jm][I];
-      // top right
-      unsigned jp=xorigin+j;
-      f0[jp][I] -= nukk*w[jp][I];
-    }
-  }
-  
-  // xorigin case
-  vector f0i=f0[xorigin];
-  vector wi=w[xorigin];
-  for(unsigned j=1; j < my; ++j)
-    f0i[j] -= nuk(j*j)*wi[j];
-  
-  // bottom right
-  for(unsigned i=xorigin; i < Nx; ++i) {
-    unsigned I=i-xorigin;
-    f0[i][0] -= nuk(I*I)*w[i][0]; 
-  }
+  Hloop loop(this);
+  loop.Lloop(w,f0,&DNSBase::LinearAxes,&DNSBase::LinearDiag,
+	     &DNSBase::LinearMain);
 }
 
 void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
@@ -61,31 +21,16 @@ void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
   w.Set(wY);
   f0.Set(wSrc);
 
+
   f0(origin)=0.0;
   f1(origin)=0.0;
   g0(origin)=0.0;
   g1(origin)=0.0;
-  // TODO: optimize?
-  for(unsigned i=0; i < Nx; ++i) {
-    Real kx=k0*((int) i-(int) xorigin);
-    Real kx2=kx*kx;
-    vector wi=w[i];
-    vector f0i=f0[i];
-    vector f1i=f1[i];
-    vector g0i=g0[i];
-    vector g1i=g1[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real ky=k0*j;
-      Complex wij=wi[j];
-      Complex kxw=Complex(-kx*wij.im,kx*wij.re);
-      Complex kyw=Complex(-ky*wij.im,ky*wij.re);
-      f0i[j]=kxw;
-      f1i[j]=kyw;
-      Real k2inv=1.0/(kx2+ky*ky);
-      g0i[j]=k2inv*kyw;
-      g1i[j]=-k2inv*kxw;
-    }
-  }
+
+  Hloop loop(this);
+  loop.Nloop(w,f0,f1,g0,g1,&DNSBase::NonLinearAxes,&DNSBase::NonLinearDiag,
+	     &DNSBase::NonLinearMain);
+
   F[0]=f0;
   Convolution->convolve(F,G);
   f0(origin)=0.0;
@@ -114,8 +59,9 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   for(unsigned K=0; K < nshells; K++)
     T[K]=Complex(0.0,0.0);
 
-  Hloop loop(this); // could be moved to base class?
-  loop.Tloop(T,w,f0,&DNSBase::TransferAxesDiag,&DNSBase::TransferMain);
+  Hloop loop(this);
+  loop.Tloop(T,w,f0,&DNSBase::TransferAxes,&DNSBase::TransferDiag,
+	     &DNSBase::TransferMain);
 }
 
 // FIXME: temp
@@ -125,9 +71,9 @@ void DNSBase::Spectrum(vector& S, const vector& y)
   w.Set(y);
   for(unsigned K=0; K < nshells; K++)    
     S[K]=Complex(0.0,0.0);
-
-  Hloop loop(this); // could be moved to base class?
-  loop.Sloop(S,w,&DNSBase::SpectrumAxesDiag,&DNSBase::SpectrumMain);
+  Hloop loop(this);
+  loop.Sloop(S,w,&DNSBase::SpectrumAxes,&DNSBase::SpectrumDiag,
+	     &DNSBase::SpectrumMain);
 }
 
 void DNSBase::Stochastic(const vector2&Y, double, double dt)
@@ -145,25 +91,6 @@ void DNSBase::Initialize()
   setcount();
 }
 
-void DNSBase::setcountBINNED()
-{
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      const Real kint=sqrt(I2+j*j);
-      if(isvisible(i,j)) // FIXME
-	count[(unsigned)(kint-0.5)]++;
-    }
-  }
-}
-
-void DNSBase::setcountRAW(unsigned lambda2)
-{
-  Hloop loop(this); // could be moved to base class?
-  loop.Cloop(count,&DNSBase::CountAxesDiag,&DNSBase::CountMain);
-}
-
 void DNSBase::setcount()
 {
   for(unsigned i=0; i < nshells; i++)
@@ -171,15 +98,23 @@ void DNSBase::setcount()
   switch(spectrum) {
   case NOSPECTRUM:
     break;
-  case BINNED:
-    setcountBINNED();
-    break;
+  case BINNED: 
+    {
+      Hloop loop(this); // could be moved to base class?
+      loop.Cloop(count,&DNSBase::CountAxes,&DNSBase::CountDiag,
+		 &DNSBase::CountMain);
+      break;
+    }
  case INTERPOLATED:
    msg(ERROR,"interpolated spectrum not yet implemented");
    break;
  case RAW:
-   setcountRAW();
-   break;
+   {
+     Hloop loop(this); // could be moved to base class?
+     loop.Cloop(count,&DNSBase::CountAxes,&DNSBase::CountDiag,
+		&DNSBase::CountMain);
+     break;
+   }
   }
 }
 
