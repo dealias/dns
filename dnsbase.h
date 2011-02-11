@@ -268,6 +268,34 @@ public:
     g1d=-k2inv*kxw;
   }
 
+  void NonLinearMain2(unsigned I,unsigned j,
+		     Complex wa,Complex wb,
+		     Complex& f0a,Complex& f0b,
+		     Complex& f1a,Complex& f1b,
+		     Complex& g0a,Complex& g0b,
+		     Complex& g1a,Complex& g1b) {
+    Real k2inv=1.0/(k02*(I*I+j*j));
+
+    // a wi[j]
+    Real kx=k0*I;
+    Real ky=k0*j;
+    Complex kxw=Complex(-kx*wa.im,kx*wa.re);
+    Complex kyw=Complex(-ky*wa.im,ky*wa.re);
+    f0a=kxw;
+    f1a=kyw;
+    g0a=k2inv*kyw;
+    g1a=-k2inv*kxw;
+
+    // b wim[j]
+    kx=-k0*I;
+    kxw=Complex(-kx*wb.im,kx*wb.re);
+    kyw=Complex(-ky*wb.im,ky*wb.re);
+    f0b=kxw;
+    f1b=kyw;
+    g0b=k2inv*kyw;
+    g1b=-k2inv*kxw;
+  }
+
 
   void SpectrumAxes(unsigned I,vector& S,Complex wa0,Complex wa1)  {
     unsigned I2=I*I;
@@ -336,7 +364,8 @@ public:
 
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src[OMEGA],Y[OMEGA],t);
-    if(spectrum != NOSPECTRUM) Transfer(Src,Y);
+    if(spectrum != NOSPECTRUM) 
+      Transfer(Src,Y); // FIXME: called more oft than it should be with C_RKs
     LinearSource(Src[OMEGA],Y[OMEGA],t);
   }
 
@@ -462,6 +491,8 @@ public:
 };
 
 //***** loop class *****//
+
+// typedefs for pointers to functions in DNSBase
 typedef void (DNSBase::*Ca)(array1<unsigned>::opt&,unsigned);
 typedef void (DNSBase::*Cm)(array1<unsigned>::opt&,unsigned,unsigned);
 
@@ -473,23 +504,7 @@ typedef void (DNSBase::*Ta)(unsigned,vector&,Complex,Complex,Complex,Complex);
 typedef void (DNSBase::*Tm)(unsigned,unsigned,vector&,
 			    Complex,Complex,Complex,Complex,
 			    Complex,Complex,Complex,Complex);
-
-typedef void (DNSBase::*La)(unsigned,Complex,Complex,Complex&,Complex&);
-typedef void (DNSBase::*Lm)(unsigned,unsigned,
-			    Complex,Complex,Complex,Complex,
-			    Complex&,Complex&,Complex&,Complex&);
-
-typedef void (DNSBase::*Na)(unsigned,Complex,Complex,
-			    Complex&,Complex&,
-			    Complex&,Complex&,
-			    Complex&,Complex&,
-			    Complex&,Complex&);
-typedef void (DNSBase::*Nm)(unsigned,unsigned,
-			    Complex,Complex,Complex,Complex,
-			    Complex&,Complex&,Complex&,Complex&,
-			    Complex&,Complex&,Complex&,Complex&,
-			    Complex&,Complex&,Complex&,Complex&,
-			    Complex&,Complex&,Complex&,Complex&);
+// TODO: go back to varargs again?
 
 class Hloop{
  private:
@@ -526,16 +541,29 @@ class Hloop{
     xorigin=parent->getxorigin();
     m2=(m-1)*(m-1);
   }
-  void setradix(unsigned radix0) {radix=radix0;}
+  void setradix2() {radix=2;}
+  void setradix4() {radix=4;}
   void makesubgrid() {subgrid=true;}
   void setInvisible(unsigned inv) {Invisible=inv;}
 
   bool doaxes(unsigned I2) {return circular ? I2 <= m2: true;}
   bool dodiag(unsigned I2) {return circular ? 2*I2 <= m2: true;}
+  unsigned jstart(unsigned I) {
+    if(subgrid) {
+      if(circular)
+	msg(ERROR,"gotta enable circular in Hloop still");
+      if(radix == 2)
+	return Invisible-I;
+      if(radix == 4)
+	return I >= Invisible ? 1 : Invisible;
+    }
+    return 1; // not a subgrid
+  }
   unsigned jstop(unsigned I) {
     return  circular ? min((int)I,(int) ceil(sqrt(m2-I*I))) : I;
   }
 
+  // FIXME: not sure if I'm going to use this or not.
   virtual bool isvisible(unsigned i, unsigned j) {return true;}
   
   void Rloop(DynVector<unsigned> &R2) {
@@ -544,8 +572,9 @@ class Hloop{
       unsigned I2=I*I;
       if(doaxes(I2)) temp.Push(I2);
       if(dodiag(I2)) temp.Push(2*I2);
+      unsigned start =jstart(I);
       unsigned stop =jstop(I);
-      for(unsigned j=1; j < stop; ++j) {
+      for(unsigned j=start; j < stop; ++j) {
 	temp.Push(I2+j*j);
       }
     }
@@ -563,8 +592,9 @@ class Hloop{
       unsigned I2=I*I;
       if(doaxes(I2)) (parent->*afp)(C,I);
       if(dodiag(I2)) (parent->*dfp)(C,I);
+      unsigned start =jstart(I);
       unsigned stop =jstop(I);
-      for(unsigned j=1; j < stop; ++j) {
+      for(unsigned j=start; j < stop; ++j) {
 	(parent->*mfp)(C,I,j);
       }
     }
@@ -581,8 +611,9 @@ class Hloop{
       vector wi=w[i];
       vector wim=w[im];
       vector wxi=w[xorigin+I];
+      unsigned start =jstart(I);
       unsigned stop =jstop(I);
-      for(unsigned j=1; j < stop; ++j)
+      for(unsigned j=start; j < stop; ++j)
 	(parent->*mfp)(I,j,S,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I]);
       if(doaxes(I2)) (parent->*afp)(I,S,wx[I],wxi[0]);
       if(dodiag(I2)) (parent->*dfp)(I,S,wi[I],wim[I]);
@@ -601,8 +632,9 @@ class Hloop{
       vector wim=w[im];
       vector fi=f[i];
       vector fim=f[im];
+      unsigned start =jstart(I);
       unsigned stop =jstop(I);
-      for(unsigned j=1; j < stop; ++j) {
+      for(unsigned j=start; j < stop; ++j) {
 	(parent->*mfp)(I,j,T,
 		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
 		       fi[j],fim[j],f[xorigin-j][I],f[xorigin+j][I]);
@@ -614,79 +646,14 @@ class Hloop{
     }
   }
 
-  void Nloop(const array2<Complex> w, 
-	     array2<Complex> f0, array2<Complex> f1, 
-	     array2<Complex> g0, array2<Complex> g1,
-	     Na afp, Na dfp, Nm mfp) {
-    vector wx=w[xorigin];
-    vector f0x=f0[xorigin];
-    vector f1x=f1[xorigin];
-    vector g0x=g0[xorigin];
-    vector g1x=g1[xorigin];
-    for(unsigned I=1; I < m; I++) {
-      unsigned I2=I*I;
-      unsigned i=xorigin+I;
-      unsigned im=xorigin-I;
-      vector wi=w[i];
-      vector wim=w[im];
-      vector f0i=f0[i];
-      vector f0im=f0[im];
-      vector f1i=f1[i];
-      vector f1im=f1[im];
-      vector g0i=g0[i];
-      vector g0im=g0[im];
-      vector g1i=g1[i];
-      vector g1im=g1[im];
-      unsigned stop =jstop(I);
-      for(unsigned j=1; j < stop; ++j) {
-	(parent->*mfp)(I,j,
-		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
-		       f0i[j],f0im[j],f0[xorigin-j][I],f0[xorigin+j][I],
-		       f1i[j],f1im[j],f1[xorigin-j][I],f1[xorigin+j][I],
-		       g0i[j],g0im[j],g0[xorigin-j][I],g0[xorigin+j][I],
-		       g1i[j],g1im[j],g1[xorigin-j][I],g1[xorigin+j][I]);
-      }
-      if(doaxes(I2))
-	(parent->*afp)(I,wx[I],w[xorigin+I][0],
-		       f0x[I],f0[xorigin+I][0],
-		       f1x[I],f1[xorigin+I][0],
-		       g0x[I],g0[xorigin+I][0],
-		       g1x[I],g1[xorigin+I][0]);
-      if(dodiag(I2))
-	(parent->*dfp)(I,wi[I],wim[I],
-		       f0i[I],f0im[I],
-		       f1i[I],f1im[I],
-		       g0i[I],g0im[I],
-		       g1i[I],g1im[I]);
+  void killmodes(array2<Complex> A) {
+    // FIXME: kill modes here!
+    if(circular) {
+      // ....
     }
-  }
-  
-  void Lloop(const array2<Complex> w, array2<Complex> f,
-	     La afp, La dfp, Lm mfp) {
-    vector wx=w[xorigin];
-    vector fx=f[xorigin];
-    for(unsigned I=1; I < m; I++) {
-      unsigned I2=I*I;
-      unsigned i=xorigin+I;
-      unsigned im=xorigin-I;
-      vector wi=w[i];
-      vector wim=w[im];
-      vector fi=f[i];
-      vector fim=f[im];
-      unsigned stop =jstop(I);
-      for(unsigned j=1; j < stop; ++j) {
-	(parent->*mfp)(I,j,
-		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
-		       fi[j],fim[j],f[xorigin-j][I],f[xorigin+j][I]);
-      }
-      if(doaxes(I2))
-	(parent->*afp)(I,wx[I],w[xorigin+I][0],fx[I],f[xorigin+I][0]);
-      if(dodiag(I2))
-	(parent->*dfp)(I,wi[I],wim[I],fi[I],fim[I]);
-    }
+    // radix-2 and radix-4 kills as well?
   }
 
-  
 };
 
 
