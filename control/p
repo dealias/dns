@@ -1,6 +1,5 @@
 Nx=63
 Ny=63
-casimir=0
 checkpoint=0
 deltaf=1
 digits=15
