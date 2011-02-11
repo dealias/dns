@@ -17,7 +17,6 @@ using namespace fftwpp;
 using std::ostringstream;
 
 extern unsigned spectrum;
-extern unsigned casimir;
 
 extern int pH;
 extern int pL;
@@ -60,7 +59,6 @@ protected:
   oxstream fwk,fw,fekvk,ftransfer;
   ofstream ft,fevt;
   
-  void CasimirTransfer(const vector2& Src, const vector2& Y);
   ImplicitHTConvolution2 *TConvolution;
   oxstream ftransferN;
   Array2<Complex> f,g,h;
