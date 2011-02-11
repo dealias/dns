@@ -239,6 +239,13 @@ public:
   }
 
   virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);
+  void AddInvariants(unsigned k2int, Real w2, Real& E, Real& Z, Real& P) {
+    Z += w2;
+    Real k2=k2int*k02;
+    E += w2/k2;
+    P += k2*w2;
+  }
+  
   void Stochastic(const vector2& Y, double, double);
 
   array1<unsigned>::opt count;
@@ -280,6 +287,8 @@ public:
 // typedefs for pointers to functions in DNSBase
 typedef void (DNSBase::*Ca)(array1<unsigned>::opt&,unsigned);
 typedef void (DNSBase::*Cm)(array1<unsigned>::opt&,unsigned,unsigned);
+
+typedef void (DNSBase::*Invarfp)(unsigned,Real,Real&,Real&,Real&);
 
 typedef void (DNSBase::*Sa)(unsigned,vector&,Complex,Complex);
 typedef void (DNSBase::*Sm)(unsigned,unsigned,
@@ -381,6 +390,31 @@ class Hloop{
       unsigned stop =jstop(I);
       for(unsigned j=start; j < stop; ++j) {
 	(parent->*mfp)(C,I,j);
+      }
+    }
+  }
+
+  void Invloop(const array2<Complex> w, Real &E, Real &Z, Real &P,
+	       Invarfp fp) {
+    vector wx=w[xorigin];
+    for(unsigned I=1; I < m; I++) {
+      unsigned I2=I*I;
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      vector wxi=w[xorigin+I];
+      if(doaxes(I2)) 
+	(parent->*fp)(I2,abs2(wx[I])+abs2(wxi[0]),E,Z,P);
+      if(dodiag(2*I2)) 
+	(parent->*fp)(2*I2,abs2(wi[I])+abs2(wim[I]),E,Z,P);
+      unsigned start =jstart(I);
+      unsigned stop =jstop(I);
+      for(unsigned j=start; j < stop; ++j) {
+	(parent->*fp)(I2+j*j,
+		      abs2(wi[j])+abs2(wim[j])+
+		      abs2(w[xorigin-j][I])+abs2(w[xorigin+j][I]),
+		      E,Z,P);
       }
     }
   }

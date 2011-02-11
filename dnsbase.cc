@@ -208,20 +208,9 @@ void DNSBase::OutFrame(int)
 void DNSBase::ComputeInvariants(const array2<Complex> &w, 
 				Real& E, Real& Z, Real& P)
 {
-  // TODO: optimize?
   E=Z=P=0.0;
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real w2=abs2(wi[j]);
-      Z += w2;
-      Real k2=(I2+j*j)*k02;
-      E += w2/k2;
-      P += k2*w2;
-    }
-  }
+  Hloop loop(this);
+  loop.Invloop(w,E,Z,P,&DNSBase::AddInvariants);
 }
 
 void DNSBase::FinalOutput()
