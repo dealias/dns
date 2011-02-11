@@ -146,169 +146,16 @@ public:
     C[(this->*Sindex)(I,j,sqrt(I*I+j*j))] += 4;
   }
 
-  void LinearAxes(unsigned I,
-		  Complex wa0,Complex wa1,Complex& fa0,Complex& fa1)  {
-    Real nukk=nuk(I*I);
-    fa0 -= nukk*wa0;
-    fa1 -= nukk*wa1;
-  }
-  void LinearDiag(unsigned I,
-		  Complex wd0,Complex wd1,Complex& fd0,Complex& fd1)  {
-    Real nukk=nuk(2*(I*I));
-    fd0 -= nukk*wd0;
-    fd1 -= nukk*wd1;
-  }
-  void LinearMain(unsigned I,unsigned j,
-		  Complex w0,Complex w1,Complex w2,Complex w3,
-		  Complex& f0,Complex& f1,Complex& f2,Complex& f3) {
-    Real nukk=nuk(I*I+j*j);
-    f0 -= nukk*w0;
-    f1 -= nukk*w1;
-    f2 -= nukk*w2;
-    f3 -= nukk*w3;
-  }
-
-  void NonLinearAxes(unsigned I,
-		     Complex wa,Complex wb,
-		     Complex& f0a,Complex& f0b,
-		     Complex& f1a,Complex& f1b,
-		     Complex& g0a,Complex& g0b,
-		     Complex& g1a,Complex& g1b)  {
-    Real k2inv=1.0/(k02*(I*I));
-
-    // wx[I]
-    Real ky=k0*I;
-    Complex kyw=Complex(-ky*wa.im,ky*wa.re);
-    f0a=0;
-    f1a=kyw;
-    g0a=k2inv*kyw;
-    g1a=0;
-
-    // w[xorigin+I][0]
-    Real kx=k0*I;
-    Complex kxw=Complex(-kx*wb.im,kx*wb.re);
-    f0b=kxw;
-    f1b=0;
-    g0b=0;
-    g1b=-k2inv*kxw;
-  }
-
-  void NonLinearDiag(unsigned I,
-		     Complex wa,Complex wb,
-		     Complex& f0a,Complex& f0b,
-		     Complex& f1a,Complex& f1b,
-		     Complex& g0a,Complex& g0b,
-		     Complex& g1a,Complex& g1b)  {
-    Real k2inv=1.0/(k02*(2*I*I));
-
-    // wi[I]
-    Real kx=k0*I;
-    Real ky=k0*I;
-    Complex kxw=Complex(-kx*wa.im,kx*wa.re);
-    Complex kyw=Complex(-ky*wa.im,ky*wa.re);
-    f0a=kxw;
-    f1a=kyw;
-    g0a=k2inv*kyw;
-    g1a=-k2inv*kxw;
-
-    // wim[I]
-    kx=-kx;
-    kxw=Complex(-kx*wb.im,kx*wb.re);
-    kyw=Complex(-ky*wb.im,ky*wb.re);
-    f0b=kxw;
-    f1b=kyw;
-    g0b=k2inv*kyw;
-    g1b=-k2inv*kxw;
-  }
-
-  void NonLinearMain(unsigned I,unsigned j,
-		     Complex wa,Complex wb,Complex wc,Complex wd,
-		     Complex& f0a,Complex& f0b,Complex& f0c,Complex& f0d,
-		     Complex& f1a,Complex& f1b,Complex& f1c,Complex& f1d,
-		     Complex& g0a,Complex& g0b,Complex& g0c,Complex& g0d,
-		     Complex& g1a,Complex& g1b,Complex& g1c,Complex& g1d) {
-    Real k2inv=1.0/(k02*(I*I+j*j));
-
-    // a wi[j]
-    Real kx=k0*I;
-    Real ky=k0*j;
-    Complex kxw=Complex(-kx*wa.im,kx*wa.re);
-    Complex kyw=Complex(-ky*wa.im,ky*wa.re);
-    f0a=kxw;
-    f1a=kyw;
-    g0a=k2inv*kyw;
-    g1a=-k2inv*kxw;
-
-    // b wim[j]
-    kx=-k0*I;
-    kxw=Complex(-kx*wb.im,kx*wb.re);
-    kyw=Complex(-ky*wb.im,ky*wb.re);
-    f0b=kxw;
-    f1b=kyw;
-    g0b=k2inv*kyw;
-    g1b=-k2inv*kxw;
-
-    // c w[xorigin-j][I]
-    kx=-k0*j;
-    ky=k0*I;
-    kxw=Complex(-kx*wc.im,kx*wc.re);
-    kyw=Complex(-ky*wc.im,ky*wc.re);
-    f0c=kxw;;
-    f1c=kyw;
-    g0c=k2inv*kyw;
-    g1c=-k2inv*kxw;
-
-    // d w[xorigin+j][I]
-    kx=-kx;
-    kxw=Complex(-kx*wd.im,kx*wd.re);
-    kyw=Complex(-ky*wd.im,ky*wd.re);
-    f0d=kxw;
-    f1d=kyw;
-    g0d=k2inv*kyw;
-    g1d=-k2inv*kxw;
-  }
-
-  void NonLinearMain2(unsigned I,unsigned j,
-		     Complex wa,Complex wb,
-		     Complex& f0a,Complex& f0b,
-		     Complex& f1a,Complex& f1b,
-		     Complex& g0a,Complex& g0b,
-		     Complex& g1a,Complex& g1b) {
-    Real k2inv=1.0/(k02*(I*I+j*j));
-
-    // a wi[j]
-    Real kx=k0*I;
-    Real ky=k0*j;
-    Complex kxw=Complex(-kx*wa.im,kx*wa.re);
-    Complex kyw=Complex(-ky*wa.im,ky*wa.re);
-    f0a=kxw;
-    f1a=kyw;
-    g0a=k2inv*kyw;
-    g1a=-k2inv*kxw;
-
-    // b wim[j]
-    kx=-k0*I;
-    kxw=Complex(-kx*wb.im,kx*wb.re);
-    kyw=Complex(-ky*wb.im,ky*wb.re);
-    f0b=kxw;
-    f1b=kyw;
-    g0b=k2inv*kyw;
-    g1b=-k2inv*kxw;
-  }
-
-
   void SpectrumAxes(unsigned I,vector& S,Complex wa0,Complex wa1)  {
     unsigned I2=I*I;
     Real Wall=abs2(wa0)+abs2(wa1);
     S[(this->*Sindex)(I,0,I)] += Complex(Wall/(k0*I),nuk(I2)*Wall);
-    //S[kval[I][0]] += Complex(Wall/(k0*I),nuk(I2)*Wall);
   }
   void SpectrumDiag(unsigned I, vector& S,Complex wd0,Complex wd1)  {
     unsigned I2=I*I;
     Real Wall=abs2(wd0)+abs2(wd1);
     Real k=sqrt2*I;
     S[(this->*Sindex)(I,I,k)] += Complex(Wall/(k0*k),nuk(I2+I2)*Wall);
-    //S[kval[I][I]] += Complex(Wall/(k0*k),nuk(2*I2)*Wall);
   }    
   void SpectrumMain(unsigned I,unsigned j, vector& S,
 		    Complex w0,Complex w1,Complex w2,Complex w3) {
@@ -316,24 +163,20 @@ public:
     unsigned k2=I*I+j*j;
     Real k=sqrt(k2);
     S[(this->*Sindex)(I,j,k)] += Complex(Wall/(k0*k),nuk(k2)*Wall);
-    //S[kval[I][j]] += Complex(Wall/(k0*k),nuk(k2)*Wall);
   }
 
   void TransferAxes(unsigned I, vector& T,
 		    Complex wa0,Complex wa1,Complex fa0,Complex fa1)  {
-    //T[kval[I][0]] += realproduct(wa0,fa0) + realproduct(wa1,fa1);
     T[(this->*Sindex)(I,0,I)] += realproduct(wa0,fa0) + realproduct(wa1,fa1);
   }
   void TransferDiag(unsigned I,vector& T,
 		    Complex wd0,Complex wd1,Complex fd0,Complex fd1)  {
-    //T[kval[I][I]] += realproduct(wd0,fd0) + realproduct(wd1,fd1);
     T[(this->*Sindex)(I,0,I)] += realproduct(wd0,fd0) + realproduct(wd1,fd1);
   }
   void TransferMain(unsigned I,unsigned j, vector& T,
 		    Complex w0,Complex w1,Complex w2,Complex w3,
 		    Complex f0,Complex f1,Complex f2,Complex f3) {
     T[(this->*Sindex)(I,j,sqrt(I*I+j*j))] 
-      //T[kval[I][j]]
       += realproduct(w0,f0) + realproduct(w1,f1) 
       +  realproduct(w2,f2) + realproduct(w3,f3);
   }
@@ -418,64 +261,6 @@ public:
     return k0*(i+1);
   }
 
-  void findrads(DynVector<unsigned> &R2, array1<unsigned> nr, 
-		unsigned m=0, Real lambda=0, unsigned Invisible=0)
-  {
-    for(unsigned i=1; i < my; ++i) {
-      //unsigned start=nr[(unsigned) floor(sqrt((i-1)/2))];
-      double nrstart=floor(sqrt((i-1)/2));
-      unsigned start=nr[nrstart > 1 ? (unsigned) nrstart -1 : 0];
-      start=0; // FIXME: restore and optimize.
-      for(unsigned x=i-1; x <= i; ++x) {
-	unsigned x2=x*x;
-	unsigned ystopnow= i < x ? i : x;
-	for(unsigned y= x == 0 ? 1 : 0; y <= ystopnow; ++y) {
-	  if(isvisible(x,y,m,lambda,Invisible)) {
-	    check_rvn(R2,x2+y*y,start);
-	  }
-	}
-      }
-      nr[i]=R2.Size();
-    }
-  }
-
-  void killmodes(array2<Complex> &A) {
-    if(circular) {
-      unsigned m2=my*my;
-      for(unsigned i=0; i < Nx; ++i) {
-	vector Ai=A[i];
-	unsigned I= i > xorigin ? i-xorigin : xorigin-i; 
-	unsigned start=(unsigned) ceil(sqrt(m2-I*I));
-	for(unsigned j=start; j < my; ++j) {
-	  Ai[j]=0.0;
-	}
-      }
-    }
-  }
-
-  virtual bool isvisible(unsigned I, unsigned j, 
-			 unsigned m=0, Real lambda=0, unsigned Invsible=0) {
-    if(circular) 
-      return I*I + j*j <= my*my;
-    return true;
-  }
-
-  virtual unsigned diagstart() {return 1;}
-  virtual unsigned diagstop() {
-    if(circular) 
-      return (unsigned) ceil((my-1)/sqrt(2.0));
-    return mx;
-  }
-  virtual unsigned mainjstart(unsigned I) {return 1;}
-  virtual unsigned mainjstop(unsigned I) {
-    if(circular) 
-      return min(I,(unsigned) ceil(sqrt((my-1)*(my-1)-I*I)));
-    return I;
-  }
-  virtual unsigned xoriginstart() {return 1;}
-  virtual unsigned xoriginstop() {return my;}
-  virtual unsigned bottomstart() {return 1;}
-  virtual unsigned bottomstop() {return mx;}
 };
 
 //***** initial conditions *****//
@@ -647,12 +432,50 @@ class Hloop{
   }
 
   void killmodes(array2<Complex> A) {
-    // FIXME: kill modes here!
-    if(circular) {
-      // ....
+    if(circular && false) {
+      vector Ax=A[xorigin];
+      for(unsigned I=1; I < m; I++) {
+	unsigned I2=I*I;
+	vector Ai=A[xorigin+I];
+	vector Aim=A[xorigin-I];
+	if(!doaxes(I2)) Ax[I]=A[xorigin+I][0]=0;
+	if(!dodiag(I2)) Ai[I]=Aim[I]=0;
+	unsigned start =jstop(I);
+	for(unsigned j=start; j < m; ++j)
+	  Ai[j]=Aim[j]=A[xorigin-j][I]=A[xorigin+j][I]=0;
+      }
     }
     // radix-2 and radix-4 kills as well?
+    // via a isvisible(unsigned I, unsigned j) ?
   }
+
+
+  // TODO: work this stuff into the loop class
+  /*
+    virtual bool isvisible(unsigned I, unsigned j, 
+			 unsigned m=0, Real lambda=0, unsigned Invsible=0) {
+    if(circular) 
+      return I*I + j*j <= my*my;
+    return true;
+  }
+
+  virtual unsigned diagstart() {return 1;}
+  virtual unsigned diagstop() {
+    if(circular) 
+      return (unsigned) ceil((my-1)/sqrt(2.0));
+    return mx;
+  }
+  virtual unsigned mainjstart(unsigned I) {return 1;}
+  virtual unsigned mainjstop(unsigned I) {
+    if(circular) 
+      return min(I,(unsigned) ceil(sqrt((my-1)*(my-1)-I*I)));
+    return I;
+  }
+  virtual unsigned xoriginstart() {return 1;}
+  virtual unsigned xoriginstop() {return my;}
+  virtual unsigned bottomstart() {return 1;}
+  virtual unsigned bottomstop() {return mx;}
+  */
 
 };
 

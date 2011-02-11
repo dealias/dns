@@ -91,8 +91,9 @@ void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
   Convolution->convolve(F,G);
   f0(origin)=0.0;
   
-  killmodes(f0);
-  killmodes(w);
+  Hloop loop(this);
+  loop.killmodes(f0);
+  loop.killmodes(w);
 
 #if 0
   Real sum=0.0;

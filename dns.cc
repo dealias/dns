@@ -389,7 +389,8 @@ void DNS::InitialConditions()
   w.Set(Y[OMEGA]);
   InitialCondition->Set(w,NY[OMEGA]);
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
-  killmodes(w);
+  Hloop loop(this);
+  loop.killmodes(w);
 
   Set(T,Y[TRANSFER]);
   for(unsigned i=0; i < nshells; i++)
