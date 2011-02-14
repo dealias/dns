@@ -306,6 +306,8 @@ class Hloop{
   DNSBase *parent;
   unsigned radix, Invisible, m2;
   bool subgrid;
+  Real innerradius, innerradius2;
+  unsigned Astart, Astop, Dstart, Dstop; 
  public:
   Hloop() {radix=1; subgrid=false; Invisible=0;}
   Hloop(DNSBase *parent0) {
@@ -327,6 +329,9 @@ class Hloop{
     m=(N+1)/2;
     xorigin=m-1;
     m2=(m-1)*(m-1);
+    innerradius=0;
+    subgrid=false;
+    bounds();
   }
   void setparams(DNSBase *parent0) {
     parent=parent0;
@@ -334,18 +339,53 @@ class Hloop{
     m=parent->getmx();
     xorigin=parent->getxorigin();
     m2=(m-1)*(m-1);
+    innerradius=0;
+    subgrid=false;
+    bounds();
+  }
+  void setinnerradius(unsigned nold) {
+    Real a=max((nold-1.0),0.0);
+    innerradius=sqrt(a*a/radix);
+    bounds();
   }
   void setradix2() {radix=2;}
   void setradix4() {radix=4;}
   void makesubgrid() {subgrid=true;}
   void setInvisible(unsigned inv) {Invisible=inv;}
 
-  bool doaxes(unsigned I2) {return circular ? I2 <= m2: true;}
-  bool dodiag(unsigned I2) {return circular ? 2*I2 <= m2: true;}
-  unsigned jstart(unsigned I) {
+  void bounds() {
+    innerradius2=innerradius*innerradius;
+    Astop=m;
+    Dstart=1;
+
+    if(!subgrid) { // standard DNS
+      Astart=1;
+      if(circular) 
+	Dstop=(unsigned) ceil(((Real) m)/sqrt2);
+      else 
+	Dstop=m;
+      
+    } else { // this is MDNS
+      if(circular) { 
+	if(Invisible == 0) // we are the first grid
+	  Astart=1;
+	else 
+	  Astart=0; // FIXME: something to do with innerradius
+      } else {
+	if(radix == 2) {
+	  Astart=Invisible/2;
+	} else { // radix == 1 or radix == 4
+	  Astart=Invisible;
+	}
+      }
+    }
+  }
+ unsigned jstart(unsigned I) {
     if(subgrid) {
-      if(circular)
+      if(circular) {
 	msg(ERROR,"gotta enable circular in Hloop still");
+	return 1+ (unsigned) floor(sqrt(innerradius2 - I*I));
+      }
       if(radix == 2)
 	return Invisible-I;
       if(radix == 4)
@@ -356,16 +396,23 @@ class Hloop{
   unsigned jstop(unsigned I) {
     return  circular ? min((int)I,(int) ceil(sqrt(m2-I*I))) : I;
   }
+  unsigned jkillstart(unsigned I) {
+    if(!circular) return m; // no kill I
+    if(I < Dstop) return m;
+    return (int) ceil(sqrt(m2-I*I));
+  }
 
   // FIXME: not sure if I'm going to use this or not.
   virtual bool isvisible(unsigned i, unsigned j) {return true;}
   
   void Rloop(DynVector<unsigned> &R2) {
     DynVector<unsigned> temp;
+    for(unsigned I=Astart; I < Astop; ++I)
+      temp.Push(I*I);
+    for(unsigned I=Dstart; I < Dstop; ++I)
+      temp.Push(2*I*I);
     for(unsigned I=1; I < m; I++) {
       unsigned I2=I*I;
-      if(doaxes(I2)) temp.Push(I2);
-      if(dodiag(I2)) temp.Push(2*I2);
       unsigned start =jstart(I);
       unsigned stop =jstop(I);
       for(unsigned j=start; j < stop; ++j) {
@@ -379,35 +426,44 @@ class Hloop{
       if(temp[i] != R2[last])
 	R2[++last]=temp[i];
     }
+    //cout << "R2 " << R2  << endl; 
   }
 
   void Cloop(array1<unsigned>::opt &C, Ca afp, Ca dfp, Cm mfp) {
+    for(unsigned I=Astart; I < Astop; ++I)
+      (parent->*afp)(C,I);
+    for(unsigned I=Dstart; I < Dstop; ++I)
+      (parent->*dfp)(C,I);
     for(unsigned I=1; I < m; I++) {
-      unsigned I2=I*I;
-      if(doaxes(I2)) (parent->*afp)(C,I);
-      if(dodiag(I2)) (parent->*dfp)(C,I);
       unsigned start =jstart(I);
       unsigned stop =jstop(I);
       for(unsigned j=start; j < stop; ++j) {
 	(parent->*mfp)(C,I,j);
       }
     }
+    //cout << "C:" << C << endl;
   }
 
-  void Invloop(const array2<Complex> w, Real &E, Real &Z, Real &P,
+  void Invariantsloop(const array2<Complex> w, Real &E, Real &Z, Real &P,
 	       Invarfp fp) {
     vector wx=w[xorigin];
+    for(unsigned I=Astart; I < Astop; ++I) {
+      vector wxi=w[xorigin+I];
+      (parent->*fp)(I*I,abs2(wx[I])+abs2(wxi[0]),E,Z,P);
+    }
+    for(unsigned I=Dstart; I < Dstop; ++I) {
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      (parent->*fp)(2*I*I,abs2(wi[I])+abs2(wim[I]),E,Z,P);
+    }
     for(unsigned I=1; I < m; I++) {
       unsigned I2=I*I;
       unsigned i=xorigin+I;
       unsigned im=xorigin-I;
       vector wi=w[i];
       vector wim=w[im];
-      vector wxi=w[xorigin+I];
-      if(doaxes(I2)) 
-	(parent->*fp)(I2,abs2(wx[I])+abs2(wxi[0]),E,Z,P);
-      if(dodiag(2*I2)) 
-	(parent->*fp)(2*I2,abs2(wi[I])+abs2(wim[I]),E,Z,P);
       unsigned start =jstart(I);
       unsigned stop =jstop(I);
       for(unsigned j=start; j < stop; ++j) {
@@ -423,19 +479,26 @@ class Hloop{
   // something, put it into the appropriate index of S, a spectrum-like array
   void Sloop(vector& S, const array2<Complex> w,Sa  afp,Sa  dfp, Sm mfp) {
     vector wx=w[xorigin];
-    for(unsigned I=1; I < m; I++) {
-      unsigned I2=I*I;
+    for(unsigned I=Astart; I < Astop; ++I) {
+      vector wxi=w[xorigin+I];
+      (parent->*afp)(I,S,wx[I],wxi[0]);
+    }
+    for(unsigned I=Dstart; I < Dstop; ++I) {
       unsigned i=xorigin+I;
       unsigned im=xorigin-I;
       vector wi=w[i];
       vector wim=w[im];
-      vector wxi=w[xorigin+I];
+      (parent->*dfp)(I,S,wi[I],wim[I]);
+    }
+    for(unsigned I=1; I < m; I++) {
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
       unsigned start =jstart(I);
       unsigned stop =jstop(I);
       for(unsigned j=start; j < stop; ++j)
 	(parent->*mfp)(I,j,S,wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I]);
-      if(doaxes(I2)) (parent->*afp)(I,S,wx[I],wxi[0]);
-      if(dodiag(I2)) (parent->*dfp)(I,S,wi[I],wim[I]);
     }
   }
   
@@ -443,8 +506,22 @@ class Hloop{
 	     Ta afp, Ta dfp, Tm mfp) {
     vector wx=w[xorigin];
     vector fx=f[xorigin];
+    for(unsigned I=Astart; I < Astop; ++I) {
+      vector wxi=w[xorigin+I];
+      vector fxi=f[xorigin+I];
+      (parent->*afp)(I,T,wx[I],wxi[0],fx[I],fxi[0]);
+    }
+    for(unsigned I=Dstart; I < Dstop; ++I) {
+      unsigned i=xorigin+I;
+      unsigned im=xorigin-I;
+      vector wi=w[i];
+      vector wim=w[im];
+      vector fi=f[i];
+      vector fim=f[im];
+      (parent->*dfp)(I,T,wi[I],wim[I],fi[I],fim[I]);
+    }
+
     for(unsigned I=1; I < m; I++) {
-      unsigned I2=I*I;
       unsigned i=xorigin+I;
       unsigned im=xorigin-I;
       vector wi=w[i];
@@ -458,58 +535,33 @@ class Hloop{
 		       wi[j],wim[j],w[xorigin-j][I],w[xorigin+j][I],
 		       fi[j],fim[j],f[xorigin-j][I],f[xorigin+j][I]);
       }
-      if(doaxes(I2))
-	(parent->*afp)(I,T,wx[I],w[xorigin+I][0],fx[I],f[xorigin+I][0]);
-      if(dodiag(I2))
-	(parent->*dfp)(I,T,wi[I],wim[I],fi[I],fim[I]);
     }
   }
 
+  // FIXME: something is wrong here
   void killmodes(array2<Complex> A) {
-    if(circular && false) {
+    if(circular) {
       vector Ax=A[xorigin];
-      for(unsigned I=1; I < m; I++) {
-	unsigned I2=I*I;
+      for(unsigned I=Astop; I < m; ++I) 
+	Ax[I]=A[xorigin+I][0]=0;
+      for(unsigned I=Dstop; I < m; ++I) 
+	A[xorigin+I][I]=A[xorigin-I][I]=0;
+      for(unsigned I=Dstop; I < m; I++) {
 	vector Ai=A[xorigin+I];
 	vector Aim=A[xorigin-I];
-	if(!doaxes(I2)) Ax[I]=A[xorigin+I][0]=0;
-	if(!dodiag(I2)) Ai[I]=Aim[I]=0;
-	unsigned start =jstop(I);
-	for(unsigned j=start; j < m; ++j)
+	unsigned start =jkillstart(I);
+	//cout << I << "->" << start << endl;
+	for(unsigned j=start; j < m; ++j) {
+	  //cout << " " << j ;
 	  Ai[j]=Aim[j]=A[xorigin-j][I]=A[xorigin+j][I]=0;
+	}
+	//cout << endl;
       }
     }
+    // TODO:
     // radix-2 and radix-4 kills as well?
-    // via a isvisible(unsigned I, unsigned j) ?
+    // via isvisible(unsigned I, unsigned j) ?
   }
-
-
-  // TODO: work this stuff into the loop class
-  /*
-    virtual bool isvisible(unsigned I, unsigned j, 
-			 unsigned m=0, Real lambda=0, unsigned Invsible=0) {
-    if(circular) 
-      return I*I + j*j <= my*my;
-    return true;
-  }
-
-  virtual unsigned diagstart() {return 1;}
-  virtual unsigned diagstop() {
-    if(circular) 
-      return (unsigned) ceil((my-1)/sqrt(2.0));
-    return mx;
-  }
-  virtual unsigned mainjstart(unsigned I) {return 1;}
-  virtual unsigned mainjstop(unsigned I) {
-    if(circular) 
-      return min(I,(unsigned) ceil(sqrt((my-1)*(my-1)-I*I)));
-    return I;
-  }
-  virtual unsigned xoriginstart() {return 1;}
-  virtual unsigned xoriginstop() {return my;}
-  virtual unsigned bottomstart() {return 1;}
-  virtual unsigned bottomstop() {return mx;}
-  */
 
 };
 

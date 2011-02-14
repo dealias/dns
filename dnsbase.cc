@@ -210,7 +210,7 @@ void DNSBase::ComputeInvariants(const array2<Complex> &w,
 {
   E=Z=P=0.0;
   Hloop loop(this);
-  loop.Invloop(w,E,Z,P,&DNSBase::AddInvariants);
+  loop.Invariantsloop(w,E,Z,P,&DNSBase::AddInvariants);
 }
 
 void DNSBase::FinalOutput()
