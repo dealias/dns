@@ -40,9 +40,9 @@ title("Convolutions");
 item("The convolution of the functions $f$ and $g$ is");
 equation("(f*g)(t)=\int_{-\infty}^\infty f(\tau) g(t-\tau)\, d\tau.");
 item("For example, if $f=g=\chi_{(-1,1)}(t)$");
-figure("cyrc_f");
+figure("figures/cyrc_f");
 item("Then $f*g$ is:");
-figure("cyrc_fg");
+figure("figures/cyrc_fg");
 
 title("Applications");
 item("Out-of-focus images are a convolution:");
@@ -94,7 +94,7 @@ step();
 equation("= {\color{green} \sum_{m=0}^{n} f_{m} g_{n-m}}.");
 
 title("Dealiasing via Explicit Zero-Padding");
-indexedfigure("cyrc_1exp",0,5,"width=22cm");
+indexedfigure("figures/cyrc_1exp",0,5,"width=22cm");
 item("Convolving these padded arrays takes $6K N \log_2 2N$ operations,");
 item("and twice the memory of a circular convolution.");
 item("CPU speed and memory size have increased much faster than memory bandwidth;  this is the {\it von-Neumann bottleneck}.");
@@ -114,7 +114,7 @@ equation("{\color{green} f*g}=\frac{1}{2}\left(f*_{\scriptscriptstyle N}g +f*_{\
 
 
 title("Phase-shift Dealiasing");
-indexedfigure("cyrc_1ph",0,4,"width=22cm");
+indexedfigure("figures/cyrc_1ph",0,4,"width=22cm");
 item("We don't need to copy data to a larger buffer first.");
 skip();
 item("Convolving these padded arrays takes $6K N \log_2 N$ operations,");
@@ -140,7 +140,7 @@ equation("F_{2k}=\sum_{n=0}^{N-1}e^{-\frac{2\pi i}{N}kn}\,f_n, \quad F_{2k+1}=\s
 step();
 remark("which {\it are} Fourier transforms.");
 step();
-indexedfigure("cyrc_1d",0,2,"width=10cm");
+indexedfigure("figures/cyrc_1d",0,2,"width=10cm");
 //skip();
 item("The inverse is the sum of two Fourier transforms:");
 equation("f_n=\frac{1}{N}\(\sum_{k=0}^{N-1}e^{\frac{2\pi i}{N}kn}F_{2k}+e^{\frac{\pi i}{N}n}\sum_{k=0}^{N-1}e^{\frac{2\pi i}{N}kn}F_{2k+1}\).");
@@ -151,7 +151,7 @@ item("There is one advantage:");
 step();
 remark("\quad the work buffer is separate from the data buffer.");
 step();
-indexedfigure("cyrc_1imp",0,3,"width=22cm");
+indexedfigure("figures/cyrc_1imp",0,3,"width=22cm");
 item("The computational complexity is $6 K N \log_2 N/2$.");
 item("By swapping arrays, we can use out-of-place transforms.");
 item("The numerical error is similar to explicit padding.");
@@ -164,18 +164,18 @@ item("Ours is much more complicated.");
 
 title("Convolutions in Higher Dimensions");
 item("An explicitly padded convolution in 2 dimensions requires $12N$ padded FFTs, and 4 times the memory of a cyclic convolution.");
-indexedfigure("cyrc_2exp",0,5,"width=14cm");
+indexedfigure("figures/cyrc_2exp",0,5,"width=14cm");
 
 title("Implicit Convolutions in Higher Dimensions");
 item("Implicitly padded 2-dimensional convolutions are done by first doing implicitly padded FFTs in the $x$ direction:");
-indexedfigure("cyrc_2dx",0,1,"width=11cm");
+indexedfigure("figures/cyrc_2dx",0,1,"width=11cm");
 item("And then $2N$ one-dimensional convolutions in the $y$-direction:");
-indexedfigure("cyrc_2dc",0,1,"width=11cm");
+indexedfigure("figures/cyrc_2dc",0,1,"width=11cm");
 
 
 title("Implicit Convolutions in Higher Dimensions");
 item("We recover $f*g$ by taking an inverse padded $x$-FFT:");
-indexedfigure("cyrc_2dxinv",0,1,"width=6cm");
+indexedfigure("figures/cyrc_2dxinv",0,1,"width=6cm");
 
 //newslide();
 //item("2D fast convolutions involve a series of FFTs, once for each dimension.");
@@ -200,7 +200,7 @@ item("This requires copying data, which is slow.");
 skip();
 item("Half of the FFTs in the $x$-direction are on zero-data.");
 item("We can skip (``prune\") such transforms:");
-figure("cyrc_prune","height=4cm");
+figure("figures/cyrc_prune","height=4cm");
 item("This is slower with large data sets due to memory-striding issues.");
 item("Phase-shift dealiasing has the same memory footprint as ``1/2\" explicit padding.");
 
