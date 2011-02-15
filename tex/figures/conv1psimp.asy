@@ -111,7 +111,7 @@ for(int i=0; i<4; ++i){
   z=(0,h);
   filldraw(pic,shift(z)*g,convpen);
   pair plast=z+(wx/2,0)+(0,w);
-  label(pic,"$\{(f*g)_n\}_{n=0}^{N-1}$",plast-(0,w/2),labelpen);
+  label(pic,"$\{(F*G)_k\}_{k=0}^{N-1}$",plast-(0,w/2),labelpen);
   draw(pic,Pe-(0,w)..plast,EndArrow);
   draw(pic,Po-(0,w)..plast,EndArrow);
   

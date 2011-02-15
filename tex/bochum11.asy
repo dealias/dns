@@ -71,7 +71,7 @@ title("Discrete Convolutions");
 skip();
 item("Applications use a {\it discrete linear convolution}:");
 skip();
-equation("{\color{darkgreen} (F*G)_k}={\color{darkgreen}\sum_{\ell=0}^k F_m G_{k-\ell}}.");
+equation("{\color{darkgreen} (F*G)_k}={\color{darkgreen}\sum_{\ell=0}^k F_\ell G_{k-\ell}}.");
 skip();
 item("Calculating $\{(F*G)_k\}_{k=0}^{N-1}$ directly takes $\O(N^2)$ operations.");
 skip();
@@ -127,12 +127,12 @@ item("CPU speed and memory size have increased much faster than memory bandwidth
 
 title("Phase-shift Dealiasing");
 item("The shifted Fourier transform \cite{Patterson71} is");
-equation("f^\Delta \doteq \{\F^\Delta[F]\}_k=\sum_{k=0}^{N-1} e^{-\frac{2\pi i}{N}(n+\Delta)k}F_k.");
+equation("f^\Delta \doteq \{{\F^\Delta}^{-1}[F]\}_k=\sum_{k=0}^{N-1} e^{-\frac{2\pi i}{N}(n+\Delta)k}F_k.");
 item("Then, setting $\Delta=1/2$, one has");
 equation("(F*_{\scriptscriptstyle\Delta}G)_k
 \doteq \F^\Delta\(f^\Delta g^\Delta\)
-= {\color{darkgreen}\sum_{m=0}^{n} F_m G_{k-m}}
-- {\color{red} \sum_{m=k+1}^{N-1} f_m g_{k-m+N}},");
+= {\color{darkgreen}\sum_{\ell=0}^{k} F_\ell G_{k-\ell}}
+- {\color{red} \sum_{\ell=k+1}^{N-1} F_\ell G_{k-\ell+N}},");
 step();
 remark("which has a dealiasing error with opposite sign.");
 step();
@@ -188,7 +188,7 @@ item("The numerical error is similar to explicit padding.");
 
 title("Implicit Padding: speed");
 item("The algorithms are comparable in speed:");
-figure("ctiming1c","height=13cm");
+figure("timing1c","height=13cm");
 item("Ours is much more complicated.");
 
 title("Convolutions in Higher Dimensions");
@@ -199,6 +199,7 @@ title("Convolutions in Higher Dimensions");
 item("Notice that $3/4$ of the transformed arrays are zero.");
 skip();
 item("It is possible to skip these transforms");
+step();
 remark("this is called a pruned FFT.");
 skip();
 item("In the absence of a specially optimized routine for pruned FFTs, it can be faster to simply transform the entire array.");
@@ -210,6 +211,7 @@ step();
 remark("then performing an implicit 1D convolution in the $y$-direction,");
 step();
 remark("and then performing a forward transform in the $x$-direction.");
+step();
 indexedfigure("figures/conv2psimp",0,6,"width=14cm");
 item("An implicitly padded convolution in 2 dimensions requires only $9N$ padded FFTs,");
 step();
@@ -227,12 +229,12 @@ item("Phase-shift dealiasing has the same memory footprint as ``1/2\" explicit p
 
 title("Implicit Padding in 2D");
 item("Implicit padding is faster in two dimensions:");
-//figure("ctiming2c","height=13cm"); // FIXME!
+figure("timing2c","height=13cm"); // FIXME!
 item("And uses half the memory of explicit padding.");
 
 title("Implicit Padding in 3D");
 item("The algorithm is easily extended to three dimensions:");
-//figure("ctiming3c","height=13cm"); // FIXME!
+figure("timing3c","height=13cm"); // FIXME!
 item("Implicit padding uses $1/4$ the memory of explicit padding in 3D.");
 
 title("Centered Hermitian Data");
@@ -242,7 +244,7 @@ item("If $\{f_n\}$ is real-valued, then $F$ is \emph{Hermitian}:");
 equation("F_{-k}=\conj{F}_k");
 //item("Real-to-complex FFTs take $K\frac{N}{2}\log\frac{N}{2}$ multiplies.");
 item("The convolution of the centered arrays $f$ and $g$ is");
-equation("(F*G)_k = \sum_{\ell=k-N/2+1}^{N/2-1}f_\ell g_{k-\ell}.");
+equation("(F*G)_k = \sum_{\ell=k-N/2+1}^{N/2-1}F_\ell G_{k-\ell}.");
 item("Padding centered data use a ``$2/3$\" rule:");
 //figure("cyrc_23","height=4cm"); // FIXME: use this somewhere?
 equation("\{\widetilde F_k\}_{k=-N/2+1}^{N-1}
@@ -251,40 +253,34 @@ item("Phase-shifting is slower than explicit padding for centered data.");
 
 title("Centered Hermitian Data: 1D");
 item("The 1D implicit convolution is as fast as explicit padding:");
-//figure("ctiming1r","height=13cm"); // FIXME!
+figure("timing1r","height=13cm"); // FIXME!
 item("And has a comparable memory footprint.");
 
 title("Centered Hermitian Data: 2D");
 item("Implicit centered convolutions are faster in higher dimensions:");
-//figure("ctiming2r","height=13cm") // FIXME!;
+figure("timing2r","height=13cm"); // FIXME!;
 item("And uses $(2/3)^{d-1}$ the memory in $d$ dimensions.");
 
 // FIXME:
 title("Example: 2D pseudospectral Navier--Stokes");
 item("These routines are available in the open-source package {\tt FFTW++}");
 item("We need to compute:");
-
 equation("
 \Partial{\omega}{t}=-\vu\dot\grad\w
 =-(\zhat\cross\grad \del^{-2}\w)\dot \grad \w,
 ");
 remark("which appears in Fourier space as");
-
 equation("
 \Partial{\w_\vk}{t} 
 =\sum_{\vk=\vp+\vq} \frac{p_xq_y - p_y q_x}{q^2}\w_{\v p}\w_{\v q}.
 ");
-
 item("The right-hand side of this equation may be computed as");
 equation(
 "{\tt ImplicitHConvolution2}(i k_x\omega,i k_y\omega,i k_y \omega/k^2,-ik_x\omega/k^2).");
 
-
-
-
-title("Centered Hermitian Data: 3D");
-item("Implicit centered convolutions are faster in higher dimensions:");
-//figure("ctiming2r","height=13cm"); // FIXME!
+//title("Centered Hermitian Data: 3D");
+//item("Implicit centered convolutions are faster in higher dimensions:");
+//figure("timing3c","height=13cm"); // FIXME!
 // NB: explicit and pruned code not done.
 
 title("Optimal Problem Sizes");
@@ -317,23 +313,36 @@ item("Computing $Z_4$ using $2048\times 2048$ pseudospectral modes simulation re
 
 title("Centered Hermitian Ternary Convolutions: 1D");
 item("The 1D implicit ternary convolution is as fast as explicit padding:");
-//figure("ctiming1b","height=13cm"); // FIXME!
+figure("timing1t","height=13cm"); // FIXME!
 item("And has a comparable memory footprint.");
 
 title("Centered Hermitian Ternary Convolutions: 2D");
 item("Implicit centered ternary convolutions are faster in higher 2D:");
-//figure("ctiming2b","height=13cm"); // FIXME!
+figure("timing2t","height=13cm"); // FIXME!
 item("And use $(1/2)^{d-1}$ the memory in $d$ dimensions.");
 
-title("Conclusion");
-item("Implicitly padded fast convolutions eliminate aliasing errors.");
-item("Implicit padding uses $(p/q)^{d-1}$ the memory of explicit \mbox{$d$-dimensional} ``$p/q$\" padding.");
-item("Computational speedup from skipping a bit-reversal in the FFT and pruning FFTs efficiently.");
-//item("Expanding dis-contiguously is easier to program.");
-item("``Efficient Dealiased Convolutions without Padding\" to appear SIAM Journal on Scientific Computing.");
+title("\tt FFTW++");
 item("A {\tt C++} implementation, ({\tt FFTW++}, LGPL) is available at {\tt http://fftwpp.sourceforge.net/}.");
 item("Fastest Fourier Transform in the West ({\tt http://fftw.org/}) provides sub-transforms.");
 item("{\tt FFTw++} will use parallelized sub-transforms when they become available .");
+item("Available in {\tt FFTW++}:");
+step();
+subitem("Non-centered convolutions in 1D, 2D, and 3D,");
+step();
+subitem("Centered Hermitian convolutions in 1D, 2D, and 3D,");
+step();
+subitem("Centered Hermitian ternary convolutions in 1D, 2D.");
+
+title("Conclusion");
+item("Implicitly padded fast convolutions eliminate aliasing errors.");
+skip();
+item("Implicit padding uses $(p/q)^{d-1}$ the memory of explicit \mbox{$d$-dimensional} ``$p/q$\" padding.");
+skip();
+item("Computational speedup from skipping a bit-reversal in the FFT and pruning FFTs efficiently..");
+skip();
+item("Expanding dis-contiguously is easier to program.");
+skip();
+item("`Efficient Dealiased Convolutions without Padding\" to appear SIAM Journal on Scientific Computing.");
 
 
 bibliography("refs");
