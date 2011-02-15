@@ -352,12 +352,12 @@ class Hloop{
   void setradix4() {radix=4;}
   void makesubgrid() {subgrid=true;}
   void setInvisible(unsigned inv) {Invisible=inv;}
-
+  
   void bounds() {
     innerradius2=innerradius*innerradius;
     Astop=m;
     Dstart=1;
-
+    
     if(!subgrid) { // standard DNS
       Astart=1;
       if(circular) 
@@ -365,7 +365,7 @@ class Hloop{
       else 
 	Dstop=m;
       
-    } else { // this is MDNS
+    } else { // MDNS
       if(circular) { 
 	if(Invisible == 0) // we are the first grid
 	  Astart=1;
@@ -380,18 +380,21 @@ class Hloop{
       }
     }
   }
- unsigned jstart(unsigned I) {
-    if(subgrid) {
-      if(circular) {
-	msg(ERROR,"gotta enable circular in Hloop still");
-	return 1+ (unsigned) floor(sqrt(innerradius2 - I*I));
-      }
-      if(radix == 2)
-	return Invisible-I;
-      if(radix == 4)
-	return I >= Invisible ? 1 : Invisible;
+
+  // bounds for inner loop
+  unsigned jstart(unsigned I) {
+    if(!subgrid) // dns
+      return 1;
+    
+    // mdns
+    if(circular) {
+      msg(ERROR,"gotta enable circular in Hloop still");
+      return 1+ (unsigned) floor(sqrt(innerradius2 - I*I));
     }
-    return 1; // not a subgrid
+    if(radix == 2)
+      return Invisible-I;
+    // radix-1 or radix-4
+    return I >= Invisible ? 1 : Invisible;
   }
   unsigned jstop(unsigned I) {
     return  circular ? min((int)I,(int) ceil(sqrt(m2-I*I))) : I;
@@ -401,10 +404,8 @@ class Hloop{
     if(I < Dstop) return m;
     return (int) ceil(sqrt(m2-I*I));
   }
-
-  // FIXME: not sure if I'm going to use this or not.
-  virtual bool isvisible(unsigned i, unsigned j) {return true;}
   
+  // loop for finding achieved radii
   void Rloop(DynVector<unsigned> &R2) {
     DynVector<unsigned> temp;
     for(unsigned I=Astart; I < Astop; ++I)
@@ -428,7 +429,8 @@ class Hloop{
     }
     //cout << "R2 " << R2  << endl; 
   }
-
+  
+  // loop for determining count
   void Cloop(array1<unsigned>::opt &C, Ca afp, Ca dfp, Cm mfp) {
     for(unsigned I=Astart; I < Astop; ++I)
       (parent->*afp)(C,I);
@@ -444,6 +446,7 @@ class Hloop{
     //cout << "C:" << C << endl;
   }
 
+  // loop for computeinvariants
   void Invariantsloop(const array2<Complex> w, Real &E, Real &Z, Real &P,
 	       Invarfp fp) {
     vector wx=w[xorigin];
@@ -475,8 +478,7 @@ class Hloop{
     }
   }
 
-  // loop over the Hermitian-symmetric array2 w, calculate
-  // something, put it into the appropriate index of S, a spectrum-like array
+  // loop for Spectrum
   void Sloop(vector& S, const array2<Complex> w,Sa  afp,Sa  dfp, Sm mfp) {
     vector wx=w[xorigin];
     for(unsigned I=Astart; I < Astop; ++I) {
@@ -502,6 +504,7 @@ class Hloop{
     }
   }
   
+  // loop for Transfer
   void Tloop(vector& T, const array2<Complex> w, const array2<Complex> f,
 	     Ta afp, Ta dfp, Tm mfp) {
     vector wx=w[xorigin];
@@ -538,7 +541,6 @@ class Hloop{
     }
   }
 
-  // FIXME: something is wrong here
   void killmodes(array2<Complex> A) {
     if(circular) {
       vector Ax=A[xorigin];
@@ -550,17 +552,11 @@ class Hloop{
 	vector Ai=A[xorigin+I];
 	vector Aim=A[xorigin-I];
 	unsigned start =jkillstart(I);
-	//cout << I << "->" << start << endl;
 	for(unsigned j=start; j < m; ++j) {
-	  //cout << " " << j ;
 	  Ai[j]=Aim[j]=A[xorigin-j][I]=A[xorigin+j][I]=0;
 	}
-	//cout << endl;
       }
     }
-    // TODO:
-    // radix-2 and radix-4 kills as well?
-    // via isvisible(unsigned I, unsigned j) ?
   }
 
 };

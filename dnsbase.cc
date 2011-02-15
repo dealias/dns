@@ -120,7 +120,7 @@ void DNSBase::Transfer(const vector2& Src, const vector2& Y)
   Hloop loop(this);
   loop.Tloop(T,w,f0,&DNSBase::TransferAxes,&DNSBase::TransferDiag,
 	     &DNSBase::TransferMain);
-  Forcing->Force(f0,T);
+  Forcing->Force(f0,T); // spurious?
   
   if(casimir)
     CasimirTransfer(Src,Y);
