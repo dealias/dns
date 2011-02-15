@@ -229,7 +229,7 @@ public:
   Nu LinearCoeff(unsigned k) {
     unsigned i=k/my;
     unsigned j=k-my*i;
-    return nuk(k02*(i*i+j*j));
+    return nuk(i*i+j*j);
   }
 
   // TODO: consider using a lookup table on i2.
