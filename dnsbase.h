@@ -194,8 +194,6 @@ public:
   void InitialConditions();
   void Initialize();
   virtual void setcount();
-  void setcountBINNED();
-  void setcountRAW();
   //  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);
@@ -301,26 +299,18 @@ typedef void (DNSBase::*Tm)(unsigned,unsigned,vector&,
 // TODO: go back to varargs again?
 
 class Hloop{
- private:
+ protected:
   unsigned N, m, xorigin;
   DNSBase *parent;
-  unsigned radix, Invisible, m2;
-  bool subgrid;
-  Real innerradius, innerradius2;
+  unsigned m2;
   unsigned Astart, Astop, Dstart, Dstop; 
  public:
-  Hloop() {radix=1; subgrid=false; Invisible=0;}
+  Hloop() {}
   Hloop(DNSBase *parent0) {
     setparams(parent0);
-    radix=1;
-    subgrid=false;
-    Invisible=0;
   }
   Hloop(unsigned N0) {
     setparams(N);
-    radix=1;
-    subgrid=false;
-    Invisible=0;
   }
   ~Hloop() {}
 
@@ -328,9 +318,6 @@ class Hloop{
     N=N0;
     m=(N+1)/2;
     xorigin=m-1;
-    m2=(m-1)*(m-1);
-    innerradius=0;
-    subgrid=false;
     bounds();
   }
   void setparams(DNSBase *parent0) {
@@ -338,65 +325,24 @@ class Hloop{
     N=parent->getNx();
     m=parent->getmx();
     xorigin=parent->getxorigin();
-    m2=(m-1)*(m-1);
-    innerradius=0;
-    subgrid=false;
     bounds();
   }
-  void setinnerradius(unsigned nold) {
-    Real a=max((nold-1.0),0.0);
-    innerradius=sqrt(a*a/radix);
-    bounds();
-  }
-  void setradix2() {radix=2;}
-  void setradix4() {radix=4;}
-  void makesubgrid() {subgrid=true;}
-  void setInvisible(unsigned inv) {Invisible=inv;}
   
-  void bounds() {
-    innerradius2=innerradius*innerradius;
+  // set bounds from parameters
+  virtual void bounds() {
+    m2=(m-1)*(m-1);
     Astop=m;
     Dstart=1;
-    
-    if(!subgrid) { // standard DNS
-      Astart=1;
-      if(circular) 
-	Dstop=(unsigned) ceil(((Real) m)/sqrt2);
-      else 
-	Dstop=m;
-      
-    } else { // MDNS
-      if(circular) { 
-	if(Invisible == 0) // we are the first grid
-	  Astart=1;
-	else 
-	  Astart=0; // FIXME: something to do with innerradius
-      } else {
-	if(radix == 2) {
-	  Astart=Invisible/2;
-	} else { // radix == 1 or radix == 4
-	  Astart=Invisible;
-	}
-      }
-    }
+    Astart=1;
+    if(circular) 
+      Dstop=(unsigned) ceil(((Real) m)/sqrt2);
+    else 
+      Dstop=m;
   }
 
   // bounds for inner loop
-  unsigned jstart(unsigned I) {
-    if(!subgrid) // dns
-      return 1;
-    
-    // mdns
-    if(circular) {
-      msg(ERROR,"gotta enable circular in Hloop still");
-      return 1+ (unsigned) floor(sqrt(innerradius2 - I*I));
-    }
-    if(radix == 2)
-      return Invisible-I;
-    // radix-1 or radix-4
-    return I >= Invisible ? 1 : Invisible;
-  }
-  unsigned jstop(unsigned I) {
+  virtual unsigned jstart(unsigned I) {return 1;}
+  unsigned jstop(unsigned I) { 
     return  circular ? min((int)I,(int) ceil(sqrt(m2-I*I))) : I;
   }
   unsigned jkillstart(unsigned I) {
@@ -560,6 +506,5 @@ class Hloop{
   }
 
 };
-
 
 #endif

@@ -56,6 +56,49 @@ MultiProblem *MProblem;
 unsigned Ngrids=2;
 const char *subintegrator="rk4";
 
+//***** derived loop class *****//
+class Mloop : public Hloop {
+protected:
+  unsigned Invisible;
+  Real innerradius, innerradius2;
+public:
+  void setInvisible(unsigned inv) {Invisible=inv;}
+  virtual void bounds() {
+    if(circular) { 
+      if(Invisible == 0) // we are the first grid
+	Astart=1;
+      else 
+	Astart=0; // FIXME: something to do with innerradius
+    } else {
+      if(radix == 2) {
+	Astart=Invisible/2;
+      } else { // radix == 1 or radix == 4
+	Astart=Invisible;
+      }
+    }
+  }
+
+  virtual void setinnerradius(unsigned nold) {
+    Real a=max((nold-1.0),0.0);
+    innerradius=sqrt(a*a/radix);
+    innerradius2=innerradius*innerradius;
+    bounds();
+  }
+
+  // inner bound for main loop affected by being a subgrid
+  virtual unsigned jstart(unsigned I) {
+    if(circular) {
+      msg(ERROR,"gotta enable circular in Hloop still");
+      return 1+ (unsigned) floor(sqrt(innerradius2 - I*I));
+    }
+    if(radix == 2)
+      return Invisible-I;
+    // radix-1 or radix-4
+    return I >= Invisible ? 1 : Invisible;
+  }
+};
+
+
 //***** Base class for functionoids *****//
 class FunctRR {
  public:
@@ -122,7 +165,7 @@ public:
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
     unsigned lambda, lambda2; // spacing factor
     
-    Hloop loop;
+    Mloop loop;
 
     bool isvisible(unsigned I, unsigned j){
       return parent->isvisible(I,j,myg);
@@ -851,18 +894,24 @@ void MDNS::Grid::setcount()
   case NOSPECTRUM:
     break;
   case BINNED: 
-    if(radix == 4) 
-      DNSBase::setcountBINNED();
-    if(lastgrid && radix == 1)
-      DNSBase::setcountBINNED();
+    if(radix == 4) { // FIXME
+      Hloop loop(this);
+      //DNSBase::setcountBINNED(); 
+    }
+    if(lastgrid && radix == 1) { // FIXME
+      Hloop loop(this);
+      //DNSBase::setcountBINNED(); 
+    }
     if(verbose > 1)  cout << count << endl;
     break;
-  case INTERPOLATED:
+  case INTERPOLATED: 
     msg(ERROR,"Interpolated spectrum not working right now.");
     break;
-  case RAW:
-    DNSBase::setcountRAW();
+  case RAW: { // FIXME
+    Hloop loop(this);
+    //DNSBase::setcountRAW();
     break;
+  }
   default:
     msg(ERROR,"Invalid spectrum choice.");
     break;
