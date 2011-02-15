@@ -10,7 +10,7 @@ INCL = -I. -I$(TRI) -I$(HOME)/nw -I$(HOME)/fftw++
 
 EXTRA = dnsbase fftw++ convolution $(CORE) $(UTILS)
 FILES = dns $(EXTRA)
-OTHER = mdns 
+OTHER = 
 
 LIB += -lfftw3
 
@@ -20,6 +20,3 @@ all: dns mdns
 
 dns: 	dependencies
 	+make -f $(TRI)/config/Compile FILES="dns $(EXTRA)" NAME=dns
-
-mdns: 	dependencies
-	+make -f $(TRI)/config/Compile FILES="mdns $(EXTRA)" NAME=mdns

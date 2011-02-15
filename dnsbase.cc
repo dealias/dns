@@ -5,32 +5,19 @@ const int DNSBase::ypad=1;
 
 //***** Source routines *****//
 
-void DNSBase::LinearSource(const vector& wSrc, const vector& w0, double)
+void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 {
-  w.Set(w0);
-  f0.Set(wSrc);
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector f0i=f0[i];
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
-      f0i[j] -= nuk(k02*(I2+j*j))*wi[j];
-  }
-}
-
-void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
-{
-  w.Set(wY);
-  f0.Set(wSrc);
-
+  w.Set(Y[OMEGA]);
+  f0.Set(Src[OMEGA]);
+  
   f0(origin)=0.0;
   f1(origin)=0.0;
   g0(origin)=0.0;
   g1(origin)=0.0;
 
   for(unsigned i=0; i < Nx; ++i) {
-    Real kx=k0*((int) i-(int) xorigin);
+    int I=(int) i-(int) xorigin;
+    Real kx=k0*I;
     Real kx2=kx*kx;
     vector wi=w[i];
     vector f0i=f0[i];
@@ -64,50 +51,102 @@ void DNSBase::NonLinearSource(const vector& wSrc, const vector& wY, double)
   }
   cout << sum << endl;
 #endif
-
 }
 
-void DNSBase::Transfer(const vector2& Src, const vector2& Y)
+vector DNSBase::E;
+vector DNSBase::T;
+Real DNSBase::k0;
+Real DNSBase::k02;
+Real DNSBase::nuH;
+Real DNSBase::nuL;
+Real DNSBase::etanorm;
+
+void DNSBase::FETL(const vector& wi, const vector& Si, unsigned I2, unsigned j)
 {
-  Set(T,Src[TRANSFER]);
+  unsigned k2int=I2+j*j;
+  Real kint=sqrt(k2int);
+  Real k=k0*kint;
+  unsigned index=(unsigned)(kint-0.5);
+  Complex wij=wi[j];
+  Real w2=abs2(wij);
+  Nu nu=nuk(k2int);
+  E[index] += Complex(w2/k,nu*w2);
+  Complex Sij=Si[j];
+  Complex& Tindex=T[index];
+  Tindex.re += realproduct(Sij,wij);
+  Forcing->Force(wij,Tindex.im,k);
+  Si[j]=Sij-nu*wij;
+}
 
-  for(unsigned K=0; K < nshells; K++)
-    T[K]=0.0;
+void DNSBase::FTL(const vector& wi, const vector& Si, unsigned I2, unsigned j)
+{
+  unsigned k2int=I2+j*j;
+  Real kint=sqrt(k2int);
+  Real k=k0*kint;
+  unsigned index=(unsigned)(kint-0.5);
+  Complex wij=wi[j];
+  Nu nu=nuk(k2int);
+  Complex Sij=Si[j];
+  Complex& Tindex=T[index];
+  Tindex.re += realproduct(Sij,wij);
+  Forcing->Force(wij,Tindex.im,k);
+  Si[j]=Sij-nu*wij;
+}
+
+void DNSBase::FET(const vector& wi, const vector& Si, unsigned I2, unsigned j)
+{
+  unsigned k2int=I2+j*j;
+  Real kint=sqrt(k2int);
+  Real k=k0*kint;
+  unsigned index=(unsigned)(kint-0.5);
+  Complex wij=wi[j];
+  Real w2=abs2(wij);
+  Nu nu=nuk(k2int);
+  E[index] += Complex(w2/k,nu*w2);
+  Complex Sij=Si[j];
+  Complex& Tindex=T[index];
+  Tindex.re += realproduct(Sij,wij);
+  Forcing->Force(wij,Tindex.im,k);
+}
+
+void DNSBase::FE(const vector& wi, const vector& Si,unsigned I2, unsigned j)
+{
+  unsigned k2int=I2+j*j;
+  Real kint=sqrt(k2int);
+  Real k=k0*kint;
+  unsigned index=(unsigned)(kint-0.5);
+  Complex wij=wi[j];
+  Real w2=abs2(wij);
+  Nu nu=nuk(k2int);
+  E[index] += Complex(w2/k,nu*w2);
+}
+
+void DNSBase::FL(const vector& wi, const vector& Si, unsigned I2, unsigned j)
+{
+  unsigned k2int=I2+j*j;
+  Complex wij=wi[j];
+  Nu nu=nuk(k2int);
+  Complex Sij=Si[j];
+  double T;
+  Real k=k0*sqrt(k2int);
+  Forcing->Force(wij,T,k);
+  Si[j]=Sij-nu*wij;
+}
+
+void DNSBase::Compute(SourceFcn fcn, const vector2& Src, const vector2& Y)
+{
   f0.Set(Src[OMEGA]);
-
   w.Set(Y[OMEGA]);
+
+  Forcing->Set();
 
   for(unsigned i=0; i < Nx; i++) {
     int I=(int) i-(int) xorigin;
     int I2=I*I;
     vector wi=w[i];
     vector Si=f0[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real k=k0*sqrt(I2+j*j);
-      T[(unsigned)(k-0.5)].re += realproduct(Si[j],wi[j]);
-    }
-  }
-
-  Forcing->Force(f0,T);
-}
-
-void DNSBase::Spectrum(vector& S, const vector& y) 
-{
-  w.Set(y);
-  for(unsigned K=0; K < nshells; K++)
-    S[K]=Complex(0.0,0.0);
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      unsigned k2int=I2+j*j;
-      Real k2=k02*k2int;
-      Real kind=sqrt(k2int);
-      Real k=sqrt(k2);
-      Real w2=abs2(wi[j]);
-      S[(unsigned)(kind-0.5)] += Complex(w2/k,nuk(k2)*w2);
-    }
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+      (*fcn)(wi,Si,I2,j);
   }
 }
 
@@ -115,7 +154,19 @@ void DNSBase::Stochastic(const vector2&Y, double, double dt)
 {
   w.Set(Y[OMEGA]);
   Set(T,Y[TRANSFER]);
-  Forcing->Force(w,T,dt);
+  
+  Forcing->SetStochastic(dt);
+  
+  for(unsigned i=0; i < Nx; i++) {
+    int I=(int) i-(int) xorigin;
+    int I2=I*I;
+    vector wi=w[i];
+    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+      Real kint=sqrt(I2+j*j);
+      unsigned index=(unsigned)(kint-0.5);
+      Forcing->ForceStochastic(wi[j],T[index].im,k0*kint);
+    }
+  }
 }
 
 //***** DNSBase Output routines *****//
@@ -143,7 +194,6 @@ void DNSBase::setcount()
 
 void DNSBase::OutFrame(int)
 {
-  //  w.Set(Y[OMEGA]); // FIXME
   unsigned int Nx0=Nx+xpad;
   unsigned int Ny0=Ny+ypad;
   unsigned int offset=Nx0/2-mx+1;

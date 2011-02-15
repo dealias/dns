@@ -26,24 +26,26 @@ protected:
   // Vocabulary:
   unsigned Nx;
   unsigned Ny;
-  Real nuH, nuL;
+  static Real nuH, nuL;
   static const int xpad,ypad;
   
-  enum Field {OMEGA,TRANSFER,TRANSFERN,EK};
+  enum Field {OMEGA,TRANSFER,EK};
 
   // derived variables:
   unsigned mx, my; // size of data arrays
   unsigned origin; // linear index of Fourier origin.
   unsigned xorigin; // horizontal index of Fourier origin.
 
-  Real k0; // grid spacing factor
-  Real k02; // k0^2
+  static Real k0; // grid spacing factor
+  static Real k02; // k0^2
   array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
 
   int tcount;
-  Real etanorm;
+public:  
+  static Real etanorm;
 
+protected:  
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
@@ -63,25 +65,12 @@ protected:
   oxstream ftransferN;
   Array2<Complex> f,g,h;
   vector Tn;
+  array1<unsigned>::opt count;
+  static vector E; // Spectrum
+  static vector T; // Transfer
 
 public:
   DNSBase() {}
-  DNSBase(unsigned Nx, unsigned my, Real k0): Nx(Nx), my(my), k0(k0) {
-    block=ComplexAlign(3*Nx*my);
-    mx=(Nx+1)/2;
-    xorigin=mx-1;
-    origin=xorigin*my;
-    w.Dimension(Nx,my);
-    f0.Dimension(Nx,my);
-    f1.Dimension(Nx,my,block);
-    g0.Dimension(Nx,my,block+Nx*my);
-    g1.Dimension(Nx,my,block+2*Nx*my);
-    F[0]=f0;
-    F[1]=f1;
-    G[0]=g0;
-    G[1]=g1;
-    Convolution=new ImplicitHConvolution2(mx,my,2);
-  }
   virtual ~DNSBase() {}
 
   unsigned getNx() {return Nx;}
@@ -99,47 +88,79 @@ public:
   void FinalOutput();
   void OutFrame(int it);
 
-  virtual void Spectrum(vector& S, const vector& y);
-  void Transfer(const vector2& Src, const vector2& Y);
-  void NonLinearSource(const vector& Src, const vector& Y, double t);
-  void LinearSource(const vector& Src, const vector& Y, double t);
+  typedef void (*SourceFcn)(const vector& wi, const vector& Si, unsigned I2,
+                            unsigned j);
+  
+  static void FETL(const vector& wi, const vector& Si, unsigned I2, unsigned j);
+  static void FTL(const vector& wi, const vector& Si, unsigned I2, unsigned j);
+  static void FET(const vector& wi, const vector& Si, unsigned I2, unsigned j);
+  static void FE(const vector& wi, const vector& Si, unsigned I2, unsigned j);
+  static void FL(const vector& wi, const vector& Si, unsigned I2, unsigned j);
 
+  void NonLinearSource(const vector2& Src, const vector2& Y, double t);
+
+  void ZeroT(const vector2& Src) {
+    Set(T,Src[TRANSFER]);
+    for(unsigned K=0; K < nshells; K++)
+      T[K]=0.0;  
+  }
+  
+  void ZeroE(const vector2& Src) {
+    Set(E,Src[EK]);
+    for(unsigned K=0; K < nshells; K++)
+      E[K]=0.0;
+  }
+    
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
-    NonLinearSource(Src[OMEGA],Y[OMEGA],t);
-    if(spectrum) Transfer(Src,Y);
-    LinearSource(Src[OMEGA],Y[OMEGA],t);
+    NonLinearSource(Src,Y,t);
+    ZeroT(Src);
+    ZeroE(Src);
+    Compute(FETL,Src,Y);
   }
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
-    if(spectrum) Spectrum(Src[EK],Y[OMEGA]);
-//    HermitianSymmetrizeX(mx,my,xorigin,Src[OMEGA]);
+    if(spectrum) {
+      ZeroT(Src);
+      Compute(FTL,Src,Y);
+    }
   }
 
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
-    NonLinearSource(Src[OMEGA],Y[OMEGA],t);
-    if(spectrum) Transfer(Src,Y);
-    NonConservativeSource(Src,Y,t);
+    NonLinearSource(Src,Y,t);
+    if(spectrum) {
+      ZeroT(Src);
+      ZeroE(Src);
+      Compute(FET,Src,Y);
+    }
   }
+
+  void Compute(SourceFcn fcn, const vector2& Src, const vector2& Y);
+  
   void Source(const vector2& Src, const vector2& Y, double t) {
-    ConservativeSource(Src,Y,t);
-    NonConservativeSource(Src,Y,t);
+    NonLinearSource(Src,Y,t);
+    if(spectrum) {
+      ZeroT(Src);
+      ZeroE(Src);
+      Compute(FETL,Src,Y);
+    } else
+      Compute(FL,Src,Y);
   }
+
   Nu LinearCoeff(unsigned k) {
     unsigned i=k/my;
     unsigned j=k-my*i;
-    return nuk(k02*(i*i+j*j));
+    return nuk(i*i+j*j);
   }
 
   // TODO: use a 1D lookup table on i^2+j^2.
-  Real nuk(Real k2) {
+  static Real nuk(unsigned i2) {
+    double k2=i2*k02;
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
 
   virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);
   void Stochastic(const vector2& Y, double, double);
 
-  array1<unsigned>::opt count;
-  vector T; // Transfer
   virtual Real getSpectrum(unsigned i) {
     double c=count[i];
     return c > 0 ? T[i].re*twopi/c : 0.0;

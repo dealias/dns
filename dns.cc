@@ -51,13 +51,13 @@ public:
     start=Start(OMEGA);
     stop=Stop(OMEGA);
     startT=Start(TRANSFER);
-    stopT=Stop(TRANSFERN);
+    stopT=Stop(TRANSFER);
     startM=Start(EK);
     stopM=Stop(EK);
   }
+  
   void Source(const vector2& Src, const vector2& Y, double t) {
-    ConservativeSource(Src,Y,t);
-    NonConservativeSource(Src,Y,t);
+    DNSBase::Source(Src,Y,t);
   }
   
   void Stochastic(const vector2&Y, double t, double dt) {
@@ -68,7 +68,6 @@ public:
 };
 
 DNS *DNSProblem;
-
 
 InitialConditionBase *InitialCondition;
 ForcingBase *Forcing;
@@ -114,71 +113,36 @@ class None : public ForcingBase {
 };
 
 class ConstantBanded : public ForcingBase {
+  Real kmin2int, kmax2int;
+  double h;
 public:
   const char *Name() {return "Constant Banded";}
-  void Force(array2<Complex> &w, vector& T, double dt) {
-    unsigned Nx=DNSProblem->getNx();
-    unsigned my=DNSProblem->getmy();
-    unsigned xorigin=DNSProblem->getxorigin();
-    Real k02=DNSProblem->getk02();
-    Real kmin=max(kforce-0.5*deltaf,0.0);
-    Real kmin2=kmin*kmin;
-    Real kmax=kforce+0.5*deltaf;
-    Real kmax2=kmax*kmax;
-
-    // TODO: only loop over modes with k in (kmin,kmax)
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      vector wi=w[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	unsigned k2int=I2+j*j;
-	Real k2=k02*k2int;
-	if(k2 > kmin2 && k2 < kmax2) {
-          T[(unsigned)(sqrt(k2int)-0.5)].im += realproduct(force,wi[j]);
-	  wi[j] += force;
-        }
-      }
+  void Set() {
+    h=0.5*deltaf;
+  }
+  
+  void Force(Complex& w, double& T, double k) {
+    if(abs(k-kforce) < h) {
+      T += realproduct(force,w);
+      w += force;
     }
   }
 };
 
 class WhiteNoiseBanded : public ForcingBase {
+  Complex f;
+  double h;
 public:
   const char *Name() {return "White-Noise Banded";}
-  void Force(array2<Complex> &w, vector& T, double dt) {
-    unsigned Nx=DNSProblem->getNx();
-    unsigned my=DNSProblem->getmy();
-    unsigned xorigin=DNSProblem->getxorigin();
-    Real k02=DNSProblem->getk02();
-    Real kmin=max(kforce-0.5*deltaf,0.0);
-    Real kmin2=kmin*kmin;
-    Real kmax=kforce+0.5*deltaf;
-    Real kmax2=kmax*kmax;
-    Real etanorm=DNSProblem->getetanorm();
-
-    Complex xi=crand_gauss();
-    Complex Fk=sqrt(2.0*eta*etanorm);
-    Complex fk=Fk*xi;
-    double sqrtdt=sqrt(dt);
-    Complex diff=sqrtdt*fk;
-    // don't loop over modes outside of the forcing region
-    unsigned jmax=1+min(my,(unsigned) ceil(kmax/k0));
-    unsigned imin=max(0,(int) xorigin - (int) jmax);
-    unsigned imax=min(Nx,xorigin+jmax);
-    for(unsigned i=imin; i <= imax; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      vector wi=w[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < jmax; ++j) {
-	unsigned k2int=I2+j*j;
-	Real k2=k02*k2int;
-	if(k2 > kmin2 && k2 < kmax2) {
-	  T[(unsigned)(sqrt(k2int)-0.5)].im += 
-            realproduct(diff,wi[j])+0.5*abs2(diff);
-	  wi[j] += diff;
-        }
-      }
+  void SetStochastic(double dt) {
+    f=sqrt(dt)*sqrt(2.0*eta*DNSBase::etanorm)*crand_gauss();
+    h=0.5*deltaf;
+  }
+  
+  void ForceStochastic(Complex& w, double& T, double k) {
+    if(abs(k-kforce) < h) {
+      T += realproduct(f,w)+0.5*abs2(f);
+      w += f;
     }
   }
 };
@@ -289,7 +253,6 @@ void DNS::InitialConditions()
 
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
-  NY[TRANSFERN]=nshells;
   NY[EK]=nshells;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
@@ -298,6 +261,7 @@ void DNS::InitialConditions()
 
   Allocator(align);
 
+  Dimension(E,nshells);
   Dimension(T,nshells);
 
   w.Dimension(Nx,my);
@@ -341,9 +305,9 @@ void DNS::InitialConditions()
   for(unsigned i=0; i < nshells; i++)
     T[i]=0.0;
   
-  Set(T,Y[EK]);
+  Set(E,Y[EK]);
   for(unsigned i=0; i < nshells; i++)
-    T[i]=0.0;
+    E[i]=0.0;
   
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
