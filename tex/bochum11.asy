@@ -118,7 +118,7 @@ equation("(\widetilde F *_{\scriptscriptstyle 2N}\widetilde G)_k=
 step();
 equation("= \sum_{\ell=0}^{N-1} F_{\ell} \widetilde G_{(k-\ell) (\mod 2N)},");
 step();
-equation("= {\color{darkgreen} \sum_{m=0}^{n} F_{\ell} G_{k-\ell}}.");
+equation("= {\color{darkgreen} \sum_{\ell=0}^{k} F_{\ell} G_{k-\ell}}.");
 
 title("Dealiasing via Explicit Zero-Padding");
 indexedfigure("figures/conv1psexp",0,5,"width=22cm");
