@@ -36,13 +36,14 @@ item("Convolution");
 subitem("Definition");
 subitem("Applications");
 item("Fast Convolutions");
-subitem("The Convolution Theorem");
-item("Aliasing Errors");
+//subitem("The Convolution Theorem");
+item("Dealiasing Convolutions");
 subitem("Zero-padding");
 subitem("Phase-shift dealiasing");
 subitem("Implicit Padding");
 //subitem("In one dimension");
 //subitem("In higher dimensions");
+item("Convolutions in Higher Dimensions");
 item("Centered Hermitian Convolutions");
 item("Ternary Convolutions");
 
@@ -75,7 +76,7 @@ equation("{\color{darkgreen} (F*G)_k}={\color{darkgreen}\sum_{\ell=0}^k F_\ell G
 skip();
 item("Calculating $\{(F*G)_k\}_{k=0}^{N-1}$ directly takes $\O(N^2)$ operations.");
 skip();
-item("Having so many operations introduces significant numerical error.");
+item("This method is not numericaly robust.");
 
 title("Fast Convolutions");
 //item("The unnormalized backward Fourier transform of $\{F_k\}_{k=0}^{N-1}$ is");
@@ -88,13 +89,15 @@ equation("\{F_k\}_{k=0}^{N-1}=\F[f]=\frac{1}{N}\sum_{n=0}^{N-1} \zeta_N^{-kn}f_n
 item("This transform relies on the identity");
 equation(
 "\sum_{j=0}^{N-1} \zeta_N^{\ell j}=
-\Large{\{}\begin{matrix} N \text{ if } \ell=sN for s\in\mathbb{Z},
-  \\  0 \text{ otherwise.} \end{matrix}");
+ \biggl\{
+\begin{matrix} N \text{ if } \ell=sN \text{ for } s\in\mathbb{Z},
+  \\  0 \text{ otherwise.} \end{matrix}
+");
 // FIXME: write cases correctly?
 
 title("Fast Convolutions");
 item("Convolutions are multiplications when Fourier-transformed:");
-equations("\F[F*G]=\sum_{j=0}^{N-1} f_j g_j\zeta_N^{-jk}
+equations("\F^{-1}[F*G]=\sum_{j=0}^{N-1} f_j g_j\zeta_N^{-jk}
 &=&\sum_{j=0}^{N-1} \zeta_N^{-jk}\(\sum_{p=0}^{N-1}\zeta_N^{jp} F_p\)
 \(\sum_{q=0}^{N-1}\zeta_N^{jq} G_q\)\endl
 &=& \sum_{p=0}^{N-1}\sum_{q=0}^{N-1} F_p G_q \sum_{j=0}^{N-1}\zeta_N^{(-k+p+q)j}\endl
@@ -200,7 +203,7 @@ item("Notice that $3/4$ of the transformed arrays are zero.");
 skip();
 item("It is possible to skip these transforms");
 step();
-remark("this is called a pruned FFT.");
+remark("i.e.\ use a pruned FFT.");
 skip();
 item("In the absence of a specially optimized routine for pruned FFTs, it can be faster to simply transform the entire array.");
 //figure("figures/cyrc_prune","height=4cm"); // FIXME: include?
@@ -284,10 +287,10 @@ equation(
 // NB: explicit and pruned code not done.
 
 title("Optimal Problem Sizes");
-item("We use convolutions in pseudo-spectral simulations:");
+//item("We use convolutions in pseudo-spectral simulations:");
 //item("The input data is centered and real-valued.");
-equation("\partial_t u + u\cdot\del u = -\del P +\nu \del^2 u");
-remark("is advanced in Fourier space, with $u\cdot\del u$ calculated in $x$-space.");
+//equation("\partial_t u + u\cdot\del u = -\del P +\nu \del^2 u");
+//remark("is advanced in Fourier space, with $u\cdot\del u$ calculated in $x$-space.");
 item("FFTs are faster for highly composite problem sizes:");
 subitem("$N=2^n$, $N=3^n$, etc., with $N=2^n$ optimal.");
 item("``$2/3$\" padding: 341, 683, 1365 etc");
@@ -340,7 +343,7 @@ item("Implicit padding uses $(p/q)^{d-1}$ the memory of explicit \mbox{$d$-dimen
 skip();
 item("Computational speedup from skipping a bit-reversal in the FFT and pruning FFTs efficiently..");
 skip();
-item("Expanding dis-contiguously is easier to program.");
+item("Expanding discontiguously is easier to program.");
 skip();
 item("`Efficient Dealiased Convolutions without Padding\" to appear SIAM Journal on Scientific Computing.");
 
