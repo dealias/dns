@@ -169,8 +169,6 @@ void DNSBase::Stochastic(const vector2&Y, double, double dt)
   }
 }
 
-//***** DNSBase Output routines *****//
-
 void DNSBase::Initialize()
 {
   fevt << "# t\tE\tZ\tP" << endl;

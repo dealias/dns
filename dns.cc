@@ -2,10 +2,8 @@
 
 const double ProblemVersion=1.0;
 
-#ifndef DEPEND
 #if !COMPLEX
 #error DNS requires COMPLEX=1 in options.h
-#endif
 #endif
 
 const char *problem="Direct Numerical Simulation of Turbulence";
@@ -13,7 +11,6 @@ const char *problem="Direct Numerical Simulation of Turbulence";
 const char *method="DNS";
 const char *integrator="RK5";
 const char *ic="Equipartition";
-//const char *linearity="Power";
 const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
@@ -32,9 +29,6 @@ unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
 Real k0=1.0;
-
-// other global variables:
-
 
 class DNS : public DNSBase, public ProblemBase {
 public:
@@ -113,7 +107,7 @@ class None : public ForcingBase {
 };
 
 class ConstantBanded : public ForcingBase {
-  Real kmin2int, kmax2int;
+protected:  
   double h;
 public:
   const char *Name() {return "Constant Banded";}
@@ -129,14 +123,13 @@ public:
   }
 };
 
-class WhiteNoiseBanded : public ForcingBase {
+class WhiteNoiseBanded : public ConstantBanded {
   Complex f;
-  double h;
 public:
   const char *Name() {return "White-Noise Banded";}
   void SetStochastic(double dt) {
+    ConstantBanded::Set();
     f=sqrt(dt)*sqrt(2.0*eta*DNSBase::etanorm)*crand_gauss();
-    h=0.5*deltaf;
   }
   
   void ForceStochastic(Complex& w, double& T, double k) {
