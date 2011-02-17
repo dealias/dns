@@ -177,6 +177,7 @@ public:
     unsigned lambda, lambda2; // spacing factor
     
     Mloop loop;
+    Hloop subloop; // for removing doubled interactions
 
     /*
     bool isvisible(unsigned I, unsigned j){
@@ -265,6 +266,9 @@ public:
     void SpectrumOverlapRad4BINNED(vector&);
     void Stochastic(const vector2&, double, double);
     
+    void killmodes() {loop.killmodes(w);}
+    void killmodes(Array::array2<Complex> & A) {loop.killmodes(A);}
+
     void ComputeInvariants(const Array::array2<Complex> &,Real&, Real&, Real&);
     void coutw() {cout << "mygrid is "<<myg<<endl<< w << endl;}
     
@@ -405,9 +409,12 @@ public:
   //void SpectrumRad4(vector&, const vector&);
 
   void Project(unsigned ga);
-  void Projectrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int,
-			bool overwrite=true);
+  void Projectrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int,			bool overwrite=true);
+  void Projectrad1(array2<Complex>&,int,int,array2<Complex>&, int);
+  void Prolongrad1(array2<Complex>&,int,int,array2<Complex>&, int);
   void Prolongrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
+  void Projectrad4point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
+  void Prolongrad4point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
   void Prolong(unsigned gb);
   int Rescale();
 
@@ -524,7 +531,7 @@ public:
       break;
     case RAW:
       if(radix !=4 && radix !=2) 
-	msg(ERROR,"only radix-4 case  with raw spectrum for now.");
+	msg(ERROR,"only radix-1 and radix-4 cases  with raw spectrum for now.");
       return i == 0 ? 0.5*k0 : k0*sqrt((Real) R2[i-1]);
       break;
     default:
@@ -784,6 +791,8 @@ void MDNS::Grid::InitialConditions(unsigned g)
   if(myg > 0) { 
     // buffer for calculating small-small-small calculations
     
+
+
     Real sk0=k0;
     if(radix==2) {
       sNx=gN(::Nx,myg-1);
@@ -794,6 +803,8 @@ void MDNS::Grid::InitialConditions(unsigned g)
       smx=smy=Invisible;
       sxorigin=(sNx+1)/2-1;
     }
+
+    subloop.setparams(sNx);
 
     unsigned nS=sNx*smy;
       
@@ -1335,92 +1346,69 @@ void MDNS::InitialConditions()
   mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
 }
 
-void MDNS::Project(unsigned gb)
+void MDNS::Project(unsigned gb)   // FIXME: use Mloop?
 {
-  // FIXME: use Mloop
-
   if(dorescale==1)
     return;
   if(verbose > 2) cout << "project onto " << G[gb]->myg << endl;
   unsigned ga=gb-1;
 
-  const unsigned bInvisible=G[gb]->getInvisible();
-  const unsigned axorigin=G[ga]->getxorigin();
-  const unsigned bxorigin=G[gb]->getxorigin();
-  const unsigned aNx=G[ga]->getNx();
-  const unsigned amy=G[ga]->getmy();
-  const unsigned bNx=G[gb]->getNx();
-  const unsigned bmy=G[gb]->getmy();
-  const unsigned dx=bxorigin-axorigin;
-
+  unsigned bInvisible=G[gb]->getInvisible();
+  unsigned aNx=G[ga]->getNx();
+  unsigned amy=G[ga]->getmy();
+  unsigned bNx=G[gb]->getNx();
+  unsigned bmy=G[gb]->getmy();
+  
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
 
   Set(wa,mY[ga][OMEGA]);
   Set(wb,mY[gb][OMEGA]);
 
-#if 0
+  G[ga]->killmodes(wa);
+
+  // debugging code: check if project and prolong conserver energy
+#define __checkpr 0
+#if __checkpr
   {
     double E=0,Z=0,P=0;
+    cout << "\nproject: before: ";
     G[ga]->ComputeInvariants(wa,E,Z,P);
-    cout << "\n project: before\n";
     //cout <<  Z << endl;
     //E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
     cout << Z << endl;
   }
 #endif
-  if(radix == 1 && prtype != NOPR) {
-    for(unsigned int i=0; i < aNx; i++) {
-      vector wai=wa[i];
-      vector wbi=wb[i+dx];
-      for(unsigned j=0; j < amy; ++j) {
-	wbi[j]=wai[j];
-      }
-    }
-  }
 
-
-  if(radix == 2) {
+  switch(radix) {
+  case 1:
+    Projectrad1(wa,aNx,amy,wb,bNx);
+    break;
+  case 2:
     if(prtype == AREA) 
       msg(ERROR,"area-type projection not implemented with radix-2 grids.");
-    if(prtype == POINT) {
+    if(prtype == POINT)
       Projectrad2point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
-    }
+    break;
+  case 4:
+    if(prtype==AREA)
+      msg(ERROR,"area-type projection no longer implemented");
+    if(prtype==POINT)
+      Projectrad4point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+    break;
+  default:
+    msg(ERROR,"Invalid radix.");
+    break;
   }
 
-  if(radix == 4) {
-    if(prtype==AREA) {
-      cout << "area-type projection no longer implemented" << endl;
-      exit(1);
-    }
+  G[gb]->killmodes(wb);
 
-    if(prtype==POINT) {
-      unsigned xstart=bInvisible;
-      unsigned xstop=bxorigin+bInvisible;
-      unsigned I=1;
-      for(unsigned i=xstart; i < xstop; ++i) {
-	vector wai;
-	Set(wai,wa[I]);
-	Dimension(wai,aNx);
-	vector wbi;
-	Set(wbi,wb[i]);
-	Dimension(wbi,wb[i]);
-	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-	  wbi[j]=wai[j+j];
-	}
-	I += 2;
-      }
-    }
-  }
-  //cout << "project:" << endl;
-  //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
-
-#if 0
+#if __checkpr
   {
     double E=0,Z=0,P=0;
+    cout << "project: after:  "; 
     G[ga]->ComputeInvariants(wa,E,Z,P);
-    cout << "\n project: after\n"; 
     //cout << Z << endl;
     //E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
@@ -1432,6 +1420,23 @@ void MDNS::Project(unsigned gb)
 
 void ComplexSet(Complex &a, Complex b) {a=b;}
 void ComplexSubfrom(Complex &a, Complex b) {a-=b;}
+
+void MDNS::Projectrad1(array2<Complex>& wa,int aNx,int amy,
+		       array2<Complex>& wb, int bNx)
+{
+  if(prtype != NOPR){
+    int axorigin=(aNx-1)/2;
+    int bxorigin=(bNx-1)/2;
+    int dx=bxorigin-axorigin;
+    for(int i=0; i < aNx; i++) {
+      vector wai=wa[i];
+      vector wbi=wb[i+dx];
+      for(int j=0; j < amy; ++j) {
+	wbi[j]=wai[j];
+      }
+    }
+  }
+}
 
 void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
 			    array2<Complex>& wb,int bNx,int bmy,int bInvisible,
@@ -1483,36 +1488,115 @@ void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
   fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
   //cout << "wa\n"<<wa << "wb\n"<<wb << endl;
 }
-  
+
+void MDNS::Projectrad4point(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+{
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+  int xstart=bInvisible;
+  int xstop=bxorigin+bInvisible;
+  int bInvisible2=bInvisible*bInvisible;
+  int I=1;
+  for(int i=xstart; i < xstop; ++i) {
+    vector wai;
+    Set(wai,wa[I]);
+    Dimension(wai,aNx);
+    vector wbi;
+    Set(wbi,wb[i]);
+    Dimension(wbi,wb[i]);
+    int bI=i-bxorigin;
+    int bI2=bI*bI;
+    for(int j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
+      //cout << bI << "," << j << " <? " << bInvisible2 << endl;
+      if(!circular || (bI2+j*j <  bInvisible2))
+	wbi[j]=wai[j+j];
+    }
+    I += 2;
+  }
+  fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
+
+  //cout << "MDNS::Projectrad4point" << endl;
+  //cout << "wa\n:" << wa << "\n wb\n:" << wb 
+}
+
+void MDNS::Prolongrad4point(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+{
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+  int xstart=bInvisible;
+  int xstop=bxorigin+bInvisible;
+  int bInvisible2=bInvisible*bInvisible;
+
+  int ai=1;
+  for(int i=xstart; i < xstop; ++i) {
+    int bI=i-bxorigin;
+    int bI2=bI*bI;
+    vector wai;
+    Set(wai,wa[ai]);
+    Dimension(wai,aNx);
+    vector wbi;
+    Set(wbi,wb[i]);
+    Dimension(wbi,wb[i]);
+    for(int j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
+      //cout << "j="<<j<<endl;
+      if(!circular || (bI2+j*j < bInvisible2))
+	wai[j+j]=wbi[j];
+    }
+    ai += 2;
+  }
+  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
+
+  //cout << "MDNS::Prolongrad4point" << endl;
+  //cout << "wa\n:" << wa << "\n wb\n:" << wb 
+}
+
+void MDNS::Prolongrad1(array2<Complex>& wa,int aNx,int amy,
+		       array2<Complex>& wb,int bNx)
+{
+  if(prtype != NOPR){
+    int axorigin=(aNx-1)/2;
+    int bxorigin=(bNx-1)/2;
+    int dx=bxorigin-axorigin;
+    for(int i=0; i < aNx; i++) {
+      vector wai=wa[i];
+      vector wbi=wb[i+dx];
+      for(int j=0; j < amy; ++j) {
+  	wai[j]=wbi[j];
+      }
+    }
+  }
+}
+
 void MDNS::Prolong(unsigned ga)
 {
-  // FIXME: use Mloop
   if(dorescale==1)
     return;
-  if(verbose > 2) cout << "prolong onto " << G[ga]->myg << endl;
+
+  if(verbose > 2) 
+    cout << "prolong onto " << G[ga]->myg << endl;
+  
   unsigned gb=ga+1;
 
-  //const unsigned aInvisible=G[ga]->getInvisible();
-  const unsigned bInvisible=G[gb]->getInvisible();
-  const unsigned axorigin=G[ga]->getxorigin();
-  const unsigned bxorigin=G[gb]->getxorigin();
-  const unsigned aNx=G[ga]->getNx();
-  const unsigned amy=G[ga]->getmy();
-  //const unsigned amx=G[ga]->getmx();
-  const unsigned bNx=G[gb]->getNx();
-  const unsigned bmy=G[gb]->getmy();
-  const unsigned dx=bxorigin-axorigin;
+  unsigned bInvisible=G[gb]->getInvisible();
+  unsigned aNx=G[ga]->getNx();
+  unsigned amy=G[ga]->getmy();
+  unsigned bNx=G[gb]->getNx();
+  unsigned bmy=G[gb]->getmy();
 
   wa.Dimension(aNx,amy);
   wb.Dimension(bNx,bmy);
   Set(wa,mY[ga][OMEGA]);
   Set(wb,mY[gb][OMEGA]);
 
-#if 0
+  G[gb]->killmodes(wb);
+
+#if __checkpr
   {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
-    cout << "\n prolong: before\n";
+    cout << "prolong: before: ";
     //cout <<  Z << endl;
     //E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
@@ -1520,57 +1604,33 @@ void MDNS::Prolong(unsigned ga)
   }
 #endif
 
-  if(radix == 1 && prtype != NOPR) {
-    for(unsigned int i=0; i < aNx; i++) {
-      vector wai=wa[i];
-      vector wbi=wb[i+dx];
-      for(unsigned j=0; j < amy; ++j) {
-  	wai[j]=wbi[j];
-      }
-    }
-  }
-
-  if(radix == 2) {
+  switch(radix) {
+  case 1:
+    Prolongrad1(wa,aNx,amy,wb,bNx);
+    break;
+  case 2:
     if(prtype == AREA) 
-      msg(ERROR,"area-type projection not implemented with radix-2 grids.");
-
-    if(prtype == POINT) {
+      msg(ERROR,"area-type prolongation not implemented with radix-2 grids.");
+    if(prtype == POINT)
       Prolongrad2point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
-    }
-  }
-
-  if(radix == 4) {
-    if(prtype==AREA) {
+    break;
+  case 4:
+    if(prtype==AREA)
       msg(ERROR,"area-type projection no longer implemented");
-    }
-
-    if(prtype==POINT) {
-      const unsigned xstart=bInvisible;
-      const unsigned xstop=bxorigin+bInvisible;
-      
-      unsigned I=1;
-      for(unsigned i=xstart; i < xstop; ++i) {
-	//cout << "i="<<i<<" I="<<I<<endl;
-	vector wai;
-	Set(wai,wa[I]);
-	Dimension(wai,aNx);
-	vector wbi;
-	Set(wbi,wb[i]);
-	Dimension(wbi,wb[i]);
-	for(unsigned j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-	  //cout << "j="<<j<<endl;
-	  wai[j+j]=wbi[j];
-	}
-	I += 2;
-      }
-    }
+    if(prtype==POINT)
+      Prolongrad4point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+    break;
+  default:
+    msg(ERROR,"Invalid radix.");
+    break;
   }
+  G[ga]->killmodes(wa);
 
-#if 0
+#if __checkpr
   {
     double E=0,Z=0,P=0;
     G[ga]->ComputeInvariants(wa,E,Z,P);
-    cout << "\n prolong: after\n";
+    cout << "prolong: after:  ";
     //cout <<  Z << endl;
     //E=Z=P=0;
     G[gb]->ComputeInvariants(wb,E,Z,P);
@@ -1580,7 +1640,6 @@ void MDNS::Prolong(unsigned ga)
   //cout << "prolong:" << endl;
   //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
   //exit(1);
-
 }
 
 void MDNS::Prolongrad2point(array2<Complex>& wa,int aNx,int amy,
@@ -1746,13 +1805,14 @@ void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w,
   // once project and prolong use Mloop, use Mloop here as well
   loop.Invariantsloop(w,E,Z,P,&DNSBase::AddInvariants);
 #else
-  if(radix == 2) {
+  if(circular) {
+    unsigned maxR2=(my-1)*(my-1);
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(abs(I) + j >= Invisible) {
+	if(I2+j*j < maxR2) {
 	  Real w2=abs2(wi[j]);
 	  Real k2=k02*(I2+j*j);
 	  Z += w2;
@@ -1762,23 +1822,40 @@ void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w,
       }
     }
   } else {
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      vector wi=w[i];
-      //cout << "\ni="<<i << ", j=";
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(j >= Invisible || I2 >= Invisible2) {
-	  //cout << j<< " ";
-	  Real w2=abs2(wi[j]);
+
+    if(radix == 2) {
+      for(unsigned i=0; i < Nx; i++) {
+	int I=(int) i-(int) xorigin;
+	int I2=I*I;
+	vector wi=w[i];
+	for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	  if(abs(I) + j >= Invisible) {
+	    Real w2=abs2(wi[j]);
 	  Real k2=k02*(I2+j*j);
 	  Z += w2;
 	  E += w2/k2;
 	  P += w2*k2;
+	  }
+	}
+      }
+    } else {
+      for(unsigned i=0; i < Nx; i++) {
+	int I=(int) i-(int) xorigin;
+	int I2=I*I;
+	vector wi=w[i];
+	//cout << "\ni="<<i << ", j=";
+	for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	  if(j >= Invisible || I2 >= Invisible2) {
+	    //cout << j<< " ";
+	    Real w2=abs2(wi[j]);
+	    Real k2=k02*(I2+j*j);
+	    Z += w2;
+	    E += w2/k2;
+	    P += w2*k2;
+	  }
 	}
       }
     }
-
 
   }
   //cout << "grid " << myg << " enstrophy is " << Z << endl;
@@ -1907,8 +1984,11 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
 	  wSi[j]=wi[j];
       }
       fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
-      
+      subloop.killmodes(wS);
+      // FIXME: add killmodes, yo. based on subloop
+
       smallDNSBase->NonLinearSource(SrcwS,wS,t);
+      subloop.killmodes(SrcwS);
       
       for(unsigned i=0; i < sNx; ++i) {
 	vector f0i=f0[i+xdiff];
@@ -1937,7 +2017,7 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
       sum += (f0[i][j]*conj(wij)).re;
     }
   }
-  cout << "multi-grid E conserved? " << sum << endl << endl;
+  cout << "grid Z conserved by NL? " << sum << endl << endl;
 #endif
 }
 
