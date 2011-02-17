@@ -63,20 +63,6 @@ protected:
   Real innerradius, innerradius2;
 public:
   void setInvisible(unsigned inv) {Invisible=inv;}
-  virtual void bounds() {
-    if(circular) { 
-      if(Invisible == 0) // we are the first grid
-	Astart=1;
-      else 
-	Astart=0; // FIXME: something to do with innerradius
-    } else {
-      if(radix == 2) {
-	Astart=Invisible/2;
-      } else { // radix == 1 or radix == 4
-	Astart=Invisible;
-      }
-    }
-  }
 
   virtual void setinnerradius(unsigned nold) {
     Real a=max((nold-1.0),0.0);
@@ -85,11 +71,30 @@ public:
     bounds();
   }
 
+  virtual void bounds() {
+    Hloop::bounds();
+    if(Invisible != 0) {    // subgrids:
+      if(circular) {
+	Astart=(unsigned) ceil(innerradius)-1;
+	Dstart=(unsigned) ceil(innerradius/sqrt2)-1;
+      } else { // not circular
+	if(radix == 2) {
+	  Astart=Invisible/2;
+	} else { // radix == 1 or radix == 4
+	  Astart=Invisible;
+	}
+	}
+    }
+    //cout << Astart << "->" << Astop << endl;
+    //cout << Dstart << "->" << Dstop << endl;
+  }
+
   // inner bound for main loop affected by being a subgrid
   virtual unsigned jstart(unsigned I) {
+    if(Invisible == 0)
+      return 1;
     if(circular) {
-      msg(ERROR,"gotta enable circular in Hloop still");
-      return 1+ (unsigned) floor(sqrt(innerradius2 - I*I));
+      return (unsigned) max(floor(sqrt(innerradius2 - I*I))-1,0.0);
     }
     if(radix == 2)
       return Invisible-I;
@@ -115,6 +120,12 @@ unsigned gN(unsigned N, unsigned g) {
 unsigned gm(unsigned m, unsigned g) {
   return radix != 4 ? pow(2,(int) g)*m : m;
   //return radix == 1 ? pow(2,(int) g)*m : m;
+};
+unsigned getInvisible(unsigned g) {
+  if(g == 0) return 0;
+  if(radix==1) return (gN(::Nx,g)+1)/2;
+  if(radix==2) return (gN(::Nx,g-1)+1)/2;
+  return (gN(::Nx,g-1)+1)/4;  // radix 4
 };
 
 
@@ -167,10 +178,13 @@ public:
     
     Mloop loop;
 
+    /*
     bool isvisible(unsigned I, unsigned j){
       return parent->isvisible(I,j,myg);
     }
+    */
 
+    /*
     // bounds for spectrum loops
     virtual unsigned diagstart() {
       if(Invisible == 0)
@@ -205,6 +219,7 @@ public:
 	return 1;
       return Invisible;
     }
+    */
 
   public:
     Grid();
@@ -269,6 +284,9 @@ public:
   };
   array1<Grid *> G;
   
+
+  // FIXME: remove?
+  /*
   bool isvisible(unsigned I, unsigned j, unsigned g) {
     unsigned m=(gN(::Nx,g)+1)/2;
     unsigned Invisible=getInvisible(g);
@@ -287,8 +305,8 @@ public:
     return I >= Invisible || j >= Invisible;
     return true;
   };
+  */
   
-
   void check_rvn(DynVector<unsigned> & R2, const unsigned r2, 
 		 const unsigned first)  {
     bool found=false;
@@ -305,6 +323,7 @@ public:
   }
   
   // FIXME: deprecated
+  /*
   void findrads(DynVector<unsigned> &R2, array1<unsigned> nr, unsigned g)  {
     unsigned m=(gN(::Nx,g)+1)/2;
     for(unsigned i=1; i < m; ++i) {
@@ -322,6 +341,7 @@ public:
       nr[i]=R2.Size();
     }
   }
+  */
   
   enum Field {OMEGA,TRANSFER,TRANSFERN,EK,Nfields};
   enum SPEC {NOSPECTRUM, BINNED, INTERPOLATED, RAW}; 
@@ -351,29 +371,18 @@ public:
       {
 	DynVector<unsigned> tempR2;
 	array1<unsigned> tempnr(gm(my,g));
-	Hloop loop;
+	Mloop loop;
 	loop.setparams(gN(::Nx,g));
+	loop.setInvisible(getInvisible(g));
+	loop.setinnerradius(g == 0 ? 0 : gN(::Nx,g-1));
 	loop.Rloop(tempR2);
-    	return tempR2.Size();
+	return tempR2.Size();
       }
       break;
     default:
       msg(ERROR,"Invalid spectral choice.");
       return 0;
     }
-  };
-  unsigned getInvisible(unsigned g) {
-    if(g == 0) 
-      return 0;
-
-    if(radix==1) 
-      return (gN(Nx,g)+1)/2;
-    
-    if(radix==2) 
-      return (gN(Nx,g-1)+1)/2;
-      
-    // radix 4
-    return (gN(Nx,g-1)+1)/4;
   };
 
   //array1<unsigned>::opt count;
@@ -410,21 +419,13 @@ public:
     for(unsigned g=1; g <= grid; ++g) {
       fieldoffset += getnfields(g-1);
     }
-    //cout << "fieldoffset=" << fieldoffset << endl;
     unsigned offset=grid == 0 ? 0 : Stop(fieldoffset-1);
-
     start=Start(fieldoffset+OMEGA)-offset;
     stop=Stop(fieldoffset+OMEGA)-offset;
     startT=Start(fieldoffset+TRANSFER)-offset;
     stopT=Stop(fieldoffset+TRANSFER)-offset;
     startM=Start(fieldoffset+EK)-offset;
     stopM=Stop(fieldoffset+EK)-offset;
-    /*
-    cout << "IndexLimits: "
-	 << start << " " << stop << " " 
-	 << startT<< " " << stopT << " "
-	 << startM << " " << stopM << endl;
-    */
   }
   
   // Output functions
@@ -544,6 +545,7 @@ public:
   void FinalOutput();
 };
 
+
 //***** Global problem *****//
 MDNS *MDNSProblem;
 
@@ -587,6 +589,12 @@ public:
 	wi[j]=Complex(v,v);
       }
     }
+    Mloop loop;
+    loop.setparams(gN(::Nx,g));
+    loop.setInvisible(getInvisible(g));
+    loop.setinnerradius(g == 0 ? 0 : gN(::Nx,g-1));
+    loop.killmodes(w);
+    	
   }
 };
 
@@ -729,7 +737,7 @@ void MDNS::Grid::SetParams()
   w.Dimension(Nx,my);
   origin=xorigin*my;
   
-  Invisible=parent->getInvisible(myg);
+  Invisible=::getInvisible(myg);
   Invisible2=Invisible*Invisible;
 }
 
@@ -756,6 +764,13 @@ void MDNS::Grid::InitialConditions(unsigned g)
   lambda=sqrt(lambda2);
 
 
+
+  // set up loop structure for this grid
+  loop.setparent(this);
+  loop.setparams(Nx);
+  loop.setInvisible(Invisible);
+  loop.setinnerradius(myg == 0 ? 0 : gN(::Nx,myg-1));
+  
   // allocate memory
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
   cout << "\nALLOCATING FFT BUFFERS" << endl;
@@ -763,7 +778,9 @@ void MDNS::Grid::InitialConditions(unsigned g)
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
   NLDimension();
   InitialCondition->Set(w,Nx*my);
-  
+  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
+  loop.killmodes(w);
+
   if(myg > 0) { 
     // buffer for calculating small-small-small calculations
     
@@ -795,7 +812,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
 	tildeB[i][0]=0.0;
     }
   }
-  
+
   // set up spectrum parameters
   switch(spectrum) {
   case NOSPECTRUM:
@@ -811,8 +828,9 @@ void MDNS::Grid::InitialConditions(unsigned g)
     {
       DynVector<unsigned> tempR2;
       array1<unsigned> tempnr(my);
-      parent->findrads(tempR2,tempnr,g);
-      tempR2.sort();
+      loop.Rloop(tempR2);
+      //parent->findrads(tempR2,tempnr,g);
+      //tempR2.sort();
       Allocate(R2,tempR2.Size());
       //Dimension(R2,tempR2.Size());
       for(unsigned i=0; i < R2.Size(); ++i) 
@@ -895,11 +913,9 @@ void MDNS::Grid::setcount()
     break;
   case BINNED: 
     if(radix == 4) { // FIXME
-      Hloop loop(this);
       //DNSBase::setcountBINNED(); 
     }
     if(lastgrid && radix == 1) { // FIXME
-      Hloop loop(this);
       //DNSBase::setcountBINNED(); 
     }
     if(verbose > 1)  cout << count << endl;
@@ -908,8 +924,8 @@ void MDNS::Grid::setcount()
     msg(ERROR,"Interpolated spectrum not working right now.");
     break;
   case RAW: { // FIXME
-    Hloop loop(this);
-    //DNSBase::setcountRAW();
+    loop.Cloop(count,&DNSBase::CountAxes,&DNSBase::CountDiag,
+		 &DNSBase::CountMain);
     break;
   }
   default:
@@ -993,7 +1009,10 @@ void MDNS::Grid::SpectrumRad4(vector& SrcEK, const vector& w0)
     msg(ERROR,"Interpolated spectrum not working yet.");
     break;
   case RAW:
-    DNSBase::Spectrum(SrcEK,w0);
+    for(unsigned K=0; K < nshells; K++)    
+      SrcEK[K]=Complex(0.0,0.0);
+    loop.Sloop(SrcEK,w,&DNSBase::SpectrumAxes,&DNSBase::SpectrumDiag,
+	       &DNSBase::SpectrumMain);
     break;
   default:
     msg(ERROR,"Invalid spectrum");
@@ -1318,6 +1337,8 @@ void MDNS::InitialConditions()
 
 void MDNS::Project(unsigned gb)
 {
+  // FIXME: use Mloop
+
   if(dorescale==1)
     return;
   if(verbose > 2) cout << "project onto " << G[gb]->myg << endl;
@@ -1465,7 +1486,7 @@ void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
   
 void MDNS::Prolong(unsigned ga)
 {
-
+  // FIXME: use Mloop
   if(dorescale==1)
     return;
   if(verbose > 2) cout << "prolong onto " << G[ga]->myg << endl;
@@ -1677,6 +1698,7 @@ void MDNS::Output(int it)
 {
   Real E,Z,P;
 
+
   ComputeInvariants(Y,E,Z,P);
   Mfevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
   
@@ -1697,6 +1719,7 @@ void MDNS::Output(int it)
 void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 {
   E=Z=P=0.0;
+  //cout << "MDNS::ComputeInvariants" << endl;
   for(unsigned g=0; g < Ngrids; ++g) {
     // add up the individual invariants
     Real tempE=0.0, tempZ=0.0, tempP=0.0;
@@ -1718,7 +1741,27 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w, 
 				   Real& E, Real& Z, Real& P)
 {
-  if(radix != 2) {
+#if 0
+  // FIXME:
+  // once project and prolong use Mloop, use Mloop here as well
+  loop.Invariantsloop(w,E,Z,P,&DNSBase::AddInvariants);
+#else
+  if(radix == 2) {
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+	if(abs(I) + j >= Invisible) {
+	  Real w2=abs2(wi[j]);
+	  Real k2=k02*(I2+j*j);
+	  Z += w2;
+	  E += w2/k2;
+	  P += w2*k2;
+	}
+      }
+    }
+  } else {
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
@@ -1735,25 +1778,13 @@ void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w,
 	}
       }
     }
-  } else {
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      vector wi=w[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(abs(I) + j >= Invisible) {
-	  Real w2=abs2(wi[j]);
-	  Real k2=k02*(I2+j*j);
-	  Z += w2;
-	  E += w2/k2;
-	  P += w2*k2;
-	}
-      }
-    }
+
+
   }
   //cout << "grid " << myg << " enstrophy is " << Z << endl;
   //  FunctRRPtr F = new Invariants;
   //  loopwF(F,3,&Z,&E,&P);
+#endif
 }
 
 void MDNS::FinalOutput()
@@ -1853,6 +1884,7 @@ void MDNS::NonLinearSource(const vector2& gSrc, const vector2& gY, double t)
 void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
 {
   w.Set(wY);
+  loop.killmodes(w);
   f0.Set(wSrc);
 
   //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
@@ -1893,7 +1925,9 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
       f0 *= fact;
     }
   }
-    
+  loop.killmodes(f0);
+  
+   
 #if 0
   Real sum=0.0;
   for(unsigned i=0; i < Nx; ++i) {
@@ -1903,7 +1937,7 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
       sum += (f0[i][j]*conj(wij)).re;
     }
   }
-  cout << "multi-grid E conserved? " << sum << endl;
+  cout << "multi-grid E conserved? " << sum << endl << endl;
 #endif
 }
 

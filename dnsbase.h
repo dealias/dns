@@ -314,6 +314,8 @@ class Hloop{
   }
   ~Hloop() {}
 
+  void setparent(DNSBase *parent0) {parent=parent0;}
+
   void setparams(unsigned N0) {
     N=N0;
     m=(N+1)/2;
@@ -358,10 +360,11 @@ class Hloop{
       temp.Push(I*I);
     for(unsigned I=Dstart; I < Dstop; ++I)
       temp.Push(2*I*I);
-    for(unsigned I=1; I < m; I++) {
+    for(unsigned I=Astart; I < m; I++) {
       unsigned I2=I*I;
       unsigned start =jstart(I);
       unsigned stop =jstop(I);
+      //      cout << I << ": " << start << "->" << stop << endl;
       for(unsigned j=start; j < stop; ++j) {
 	temp.Push(I2+j*j);
       }
@@ -382,7 +385,7 @@ class Hloop{
       (parent->*afp)(C,I);
     for(unsigned I=Dstart; I < Dstop; ++I)
       (parent->*dfp)(C,I);
-    for(unsigned I=1; I < m; I++) {
+    for(unsigned I=Astart; I < m; I++) {
       unsigned start =jstart(I);
       unsigned stop =jstop(I);
       for(unsigned j=start; j < stop; ++j) {
@@ -407,7 +410,7 @@ class Hloop{
       vector wim=w[im];
       (parent->*fp)(2*I*I,abs2(wi[I])+abs2(wim[I]),E,Z,P);
     }
-    for(unsigned I=1; I < m; I++) {
+    for(unsigned I=Astart; I < m; I++) {
       unsigned I2=I*I;
       unsigned i=xorigin+I;
       unsigned im=xorigin-I;
@@ -438,7 +441,7 @@ class Hloop{
       vector wim=w[im];
       (parent->*dfp)(I,S,wi[I],wim[I]);
     }
-    for(unsigned I=1; I < m; I++) {
+    for(unsigned I=Astart; I < m; I++) {
       unsigned i=xorigin+I;
       unsigned im=xorigin-I;
       vector wi=w[i];
@@ -470,7 +473,7 @@ class Hloop{
       (parent->*dfp)(I,T,wi[I],wim[I],fi[I],fim[I]);
     }
 
-    for(unsigned I=1; I < m; I++) {
+    for(unsigned I=Astart; I < m; I++) {
       unsigned i=xorigin+I;
       unsigned im=xorigin-I;
       vector wi=w[i];
