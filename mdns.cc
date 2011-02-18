@@ -267,7 +267,26 @@ public:
     void Stochastic(const vector2&, double, double);
     
     void killmodes() {loop.killmodes(w);}
-    void killmodes(Array::array2<Complex> & A) {loop.killmodes(A);}
+    void killmodes(Array::array2<Complex> & A) {
+      
+      //loop.killmodes(A); // FIXME: restore?
+      
+      if(circular) {
+	for(unsigned i=0; i < Nx; ++i) {
+	  unsigned maxR2=(my-1)*(my-1);
+	  unsigned I= i > xorigin ? i-xorigin : xorigin-i;
+	  unsigned I2=I*I;
+	  vector Ai=A[i];
+	  for(unsigned j=0; j < my; ++j) {
+	    unsigned r2=I2+j*j;
+	    if(r2 >= maxR2) {
+	      Ai[j]=0.0;
+	    }
+	  }
+	}
+      }
+
+    }
 
     void ComputeInvariants(const Array::array2<Complex> &,Real&, Real&, Real&);
     void coutw() {cout << "mygrid is "<<myg<<endl<< w << endl;}
@@ -1496,23 +1515,19 @@ void MDNS::Projectrad4point(array2<Complex>& wa,int aNx,int amy,
   int bxorigin=(bNx-1)/2;
   int xstart=bInvisible;
   int xstop=bxorigin+bInvisible;
-  int bInvisible2=bInvisible*bInvisible;
-  int I=1;
-  for(int i=xstart; i < xstop; ++i) {
-    vector wai;
-    Set(wai,wa[I]);
-    Dimension(wai,aNx);
-    vector wbi;
-    Set(wbi,wb[i]);
-    Dimension(wbi,wb[i]);
-    int bI=i-bxorigin;
-    int bI2=bI*bI;
-    for(int j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-      //cout << bI << "," << j << " <? " << bInvisible2 << endl;
-      if(!circular || (bI2+j*j <  bInvisible2))
+  int maxR2=(amy-1)*(amy-1);
+
+  int ai=1;
+  for(int bi=xstart; bi < xstop; ++bi) {
+    vector wai=wa[ai];
+    vector wbi=wb[bi];
+    int aI=ai-axorigin;
+    int aI2=aI*aI;
+    for(int j= bi < bxorigin ? 1 : 0 ; j < bInvisible; ++j) {
+      if(!circular || (aI2+4*j*j < maxR2))
 	wbi[j]=wai[j+j];
     }
-    I += 2;
+    ai += 2;
   }
   fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
 
@@ -1527,21 +1542,16 @@ void MDNS::Prolongrad4point(array2<Complex>& wa,int aNx,int amy,
   int bxorigin=(bNx-1)/2;
   int xstart=bInvisible;
   int xstop=bxorigin+bInvisible;
-  int bInvisible2=bInvisible*bInvisible;
+  int maxR2=(amy-1)*(amy-1);
 
   int ai=1;
-  for(int i=xstart; i < xstop; ++i) {
-    int bI=i-bxorigin;
-    int bI2=bI*bI;
-    vector wai;
-    Set(wai,wa[ai]);
-    Dimension(wai,aNx);
-    vector wbi;
-    Set(wbi,wb[i]);
-    Dimension(wbi,wb[i]);
-    for(int j= i < axorigin ? 1 : 0 ; j < bInvisible; ++j) {
-      //cout << "j="<<j<<endl;
-      if(!circular || (bI2+j*j < bInvisible2))
+  for(int bi=xstart; bi < xstop; ++bi) {
+    int aI=ai-axorigin;
+    int aI2=aI*aI;
+    vector wai=wa[ai];
+    vector wbi=wb[bi];
+    for(int j= bi < bxorigin ? 1 : 0 ; j < bInvisible; ++j) {
+      if(!circular || (aI2+4*j*j < maxR2))
 	wai[j+j]=wbi[j];
     }
     ai += 2;
@@ -1822,7 +1832,6 @@ void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w,
       }
     }
   } else {
-
     if(radix == 2) {
       for(unsigned i=0; i < Nx; i++) {
 	int I=(int) i-(int) xorigin;
