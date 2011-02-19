@@ -60,14 +60,13 @@ const char *subintegrator="rk4";
 class Mloop : public Hloop {
 protected:
   unsigned Invisible;
-  Real innerradius, innerradius2;
+  Real minR, minR2;
 public:
   void setInvisible(unsigned inv) {Invisible=inv;}
 
-  virtual void setinnerradius(unsigned nold) {
-    Real a=max((nold-1.0),0.0);
-    innerradius=sqrt(a*a/radix);
-    innerradius2=innerradius*innerradius;
+  virtual void setminR2(Real minR2_0) {
+    minR2=minR2_0;
+    minR=sqrt(minR2);
     bounds();
   }
 
@@ -75,8 +74,8 @@ public:
     Hloop::bounds();
     if(Invisible != 0) {    // subgrids:
       if(circular) {
-	Astart=(unsigned) ceil(innerradius)-1;
-	Dstart=(unsigned) ceil(innerradius/sqrt2)-1;
+	Astart=(unsigned) ceil(minR)-1;
+	Dstart=(unsigned) ceil(minR/sqrt2)-1;
       } else { // not circular
 	if(radix == 2) {
 	  Astart=Invisible/2;
@@ -94,7 +93,7 @@ public:
     if(Invisible == 0)
       return 1;
     if(circular) {
-      return (unsigned) max(floor(sqrt(innerradius2 - I*I))-1,0.0);
+      return (unsigned) max(floor(sqrt(minR2 - I*I))-1,0.0);
     }
     if(radix == 2)
       return Invisible-I;
@@ -274,9 +273,8 @@ public:
       
       //gloop.killmodes(A); // FIXME: restore?
       
-      if(circular) { // FIXME: turning this on breaks energy conservation
+      if(circular) {
 	for(unsigned i=0; i < Nx; ++i) {
-	  //unsigned maxR2=(my-1)*(my-1);
 	  unsigned I= i > xorigin ? i-xorigin : xorigin-i;
 	  unsigned I2=I*I;
 	  vector Ai=A[i];
@@ -400,7 +398,13 @@ public:
 	Mloop temploop;
 	temploop.setparams(gN(::Nx,g));
 	temploop.setInvisible(getInvisible(g));
-	temploop.setinnerradius(g == 0 ? 0 : gN(::Nx,g-1));
+
+	Real minR2=0;
+	if(g > 0) {
+	  unsigned mup=(gN(::Nx,g-1)+1)/2;
+	  minR2=(mup-1)*(mup-1)/((Real) radix);
+	}
+	temploop.setminR2(minR2);
 	temploop.Rloop(tempR2);
 	return tempR2.Size();
       }
@@ -621,9 +625,13 @@ public:
     Mloop temploop;
     temploop.setparams(gN(::Nx,g));
     temploop.setInvisible(getInvisible(g));
-    temploop.setinnerradius(g == 0 ? 0 : gN(::Nx,g-1));
+    Real minR2=0;
+    if(g > 0) {
+      unsigned mup=(gN(::Nx,g-1)+1)/2;
+      minR2=(mup-1)*(mup-1)/((Real) radix);
+    }
+    temploop.setminR2(minR2);
     temploop.killmodes(w);
-    	
   }
 };
 
@@ -803,7 +811,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
   gloop.setparent(this);
   gloop.setparams(Nx);
   gloop.setInvisible(Invisible);
-  gloop.setinnerradius(myg == 0 ? 0 : gN(::Nx,myg-1));
+  gloop.setminR2(minR2);
   
   // allocate memory
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
@@ -1174,7 +1182,7 @@ MDNSVocabulary::MDNSVocabulary()
   VOCAB(radix,1,INT_MAX,"Radix number for grid decimation");
   VOCAB(prtype,0,2,"Synchronization scheme (0=none,1=area, 2=point)");
   VOCAB(dorescale,0,1,"Symmetric synchronization? (0=no, 1=hell yes!)");
-  VOCAB(nlfactor,0.0,REAL_MAX,"subgrid nonlinear rescaling factor exponent.");
+  VOCAB(nlfactor,-REAL_MAX,REAL_MAX,"subgrid nonlinear rescaling factor exponent.");
 }
 
 MDNS::MDNS() 
