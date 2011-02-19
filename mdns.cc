@@ -176,7 +176,7 @@ public:
     DNSBase * smallDNSBase; // for subgrid non-linearity calculation
     unsigned lambda, lambda2; // spacing factor
     
-    Mloop loop;
+    Mloop gloop;
     Hloop subloop; // for removing doubled interactions
 
     /*
@@ -231,6 +231,9 @@ public:
 
     unsigned myg;
 
+    Real minR2;
+    unsigned maxR2;
+
     array2<Real> tildeB;
 
     void setcount();
@@ -266,20 +269,20 @@ public:
     void SpectrumOverlapRad4BINNED(vector&);
     void Stochastic(const vector2&, double, double);
     
-    void killmodes() {loop.killmodes(w);}
+    void killmodes() {exit(1); gloop.killmodes(w);} // FIXME: restore
     void killmodes(Array::array2<Complex> & A) {
       
-      //loop.killmodes(A); // FIXME: restore?
+      //gloop.killmodes(A); // FIXME: restore?
       
-      if(circular) {
+      if(circular) { // FIXME: turning this on breaks energy conservation
 	for(unsigned i=0; i < Nx; ++i) {
-	  unsigned maxR2=(my-1)*(my-1);
+	  //unsigned maxR2=(my-1)*(my-1);
 	  unsigned I= i > xorigin ? i-xorigin : xorigin-i;
 	  unsigned I2=I*I;
 	  vector Ai=A[i];
 	  for(unsigned j=0; j < my; ++j) {
 	    unsigned r2=I2+j*j;
-	    if(r2 >= maxR2) {
+	    if(r2 >=maxR2) {
 	      Ai[j]=0.0;
 	    }
 	  }
@@ -394,11 +397,11 @@ public:
       {
 	DynVector<unsigned> tempR2;
 	array1<unsigned> tempnr(gm(my,g));
-	Mloop loop;
-	loop.setparams(gN(::Nx,g));
-	loop.setInvisible(getInvisible(g));
-	loop.setinnerradius(g == 0 ? 0 : gN(::Nx,g-1));
-	loop.Rloop(tempR2);
+	Mloop temploop;
+	temploop.setparams(gN(::Nx,g));
+	temploop.setInvisible(getInvisible(g));
+	temploop.setinnerradius(g == 0 ? 0 : gN(::Nx,g-1));
+	temploop.Rloop(tempR2);
 	return tempR2.Size();
       }
       break;
@@ -615,11 +618,11 @@ public:
 	wi[j]=Complex(v,v);
       }
     }
-    Mloop loop;
-    loop.setparams(gN(::Nx,g));
-    loop.setInvisible(getInvisible(g));
-    loop.setinnerradius(g == 0 ? 0 : gN(::Nx,g-1));
-    loop.killmodes(w);
+    Mloop temploop;
+    temploop.setparams(gN(::Nx,g));
+    temploop.setInvisible(getInvisible(g));
+    temploop.setinnerradius(g == 0 ? 0 : gN(::Nx,g-1));
+    temploop.killmodes(w);
     	
   }
 };
@@ -789,13 +792,18 @@ void MDNS::Grid::InitialConditions(unsigned g)
     lambda2 *= radix;
   lambda=sqrt(lambda2);
 
-
-
   // set up loop structure for this grid
-  loop.setparent(this);
-  loop.setparams(Nx);
-  loop.setInvisible(Invisible);
-  loop.setinnerradius(myg == 0 ? 0 : gN(::Nx,myg-1));
+  minR2=0;
+  if(myg > 0) {
+    unsigned mup=(gN(::Nx,myg-1)+1)/2;
+    minR2=(mup-1)*(mup-1)/((Real) radix);
+  }
+
+  maxR2=(my-1)*(my-1);
+  gloop.setparent(this);
+  gloop.setparams(Nx);
+  gloop.setInvisible(Invisible);
+  gloop.setinnerradius(myg == 0 ? 0 : gN(::Nx,myg-1));
   
   // allocate memory
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
@@ -805,13 +813,10 @@ void MDNS::Grid::InitialConditions(unsigned g)
   NLDimension();
   InitialCondition->Set(w,Nx*my);
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
-  loop.killmodes(w);
-
-  if(myg > 0) { 
-    // buffer for calculating small-small-small calculations
-    
+  gloop.killmodes(w);
 
 
+  if(myg > 0) { // buffer for calculating small-small-small calculations
     Real sk0=k0;
     if(radix==2) {
       sNx=gN(::Nx,myg-1);
@@ -858,7 +863,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
     {
       DynVector<unsigned> tempR2;
       array1<unsigned> tempnr(my);
-      loop.Rloop(tempR2);
+      gloop.Rloop(tempR2);
       //parent->findrads(tempR2,tempnr,g);
       //tempR2.sort();
       Allocate(R2,tempR2.Size());
@@ -954,7 +959,7 @@ void MDNS::Grid::setcount()
     msg(ERROR,"Interpolated spectrum not working right now.");
     break;
   case RAW: { // FIXME
-    loop.Cloop(count,&DNSBase::CountAxes,&DNSBase::CountDiag,
+    gloop.Cloop(count,&DNSBase::CountAxes,&DNSBase::CountDiag,
 		 &DNSBase::CountMain);
     break;
   }
@@ -1041,7 +1046,7 @@ void MDNS::Grid::SpectrumRad4(vector& SrcEK, const vector& w0)
   case RAW:
     for(unsigned K=0; K < nshells; K++)    
       SrcEK[K]=Complex(0.0,0.0);
-    loop.Sloop(SrcEK,w,&DNSBase::SpectrumAxes,&DNSBase::SpectrumDiag,
+    gloop.Sloop(SrcEK,w,&DNSBase::SpectrumAxes,&DNSBase::SpectrumDiag,
 	       &DNSBase::SpectrumMain);
     break;
   default:
@@ -1098,7 +1103,7 @@ void MDNS::Grid::SpectrumRad4BINNED(vector& SrcEK, const vector& w0)
 void MDNS::Grid::SpectrumOverlapRad4BINNED(vector& S)
 {
   if(spectrum && overlap) {
-    MDNSProblem->settow(w,myg); // FIXME: does settow work?
+    MDNSProblem->settow(w,myg);
     Real overlambda=1.0;
     if(radix==4) overlambda=0.5;
     Real weight=prtype==AREA ? radix : 1.0;
@@ -1386,6 +1391,15 @@ void MDNS::Project(unsigned gb)   // FIXME: use Mloop?
 
   G[ga]->killmodes(wa);
 
+
+  // FIXME: temp
+  /*
+  wa.Load(1.0);
+  wb.Load(2.0);
+  G[ga]->killmodes(wa);
+  G[gb]->killmodes(wb);
+  */
+
   // debugging code: check if project and prolong conserver energy
 #define __checkpr 0
 #if __checkpr
@@ -1422,6 +1436,8 @@ void MDNS::Project(unsigned gb)   // FIXME: use Mloop?
   }
 
   G[gb]->killmodes(wb);
+
+  //cout << "MDNS::Project\nwa\n:" << wa << "\n wb\n:" << wb ;
 
 #if __checkpr
   {
@@ -1464,8 +1480,6 @@ void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
   int axorigin=(aNx-1)/2;
   int bxorigin=(bNx-1)/2;
   bool iodd=false;
-  //wa.Load(Complex(1.0,1.0));
-  //wb.Load(0.0);
   
   void (*op)(Complex&,Complex)=overwrite ? &ComplexSet : &ComplexSubfrom;
 
@@ -1515,7 +1529,7 @@ void MDNS::Projectrad4point(array2<Complex>& wa,int aNx,int amy,
   int bxorigin=(bNx-1)/2;
   int xstart=bInvisible;
   int xstop=bxorigin+bInvisible;
-  int maxR2=(amy-1)*(amy-1);
+  int maxR2=(amy-1)*(amy-1); //TODO: get this from the grid?
 
   int ai=1;
   for(int bi=xstart; bi < xstop; ++bi) {
@@ -1531,8 +1545,7 @@ void MDNS::Projectrad4point(array2<Complex>& wa,int aNx,int amy,
   }
   fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
 
-  //cout << "MDNS::Projectrad4point" << endl;
-  //cout << "wa\n:" << wa << "\n wb\n:" << wb 
+  //cout << "MDNS::Projectrad4point\nwa\n:" << wa << "\n wb\n:" << wb ;
 }
 
 void MDNS::Prolongrad4point(array2<Complex>& wa,int aNx,int amy,
@@ -1602,6 +1615,14 @@ void MDNS::Prolong(unsigned ga)
 
   G[gb]->killmodes(wb);
 
+  /*
+  // FIXME: temp
+  wa.Load(1.0);
+  wb.Load(2.0);
+  G[ga]->killmodes(wa);
+  G[gb]->killmodes(wb);
+  */
+
 #if __checkpr
   {
     double E=0,Z=0,P=0;
@@ -1647,9 +1668,8 @@ void MDNS::Prolong(unsigned ga)
     cout << Z << endl;
   }  
 #endif
-  //cout << "prolong:" << endl;
-  //cout << "wa:\n"<< wa<< endl << "wb:\n"<< wb << endl;
-  //exit(1);
+
+  //cout << "MDNS::Prolong\nwa\n:" << wa << "\n wb\n:" << wb ;
 }
 
 void MDNS::Prolongrad2point(array2<Complex>& wa,int aNx,int amy,
@@ -1807,22 +1827,24 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
 }
 
 
-void MDNS::Grid::ComputeInvariants(const Array::array2<Complex> & w, 
+void MDNS::Grid::ComputeInvariants(const  Array::array2<Complex>& w, 
 				   Real& E, Real& Z, Real& P)
 {
 #if 0
   // FIXME:
   // once project and prolong use Mloop, use Mloop here as well
-  loop.Invariantsloop(w,E,Z,P,&DNSBase::AddInvariants);
+  gloop.Invariantsloop(w,E,Z,P,&DNSBase::AddInvariants);
 #else
   if(circular) {
-    unsigned maxR2=(my-1)*(my-1);
+    //cout << "minR2=" << minR2 << endl;    cout << "maxR2=" << maxR2 << endl;
+    //unsigned maxR2=(my-1)*(my-1);
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;
       int I2=I*I;
       vector wi=w[i];
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	if(I2+j*j < maxR2) {
+	unsigned r2=I2+j*j;
+	if((r2 < maxR2) && (r2 >= minR2)) {
 	  Real w2=abs2(wi[j]);
 	  Real k2=k02*(I2+j*j);
 	  Z += w2;
@@ -1970,8 +1992,24 @@ void MDNS::NonLinearSource(const vector2& gSrc, const vector2& gY, double t)
 void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
 {
   w.Set(wY);
-  loop.killmodes(w);
   f0.Set(wSrc);
+
+  //gloop.killmodes(w); // FIXME: restore
+
+  if(circular) { // FIXME: replace with killmodes
+    for(unsigned i=0; i < Nx; ++i) {
+      //unsigned maxR2=(my-1)*(my-1);
+      unsigned I= i > xorigin ? i-xorigin : xorigin-i;
+      unsigned I2=I*I;
+      vector wi=w[i];
+      for(unsigned j=0; j < my; ++j) {
+	unsigned r2=I2+j*j;
+	if(r2 >=maxR2) {
+	  wi[j]=0.0;
+	}
+      }
+    }
+  }
 
   //  cout << "w from Grid::NonLinearSource, myg=" << myg << endl;
   //  cout << w << endl;
@@ -1994,7 +2032,6 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
       }
       fftwpp::HermitianSymmetrizeX(smx,smy,sxorigin,wS);
       subloop.killmodes(wS);
-      // FIXME: add killmodes, yo. based on subloop
 
       smallDNSBase->NonLinearSource(SrcwS,wS,t);
       subloop.killmodes(SrcwS);
@@ -2013,17 +2050,36 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
       Real fact=pow((double)radix,nlfactor*myg); 
       f0 *= fact;
     }
+  } 
+
+  //gloop.killmodes(f0); // FIXME: restore
+
+  if(circular) { // FIXME: replace with killmodes
+    for(unsigned i=0; i < Nx; ++i) {
+      unsigned I= i > xorigin ? i-xorigin : xorigin-i;
+      unsigned I2=I*I;
+      vector f0i=f0[i];
+      for(unsigned j=0; j < my; ++j) {
+	unsigned r2=I2+j*j;
+	if(r2 >=maxR2) {
+	  f0i[j]=0.0;
+	}
+      }
+    }
   }
-  loop.killmodes(f0);
   
-   
 #if 0
   Real sum=0.0;
   for(unsigned i=0; i < Nx; ++i) {
+    unsigned I=i > xorigin ? i-xorigin : xorigin-i;
+    unsigned I2=I*I;
     vector wi=w[i];
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Complex wij=wi[j];
-      sum += (f0[i][j]*conj(wij)).re;
+      unsigned r2=I2+j*j;
+      if(!(circular) || (r2 < maxR2)) {
+	Complex wij=wi[j];
+	sum += (f0[i][j]*conj(wij)).re;
+      }
     }
   }
   cout << "grid Z conserved by NL? " << sum << endl << endl;

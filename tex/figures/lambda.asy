@@ -39,14 +39,16 @@ int Invisible;
 bool visible(int i, int j, int Invisible) {
   if(circular) {
     real a=max((nold-1.0),0);
-    real cutoff=a*a/radix;
+    real minr2=a*a/radix;
+    int maxr2=(n-1)*(n-1);
+    int r2=i*i+j*j;
     if(Invisible ==0)
-      return (i*i+j*j <= (n-1)*(n-1));
+      return (r2 <= maxr2);
     if(radix==2) {
-      return (i*i+j*j <= (n-1)*(n-1))&& ((i*i+j*j) > cutoff);
+      return((r2 >= minr2) && (r2 < maxr2));
     }
     if(radix==4) {
-      return (i*i+j*j <= (n-1)*(n-1))&& ((i*i+j*j) > cutoff);
+      return((r2 >= minr2) && (r2 < maxr2));
     }
   } else {
     if(radix==1 || radix == 4)
