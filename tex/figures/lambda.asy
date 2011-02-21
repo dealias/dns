@@ -15,7 +15,7 @@ int Ngrids=2; // the following three arrays only work up to ngrids=3
 pen[] dotpen={black,blue,deepgreen};
 filltype[] dotfill={Fill,NoFill,NoFill};
 pen[] dotfillpen={black,invisible,invisible};
-bool circular=true;
+bool circular=false;
 int n,G;
 int radix;
 path g;

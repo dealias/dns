@@ -56,6 +56,7 @@ MultiProblem *MProblem;
 unsigned Ngrids=2;
 const char *subintegrator="rk4";
 
+
 //***** derived loop class *****//
 class Mloop : public Hloop {
 protected:
@@ -101,6 +102,7 @@ public:
     return I >= Invisible ? 1 : Invisible;
   }
 };
+
 
 
 //***** Base class for functionoids *****//
@@ -398,7 +400,6 @@ public:
 	Mloop temploop;
 	temploop.setparams(gN(::Nx,g));
 	temploop.setInvisible(getInvisible(g));
-
 	Real minR2=0;
 	if(g > 0) {
 	  unsigned mup=(gN(::Nx,g-1)+1)/2;
@@ -435,13 +436,75 @@ public:
   //void SpectrumRad4(vector&, const vector&);
 
   void Project(unsigned ga);
-  void Projectrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int,			bool overwrite=true);
+  void Prolong(unsigned gb);
+
   void Projectrad1(array2<Complex>&,int,int,array2<Complex>&, int);
   void Prolongrad1(array2<Complex>&,int,int,array2<Complex>&, int);
+
+  void Projectrad2area(array2<Complex>&,int,int,array2<Complex>&,int,int,int,			bool overwrite=true);
+  void Prolongrad2area(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
+  void Projectrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int,			bool overwrite=true);
   void Prolongrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
+
+  void Projectrad4area(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
+  void Prolongrad4area(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
   void Projectrad4point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
   void Prolongrad4point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
-  void Prolong(unsigned gb);
+
+  enum direct{N,NE,E,SE,S,SW,W,NW};
+
+  Complex fakewrad4(array2<Complex> w, unsigned i, unsigned j, direct d) {
+    unsigned Nx=w.Nx();
+    unsigned xorigin=(Nx-1)/2;
+    unsigned jm;
+    vector wi=w[i];
+    vector wip=w[i+1];
+    vector wim=w[i-1];
+    Complex wij=wi[j];
+    Complex wijm, wimjm, wipjm;
+    if(j > 0) {
+      jm=j-1;
+      wijm=w[i][jm];
+      wimjm=w[i-1][jm];
+      wipjm=w[i+1][jm];
+    } else {
+      jm=1;
+      unsigned ic=2*xorigin-i;
+      wijm=w[ic][jm];
+      wimjm=w[ic+1][jm];
+      wipjm=w[ic-1][jm];
+    }
+    switch(d) {
+    case N:
+      return 0.5*(wij + wi[j+1]);
+      break;
+    case NE: // ++
+      return 0.25*(wij + wi[j+1] + wip[j] + wip[j+1]);
+      break;
+    case E:
+      return 0.5*(wij + wip[j]);
+      break;
+    case SE: // -+ 
+      return 0.25*(wij + wi[j+1] + wim[j] + wim[j+1]);
+      break;
+    case S:
+      return 0.5*(wij + wijm);
+      break;
+    case SW: // --
+      return 0.25*(wij + wi[j-1] + wim[j] + wim[j-1]);
+      break;
+    case W:
+      return 0.5*(wij + wim[j]);
+      break;    
+    case NW: // +-
+      return 0.25*(wij + wi[j-1] + wip[j] + wip[j-1]);
+      break;
+    }
+    msg(ERROR,"Invalid direction.");
+    return Complex(0.0,0.0);
+  }
+
+
   int Rescale();
 
   void IndexLimits(unsigned int& start, unsigned int& stop,
@@ -1030,6 +1093,7 @@ void MDNS::Grid::SpectrumRad2(vector& SrcEK, const vector& w0)
   case NOSPECTRUM:
     break;
   case RAW:
+    //gloop.Sloop(SrcEK,w0,&DNSBase::SpectrumAxes,&DNSBase::SpectrumDiag,&DNSBase::SpectrumMain);
     DNSBase::Spectrum(SrcEK,w0);
     break;
   default:
@@ -1378,7 +1442,7 @@ void MDNS::InitialConditions()
   mkdir(Vocabulary->FileName(dirsep,"ekvk"),0xFFFF);
 }
 
-void MDNS::Project(unsigned gb)   // FIXME: use Mloop?
+void MDNS::Project(unsigned gb)
 {
   if(dorescale==1)
     return;
@@ -1427,14 +1491,14 @@ void MDNS::Project(unsigned gb)   // FIXME: use Mloop?
     Projectrad1(wa,aNx,amy,wb,bNx);
     break;
   case 2:
-    if(prtype == AREA) 
-      msg(ERROR,"area-type projection not implemented with radix-2 grids.");
+    if(prtype == AREA)
+      Projectrad2area(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     if(prtype == POINT)
       Projectrad2point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     break;
   case 4:
     if(prtype==AREA)
-      msg(ERROR,"area-type projection no longer implemented");
+      Projectrad4area(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     if(prtype==POINT)
       Projectrad4point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     break;
@@ -1481,6 +1545,75 @@ void MDNS::Projectrad1(array2<Complex>& wa,int aNx,int amy,
   }
 }
 
+void MDNS::Projectrad2area(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible,
+			    bool overwrite)
+{
+  msg(ERROR,"function totally not finished");
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa); 
+   
+  bool iodd=false;
+  for(int ai=0; ai < aNx; ++ai) {
+    int aI=ai-axorigin;
+    vector wai=wa[ai];
+    cout << mod(ai,aNx);
+    //vector waim=wa[mod(ai-1,aNx)];
+    iodd=!iodd;
+    int start=iodd ? 1 : 0;
+    if(ai < axorigin && start==0) start=2;
+    for(int aj=start; aj < amy; aj+=2) {
+      int bI=(aI+aj)/2;
+      int bj=(aj-aI)/2;
+      if(bj >= 0) {
+	//wb[bI+bxorigin][bj]=	  (0.5*wai[aj] + 0.125*( )); // FIXME
+      } else {
+	wb[bxorigin-bI][-bj]=Complex(wai[aj].re,-wai[aj].im);
+      }
+    }
+  }
+  fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
+  //cout << "wa\n"<<wa << "wb\n"<<wb << endl;
+}
+
+void MDNS::Prolongrad2area(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+{
+  msg(ERROR,"function totally not finished");
+  //wa.Load(1.0);
+  //wb.Load(0.0);
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+
+  fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,axorigin,wb);
+  int bistop=(int) bNx;
+  for(int bi=0; bi < bistop; ++bi) {
+    vector wbi=wb[bi];
+    int bI=bi-(int) bxorigin;
+    int bjstop=(int)bInvisible-abs(bI);
+    for(int bj=bi < (int) bxorigin ? 1 : 0; bj < bjstop; ++bj) {
+      int aI=bI-bj;
+      int aj=bI+bj;
+      if(aj > 0) {
+	//cout << "(" << bI+(int)bxorigin << "," << bj  << ")->"
+	//<< "(" << aI+(int)axorigin << "," << aj  << ")" << endl;
+	//wa[aI+axorigin][aj]=Complex(bI,bj);
+	wa[aI+axorigin][aj]=wbi[bj];
+      } else {
+	//cout << "(" << bI+(int)axorigin << "," << bj  << ")->"
+	//<< "(" << (int)axorigin-aI << "," << -aj  << ")*" << endl;
+	//complex conjugate case
+	//wa[axorigin-aI][-aj]=Complex(bI,bj);
+	wa[axorigin-aI][-aj]=Complex(wbi[bj].re,-wbi[bj].im);
+	
+      }
+    }
+  }
+  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
+  //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
+}
+
 void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
 			    array2<Complex>& wb,int bNx,int bmy,int bInvisible,
 			    bool overwrite)
@@ -1489,14 +1622,10 @@ void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
   int bxorigin=(bNx-1)/2;
   bool iodd=false;
   
-  void (*op)(Complex&,Complex)=overwrite ? &ComplexSet : &ComplexSubfrom;
-
   fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
   for(int ai=0; ai < aNx; ++ai) {
     int aI=ai-axorigin;
-    vector wai;
-    Set(wai,wa[ai]);
-    Dimension(wai,aNx);
+    vector wai=wa[ai];
     iodd=!iodd;
     int start=iodd ? 1 : 0;
     if(ai < axorigin && start==0) start=2;
@@ -1510,7 +1639,7 @@ void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
 	//wb[bI+bxorigin][bj]=Complex(aI,aj);
 	//wb[bI+bxorigin][bj]=wai[aj];
 	//cout << wai[aj] << " ";
-	op(wb[bI+bxorigin][bj],wai[aj]);
+	wb[bI+bxorigin][bj]=wai[aj];
 	//ComplexSet(wb[bI+bxorigin][bj],wai[aj]);
 	//cout << wb[bI+bxorigin][bj] << endl;
       } else {
@@ -1520,7 +1649,7 @@ void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
 	//wb[bxorigin-bI][-bj]=Complex(aI,aj); 
 	//wb[bxorigin-bI][-bj]=Complex(wai[aj].re,-wai[aj].im);
 	//cout <<Complex(wai[aj].re,-wai[aj].im) << " ";
-	op(wb[bxorigin-bI][-bj],Complex(wai[aj].re,-wai[aj].im));
+	wb[bxorigin-bI][-bj]=Complex(wai[aj].re,-wai[aj].im);
 	//cout << wb[bxorigin-bI][-bj] << endl;
 	//ComplexSet(wb[bxorigin-bI][-bj],wai[aj]);
       }
@@ -1528,6 +1657,44 @@ void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
   }
   fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
   //cout << "wa\n"<<wa << "wb\n"<<wb << endl;
+}
+
+void MDNS::Prolongrad2point(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+{
+  //wa.Load(1.0);
+  //wb.Load(0.0);
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+
+  fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,axorigin,wb);
+  int bistop=(int) bNx;
+  for(int bi=0; bi < bistop; ++bi) {
+    vector wbi;
+    Set(wbi,wb[bi]);
+    Dimension(wbi,bNx);
+    int bI=bi-(int) bxorigin;
+    int bjstop=(int)bInvisible-abs(bI);
+    for(int bj=bi < (int) bxorigin ? 1 : 0; bj < bjstop; ++bj) {
+      int aI=bI-bj;
+      int aj=bI+bj;
+      if(aj > 0) {
+	//cout << "(" << bI+(int)bxorigin << "," << bj  << ")->"
+	//<< "(" << aI+(int)axorigin << "," << aj  << ")" << endl;
+	//wa[aI+axorigin][aj]=Complex(bI,bj);
+	wa[aI+axorigin][aj]=wbi[bj];
+      } else {
+	//cout << "(" << bI+(int)axorigin << "," << bj  << ")->"
+	//<< "(" << (int)axorigin-aI << "," << -aj  << ")*" << endl;
+	//complex conjugate case
+	//wa[axorigin-aI][-aj]=Complex(bI,bj);
+	wa[axorigin-aI][-aj]=Complex(wbi[bj].re,-wbi[bj].im);
+	
+      }
+    }
+  }
+  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
+  //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
 }
 
 void MDNS::Projectrad4point(array2<Complex>& wa,int aNx,int amy,
@@ -1581,6 +1748,204 @@ void MDNS::Prolongrad4point(array2<Complex>& wa,int aNx,int amy,
 
   //cout << "MDNS::Prolongrad4point" << endl;
   //cout << "wa\n:" << wa << "\n wb\n:" << wb 
+}
+
+void MDNS::Projectrad4area(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+{
+  if(circular)
+    msg(ERROR,"circular not working with MDNS::Projectrad4area yet.");
+
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+  int xstart=bInvisible;
+  int xstop=bxorigin+bInvisible;
+
+  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
+
+  int ai=1;
+  for(int bi=xstart; bi < xstop; ++bi) {
+    vector waim=wa[ai-1];
+    vector wai=wa[ai];
+    vector waip=wa[ai+1];
+    vector wbi=wb[bi];
+    int aI=ai-axorigin;
+
+    // main case
+    for(int j= bi=1 ; j < bInvisible; ++j) {
+      int aj=2*j;
+      int ajm=aj-1;
+      wbi[j]=0.25*(wai[aj]
+		   +0.5*(waim[aj]+waip[aj]) // horiz
+		   +0.5*(wai[aj+1]+wai[aj-1]) // vert
+		   +0.25*(waim[aj+1]+waip[aj+1]+waim[ajm]+waip[ajm])
+		   );
+    }
+
+      if(aj==0) {
+	waim=wa[axorigin-aI];
+	ajm=aj+1;
+      }
+
+
+    // top case
+    int bj=bInvisible;
+    int aj=2*bj;
+    vector wbim=wb[bi-1];
+    vector wbip=wb[bi+1];
+    wbi[bj]=0.25*(wbi[bj]
+		  +0.5*(fakewrad4(wb,bi,bj,E)+fakewrad4(wb,bi,bj,W))
+		  +0.5*(fakewrad4(wb,bi,bj,S)+wai[aj-1])
+		  +0.25*(
+			 fakewrad4(wb,bi,bj,NW)+
+			 fakewrad4(wb,bi,bj,NE)+
+			 waim[aj-1]+ // --
+			 fakewrad4(wb,bi,bj,SE)
+			 )
+		  );
+
+    
+
+    ai += 2;
+  }
+
+  // FIXME: is xstart really the right thing here?
+  
+  // bottom row
+  for(int bi=bxorigin+1; bi < xstop; ++bi) {
+    int bI=bi-bxorigin;
+    int aI=bI/2;
+    int ai=aI+axorigin;
+    wb[bi][0]=0.25*(
+		    wb[i][0]
+		    +0.5*(waR[0]+fakewrad4(wb,i,0,E)) // horiz
+		    +0.5*(fakewrad4(wb,i,0,N)+fakewrad4(wb,i,0,S)) // vert
+		    +0.25*(
+			   fakewrad4(wb,i,0,NE)+
+			   fakewrad4(wb,i,0,SE)+
+			   conj(wa[0][1])+// SW+
+			   waR[1]// NW
+			   )
+		    );
+    
+  }
+
+  // origin case:
+  // FIXME
+
+  // side case
+  vector wbL=wb[xstart];
+  vector wbR=wb[xstop];
+  vector wbLm=wb[xstart-1];
+  vector wbRm=wb[xstop-1];
+  vector wbLp=wb[xstart+1];
+  vector wbRp=wb[xstop+1];
+  vector waL=wa[0];
+  vector waR=wb[aNx-1];
+  for(int j=1; j < bInvisible; ++j) {
+    int aj=2*j;
+    wbL[j]=0.25*(wbL[j]
+		 +0.5*(fakewrad4(wb,xstart,j,W)+waL[aj]) // horiz
+		 +0.5*(fakewrad4(wb,xstart,j,N)+fakewrad4(wb,xstart,j,S))// vert
+		 +0.25*(
+			fakewrad4(wb,xstart,j,SE)+waL[aj+1]
+			+fakewrad4(wb,xstart,j,SW)+waL[aj-1] 
+			)
+		 );
+    wbR[j]=0.25*(wbR[j]
+		 +0.5*(fakewrad4(wb,xstop,j,E)+waR[aj]) // horiz
+		 +0.5*(fakewrad4(wb,xstop,j,N)+fakewrad4(wb,xstop,j,S)
+		       ) // vert
+		 +0.25*(
+			fakewrad4(wb,xstop,j,NE)+waR[aj+1] 
+			+fakewrad4(wb,xstop,j,SE)+waR[aj-1]
+			)
+		 );
+  }
+
+  // corner cases (three of them)
+  // top-left
+  unsigned i=xstart, j = bInvisible;
+  wb[i][j]=0.25*(
+		 wb[i][j]
+		 +0.5*(fakewrad4(wb,i,j,W)+fakewrad4(wb,i,j,E)) // horiz
+		 +0.5*(fakewrad4(wb,i,j,N)+fakewrad4(wb,i,j,S)) // vert
+		 +0.25*( // all but SE are faked
+			fakewrad4(wb,i,j,N)+
+			fakewrad4(wb,i,j,NE)+
+			fakewrad4(wb,i,j,E)+
+			waL[2*j]+
+			fakewrad4(wb,i,j,S)+
+			fakewrad4(wb,i,j,SW)+
+			fakewrad4(wb,i,j,W)+
+			fakewrad4(wb,i,j,NW)
+			 )
+		 );
+  // top-right
+  i=xstop;
+  wb[i][j]=0.25*(
+		 wb[i][j]
+		 +0.5*(fakewrad4(wb,i,j,W)+fakewrad4(wb,i,j,E)) // horiz
+		 +0.5*(fakewrad4(wb,i,j,N)+fakewrad4(wb,i,j,S)) // vert
+		 +0.25*( // all but SW are faked
+			fakewrad4(wb,i,j,N)+
+			fakewrad4(wb,i,j,NE)+
+			fakewrad4(wb,i,j,E)+
+			fakewrad4(wb,i,j,SE)+
+			fakewrad4(wb,i,j,S)+
+			waR[2*j]+
+			fakewrad4(wb,i,j,W)+
+			fakewrad4(wb,i,j,NW)
+			 )
+		 );
+
+  // bottom-right
+  j=0;
+  //Complex aRjm= // FIXME: this is the cc case
+  wb[i][j]=0.25*(
+		 wb[i][j]
+		 +0.5*(waR[j]+fakewrad4(wb,i,j,E)) // horiz
+		 +0.5*(fakewrad4(wb,i,j,N)+fakewrad4(wb,i,j,S)) // vert
+		 +0.25*(
+			fakewrad4(wb,i,j,NE)+
+			fakewrad4(wb,i,j,SE)+
+			conj(wa[0][1])+// SW+
+			waR[1]// NW
+			 )
+		 );
+  
+
+  fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
+
+  cout << "MDNS::Projectrad4area\nwa\n:" << wa << "\n wb\n:" << wb ;
+}
+
+void MDNS::Prolongrad4area(array2<Complex>& wa,int aNx,int amy,
+			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+{
+  int axorigin=(aNx-1)/2;
+  int bxorigin=(bNx-1)/2;
+  int xstart=bInvisible;
+  int xstop=bxorigin+bInvisible;
+  int maxR2=(amy-1)*(amy-1);
+
+  // FIXME: this doesn't do what's advertised as of yet.
+
+  int ai=1;
+  for(int bi=xstart; bi < xstop; ++bi) {
+    int aI=ai-axorigin;
+    int aI2=aI*aI;
+    vector wai=wa[ai];
+    vector wbi=wb[bi];
+    for(int j= bi < bxorigin ? 1 : 0 ; j < bInvisible; ++j) {
+      if(!circular || (aI2+4*j*j < maxR2))
+	wai[j+j]=wbi[j];
+    }
+    ai += 2;
+  }
+  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
+
+  cout << "MDNS::Prolongrad4area\nwa\n:" << wa << "\n wb\n:" << wb;
 }
 
 void MDNS::Prolongrad1(array2<Complex>& wa,int aNx,int amy,
@@ -1649,13 +2014,13 @@ void MDNS::Prolong(unsigned ga)
     break;
   case 2:
     if(prtype == AREA) 
-      msg(ERROR,"area-type prolongation not implemented with radix-2 grids.");
+      Prolongrad2area(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     if(prtype == POINT)
       Prolongrad2point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     break;
   case 4:
     if(prtype==AREA)
-      msg(ERROR,"area-type projection no longer implemented");
+      Prolongrad4area(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     if(prtype==POINT)
       Prolongrad4point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     break;
@@ -1678,44 +2043,6 @@ void MDNS::Prolong(unsigned ga)
 #endif
 
   //cout << "MDNS::Prolong\nwa\n:" << wa << "\n wb\n:" << wb ;
-}
-
-void MDNS::Prolongrad2point(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
-{
-  //wa.Load(1.0);
-  //wb.Load(0.0);
-  int axorigin=(aNx-1)/2;
-  int bxorigin=(bNx-1)/2;
-
-  fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,axorigin,wb);
-  int bistop=(int) bNx;
-  for(int bi=0; bi < bistop; ++bi) {
-    vector wbi;
-    Set(wbi,wb[bi]);
-    Dimension(wbi,bNx);
-    int bI=bi-(int) bxorigin;
-    int bjstop=(int)bInvisible-abs(bI);
-    for(int bj=bi < (int) bxorigin ? 1 : 0; bj < bjstop; ++bj) {
-      int aI=bI-bj;
-      int aj=bI+bj;
-      if(aj > 0) {
-	//cout << "(" << bI+(int)bxorigin << "," << bj  << ")->"
-	//<< "(" << aI+(int)axorigin << "," << aj  << ")" << endl;
-	//wa[aI+axorigin][aj]=Complex(bI,bj);
-	wa[aI+axorigin][aj]=wbi[bj];
-      } else {
-	//cout << "(" << bI+(int)axorigin << "," << bj  << ")->"
-	//<< "(" << (int)axorigin-aI << "," << -aj  << ")*" << endl;
-	//complex conjugate case
-	//wa[axorigin-aI][-aj]=Complex(bI,bj);
-	wa[axorigin-aI][-aj]=Complex(wbi[bj].re,-wbi[bj].im);
-	
-      }
-    }
-  }
-  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
-  //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
 }
 
 int MDNS::Rescale()
