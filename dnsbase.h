@@ -26,7 +26,7 @@ protected:
   // Vocabulary:
   unsigned Nx;
   unsigned Ny;
-  static Real nuH, nuL;
+  Real nuH, nuL;
   static const int xpad,ypad;
   
   enum Field {OMEGA,TRANSFER,EK};
@@ -36,8 +36,8 @@ protected:
   unsigned origin; // linear index of Fourier origin.
   unsigned xorigin; // horizontal index of Fourier origin.
 
-  static Real k0; // grid spacing factor
-  static Real k02; // k0^2
+  Real k0; // grid spacing factor
+  Real k02; // k0^2
   array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
 
@@ -66,8 +66,8 @@ protected:
   Array2<Complex> f,g,h;
   vector Tn;
   array1<unsigned>::opt count;
-  static vector E; // Spectrum
-  static vector T; // Transfer
+  vector E; // Spectrum
+  vector T; // Transfer
 
 public:
   DNSBase() {}
@@ -84,19 +84,123 @@ public:
   void InitialConditions();
   void Initialize();
   virtual void setcount();
-  //  virtual void Output(int it)=0;
   void FinalOutput();
   void OutFrame(int it);
 
-  typedef void (*SourceFcn)(const vector& wi, const vector& Si, unsigned I2,
-                            unsigned j);
+  class FETL {
+    DNSBase *b;
+    const vector& E;
+    const vector& T;
+    Real k0;
+    
+  public: 
+    FETL(DNSBase *b) : b(b), E(b->E), T(b->T), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      unsigned index=(unsigned)(kint-0.5);
+      Complex wij=wi[j];
+      Real w2=abs2(wij);
+      Nu nu=b->nuk(k2int);
+      E[index] += Complex(w2/k,nu*w2);
+      Complex Sij=Si[j];
+      Complex& Tindex=T[index];
+      Tindex.re += realproduct(Sij,wij);
+      Forcing->Force(wij,Tindex.im,k);
+      Si[j]=Sij-nu*wij;
+    }
+  };
   
-  static void FETL(const vector& wi, const vector& Si, unsigned I2, unsigned j);
-  static void FTL(const vector& wi, const vector& Si, unsigned I2, unsigned j);
-  static void FET(const vector& wi, const vector& Si, unsigned I2, unsigned j);
-  static void FE(const vector& wi, const vector& Si, unsigned I2, unsigned j);
-  static void FL(const vector& wi, const vector& Si, unsigned I2, unsigned j);
-
+  class FTL {
+    DNSBase *b;
+    const vector& T;
+    Real k0;
+    
+  public: 
+    FTL(DNSBase *b) : b(b), T(b->T), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      unsigned index=(unsigned)(kint-0.5);
+      Complex wij=wi[j];
+      Nu nu=b->nuk(k2int);
+      Complex Sij=Si[j];
+      Complex& Tindex=T[index];
+      Tindex.re += realproduct(Sij,wij);
+      Forcing->Force(wij,Tindex.im,k);
+      Si[j]=Sij-nu*wij;
+    }
+  };
+  
+  class FET {
+    DNSBase *b;
+    const vector& E;
+    const vector& T;
+    Real k0;
+    
+  public: 
+    FET(DNSBase *b) : b(b), E(b->E), T(b->T), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      unsigned index=(unsigned)(kint-0.5);
+      Complex wij=wi[j];
+      Real w2=abs2(wij);
+      Nu nu=b->nuk(k2int);
+      E[index] += Complex(w2/k,nu*w2);
+      Complex Sij=Si[j];
+      Complex& Tindex=T[index];
+      Tindex.re += realproduct(Sij,wij);
+      Forcing->Force(wij,Tindex.im,k);
+    }
+  };
+  
+  class FE {
+    DNSBase *b;
+    const vector& E;
+    Real k0;
+    
+  public: 
+    FE(DNSBase *b) : b(b), E(b->E), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      unsigned index=(unsigned)(kint-0.5);
+      Complex wij=wi[j];
+      Real w2=abs2(wij);
+      Nu nu=b->nuk(k2int);
+      E[index] += Complex(w2/k,nu*w2);
+    }
+  };
+  
+  class FL {
+    DNSBase *b;
+    Real k0;
+    
+  public: 
+    FL(DNSBase *b) : b(b), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      Complex wij=wi[j];
+      Nu nu=b->nuk(k2int);
+      Complex Sij=Si[j];
+      double T;
+      Forcing->Force(wij,T,k);
+      Si[j]=Sij-nu*wij;
+    }
+  };
+  
   void NonLinearSource(const vector2& Src, const vector2& Y, double t);
 
   void ZeroT(const vector2& Src) {
@@ -115,13 +219,13 @@ public:
     NonLinearSource(Src,Y,t);
     ZeroT(Src);
     ZeroE(Src);
-    Compute(FETL,Src,Y);
+    Compute(FETL(this),Src,Y);
   }
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
     if(spectrum) {
       ZeroT(Src);
-      Compute(FTL,Src,Y);
+      Compute(FTL(this),Src,Y);
     }
   }
 
@@ -130,20 +234,36 @@ public:
     if(spectrum) {
       ZeroT(Src);
       ZeroE(Src);
-      Compute(FET,Src,Y);
+      Compute(FET(this),Src,Y);
     }
   }
 
-  void Compute(SourceFcn fcn, const vector2& Src, const vector2& Y);
+  template<class T>
+  void Compute(T fcn, const vector2& Src, const vector2& Y)
+  {
+    f0.Set(Src[OMEGA]);
+    w.Set(Y[OMEGA]);
+
+    Forcing->Set();
+
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      vector wi=w[i];
+      vector Si=f0[i];
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+        fcn(wi,Si,I2,j);
+    }
+  }
   
   void Source(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
     if(spectrum) {
       ZeroT(Src);
       ZeroE(Src);
-      Compute(FETL,Src,Y);
+      Compute(FETL(this),Src,Y);
     } else
-      Compute(FL,Src,Y);
+      Compute(FL(this),Src,Y);
   }
 
   Nu LinearCoeff(unsigned k) {
@@ -153,7 +273,7 @@ public:
   }
 
   // TODO: use a 1D lookup table on i^2+j^2.
-  static Real nuk(unsigned i2) {
+  Real nuk(unsigned i2) {
     double k2=i2*k02;
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
   }
