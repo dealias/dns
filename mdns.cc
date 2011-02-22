@@ -4,6 +4,7 @@
 #include "Conservative.h"
 #include "DynVector.h"
 #include "ArrayL.h"
+#include "ArrayH.h"
 
 using namespace fftwpp;
 
@@ -446,14 +447,116 @@ public:
   void Projectrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int,			bool overwrite=true);
   void Prolongrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
 
-  void Projectrad4area(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
+  void Projectrad4area(array2<Complex>&,array2<Complex>&,int);
   void Prolongrad4area(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
   void Projectrad4point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
   void Prolongrad4point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
 
   enum direct{N,NE,E,SE,S,SW,W,NW};
 
+  Complex self(array2<Complex> wa, array2<Complex> wb,
+	       int bi, int bj) {
+    // I'm a very complex person
+
+
+    int aN=wa.Nx();
+    int am=wa.Ny();
+    int bN=wb.Nx();
+    //int bm=wb.Ny();
+    int axorigin=(aN-1)/2;
+    int bxorigin=(bN-1)/2;
+    int bI=bi-bxorigin;
+    int aI=2*bI;
+    int ai=aI-axorigin;
+    int aj=2*bj;
+    if(ai > 0 && ai < aN && aj < am)
+      return wa[ai][aj];
+    return wb[bi][bj];
+  }
+
+  Complex neighbour(array2<Complex> wa0, array2<Complex> wb,
+			int bi, int bj, direct d) {
+    // given corrdinates (bI,bj) on grid b, 
+    // find the point in the direction d.
+
+    if(radix != 4) 
+      msg(ERROR,"this only works with radix=4 right now");
+
+
+    int aN=wa.Nx();
+    int am=wa.Ny();
+    int bN=wb.Nx();
+    //int bm=wb.Ny();
+    int axorigin=(aN-1)/2;
+    int bxorigin=(bN-1)/2;
+    int bI=bi-bxorigin;
+    int aI=2*bI;
+    int ai=aI+axorigin;
+    int aj=2*bj;
+    array2H<Complex> wa;
+    wa.Dimension(aN,am);
+    wa.Set(wa);
+
+    if(ai < aN && ai > 0) {
+      if(aj < am) {
+	switch(d) {
+	case N: return wa.get(aI  ,aj+1);
+	case NE:return wa.get(aI+1,aj+1);
+	case E: return wa.get(aI+1,aj  );
+	case SE:return wa.get(aI+1,aj-1);
+	case S: return wa.get(aI  ,aj-1);
+	case SW:return wa.get(aI-1,aj-1);
+	case W: return wa.get(aI-1,aj  );
+	case NW:return wa.get(aI-1,aj+1);
+	}
+      } else { // aJ equals am, so top row
+	switch(d) {
+	case SE:return wa.get(aI+1,aj-1);
+	case S: return wa.get(aI  ,aj-1);
+	case SW:return wa.get(aI-1,aj-1);
+	default: return fakewrad4(wb,bi,bj,d);
+	}
+      }
+    }
+    
+    if(ai == -1) { // left column
+      if(aj < am) { // left column
+	switch(d) {
+	case NE:return wa.get(aI+1,aj+1);
+	case E: return wa.get(aI+1,aj  );
+	case SE:return wa.get(aI+1,aj-1);
+	default: return fakewrad4(wb,bi,bj,d);
+	}
+      } else { // top-left corner
+	if(d == SE)
+	  return wa.get(aI+1,aj-1);
+	return fakewrad4(wb,bi,bj,d);
+      }
+    }
+
+    if(ai == aN) {
+      if(aj < am) { // right column
+	switch(d) {
+	case SW:return wa.get(aI-1,aj-1);
+	case W: return wa.get(aI-1,aj  );
+	case NW:return wa.get(aI-1,aj+1);
+	default: return fakewrad4(wb,bi,bj,d);
+	}
+      } else { // top-right corner
+	if(d == SW)
+	  return wa.get(aI-1,aj-1);
+	return fakewrad4(wb,bi,bj,d);
+
+      }
+    }
+    
+    cout << "bi="<< bi << " bj="<<bj << " direction="<<d << endl;
+    msg(ERROR,"case should never happen");
+    return wa[0][0];
+  }
+
   Complex fakewrad4(array2<Complex> w, unsigned i, unsigned j, direct d) {
+    // FIXME: use array2H?
     unsigned Nx=w.Nx();
     unsigned xorigin=(Nx-1)/2;
     unsigned jm;
@@ -475,30 +578,14 @@ public:
       wipjm=w[ic-1][jm];
     }
     switch(d) {
-    case N:
-      return 0.5*(wij + wi[j+1]);
-      break;
-    case NE: // ++
-      return 0.25*(wij + wi[j+1] + wip[j] + wip[j+1]);
-      break;
-    case E:
-      return 0.5*(wij + wip[j]);
-      break;
-    case SE: // -+ 
-      return 0.25*(wij + wi[j+1] + wim[j] + wim[j+1]);
-      break;
-    case S:
-      return 0.5*(wij + wijm);
-      break;
-    case SW: // --
-      return 0.25*(wij + wi[j-1] + wim[j] + wim[j-1]);
-      break;
-    case W:
-      return 0.5*(wij + wim[j]);
-      break;    
-    case NW: // +-
-      return 0.25*(wij + wi[j-1] + wip[j] + wip[j-1]);
-      break;
+    case N:  return 0.5*(wij + wi[j+1]);
+    case NE: return 0.25*(wij + wi[j+1] + wip[j] + wip[j+1]); 
+    case E:  return 0.5*(wij + wip[j]);
+    case SE: return 0.25*(wij + wi[j+1] + wim[j] + wim[j+1]);
+    case S:  return 0.5*(wij + wijm);
+    case SW: return 0.25*(wij + wi[j-1] + wim[j] + wim[j-1]);
+    case W:  return 0.5*(wij + wim[j]);
+    case NW: return 0.25*(wij + wi[j-1] + wip[j] + wip[j-1]);
     }
     msg(ERROR,"Invalid direction.");
     return Complex(0.0,0.0);
@@ -1498,7 +1585,7 @@ void MDNS::Project(unsigned gb)
     break;
   case 4:
     if(prtype==AREA)
-      Projectrad4area(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+      Projectrad4area(wa,wb,bInvisible);
     if(prtype==POINT)
       Projectrad4point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
     break;
@@ -1750,174 +1837,47 @@ void MDNS::Prolongrad4point(array2<Complex>& wa,int aNx,int amy,
   //cout << "wa\n:" << wa << "\n wb\n:" << wb 
 }
 
-void MDNS::Projectrad4area(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+void MDNS::Projectrad4area(array2<Complex>& wa,array2<Complex>& wb,
+			   int bInvisible)
 {
   if(circular)
     msg(ERROR,"circular not working with MDNS::Projectrad4area yet.");
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+  int bmy=wb.Ny();
 
   int axorigin=(aNx-1)/2;
   int bxorigin=(bNx-1)/2;
-  int xstart=bInvisible;
-  int xstop=bxorigin+bInvisible;
+  int xstart=bInvisible-1;
+  int xstop=bxorigin+bInvisible+1;
+  int ystop=bInvisible+1;
 
   fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
 
-  int ai=1;
+  cout << "xstart="<< xstart << endl;
+  cout << "xstop="<< xstop << endl;
+  cout << "ystop="<< ystop << endl;
+
   for(int bi=xstart; bi < xstop; ++bi) {
-    vector waim=wa[ai-1];
-    vector wai=wa[ai];
-    vector waip=wa[ai+1];
     vector wbi=wb[bi];
-    int aI=ai-axorigin;
-
-    // main case
-    for(int j= bi=1 ; j < bInvisible; ++j) {
-      int aj=2*j;
-      int ajm=aj-1;
-      wbi[j]=0.25*(wai[aj]
-		   +0.5*(waim[aj]+waip[aj]) // horiz
-		   +0.5*(wai[aj+1]+wai[aj-1]) // vert
-		   +0.25*(waim[aj+1]+waip[aj+1]+waim[ajm]+waip[ajm])
-		   );
-    }
-
-      if(aj==0) {
-	waim=wa[axorigin-aI];
-	ajm=aj+1;
-      }
-
-
-    // top case
-    int bj=bInvisible;
-    int aj=2*bj;
-    vector wbim=wb[bi-1];
-    vector wbip=wb[bi+1];
-    wbi[bj]=0.25*(wbi[bj]
-		  +0.5*(fakewrad4(wb,bi,bj,E)+fakewrad4(wb,bi,bj,W))
-		  +0.5*(fakewrad4(wb,bi,bj,S)+wai[aj-1])
-		  +0.25*(
-			 fakewrad4(wb,bi,bj,NW)+
-			 fakewrad4(wb,bi,bj,NE)+
-			 waim[aj-1]+ // --
-			 fakewrad4(wb,bi,bj,SE)
-			 )
-		  );
-
-    
-
-    ai += 2;
-  }
-
-  // FIXME: is xstart really the right thing here?
-  
-  // bottom row
-  for(int bi=bxorigin+1; bi < xstop; ++bi) {
-    int bI=bi-bxorigin;
-    int aI=bI/2;
-    int ai=aI+axorigin;
-    wb[bi][0]=0.25*(
-		    wb[i][0]
-		    +0.5*(waR[0]+fakewrad4(wb,i,0,E)) // horiz
-		    +0.5*(fakewrad4(wb,i,0,N)+fakewrad4(wb,i,0,S)) // vert
-		    +0.25*(
-			   fakewrad4(wb,i,0,NE)+
-			   fakewrad4(wb,i,0,SE)+
-			   conj(wa[0][1])+// SW+
-			   waR[1]// NW
-			   )
+    for(int bj=1 ; bj < ystop; ++bj) {
+      pout(bi,bj); cout << endl;
+      
+      wbi[bj]=0.25*(self(wa,wb,bi,bj)
+		    +neighbour(wa,wb,bi,bj,E)
+		    //+0.5*(waim[aj]+waip[aj]) // horiz
+		    //+0.5*(wai[aj+1]+wai[aj-1]) // vert
+		    //+0.25*(waim[aj+1]+waip[aj+1]+waim[ajm]+waip[ajm])
 		    );
-    
+      
+    }
+    cout << endl;
   }
-
-  // origin case:
-  // FIXME
-
-  // side case
-  vector wbL=wb[xstart];
-  vector wbR=wb[xstop];
-  vector wbLm=wb[xstart-1];
-  vector wbRm=wb[xstop-1];
-  vector wbLp=wb[xstart+1];
-  vector wbRp=wb[xstop+1];
-  vector waL=wa[0];
-  vector waR=wb[aNx-1];
-  for(int j=1; j < bInvisible; ++j) {
-    int aj=2*j;
-    wbL[j]=0.25*(wbL[j]
-		 +0.5*(fakewrad4(wb,xstart,j,W)+waL[aj]) // horiz
-		 +0.5*(fakewrad4(wb,xstart,j,N)+fakewrad4(wb,xstart,j,S))// vert
-		 +0.25*(
-			fakewrad4(wb,xstart,j,SE)+waL[aj+1]
-			+fakewrad4(wb,xstart,j,SW)+waL[aj-1] 
-			)
-		 );
-    wbR[j]=0.25*(wbR[j]
-		 +0.5*(fakewrad4(wb,xstop,j,E)+waR[aj]) // horiz
-		 +0.5*(fakewrad4(wb,xstop,j,N)+fakewrad4(wb,xstop,j,S)
-		       ) // vert
-		 +0.25*(
-			fakewrad4(wb,xstop,j,NE)+waR[aj+1] 
-			+fakewrad4(wb,xstop,j,SE)+waR[aj-1]
-			)
-		 );
-  }
-
-  // corner cases (three of them)
-  // top-left
-  unsigned i=xstart, j = bInvisible;
-  wb[i][j]=0.25*(
-		 wb[i][j]
-		 +0.5*(fakewrad4(wb,i,j,W)+fakewrad4(wb,i,j,E)) // horiz
-		 +0.5*(fakewrad4(wb,i,j,N)+fakewrad4(wb,i,j,S)) // vert
-		 +0.25*( // all but SE are faked
-			fakewrad4(wb,i,j,N)+
-			fakewrad4(wb,i,j,NE)+
-			fakewrad4(wb,i,j,E)+
-			waL[2*j]+
-			fakewrad4(wb,i,j,S)+
-			fakewrad4(wb,i,j,SW)+
-			fakewrad4(wb,i,j,W)+
-			fakewrad4(wb,i,j,NW)
-			 )
-		 );
-  // top-right
-  i=xstop;
-  wb[i][j]=0.25*(
-		 wb[i][j]
-		 +0.5*(fakewrad4(wb,i,j,W)+fakewrad4(wb,i,j,E)) // horiz
-		 +0.5*(fakewrad4(wb,i,j,N)+fakewrad4(wb,i,j,S)) // vert
-		 +0.25*( // all but SW are faked
-			fakewrad4(wb,i,j,N)+
-			fakewrad4(wb,i,j,NE)+
-			fakewrad4(wb,i,j,E)+
-			fakewrad4(wb,i,j,SE)+
-			fakewrad4(wb,i,j,S)+
-			waR[2*j]+
-			fakewrad4(wb,i,j,W)+
-			fakewrad4(wb,i,j,NW)
-			 )
-		 );
-
-  // bottom-right
-  j=0;
-  //Complex aRjm= // FIXME: this is the cc case
-  wb[i][j]=0.25*(
-		 wb[i][j]
-		 +0.5*(waR[j]+fakewrad4(wb,i,j,E)) // horiz
-		 +0.5*(fakewrad4(wb,i,j,N)+fakewrad4(wb,i,j,S)) // vert
-		 +0.25*(
-			fakewrad4(wb,i,j,NE)+
-			fakewrad4(wb,i,j,SE)+
-			conj(wa[0][1])+// SW+
-			waR[1]// NW
-			 )
-		 );
-  
-
   fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
 
   cout << "MDNS::Projectrad4area\nwa\n:" << wa << "\n wb\n:" << wb ;
+  exit(1);
 }
 
 void MDNS::Prolongrad4area(array2<Complex>& wa,int aNx,int amy,
