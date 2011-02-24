@@ -1918,17 +1918,25 @@ void MDNS::Projectrad4area(array2<Complex>& wa,array2<Complex>& wb,
     vector wbi=wb[bi];
     for(int bj=1 ; bj < ystop; ++bj) {
       //pout(bi,bj); cout << endl;
-      wbi[bj]=0.25*(self(wa,wb,bi,bj)
-		    +0.5*(neighbour(wa,wb,bi,bj,E)+neighbour(wa,wb,bi,bj,W))
-		    +0.5*(neighbour(wa,wb,bi,bj,N)+neighbour(wa,wb,bi,bj,S))
+      wbi[bj] *=
+	sqrt(0.25*(abs2(self(wa,wb,bi,bj))
+		    +0.5*(
+			  abs2(neighbour(wa,wb,bi,bj,E))+
+			  abs2(neighbour(wa,wb,bi,bj,W))
+			  )
+		    +0.5*(
+			  abs2(neighbour(wa,wb,bi,bj,N))+
+			  abs2(neighbour(wa,wb,bi,bj,S))
+			  )
 		    +0.25*(
-			   neighbour(wa,wb,bi,bj,NE)+
-			   neighbour(wa,wb,bi,bj,SE)+
-			   neighbour(wa,wb,bi,bj,NW)+
-			   neighbour(wa,wb,bi,bj,SW)
+			   abs2(neighbour(wa,wb,bi,bj,NE))+
+			   abs2(neighbour(wa,wb,bi,bj,SE))+
+			   abs2(neighbour(wa,wb,bi,bj,NW))+
+			   abs2(neighbour(wa,wb,bi,bj,SW))
 			   )
 
-	 );
+		    )/abs2(wbi[bj])
+	     );
     }
     //cout << endl;
   }
@@ -1980,7 +1988,9 @@ void MDNS::Prolongrad4area(array2<Complex>& wa,array2<Complex>& wb,
     vector wbiR=wb[biR];
     for(int aj= ai < axorigin ? 2 : 0 ; aj < am; aj += 2) {
       int bj=aj/2;
-      wai[aj]=0.5*(wbiL[bj]+wbiR[bj]);
+      wai[aj] *= sqrt(
+		      0.5*(abs2(wbiL[bj])+abs2(wbiR[bj]))/abs2(wai[aj])
+		      );
     }
   }
 
@@ -1996,7 +2006,7 @@ void MDNS::Prolongrad4area(array2<Complex>& wa,array2<Complex>& wb,
     for(int aj= 1 ; aj < am; aj += 2) {
       int bjD=(aj-1)/2;
       int bjU=(aj+1)/2;
-      wai[aj]=0.5*(wbi[bjD]+wbi[bjU]);
+      wai[aj] *= sqrt(0.5*(abs2(wbi[bjD])+abs2(wbi[bjU]))/abs2(wai[aj]));
     }
   }
   
@@ -2013,7 +2023,11 @@ void MDNS::Prolongrad4area(array2<Complex>& wa,array2<Complex>& wb,
     for(int aj= 1 ; aj < am; aj += 2) {
       int bjD=(aj-1)/2;
       int bjU=(aj+1)/2;
-      wai[aj]=0.25*(wbiL[bjD]+wbiL[bjU]+wbiR[bjD]+wbiR[bjU]);
+      wai[aj] *= sqrt(
+		   0.25*(abs2(wbiL[bjD])+abs2(wbiL[bjU])+
+			 abs2(wbiR[bjD])+abs2(wbiR[bjU]))
+		   /abs2(wai[aj])
+		   );
     }
   }
 
