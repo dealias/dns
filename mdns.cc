@@ -12,7 +12,7 @@ const double ProblemVersion=1.0;
 
 #ifndef DEPEND
 #if !COMPLEX
-#error Navier requires COMPLEX=1 in options.h
+#error MDNS requires COMPLEX=1 in options.h
 #endif
 #endif
 
@@ -439,18 +439,20 @@ public:
   void Project(unsigned ga);
   void Prolong(unsigned gb);
 
-  void Projectrad1(array2<Complex>&,int,int,array2<Complex>&, int);
-  void Prolongrad1(array2<Complex>&,int,int,array2<Complex>&, int);
+  void Projectrad1(array2<Complex>&,array2<Complex>&);
+  void Prolongrad1(array2<Complex>&,array2<Complex>&);
 
-  void Projectrad2area(array2<Complex>&,int,int,array2<Complex>&,int,int,int,			bool overwrite=true);
-  void Prolongrad2area(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
-  void Projectrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int,			bool overwrite=true);
-  void Prolongrad2point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
+  void Projectrad2area(array2<Complex>&,array2<Complex>&,int,			
+		       bool overwrite=true);
+  void Prolongrad2area(array2<Complex>&,array2<Complex>&,int);
+  void Projectrad2point(array2<Complex>&,array2<Complex>&,int,
+			bool overwrite=true);
+  void Prolongrad2point(array2<Complex>&,array2<Complex>&,int);
 
   void Projectrad4area(array2<Complex>&,array2<Complex>&,int);
-  void Prolongrad4area(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
-  void Projectrad4point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
-  void Prolongrad4point(array2<Complex>&,int,int,array2<Complex>&,int,int,int);
+  void Prolongrad4area(array2<Complex>&,array2<Complex>&,int);
+  void Projectrad4point(array2<Complex>&,array2<Complex>&,int);
+  void Prolongrad4point(array2<Complex>&,array2<Complex>&,int);
 
   enum direct{N,NE,E,SE,S,SW,W,NW};
 
@@ -495,25 +497,25 @@ public:
     int aj=2*bj;
     array2H<Complex> wa;
     wa.Dimension(aN,am);
-    wa.Set(wa);
-
+    wa.Set(wa0);
+    
     if(ai < aN && ai > 0) {
       if(aj < am) {
 	switch(d) {
-	case N: return wa.get(aI  ,aj+1);
-	case NE:return wa.get(aI+1,aj+1);
-	case E: return wa.get(aI+1,aj  );
-	case SE:return wa.get(aI+1,aj-1);
-	case S: return wa.get(aI  ,aj-1);
-	case SW:return wa.get(aI-1,aj-1);
-	case W: return wa.get(aI-1,aj  );
-	case NW:return wa.get(aI-1,aj+1);
+	case N: return wa.get(ai  ,aj+1);
+	case NE:return wa.get(ai+1,aj+1);
+	case E: return wa.get(ai+1,aj  );
+	case SE:return wa.get(ai+1,aj-1);
+	case S: return wa.get(ai  ,aj-1);
+	case SW:return wa.get(ai-1,aj-1);
+	case W: return wa.get(ai-1,aj  );
+	case NW:return wa.get(ai-1,aj+1);
 	}
       } else { // aJ equals am, so top row
 	switch(d) {
-	case SE:return wa.get(aI+1,aj-1);
-	case S: return wa.get(aI  ,aj-1);
-	case SW:return wa.get(aI-1,aj-1);
+	case SE:return wa.get(ai+1,aj-1);
+	case S: return wa.get(ai  ,aj-1);
+	case SW:return wa.get(ai-1,aj-1);
 	default: return fakewrad4(wb,bi,bj,d);
 	}
       }
@@ -522,14 +524,14 @@ public:
     if(ai == -1) { // left column
       if(aj < am) { // left column
 	switch(d) {
-	case NE:return wa.get(aI+1,aj+1);
-	case E: return wa.get(aI+1,aj  );
-	case SE:return wa.get(aI+1,aj-1);
+	case NE:return wa.get(ai+1,aj+1);
+	case E: return wa.get(ai+1,aj  );
+	case SE:return wa.get(ai+1,aj-1);
 	default: return fakewrad4(wb,bi,bj,d);
 	}
       } else { // top-left corner
 	if(d == SE)
-	  return wa.get(aI+1,aj-1);
+	  return wa.get(ai+1,aj-1);
 	return fakewrad4(wb,bi,bj,d);
       }
     }
@@ -537,14 +539,14 @@ public:
     if(ai == aN) {
       if(aj < am) { // right column
 	switch(d) {
-	case SW:return wa.get(aI-1,aj-1);
-	case W: return wa.get(aI-1,aj  );
-	case NW:return wa.get(aI-1,aj+1);
+	case SW:return wa.get(ai-1,aj-1);
+	case W: return wa.get(ai-1,aj  );
+	case NW:return wa.get(ai-1,aj+1);
 	default: return fakewrad4(wb,bi,bj,d);
 	}
       } else { // top-right corner
 	if(d == SW)
-	  return wa.get(aI-1,aj-1);
+	  return wa.get(ai-1,aj-1);
 	return fakewrad4(wb,bi,bj,d);
 
       }
@@ -998,7 +1000,7 @@ void MDNS::Grid::InitialConditions(unsigned g)
     SrcwS.Dimension(sNx,smy,SrcwSblock);
     smallDNSBase=new DNSBase(sNx,smy,sk0); // TODO: share memory block
 
-    if(prtype==AREA) {
+    if(prtype==AREA) { // FIXME: update this code
       tildeB.Dimension(2*Invisible+1,Invisible+1);
       Allocate(tildeB,(2*Invisible+1)*(Invisible+1));
       for(unsigned i=0; i < 2*Invisible+1; ++i)
@@ -1575,19 +1577,19 @@ void MDNS::Project(unsigned gb)
 
   switch(radix) {
   case 1:
-    Projectrad1(wa,aNx,amy,wb,bNx);
+    Projectrad1(wa,wb);
     break;
   case 2:
     if(prtype == AREA)
-      Projectrad2area(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+      Projectrad2area(wa,wb,bInvisible);
     if(prtype == POINT)
-      Projectrad2point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+      Projectrad2point(wa,wb,bInvisible);
     break;
   case 4:
     if(prtype==AREA)
       Projectrad4area(wa,wb,bInvisible);
     if(prtype==POINT)
-      Projectrad4point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+      Projectrad4point(wa,wb,bInvisible);
     break;
   default:
     msg(ERROR,"Invalid radix.");
@@ -1615,9 +1617,12 @@ void MDNS::Project(unsigned gb)
 void ComplexSet(Complex &a, Complex b) {a=b;}
 void ComplexSubfrom(Complex &a, Complex b) {a-=b;}
 
-void MDNS::Projectrad1(array2<Complex>& wa,int aNx,int amy,
-		       array2<Complex>& wb, int bNx)
-{
+void MDNS::Projectrad1(array2<Complex>& wa,array2<Complex>& wb)
+{  
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+  
   if(prtype != NOPR){
     int axorigin=(aNx-1)/2;
     int bxorigin=(bNx-1)/2;
@@ -1632,11 +1637,36 @@ void MDNS::Projectrad1(array2<Complex>& wa,int aNx,int amy,
   }
 }
 
-void MDNS::Projectrad2area(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible,
-			    bool overwrite)
+void MDNS::Prolongrad1(array2<Complex>& wa,array2<Complex>& wb)
+{  
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+
+  if(prtype != NOPR){
+    int axorigin=(aNx-1)/2;
+    int bxorigin=(bNx-1)/2;
+    int dx=bxorigin-axorigin;
+    for(int i=0; i < aNx; i++) {
+      vector wai=wa[i];
+      vector wbi=wb[i+dx];
+      for(int j=0; j < amy; ++j) {
+  	wai[j]=wbi[j];
+      }
+    }
+  }
+}
+
+void MDNS::Projectrad2area(array2<Complex>& wa,array2<Complex>& wb,
+			   int bInvisible,bool overwrite)
 {
   msg(ERROR,"function totally not finished");
+
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+  int bmy=wb.Ny();
+
   int axorigin=(aNx-1)/2;
   int bxorigin=(bNx-1)/2;
   fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa); 
@@ -1664,10 +1694,16 @@ void MDNS::Projectrad2area(array2<Complex>& wa,int aNx,int amy,
   //cout << "wa\n"<<wa << "wb\n"<<wb << endl;
 }
 
-void MDNS::Prolongrad2area(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+void MDNS::Prolongrad2area(array2<Complex>& wa,array2<Complex>& wb,
+			   int bInvisible)
 {
   msg(ERROR,"function totally not finished");
+
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+  int bmy=wb.Ny();
+
   //wa.Load(1.0);
   //wb.Load(0.0);
   int axorigin=(aNx-1)/2;
@@ -1701,10 +1737,14 @@ void MDNS::Prolongrad2area(array2<Complex>& wa,int aNx,int amy,
   //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
 }
 
-void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible,
-			    bool overwrite)
+void MDNS::Projectrad2point(array2<Complex>& wa,array2<Complex>& wb,
+			    int bInvisible,bool overwrite)
 {
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+  int bmy=wb.Ny();
+
   int axorigin=(aNx-1)/2;
   int bxorigin=(bNx-1)/2;
   bool iodd=false;
@@ -1746,9 +1786,14 @@ void MDNS::Projectrad2point(array2<Complex>& wa,int aNx,int amy,
   //cout << "wa\n"<<wa << "wb\n"<<wb << endl;
 }
 
-void MDNS::Prolongrad2point(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+void MDNS::Prolongrad2point(array2<Complex>& wa,array2<Complex>& wb,
+			    int bInvisible)
 {
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+  int bmy=wb.Ny();
+
   //wa.Load(1.0);
   //wb.Load(0.0);
   int axorigin=(aNx-1)/2;
@@ -1784,9 +1829,14 @@ void MDNS::Prolongrad2point(array2<Complex>& wa,int aNx,int amy,
   //cout << "wa\n"<<wa << "wb\n"<<wb << endl;  exit(1);
 }
 
-void MDNS::Projectrad4point(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+void MDNS::Projectrad4point(array2<Complex>& wa,array2<Complex>& wb,
+			    int bInvisible)
 {
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+  int bmy=wb.Ny();
+
   int axorigin=(aNx-1)/2;
   int bxorigin=(bNx-1)/2;
   int xstart=bInvisible;
@@ -1810,9 +1860,14 @@ void MDNS::Projectrad4point(array2<Complex>& wa,int aNx,int amy,
   //cout << "MDNS::Projectrad4point\nwa\n:" << wa << "\n wb\n:" << wb ;
 }
 
-void MDNS::Prolongrad4point(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+void MDNS::Prolongrad4point(array2<Complex>& wa,array2<Complex>& wb,
+			    int bInvisible)
 {
+  int aNx=wa.Nx();
+  int amy=wa.Ny();
+  int bNx=wb.Nx();
+  //int bmy=wb.Ny();
+
   int axorigin=(aNx-1)/2;
   int bxorigin=(bNx-1)/2;
   int xstart=bInvisible;
@@ -1825,9 +1880,9 @@ void MDNS::Prolongrad4point(array2<Complex>& wa,int aNx,int amy,
     int aI2=aI*aI;
     vector wai=wa[ai];
     vector wbi=wb[bi];
-    for(int j= bi < bxorigin ? 1 : 0 ; j < bInvisible; ++j) {
-      if(!circular || (aI2+4*j*j < maxR2))
-	wai[j+j]=wbi[j];
+    for(int bj= bi < bxorigin ? 1 : 0 ; bj < bInvisible; ++bj) {
+      if(!circular || (aI2+4*bj*bj < maxR2))
+	wai[bj+bj]=wbi[bj];
     }
     ai += 2;
   }
@@ -1840,6 +1895,8 @@ void MDNS::Prolongrad4point(array2<Complex>& wa,int aNx,int amy,
 void MDNS::Projectrad4area(array2<Complex>& wa,array2<Complex>& wb,
 			   int bInvisible)
 {
+  //Projectrad4point(wa,wb,bInvisible); return; // FIXME: temp
+
   if(circular)
     msg(ERROR,"circular not working with MDNS::Projectrad4area yet.");
   int aNx=wa.Nx();
@@ -1855,74 +1912,114 @@ void MDNS::Projectrad4area(array2<Complex>& wa,array2<Complex>& wb,
 
   fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
 
-  cout << "xstart="<< xstart << endl;
-  cout << "xstop="<< xstop << endl;
-  cout << "ystop="<< ystop << endl;
+  //cout<< "xstart="<<xstart << "\nxstop="<<xstop << "\nystop="<< ystop << endl;
 
   for(int bi=xstart; bi < xstop; ++bi) {
     vector wbi=wb[bi];
     for(int bj=1 ; bj < ystop; ++bj) {
-      pout(bi,bj); cout << endl;
-      
+      //pout(bi,bj); cout << endl;
       wbi[bj]=0.25*(self(wa,wb,bi,bj)
-		    +neighbour(wa,wb,bi,bj,E)
-		    //+0.5*(waim[aj]+waip[aj]) // horiz
-		    //+0.5*(wai[aj+1]+wai[aj-1]) // vert
-		    //+0.25*(waim[aj+1]+waip[aj+1]+waim[ajm]+waip[ajm])
-		    );
-      
+		    +0.5*(neighbour(wa,wb,bi,bj,E)+neighbour(wa,wb,bi,bj,W))
+		    +0.5*(neighbour(wa,wb,bi,bj,N)+neighbour(wa,wb,bi,bj,S))
+		    +0.25*(
+			   neighbour(wa,wb,bi,bj,NE)+
+			   neighbour(wa,wb,bi,bj,SE)+
+			   neighbour(wa,wb,bi,bj,NW)+
+			   neighbour(wa,wb,bi,bj,SW)
+			   )
+
+	 );
     }
-    cout << endl;
+    //cout << endl;
   }
   fftwpp::HermitianSymmetrizeX((bNx+1)/2,bmy,bxorigin,wb);
 
-  cout << "MDNS::Projectrad4area\nwa\n:" << wa << "\n wb\n:" << wb ;
-  exit(1);
+  //cout << "MDNS::Projectrad4area\nwa\n:" << wa << "\n wb\n:" << wb ;
+  //exit(1);
 }
 
-void MDNS::Prolongrad4area(array2<Complex>& wa,int aNx,int amy,
-			    array2<Complex>& wb,int bNx,int bmy,int bInvisible)
+void MDNS::Prolongrad4area(array2<Complex>& wa,array2<Complex>& wb,
+			   int bInvisible)
 {
-  int axorigin=(aNx-1)/2;
-  int bxorigin=(bNx-1)/2;
-  int xstart=bInvisible;
-  int xstop=bxorigin+bInvisible;
-  int maxR2=(amy-1)*(amy-1);
+  //Prolongrad4point(wa,wb,bInvisible); return; // FIXME: temp
+  
+  if(circular)
+    msg(ERROR,"circular not working with MDNS::Prolongrad4area yet.");
+    
+  int aN=wa.Nx();
+  int am=wa.Ny();
+  int bN=wb.Nx();
+  //int bm=wb.Ny();
 
-  // FIXME: this doesn't do what's advertised as of yet.
+  int axorigin=(aN-1)/2;
+  int bxorigin=(bN-1)/2;
 
-  int ai=1;
-  for(int bi=xstart; bi < xstop; ++bi) {
+  // coincident modes
+  for(int ai=1; ai < aN; ai += 2) {
     int aI=ai-axorigin;
-    int aI2=aI*aI;
+    int bI=aI/2;
+    int bi=bI+bxorigin;
     vector wai=wa[ai];
     vector wbi=wb[bi];
-    for(int j= bi < bxorigin ? 1 : 0 ; j < bInvisible; ++j) {
-      if(!circular || (aI2+4*j*j < maxR2))
-	wai[j+j]=wbi[j];
-    }
-    ai += 2;
-  }
-  fftwpp::HermitianSymmetrizeX((aNx+1)/2,amy,axorigin,wa);
-
-  cout << "MDNS::Prolongrad4area\nwa\n:" << wa << "\n wb\n:" << wb;
-}
-
-void MDNS::Prolongrad1(array2<Complex>& wa,int aNx,int amy,
-		       array2<Complex>& wb,int bNx)
-{
-  if(prtype != NOPR){
-    int axorigin=(aNx-1)/2;
-    int bxorigin=(bNx-1)/2;
-    int dx=bxorigin-axorigin;
-    for(int i=0; i < aNx; i++) {
-      vector wai=wa[i];
-      vector wbi=wb[i+dx];
-      for(int j=0; j < amy; ++j) {
-  	wai[j]=wbi[j];
-      }
+    for(int aj= ai < axorigin ? 2 : 0 ; aj < am; aj += 2) {
+      //if(!circular || (aI2+4*j*j < maxR2))
+      int bj=aj/2;
+      wai[aj]=wbi[bj];
     }
   }
+
+  // modes between two subgrid modes: aI is odd
+  for(int ai=0; ai < aN; ai += 2) {
+    int aI=ai-axorigin;
+    vector wai=wa[ai];
+    int bIL=(aI-1)/2;
+    int bIR=(aI+1)/2;
+    int biL=bIL+bxorigin;
+    int biR=bIR+bxorigin;
+    vector wbiL=wb[biL];
+    vector wbiR=wb[biR];
+    for(int aj= ai < axorigin ? 2 : 0 ; aj < am; aj += 2) {
+      int bj=aj/2;
+      wai[aj]=0.5*(wbiL[bj]+wbiR[bj]);
+    }
+  }
+
+  // modes between two subgrid modes: aj is odd
+  for(int ai=1; ai < aN; ai += 2) {
+    vector wai=wa[ai];
+    int aI=ai-axorigin;
+    //int aI2=aI*aI;
+    int bI=aI/2;
+    int bi=bI+bxorigin;
+
+    vector wbi=wb[bi];
+    for(int aj= 1 ; aj < am; aj += 2) {
+      int bjD=(aj-1)/2;
+      int bjU=(aj+1)/2;
+      wai[aj]=0.5*(wbi[bjD]+wbi[bjU]);
+    }
+  }
+  
+  // modes between four subgrid modes: aI and aj are both odd
+  for(int ai=0; ai < aN; ai += 2) {
+    vector wai=wa[ai];
+    int aI=ai-axorigin;
+    int bIL=(aI-1)/2;
+    int bIR=(aI+1)/2;
+    int biL=bIL+bxorigin;
+    int biR=bIR+bxorigin;
+    vector wbiL=wb[biL];
+    vector wbiR=wb[biR];
+    for(int aj= 1 ; aj < am; aj += 2) {
+      int bjD=(aj-1)/2;
+      int bjU=(aj+1)/2;
+      wai[aj]=0.25*(wbiL[bjD]+wbiL[bjU]+wbiR[bjD]+wbiR[bjU]);
+    }
+  }
+
+  fftwpp::HermitianSymmetrizeX((aN+1)/2,am,axorigin,wa);
+
+  //cout << "MDNS::Prolongrad4area\nwa\n:" << wa << "\n wb\n:" << wb;
 }
 
 void MDNS::Prolong(unsigned ga)
@@ -1970,19 +2067,19 @@ void MDNS::Prolong(unsigned ga)
 
   switch(radix) {
   case 1:
-    Prolongrad1(wa,aNx,amy,wb,bNx);
+    Prolongrad1(wa,wb);
     break;
   case 2:
     if(prtype == AREA) 
-      Prolongrad2area(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+      Prolongrad2area(wa,wb,bInvisible);
     if(prtype == POINT)
-      Prolongrad2point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+      Prolongrad2point(wa,wb,bInvisible);
     break;
   case 4:
     if(prtype==AREA)
-      Prolongrad4area(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+      Prolongrad4area(wa,wb,bInvisible);
     if(prtype==POINT)
-      Prolongrad4point(wa,aNx,amy,wb,bNx,bmy,bInvisible);
+      Prolongrad4point(wa,wb,bInvisible);
     break;
   default:
     msg(ERROR,"Invalid radix.");
@@ -2114,7 +2211,8 @@ void MDNS::ComputeInvariants(const vector2& Y, Real& E, Real& Z, Real& P)
     Set(w0,mY[g][OMEGA]);
     G[g]->Dimensiontow(w0);
     G[g]->ComputeInvariants(w0,tempE,tempZ,tempP);
-    Real scale=prtype==AREA ? pow((double) radix,(double) g) : 1.0;
+    //Real scale=prtype==AREA ? pow((double) radix,(double) g) : 1.0;
+    Real scale=1.0;
     E += scale*tempE;
     Z += scale*tempZ;
     P += scale*tempP;
@@ -2314,9 +2412,9 @@ void MDNS::Grid::NonLinearSource(const vector& wSrc, const vector& wY, double t)
   if(myg > 0) {
     if(radix==2) {
       wS.Load(0.0);
-      parent->Prolongrad2point(wS,sNx,smy,w,Nx,my,Invisible);
+      parent->Prolongrad2point(wS,w,Invisible);
       smallDNSBase->NonLinearSource(SrcwS,wS,t);
-      parent->Projectrad2point(SrcwS,sNx,smy,f0,Nx,my,Invisible,false);
+      parent->Projectrad2point(SrcwS,f0,Invisible,false);
   
     } else { //radix is 1 or 4
       for(unsigned i=0; i < sNx; ++i) {
