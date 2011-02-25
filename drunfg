@@ -1,4 +1,0 @@
-#!/bin/csh -f
-nice +19
-#setenv TMP_DIR /tmp/$USER
-./dns run=$* | tee -a $1/log
