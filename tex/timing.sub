@@ -1,0 +1,21 @@
+#!/bin/csh
+# usage: ./timing.sub <program name> <lower int> <higher int>
+# make sure that you put "set EMAIL=your@email.com" in .cshrc
+
+rm run.qsub
+set DIR=$HOME/dns/tex
+mkdir -p $DIR/output
+mkdir -p $DIR/errors
+echo "#PBS -l walltime=240:00:00" >> run.qsub
+echo "#PBS -l ncpus=1" >> run.qsub
+echo "#PBS -m bea" >> run.qsub
+echo "#PBS -M $EMAIL" >> run.qsub
+echo "#PBS -o $DIR/output" >> run.qsub
+echo "#PBS -e $DIR/errors" >> run.qsub
+echo "#PBS -S /bin/sh" >> run.qsub
+echo "#PBS -r n" >> run.qsub
+
+echo "cd $DIR" >> run.qsub
+echo "./timing $1 $2 $3" >> run.qsub
+set RUN=`echo $1 | head -c 15`
+qsub -N $RUN run.qsub
