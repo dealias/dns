@@ -53,8 +53,6 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 #endif
 }
 
-Real DNSBase::etanorm;
-
 void DNSBase::Stochastic(const vector2&Y, double, double dt)
 {
   w.Set(Y[OMEGA]);

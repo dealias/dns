@@ -111,7 +111,7 @@ protected:
   double h;
 public:
   const char *Name() {return "Constant Banded";}
-  void Set() {
+  void Init() {
     h=0.5*deltaf;
   }
   
@@ -125,11 +125,34 @@ public:
 
 class WhiteNoiseBanded : public ConstantBanded {
   Complex f;
+  Real etanorm;
 public:
   const char *Name() {return "White-Noise Banded";}
+  
+  void Init() {
+    ConstantBanded::Init();
+    // Compute the number of forced modes.
+    unsigned fcount=0;
+  
+    unsigned Nx=DNSProblem->getNx();
+    unsigned my=DNSProblem->getmy();
+    unsigned xorigin=DNSProblem->getxorigin();
+  
+    for(unsigned i=0; i < Nx; i++) {
+      int I=(int) i-(int) xorigin;
+      int I2=I*I;
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+        Real k=k0*sqrt(I2+j*j);
+        if(abs(k-kforce) < h)
+          ++fcount;
+      }
+    }
+    fcount *= 2; // Account for Hermitian conjugate modes.
+    etanorm=1.0/((Real) fcount);
+  }
+  
   void SetStochastic(double dt) {
-    ConstantBanded::Set();
-    f=sqrt(dt)*sqrt(2.0*eta*DNSBase::etanorm)*crand_gauss();
+    f=sqrt(dt)*sqrt(2.0*eta*etanorm)*crand_gauss();
   }
   
   void ForceStochastic(Complex& w, double& T, double k) {
@@ -330,26 +353,7 @@ void DNS::InitialConditions()
 
   errno=0;
 
-  // set fcount, the number of forced modes.
-  {
-    unsigned fcount=0;
-    Real kmin=max(kforce-0.5*deltaf,0.0);
-    Real kmin2=kmin*kmin;
-    Real kmax=kforce+0.5*deltaf;
-    Real kmax2=kmax*kmax;
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	unsigned k2int=I2+j*j;
-	Real k2=k02*k2int;
-	if(k2 > kmin2 && k2 < kmax2)
-	  ++fcount;
-      }
-    }
-    fcount *= 2; // Account for Hermitian conjugate modes.
-    etanorm=1.0/((Real) fcount);
-  }
+  Forcing->Init();
 
   if(output)
     open_output(fwk,dirsep,"wk");

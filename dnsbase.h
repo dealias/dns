@@ -42,8 +42,6 @@ protected:
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
 
   int tcount;
-public:  
-  static Real etanorm;
 
 protected:  
   unsigned nmode;
@@ -79,7 +77,6 @@ public:
   Real getk0() {return k0;}
   Real getk02() {return k02;}
   unsigned getxorigin() {return xorigin;}
-  Real getetanorm() {return etanorm;}
 
   void InitialConditions();
   void Initialize();
@@ -243,8 +240,6 @@ public:
   {
     f0.Set(Src[OMEGA]);
     w.Set(Y[OMEGA]);
-
-    Forcing->Set();
 
     for(unsigned i=0; i < Nx; i++) {
       int I=(int) i-(int) xorigin;

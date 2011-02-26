@@ -9,7 +9,7 @@ class ForcingBase {
   virtual ~ForcingBase() {}
   virtual const char *Name() {return "None";}
   
-  virtual void Set() {}
+  virtual void Init() {}
   virtual void SetStochastic(double dt=0.0) {}
   virtual void Force(Complex& w, double& T, double k) {}
   virtual void ForceStochastic(Complex& w, double& T, double k) {}
