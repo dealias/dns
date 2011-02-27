@@ -59,10 +59,7 @@ protected:
   oxstream fwk,fw,fekvk,ftransfer;
   ofstream ft,fevt;
   
-  ImplicitHTConvolution2 *TConvolution;
-  oxstream ftransferN;
   Array2<Complex> f,g,h;
-  vector Tn;
   array1<unsigned>::opt count;
   vector E; // Spectrum
   vector T; // Transfer
