@@ -67,7 +67,8 @@ void DNSBase::Stochastic(const vector2&Y, double, double dt)
     for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
       Real kint=sqrt(I2+j*j);
       unsigned index=(unsigned)(kint-0.5);
-      Forcing->ForceStochastic(wi[j],T[index].im,k0*kint);
+      Real Tim;
+      Forcing->ForceStochastic(wi[j],spectrum ? T[index].im : Tim,k0*kint);
     }
   }
 }
