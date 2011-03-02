@@ -42,8 +42,8 @@ protected:
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
 
   int tcount;
+  unsigned fcount;
 
-protected:  
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
@@ -60,9 +60,10 @@ protected:
   ofstream ft,fevt;
   
   Array2<Complex> f,g,h;
-  array1<unsigned>::opt count;
+  uvector count;
   vector E; // Spectrum
   vector T; // Transfer
+  Real Energy,Enstrophy,Palenstrophy;
 
 public:
   DNSBase() {}
@@ -75,8 +76,9 @@ public:
   Real getk02() {return k02;}
   unsigned getxorigin() {return xorigin;}
 
-  void InitialConditions();
   void Initialize();
+  void InitialConditions();
+  void SetParameters();
   virtual void setcount();
   void FinalOutput();
   void OutFrame(int it);
@@ -195,30 +197,141 @@ public:
     }
   };
   
+  class ForceStochastic {
+    const vector& T;
+    Real k0;
+  public: 
+    ForceStochastic(DNSBase *b) : T(b->T), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      unsigned index=(unsigned)(kint-0.5);
+      Forcing->ForceStochastic(wi[j],T[index].im,k);
+    }
+  };
+  
+  class ForceStochasticNO {
+    const vector& T;
+    Real k0;
+  public: 
+    ForceStochasticNO(DNSBase *b) : T(b->T), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      double T;
+      Forcing->ForceStochastic(wi[j],T,k);
+    }
+  };
+  
+  class InitializeValue {
+    Real k0;
+  public: 
+    InitializeValue(DNSBase *b) : k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      wi[j]=InitialCondition->Value(k);
+    }
+  };
+  
+  class ForcingCount {
+    DNSBase *b;
+    Real k0;
+  public: 
+    ForcingCount(DNSBase *b) : b(b), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      if(Forcing->active(k)) ++b->fcount;
+    }
+  };
+  
+  class Invariants {
+    DNSBase *b;
+    Real &Energy,&Enstrophy,&Palenstrophy;
+    Real k0;
+  public: 
+    Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
+                             Palenstrophy(b->Palenstrophy), k0(b->k0) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      Real w2=abs2(wi[j]);
+      Enstrophy += w2;
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      Real k=k0*kint;
+      Real k2=k*k;
+      Energy += w2/k2;
+      Palenstrophy += k2*w2;
+    }
+  };
+  
+  class InitwS {
+    DNSBase *b;
+  public: 
+    InitwS(DNSBase *b) : b(b) {}
+    inline void operator()(vector& wi, vector& Si, unsigned i) {
+      Dimension(wi,b->w[i]);
+      Dimension(Si,b->f0[i]);
+    }
+  };
+  
+  class Initw {
+    DNSBase *b;
+  public: 
+    Initw(DNSBase *b) : b(b) {}
+    inline void operator()(vector& wi, vector& Si, unsigned i) {
+      Dimension(wi,b->w[i]);
+    }
+  };
+  
+  class InitNone {
+  public: 
+    InitNone(DNSBase *b) {}
+    inline void operator()(vector& wi, vector& Si, unsigned i) {
+    }
+  };
+  
+  class Count {
+    DNSBase *b;
+    const uvector& count;
+  public: 
+    Count(DNSBase *b) : b(b), count(b->count) {}
+    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+                           unsigned j) {
+      unsigned k2int=I2+j*j;
+      Real kint=sqrt(k2int);
+      unsigned index=(unsigned)(kint-0.5);
+      ++count[index];
+    }
+  };
+  
   void NonLinearSource(const vector2& Src, const vector2& Y, double t);
 
-  void ZeroT(const vector2& Src) {
-    Set(T,Src[TRANSFER]);
+  void Init(vector& T, const vector& Src) {
+    Set(T,Src);
     for(unsigned K=0; K < nshells; K++)
       T[K]=0.0;  
   }
   
-  void ZeroE(const vector2& Src) {
-    Set(E,Src[EK]);
-    for(unsigned K=0; K < nshells; K++)
-      E[K]=0.0;
-  }
-    
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
-    ZeroT(Src);
-    ZeroE(Src);
+    Init(T,Src[TRANSFER]);
+    Init(E,Src[EK]);
     Compute(FETL(this),Src,Y);
   }
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
     if(spectrum) {
-      ZeroT(Src);
+      Init(T,Src[TRANSFER]);
       Compute(FTL(this),Src,Y);
     }
   }
@@ -226,36 +339,55 @@ public:
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
     if(spectrum) {
-      ZeroT(Src);
-      ZeroE(Src);
+      Init(T,Src[TRANSFER]);
+      Init(E,Src[EK]);
       Compute(FET(this),Src,Y);
     }
   }
 
+  void Source(const vector2& Src, const vector2& Y, double t) {
+    NonLinearSource(Src,Y,t);
+    if(spectrum) {
+      Init(T,Src[TRANSFER]);
+      Init(E,Src[EK]);
+      Compute(FETL(this),Src,Y);
+    } else
+      Compute(FL(this),Src,Y);
+  }
+
+  template<class S, class T>
+  void Loop(S init, T fcn)
+  {
+    vector wi,Si;
+    for(unsigned i=0; i < Nx; i++) {
+      unsigned I=(int) i-(int) xorigin;
+      int I2=I*I;
+      init(wi,Si,i);
+      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
+        fcn(wi,Si,I2,j);
+    }
+  }
+  
   template<class T>
   void Compute(T fcn, const vector2& Src, const vector2& Y)
   {
     f0.Set(Src[OMEGA]);
     w.Set(Y[OMEGA]);
 
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      vector wi=w[i];
-      vector Si=f0[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
-        fcn(wi,Si,I2,j);
-    }
+    Loop(InitwS(this),fcn);
   }
   
-  void Source(const vector2& Src, const vector2& Y, double t) {
-    NonLinearSource(Src,Y,t);
-    if(spectrum) {
-      ZeroT(Src);
-      ZeroE(Src);
-      Compute(FETL(this),Src,Y);
-    } else
-      Compute(FL(this),Src,Y);
+  void Stochastic(const vector2&Y, double, double dt)
+  {
+    w.Set(Y[OMEGA]);
+    Forcing->SetStochastic(dt);
+    
+    if(spectrum == 0) {
+      Loop(Initw(this),ForceStochasticNO(this));
+    } else {
+      Set(T,Y[TRANSFER]);
+      Loop(Initw(this),ForceStochastic(this));
+    }
   }
 
   Nu LinearCoeff(unsigned k) {
@@ -271,8 +403,13 @@ public:
   }
 
   virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);
-  void Stochastic(const vector2& Y, double, double);
-
+  void AddInvariants(unsigned k2int, Real w2, Real& E, Real& Z, Real& P) {
+    Z += w2;
+    Real k2=k2int*k02;
+    E += w2/k2;
+    P += k2*w2;
+  }
+  
   virtual Real getSpectrum(unsigned i) {
     double c=count[i];
     return c > 0 ? T[i].re*twopi/c : 0.0;
@@ -287,13 +424,5 @@ public:
 //***** initial conditions *****//
 
 extern InitialConditionBase *InitialCondition;
-class Zero : public InitialConditionBase {
-public:
-  const char *Name() {return "Zero";}
-  void Set(Complex *w, unsigned n) {
-    for(unsigned i=0; i < n; i++)
-      w[i]=0.0;
-  }
-};
 
 #endif

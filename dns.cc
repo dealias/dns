@@ -34,7 +34,9 @@ class DNS : public DNSBase, public ProblemBase {
 public:
   DNS();
   ~DNS();
+  
   void InitialConditions();
+  
   void Output(int);
   void FinalOutput();
   oxstream fprolog;
@@ -66,39 +68,30 @@ DNS *DNSProblem;
 InitialConditionBase *InitialCondition;
 ForcingBase *Forcing;
 
+class Zero : public InitialConditionBase {
+public:
+  const char *Name() {return "Zero";}
+  
+  Var Value(Real) {return 0.0;}
+};
+
 class Constant : public InitialConditionBase {
 public:
   const char *Name() {return "Constant";}
-  void Set(Complex *w, unsigned n) {
-    for(unsigned i=0; i < n; i++)
-      w[i]=Complex(icalpha,icbeta);
-  }
+  
+  Var Value(Real) {return Complex(icalpha,icbeta);}
 };
 
 class Equipartition : public InitialConditionBase {
 public:
   const char *Name() {return "Equipartition";}
-  void Set(Complex *w0, unsigned) {
-    unsigned Nx=DNSProblem->getNx();
-    unsigned my=DNSProblem->getmy();
-    unsigned xorigin=DNSProblem->getxorigin();
-    Real k0=DNSProblem->getk0();
 
-    array2<Complex> w(Nx,my,w0);
-    w(xorigin,0)=0;
-    Real k02=k0*k0;
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      vector wi=w[i];
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-	Real k2=k02*(I2+j*j);
+  Var Value(Real k) {
 // Distribute the enstrophy evenly between the real and imaginary components
-        Real v=icalpha+icbeta*k2;
-        v=v ? sqrt(0.5*k2/v) : 0.0;
-	wi[j]=Complex(v,v);
-      }
-    }
+    Real k2=k*k;
+    Real v=icalpha+icbeta*k2;
+    v=v ? sqrt(0.5*k2/v) : 0.0;
+    return Complex(v,v);
   }
 };
 
@@ -111,12 +104,17 @@ protected:
   double h;
 public:
   const char *Name() {return "Constant Banded";}
+  
   void Init() {
     h=0.5*deltaf;
   }
   
-  void Force(Complex& w, double& T, double k) {
-    if(abs(k-kforce) < h) {
+  bool active(double k) {
+    return abs(k-kforce) < h;
+  }
+  
+ void Force(Complex& w, double& T, double k) {
+    if(active(k)) {
       T += realproduct(force,w);
       w += force;
     }
@@ -129,34 +127,20 @@ class WhiteNoiseBanded : public ConstantBanded {
 public:
   const char *Name() {return "White-Noise Banded";}
   
-  void Init() {
-    ConstantBanded::Init();
-    // Compute the number of forced modes.
-    unsigned fcount=0;
-  
-    unsigned Nx=DNSProblem->getNx();
-    unsigned my=DNSProblem->getmy();
-    unsigned xorigin=DNSProblem->getxorigin();
-  
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-        Real k=k0*sqrt(I2+j*j);
-        if(abs(k-kforce) < h)
-          ++fcount;
-      }
-    }
-    fcount *= 2; // Account for Hermitian conjugate modes.
+  void Init(unsigned fcount) {
     etanorm=1.0/((Real) fcount);
+  }
+  
+  bool active(double k) {
+    return abs(k-kforce) < h;
   }
   
   void SetStochastic(double dt) {
     f=sqrt(dt)*sqrt(2.0*eta*etanorm)*crand_gauss();
   }
   
-  void ForceStochastic(Complex& w, double& T, double k) {
-    if(abs(k-kforce) < h) {
+   void ForceStochastic(Complex& w, double& T, double k) {
+    if(active(k)) {
       T += realproduct(f,w)+0.5*abs2(f);
       w += f;
     }
@@ -216,6 +200,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   FORCING(None);
+  FORCING(ConstantBanded);
   FORCING(WhiteNoiseBanded);
 }
 
@@ -313,17 +298,11 @@ void DNS::InitialConditions()
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
-  w.Set(Y[OMEGA]);
-  InitialCondition->Set(w,NY[OMEGA]);
-  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
-
-  Set(T,Y[TRANSFER]);
-  for(unsigned i=0; i < nshells; i++)
-    T[i]=0.0;
   
-  Set(E,Y[EK]);
-  for(unsigned i=0; i < nshells; i++)
-    E[i]=0.0;
+  w.Set(Y[OMEGA]);
+
+  Init(T,Y[TRANSFER]);
+  Init(T,Y[EK]);
   
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
@@ -353,7 +332,8 @@ void DNS::InitialConditions()
 
   errno=0;
 
-  Forcing->Init();
+  DNSBase::InitialConditions();
+  DNSBase::SetParameters();
 
   if(output)
     open_output(fwk,dirsep,"wk");

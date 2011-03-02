@@ -10,6 +10,8 @@ class ForcingBase {
   virtual const char *Name() {return "None";}
   
   virtual void Init() {}
+  virtual void Init(unsigned fcount) {}
+  virtual bool active(double k) {return false;} 
   virtual void SetStochastic(double dt=0.0) {}
   virtual void Force(Complex& w, double& T, double k) {}
   virtual void ForceStochastic(Complex& w, double& T, double k) {}

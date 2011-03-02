@@ -3,21 +3,18 @@
 const int DNSBase::xpad=1;
 const int DNSBase::ypad=1;
 
-//***** Source routines *****//
-
 void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 {
   w.Set(Y[OMEGA]);
   f0.Set(Src[OMEGA]);
-  
+
   f0(origin)=0.0;
   f1(origin)=0.0;
   g0(origin)=0.0;
   g1(origin)=0.0;
 
   for(unsigned i=0; i < Nx; ++i) {
-    int I=(int) i-(int) xorigin;
-    Real kx=k0*I;
+    Real kx=k0*((int) i-(int) xorigin);
     Real kx2=kx*kx;
     vector wi=w[i];
     vector f0i=f0[i];
@@ -36,6 +33,7 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
       g1i[j]=-k2inv*kxw;
     }
   }
+
   F[0]=f0;
   Convolution->convolve(F,G);
   f0(origin)=0.0;
@@ -53,45 +51,40 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 #endif
 }
 
-void DNSBase::Stochastic(const vector2&Y, double, double dt)
-{
-  w.Set(Y[OMEGA]);
-  Set(T,Y[TRANSFER]);
-  
-  Forcing->SetStochastic(dt);
-  
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real kint=sqrt(I2+j*j);
-      unsigned index=(unsigned)(kint-0.5);
-      Real Tim;
-      Forcing->ForceStochastic(wi[j],spectrum ? T[index].im : Tim,k0*kint);
-    }
-  }
-}
-
 void DNSBase::Initialize()
 {
   fevt << "# t\tE\tZ\tP" << endl;
+}
+
+void DNSBase::SetParameters()
+{
   setcount();
+  fcount=0;
+  
+  Forcing->Init();
+  
+  Loop(InitNone(this),ForcingCount(this));
+
+  fcount *= 2; // Account for Hermitian conjugate modes.
+
+  Forcing->Init(fcount);
+}
+  
+void DNSBase::InitialConditions()
+{
+  w(xorigin,0)=0;
+  
+  Loop(Initw(this),InitializeValue(this));
+  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
 }
 
 void DNSBase::setcount()
 {
-  if(spectrum) {
-    for(unsigned i=0; i < nshells; i++)
-      count[i]=0;
-    for(unsigned i=0; i < Nx; i++) {
-      int I=(int) i-(int) xorigin;
-      int I2=I*I;
-      for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-        count[(unsigned)(sqrt(I2+j*j)-0.5)]++;
-      }
-    }
-  }
+  for(unsigned i=0; i < nshells; i++)
+    count[i]=0;
+  
+  if(spectrum)
+      Loop(InitNone(this),Count(this));
 }
 
 void DNSBase::OutFrame(int)
@@ -120,19 +113,13 @@ void DNSBase::OutFrame(int)
 void DNSBase::ComputeInvariants(const array2<Complex> &w, 
 				Real& E, Real& Z, Real& P)
 {
-  E=Z=P=0.0;
-  for(unsigned i=0; i < Nx; i++) {
-    int I=(int) i-(int) xorigin;
-    int I2=I*I;
-    vector wi=w[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
-      Real w2=abs2(wi[j]);
-      Z += w2;
-      Real k2=k02*(I2+j*j);
-      E += w2/k2;
-      P += k2*w2;
-    }
-  }
+  Energy=Enstrophy=Palenstrophy=0.0;
+  
+  Loop(Initw(this),Invariants(this));
+  
+  E=Energy;
+  Z=Enstrophy;
+  P=Palenstrophy;
 }
 
 void DNSBase::FinalOutput()
