@@ -66,16 +66,6 @@ protected:
   Real Energy,Enstrophy,Palenstrophy;
 
 public:
-  DNSBase() {}
-  virtual ~DNSBase() {}
-
-  unsigned getNx() {return Nx;}
-  unsigned getmx() {return mx;}
-  unsigned getmy() {return my;}
-  Real getk0() {return k0;}
-  Real getk02() {return k02;}
-  unsigned getxorigin() {return xorigin;}
-
   void Initialize();
   void InitialConditions();
   void SetParameters();
