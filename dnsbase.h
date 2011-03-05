@@ -315,14 +315,13 @@ public:
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
     Init(T,Src[TRANSFER]);
-    Init(E,Src[EK]);
-    Compute(FETL(this),Src,Y);
+    Compute(FTL(this),Src,Y);
   }
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
     if(spectrum) {
-      Init(T,Src[TRANSFER]);
-      Compute(FTL(this),Src,Y);
+      Init(E,Src[EK]);
+      Compute(FE(this),Src,Y);
     }
   }
 
