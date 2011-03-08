@@ -26,8 +26,8 @@ Real deltaf=1.0;
 unsigned movie=0;
 unsigned rezero=0;
 unsigned spectrum=1;
-Real alpha=1.0;
-Real beta=1.0;
+Real icalpha=1.0;
+Real icbeta=1.0;
 Real k0=1.0;
 
 class DNS : public DNSBase, public ProblemBase {
@@ -79,7 +79,7 @@ class Constant : public InitialConditionBase {
 public:
   const char *Name() {return "Constant";}
   
-  Var Value(Real) {return Complex(alpha,beta);}
+  Var Value(Real) {return Complex(icalpha,icbeta);}
 };
 
 class Equipartition : public InitialConditionBase {
@@ -89,7 +89,7 @@ public:
   Var Value(Real k) {
 // Distribute the enstrophy evenly between the real and imaginary components
     Real k2=k*k;
-    Real v=alpha+beta*k2;
+    Real v=icalpha+icbeta*k2;
     v=v ? sqrt(0.5*k2/v) : 0.0;
     return Complex(v,v);
   }
@@ -180,8 +180,8 @@ DNSVocabulary::DNSVocabulary()
   METHOD(DNS);
 
   InitialConditionTable=new Table<InitialConditionBase>("initial condition");
-  VOCAB(alpha,0.0,0.0,"initial condition parameter");
-  VOCAB(beta,0.0,0.0,"initial condition parameter");
+  VOCAB(icalpha,0.0,0.0,"initial condition parameter");
+  VOCAB(icbeta,0.0,0.0,"initial condition parameter");
   INITIALCONDITION(Zero);
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
