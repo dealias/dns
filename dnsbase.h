@@ -203,10 +203,9 @@ public:
   };
   
   class ForceStochasticNO {
-    const vector& T;
     Real k0;
   public: 
-    ForceStochasticNO(DNSBase *b) : T(b->T), k0(b->k0) {}
+    ForceStochasticNO(DNSBase *b) : k0(b->k0) {}
     inline void operator()(const vector& wi, const vector& Si, unsigned I2,
                            unsigned j) {
       unsigned k2int=I2+j*j;

@@ -136,7 +136,7 @@ public:
   }
   
   void SetStochastic(double dt) {
-    f=sqrt(dt)*sqrt(2.0*eta*etanorm)*crand_gauss();
+    f=sqrt(2.0*dt*eta*etanorm)*crand_gauss();
   }
   
    void ForceStochastic(Complex& w, double& T, double k) {
