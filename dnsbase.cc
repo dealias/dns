@@ -12,16 +12,18 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   f1(origin)=0.0;
   g0(origin)=0.0;
   g1(origin)=0.0;
-
-  for(unsigned i=0; i < Nx; ++i) {
-    Real kx=k0*((int) i-(int) xorigin);
+  
+  int imx=(int) mx;
+  for(int I=-imx+1; I < imx; ++I) {
+    Real kx=k0*I;
     Real kx2=kx*kx;
+    unsigned i=I+xorigin;
     vector wi=w[i];
     vector f0i=f0[i];
     vector f1i=f1[i];
     vector g0i=g0[i];
     vector g1i=g1[i];
-    for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j) {
+    for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
       Real ky=k0*j;
       Complex wij=wi[j];
       Complex kxw=Complex(-kx*wij.im,kx*wij.re);
