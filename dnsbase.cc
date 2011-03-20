@@ -16,13 +16,13 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   int imx=(int) mx;
   for(int I=-imx+1; I < imx; ++I) {
     Real kx=k0*I;
-    Real kx2=kx*kx;
     unsigned i=I+xorigin;
     vector wi=w[i];
     vector f0i=f0[i];
     vector f1i=f1[i];
     vector g0i=g0[i];
     vector g1i=g1[i];
+    rvector k2invi=k2inv[i];
     for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
       Real ky=k0*j;
       Complex wij=wi[j];
@@ -30,9 +30,9 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
       Complex kyw=Complex(-ky*wij.im,ky*wij.re);
       f0i[j]=kxw;
       f1i[j]=kyw;
-      Real k2inv=1.0/(kx2+ky*ky);
-      g0i[j]=k2inv*kyw;
-      g1i[j]=-k2inv*kxw;
+      Real k2invij=k2invi[j];
+      g0i[j]=k2invij*kyw;
+      g1i[j]=-k2invij*kxw;
     }
   }
 
@@ -70,6 +70,18 @@ void DNSBase::SetParameters()
   fcount *= 2; // Account for Hermitian conjugate modes.
 
   Forcing->Init(fcount);
+  
+  k2inv.Allocate(Nx,my);
+  int imx=(int) mx;
+  for(int I=-imx+1; I < imx; ++I) {
+    Real kx=k0*I;
+    Real kx2=kx*kx;
+    rvector k2invi=k2inv[I+xorigin];
+    for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
+      Real ky=k0*j;
+      k2invi[j]=1.0/(kx2+ky*ky);
+    }
+  }
 }
   
 void DNSBase::InitialConditions()

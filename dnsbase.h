@@ -64,6 +64,7 @@ protected:
   vector E; // Spectrum
   vector T; // Transfer
   Real Energy,Enstrophy,Palenstrophy;
+  array2<Real> k2inv;
 
 public:
   void Initialize();
@@ -388,7 +389,6 @@ public:
     return nuk(i*i+j*j);
   }
 
-  // TODO: use a 1D lookup table on i^2+j^2.
   Real nuk(unsigned i2) {
     double k2=i2*k02;
     return nuL*pow(k2,pL)+nuH*pow(k2,pH);
