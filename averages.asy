@@ -57,7 +57,7 @@ real[][] getintegrals(string dir, real T, real Tmax, int n=1)
 }
 
 real[] Ek;
-real[] k;
+real[] k,kB;
 
 real[][] moment2()
 {
@@ -77,8 +77,11 @@ real[][] transferN()
 void Ekavg()
 {
   Ek=0.5*moment2()[EK];
-  k=Ek > 0 ? kc : null;
-  Ek=Ek > 0 ? Ek : null;
+  bool[] test=Ek > 0;
+  k=test ? kc : null;
+  Ek=test ? Ek : null;
+  test.insert(0,true);
+  kB=test ? kb : null;
 }
 
 bool nextrun()
@@ -92,7 +95,7 @@ bool nextrun()
   
   prolog();
   k=kc;
-
+  kB=kb;
 
   return true;
 }
