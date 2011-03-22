@@ -29,6 +29,7 @@ unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
 Real k0=1.0;
+int randomIC=0;
 
 class DNS : public DNSBase, public ProblemBase {
 public:
@@ -90,8 +91,8 @@ public:
 // Distribute the enstrophy evenly between the real and imaginary components
     Real k2=k*k;
     Real v=icalpha+icbeta*k2;
-    v=v ? sqrt(0.5*k2/v) : 0.0;
-    return Complex(v,v);
+    v=v ? k/sqrt(v) : 0.0;
+    return randomIC ? v*expi(twopi*drand()) : sqrt(0.5)*Complex(v,v);
   }
 };
 
@@ -182,6 +183,7 @@ DNSVocabulary::DNSVocabulary()
   InitialConditionTable=new Table<InitialConditionBase>("initial condition");
   VOCAB(icalpha,0.0,0.0,"initial condition parameter");
   VOCAB(icbeta,0.0,0.0,"initial condition parameter");
+  VOCAB(randomIC,0,1,"randomize the initial conditions?");
   INITIALCONDITION(Zero);
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
