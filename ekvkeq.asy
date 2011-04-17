@@ -12,9 +12,7 @@ struct equil
   real alpha, beta;
 
   real f(real rho) {
-    int count;
-    
-    real sum;
+    real sum=0.0;
     for(int i=-mx+1; i < mx; ++i) {
       real i2=i*i;
       for(int j=-my+1; j < my; ++j) {
