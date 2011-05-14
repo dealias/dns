@@ -82,9 +82,9 @@ public:
     
   public: 
     FETL(DNSBase *b) : b(b), E(b->E), T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       unsigned index=(unsigned)(kint-0.5);
@@ -107,9 +107,9 @@ public:
     
   public: 
     FTL(DNSBase *b) : b(b), T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       unsigned index=(unsigned)(kint-0.5);
@@ -131,9 +131,9 @@ public:
     
   public: 
     FET(DNSBase *b) : b(b), E(b->E), T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       unsigned index=(unsigned)(kint-0.5);
@@ -155,9 +155,9 @@ public:
     
   public: 
     FE(DNSBase *b) : b(b), E(b->E), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       unsigned index=(unsigned)(kint-0.5);
@@ -174,9 +174,9 @@ public:
     
   public: 
     FL(DNSBase *b) : b(b), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       Complex wij=wi[j];
@@ -193,9 +193,9 @@ public:
     Real k0;
   public: 
     ForceStochastic(DNSBase *b) : T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       unsigned index=(unsigned)(kint-0.5);
@@ -207,9 +207,9 @@ public:
     Real k0;
   public: 
     ForceStochasticNO(DNSBase *b) : k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       double T;
@@ -221,9 +221,9 @@ public:
     Real k0;
   public: 
     InitializeValue(DNSBase *b) : k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       wi[j]=InitialCondition->Value(k);
@@ -235,9 +235,9 @@ public:
     Real k0;
   public: 
     ForcingCount(DNSBase *b) : b(b), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       if(Forcing->active(k)) ++b->fcount;
@@ -251,11 +251,11 @@ public:
   public: 
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
                              Palenstrophy(b->Palenstrophy), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
       Real w2=abs2(wi[j]);
       Enstrophy += w2;
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
       Real k2=k*k;
@@ -295,9 +295,9 @@ public:
     const uvector& count;
   public: 
     Count(DNSBase *b) : b(b), count(b->count) {}
-    inline void operator()(const vector& wi, const vector& Si, unsigned I2,
+    inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I2+j*j;
+      unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       unsigned index=(unsigned)(kint-0.5);
       ++count[index];
@@ -354,10 +354,9 @@ public:
     vector wi,Si;
     for(unsigned i=0; i < Nx; i++) {
       unsigned I=(int) i-(int) xorigin;
-      int I2=I*I;
       init(wi,Si,i);
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
-        fcn(wi,Si,I2,j);
+        fcn(wi,Si,I,j);
     }
   }
   

@@ -28,6 +28,7 @@ output=0
 pH=1
 pL=0
 polltime=0
+randomIC=0
 rezero=0
 sample=0
 spectrum=1
