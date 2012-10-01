@@ -12,7 +12,8 @@ real[] Pi,Eta;
 real[][] M2,Tk;
 
 while(nextrun()) {
-  gettime(n == 0);
+  //  gettime(n == 0);
+  gettime();
   M2=moment2();
   Tk=transfer();
 

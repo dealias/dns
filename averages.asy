@@ -17,7 +17,7 @@ real[][] getintegrals(string dir, real T, real Tmax, int n=1)
   int T0=Tindex(T);
   int T1=Tindex(Tmax);
   string prefix=rundir(dir)+"t";
-  in=xinput(prefix+(string) T0);
+  in=input(prefix+(string) T0,mode="xdr");
   real[] time=in.read(1);
   real t0=time[0];
   real t1;
@@ -25,7 +25,7 @@ real[][] getintegrals(string dir, real T, real Tmax, int n=1)
   real[][] final;
     
   // final values      
-  in=xinput(prefix+(string) T1);
+  in=input(prefix+(string) T1,mode="xdr");
   time=in.read(1);
   t1=time[0];
   for(int i=0; i < n; ++i)
@@ -35,7 +35,7 @@ real[][] getintegrals(string dir, real T, real Tmax, int n=1)
   // values added at steps which are multiples of rezero
   int lastrezero=rezero > 0 ? T1-(T1 % rezero) : 0;
   while(lastrezero > T0) {
-    in=xinput(prefix+(string) lastrezero);
+    in=input(prefix+(string) lastrezero,mode="xdr");
     time=in.read(1);
     for(int i=0; i < n; ++i)
       final[i] += (real[]) in.read(1);
@@ -43,7 +43,7 @@ real[][] getintegrals(string dir, real T, real Tmax, int n=1)
     lastrezero -= rezero;
   }
     
-  in=xinput(prefix+(string) T0);
+  in=input(prefix+(string) T0,mode="xdr");
   time=in.read(1);
   t0=time[0];
   for(int i=0; i < n; ++i)
