@@ -6,6 +6,7 @@
 #include "Array.h"
 #include "fftw++.h"
 #include "convolution.h"
+#include "explicit.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
 #include "Conservative.h"
@@ -193,7 +194,7 @@ public:
     Real k0;
   public: 
     ForceStochastic(DNSBase *b) : T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int I,
+    inline void operator()(const vector& wi, const vector&, int I,
                            unsigned j) {
       unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
@@ -207,7 +208,7 @@ public:
     Real k0;
   public: 
     ForceStochasticNO(DNSBase *b) : k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int I,
+    inline void operator()(const vector& wi, const vector&, int I,
                            unsigned j) {
       unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
@@ -411,8 +412,6 @@ public:
   Real kb(unsigned i) {return k0*(i+0.5);}
   Real kc(unsigned i) {return k0*(i+1);}
 };
-
-//***** initial conditions *****//
 
 extern InitialConditionBase *InitialCondition;
 
