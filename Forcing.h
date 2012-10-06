@@ -12,7 +12,7 @@ class ForcingBase {
   virtual void Init() {}
   virtual void Init(unsigned fcount) {}
   virtual bool active(double k) {return false;} 
-  virtual void SetStochastic(double dt=0.0) {}
+  virtual bool Stochastic(double dt=0.0) {return false;}
   virtual void Force(Complex& w, double& T, double k) {}
   virtual void ForceStochastic(Complex& w, double& T, double k) {}
 };

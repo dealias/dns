@@ -136,8 +136,9 @@ public:
     return abs(k-kforce) < h;
   }
   
-  void SetStochastic(double dt) {
+  bool Stochastic(double dt) {
     f=sqrt(2.0*dt*eta*etanorm)*crand_gauss();
+    return true;
   }
   
    void ForceStochastic(Complex& w, double& T, double k) {

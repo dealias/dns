@@ -372,8 +372,8 @@ public:
   
   void Stochastic(const vector2&Y, double, double dt)
   {
+    if(!Forcing->SetStochastic(dt)) return;
     w.Set(Y[OMEGA]);
-    Forcing->SetStochastic(dt);
     
     if(spectrum == 0) {
       Loop(Initw(this),ForceStochasticNO(this));
