@@ -235,7 +235,7 @@ void DNS::Initialize()
 
 void DNS::InitialConditions()
 {
-  fftw::maxthreads=get_max_threads();
+  fftw::maxthreads=threads;
   
   // load vocabulary from global variables
   Nx=::Nx;
