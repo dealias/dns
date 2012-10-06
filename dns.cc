@@ -132,10 +132,6 @@ public:
     etanorm=1.0/((Real) fcount);
   }
   
-  bool active(double k) {
-    return abs(k-kforce) < h;
-  }
-  
   bool Stochastic(double dt) {
     f=sqrt(2.0*dt*eta*etanorm)*crand_gauss();
     return true;
