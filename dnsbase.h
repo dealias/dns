@@ -309,6 +309,7 @@ public:
 
   void Init(vector& T, const vector& Src) {
     Set(T,Src);
+#pragma omp parallel for num_threads(threads)
     for(unsigned K=0; K < nshells; K++)
       T[K]=0.0;  
   }

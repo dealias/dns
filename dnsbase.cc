@@ -14,6 +14,7 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   g1(origin)=0.0;
   
   int imx=(int) mx;
+#pragma omp parallel for num_threads(threads)
   for(int I=-imx+1; I < imx; ++I) {
     Real kx=k0*I;
     unsigned i=I+xorigin;
@@ -148,6 +149,7 @@ void DNSBase::InitialConditions()
 
 void DNSBase::setcount()
 {
+#pragma omp parallel for num_threads(threads)
   for(unsigned i=0; i < nshells; i++)
     count[i]=0;
   
