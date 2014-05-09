@@ -1,1 +1,0 @@
-/u/bowman/tri/efficiency.asy
