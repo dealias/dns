@@ -6,13 +6,13 @@ include $(TRI)/config/Common
 
 vpath %.cc $(HOME)/nw
 vpath %.cc $(HOME)/fftw++
-INCL += -I$(HOME)/nw -I$(HOME)/fftw++
+INCL += -I$(HOME)/nw -I$(HOME)/fftw++ -I$(HOME)/fftw/include
 
 EXTRA = dnsbase fftw++ convolution explicit $(CORE) $(UTILS)
 FILES = dns $(EXTRA)
 OTHER = 
 
-LIB += -lfftw3 -lfftw3_omp
+LIB += -L$(HOME)/fftw/lib -lfftw3 -lfftw3_omp
 
 include $(TRI)/config/Rules
 

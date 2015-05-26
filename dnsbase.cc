@@ -38,7 +38,14 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   }
 
   F[0]=f0;
-  Convolution->convolve(F,G);
+
+  Complex **FF = new Complex*[4];
+  FF[0] = f0();
+  FF[1] = f1();
+  FF[2] = g0();
+  FF[3] = g1();
+  Convolution->convolve(FF, multbinary2);
+  free(FF);
   f0(origin)=0.0;
   
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);

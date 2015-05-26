@@ -287,7 +287,7 @@ void DNS::InitialConditions()
   G[0]=g0;
   G[1]=g1;
 
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,2);
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,4);
 
   Allocate(count,nshells);
   setcount();
