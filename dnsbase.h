@@ -50,8 +50,7 @@ protected:
 
   array2<Complex> f0,f1,g0,g1;
   array2<Complex> buffer;
-  Complex *F[2];
-  Complex *G[2];
+  Complex *F[4];
   Complex *block;
   ImplicitHConvolution2 *Convolution;
   ExplicitHConvolution2 *Padded;
