@@ -38,64 +38,10 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   }
 
   F[0]=f0;
-
-  Complex **FF = new Complex*[4];
-  FF[0] = f0();
-  FF[1] = f1();
-  FF[2] = g0();
-  FF[3] = g1();
-  Convolution->convolve(FF, multbinary2);
-  free(FF);
+  Convolution->convolve(F,multbinary2);
   f0(origin)=0.0;
   
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
-  
-#if 0
-  int lx=8;
-  int ly=8;
-    
-  int d=(int) xorigin+lx-ly;
-  int s=lx+ly;
-  Complex wlp;
-  assert(d >= 0 && d < (int) Nx && s < (int) my);
-  wlp=w[d][s];
-  Complex factor=1.0/((lx*lx+ly*ly)*wlp);
-  Complex Sl=f0[(int) xorigin+lx][ly];
-  Complex Slp=f0[(int) xorigin-ly][lx];
-  
-  for(int I=-imx+1; I < imx; ++I) {
-    Real kx=k0*I;
-    unsigned i=I+xorigin;
-    vector wi=w[i];
-    vector f0i=f0[i];
-    rvector k2invi=k2inv[i];
-    for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
-      Real ky=k0*j;
-      Complex wij=wi[j];
-      Complex wkl,wkp;
-      int ilx=i+lx;
-      int jly=j+ly;
-      if(ilx < (int) Nx && jly < (int) my)
-        wkl=w[ilx][jly];
-      else
-        wkl=0.0;
-      int ily=(int) i-ly;
-      int jlx=j+lx;
-      if(ily >= 0 && ily < (int) Nx && jlx < (int) my)
-        wkp=w[ily][jlx];
-      else
-        wkp=0.0;
-      f0i[j] -= factor*((lx*ky-kx*ly)*wkl*Slp+(lx*kx+ly*ky)*wkp*Sl);
-    }
-  }
-  
-  cout << f0[xorigin+lx][ly] << endl;
-  cout << f0[xorigin-ly][lx] << endl;
-  
-  f0(origin)=0.0;
-  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
-  
-#endif  
   
 #if 0
   Real sum=0.0;

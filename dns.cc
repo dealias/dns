@@ -276,7 +276,7 @@ void DNS::InitialConditions()
   unsigned int Ny0=Ny+ypad;
   int my0=Ny0/2+1;
   if(movie)
-    nbuf=max(nbuf,Nx0*my0);
+    nbuf=s::max(nbuf,Nx0*my0);
 
   block=fftwpp::ComplexAlign(nbuf);
   f1.Dimension(Nx,my,block);
@@ -284,8 +284,8 @@ void DNS::InitialConditions()
   g1.Dimension(Nx,my,block+2*Nxmy);
 
   F[1]=f1;
-  G[0]=g0;
-  G[1]=g1;
+  F[2]=g0;
+  F[3]=g1;
 
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,4);
 
