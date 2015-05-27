@@ -12,7 +12,7 @@ import graph;
 import palette;
 import contour;
 
-string[][] t={{"vort","\omega"},{"vx","v_x"},{"vy","v_y"}};
+string[][] t={{"C","C"},{"w","\omega"},{"vx","v_x"},{"vy","v_y"}};
 
 string dir=getstring("directory","r");
 string field=getstring("field","vort");
