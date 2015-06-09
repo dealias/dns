@@ -1,0 +1,161 @@
+Index: dns.cc
+===================================================================
+--- dns.cc	(revision 1996)
++++ dns.cc	(working copy)
+@@ -1,4 +1,5 @@
+ #include "dnsbase.h"
++#include "tests/utils.h"
+ 
+ const double ProblemVersion=1.0;
+ 
+@@ -250,6 +251,7 @@
+   mx=(Nx+1)/2;
+   my=(Ny+1)/2;
+   xorigin=mx-1;
++
+   origin=xorigin*my;
+   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
+ 
+@@ -258,7 +260,6 @@
+   NY[EK]=nshells;
+ 
+   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
+-  cout << "\nALLOCATING FFT BUFFERS" << endl;
+   size_t align=sizeof(Complex);
+ 
+   Allocator(align);
+@@ -269,9 +270,18 @@
+   w.Dimension(Nx,my);
+   f0.Dimension(Nx,my);
+ 
+-  unsigned int Nxmy=Nx*my;
+-  unsigned int nbuf=3*Nxmy;
++  unsigned int nx=hpadding(mx);
++  unsigned int ny=hpadding(my);
++  unsigned int nyp=ny/2+1;
++  unsigned int Nxmy=nx*nyp;//Nx*my;
++  unsigned int nbuf=4*Nxmy;
+   
++  xorigin0=nx/2;
++  origin0=xorigin0*nyp;
++  
++//  unsigned int Nxmy=Nx*my;
++//  unsigned int nbuf=3*Nxmy;
++  
+   unsigned int Nx0=Nx+xpad;
+   unsigned int Ny0=Ny+ypad;
+   int my0=Ny0/2+1;
+@@ -278,16 +288,21 @@
+   if(movie)
+     nbuf=::max(nbuf,Nx0*my0);
+ 
++  cout << "\nALLOCATING FFT BUFFERS: (" << nx << " X " << nyp << ")" << endl;
+   block=fftwpp::ComplexAlign(nbuf);
+-  f1.Dimension(Nx,my,block);
+-  g0.Dimension(Nx,my,block+Nxmy);
+-  g1.Dimension(Nx,my,block+2*Nxmy);
++//  f0.Dimension(Nx,nyp,block);
++  F0.Dimension(nx,nyp,block);
++  f1.Dimension(nx,nyp,block+Nxmy);
++  g0.Dimension(nx,nyp,block+2*Nxmy);
++  g1.Dimension(nx,nyp,block+3*Nxmy);
+ 
++  F[0]=F0;
+   F[1]=f1;
+   F[2]=g0;
+   F[3]=g1;
+ 
+-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,4);
++//  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,4);
++  Convolution=new fftwpp::ExplicitHConvolution2(nx,ny,mx,my,F0,2); // aliased
+ 
+   Allocate(count,nshells);
+   setcount();
+Index: dnsbase.cc
+===================================================================
+--- dnsbase.cc	(revision 1996)
++++ dnsbase.cc	(working copy)
+@@ -8,10 +8,10 @@
+   w.Set(Y[OMEGA]);
+   f0.Set(Src[OMEGA]);
+ 
+-  f0(origin)=0.0;
+-  f1(origin)=0.0;
+-  g0(origin)=0.0;
+-  g1(origin)=0.0;
++  F0(origin0)=0.0;
++  f1(origin0)=0.0;
++  g0(origin0)=0.0;
++  g1(origin0)=0.0;
+   
+   int imx=(int) mx;
+ #pragma omp parallel for num_threads(threads)
+@@ -18,11 +18,12 @@
+   for(int I=-imx+1; I < imx; ++I) {
+     Real kx=k0*I;
+     unsigned i=I+xorigin;
++    unsigned i0=I+xorigin0;
+     vector wi=w[i];
+-    vector f0i=f0[i];
+-    vector f1i=f1[i];
+-    vector g0i=g0[i];
+-    vector g1i=g1[i];
++    vector f0i=F0[i0];
++    vector f1i=f1[i0];
++    vector g0i=g0[i0];
++    vector g1i=g1[i0];
+     rvector k2invi=k2inv[i];
+     for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
+       Real ky=k0*j;
+@@ -37,10 +38,19 @@
+     }
+   }
+ 
+-  F[0]=f0;
+-  Convolution->convolve(F,multbinary2);
++//  F[0]=f0;
++//  Convolution->convolve(F,multbinary2);
++  Convolution->convolve(F,F+2);
++  
++  for(int I=-imx+1; I < imx; ++I) {
++    unsigned i=I+xorigin;
++    unsigned i0=I+xorigin0;
++    for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
++      f0[i][j]=F0[i0][j];
++    }
++  }
++  
+   f0(origin)=0.0;
+-  
+   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
+   
+ #if 0
+Index: dnsbase.h
+===================================================================
+--- dnsbase.h	(revision 1996)
++++ dnsbase.h	(working copy)
+@@ -35,7 +35,9 @@
+   // derived variables:
+   unsigned mx, my; // size of data arrays
+   unsigned origin; // linear index of Fourier origin.
++  unsigned origin0; // linear index of Fourier origin.
+   unsigned xorigin; // horizontal index of Fourier origin.
++  unsigned xorigin0; // horizontal index of Fourier origin (Explicit).
+ 
+   Real k0; // grid spacing factor
+   Real k02; // k0^2
+@@ -48,11 +50,13 @@
+   unsigned nmode;
+   unsigned nshells;  // Number of spectral shells
+ 
++  array2<Complex> F0;
+   array2<Complex> f0,f1,g0,g1;
+   array2<Complex> buffer;
+   Complex *F[4];
+   Complex *block;
+-  ImplicitHConvolution2 *Convolution;
++//  ImplicitHConvolution2 *Convolution;
++  ExplicitHConvolution2 *Convolution;
+   ExplicitHConvolution2 *Padded;
+ 
+   ifstream ftin;

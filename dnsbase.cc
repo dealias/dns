@@ -8,21 +8,22 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   w.Set(Y[OMEGA]);
   f0.Set(Src[OMEGA]);
 
-  f0(origin)=0.0;
-  f1(origin)=0.0;
-  g0(origin)=0.0;
-  g1(origin)=0.0;
+  F0(origin0)=0.0;
+  f1(origin0)=0.0;
+  g0(origin0)=0.0;
+  g1(origin0)=0.0;
   
   int imx=(int) mx;
 #pragma omp parallel for num_threads(threads)
   for(int I=-imx+1; I < imx; ++I) {
     Real kx=k0*I;
     unsigned i=I+xorigin;
+    unsigned i0=I+xorigin0;
     vector wi=w[i];
-    vector f0i=f0[i];
-    vector f1i=f1[i];
-    vector g0i=g0[i];
-    vector g1i=g1[i];
+    vector f0i=F0[i0];
+    vector f1i=f1[i0];
+    vector g0i=g0[i0];
+    vector g1i=g1[i0];
     rvector k2invi=k2inv[i];
     for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
       Real ky=k0*j;
@@ -37,10 +38,19 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
     }
   }
 
-  F[0]=f0;
-  Convolution->convolve(F,multbinary2);
-  f0(origin)=0.0;
+//  F[0]=f0;
+//  Convolution->convolve(F,multbinary2);
+  Convolution->convolve(F,F+2);
   
+  for(int I=-imx+1; I < imx; ++I) {
+    unsigned i=I+xorigin;
+    unsigned i0=I+xorigin0;
+    for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
+      f0[i][j]=F0[i0][j];
+    }
+  }
+  
+  f0(origin)=0.0;
   fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
   
 #if 0
