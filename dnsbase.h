@@ -35,9 +35,7 @@ protected:
   // derived variables:
   unsigned mx, my; // size of data arrays
   unsigned origin; // linear index of Fourier origin.
-  unsigned origin0; // linear index of Fourier origin.
   unsigned xorigin; // horizontal index of Fourier origin.
-  unsigned xorigin0; // horizontal index of Fourier origin (Explicit).
 
   Real k0; // grid spacing factor
   Real k02; // k0^2
@@ -50,13 +48,11 @@ protected:
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
-  array2<Complex> F0;
   array2<Complex> f0,f1,g0,g1;
   array2<Complex> buffer;
   Complex *F[4];
   Complex *block;
-//  ImplicitHConvolution2 *Convolution;
-  ExplicitHConvolution2 *Convolution;
+  ImplicitHConvolution2 *Convolution;
   ExplicitHConvolution2 *Padded;
 
   ifstream ftin;

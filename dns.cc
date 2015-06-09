@@ -1,5 +1,4 @@
 #include "dnsbase.h"
-#include "tests/utils.h"
 
 const double ProblemVersion=1.0;
 
@@ -251,7 +250,6 @@ void DNS::InitialConditions()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   xorigin=mx-1;
-
   origin=xorigin*my;
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
@@ -260,6 +258,7 @@ void DNS::InitialConditions()
   NY[EK]=nshells;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
+  cout << "\nALLOCATING FFT BUFFERS" << endl;
   size_t align=sizeof(Complex);
 
   Allocator(align);
@@ -270,17 +269,8 @@ void DNS::InitialConditions()
   w.Dimension(Nx,my);
   f0.Dimension(Nx,my);
 
-  unsigned int nx=hpadding(mx);
-  unsigned int ny=hpadding(my);
-  unsigned int nyp=ny/2+1;
-  unsigned int Nxmy=nx*nyp;//Nx*my;
-  unsigned int nbuf=4*Nxmy;
-  
-  xorigin0=nx/2;
-  origin0=xorigin0*nyp;
-  
-//  unsigned int Nxmy=Nx*my;
-//  unsigned int nbuf=3*Nxmy;
+  unsigned int Nxmy=Nx*my;
+  unsigned int nbuf=3*Nxmy;
   
   unsigned int Nx0=Nx+xpad;
   unsigned int Ny0=Ny+ypad;
@@ -288,21 +278,16 @@ void DNS::InitialConditions()
   if(movie)
     nbuf=::max(nbuf,Nx0*my0);
 
-  cout << "\nALLOCATING FFT BUFFERS: (" << nx << " X " << nyp << ")" << endl;
   block=fftwpp::ComplexAlign(nbuf);
-//  f0.Dimension(Nx,nyp,block);
-  F0.Dimension(nx,nyp,block);
-  f1.Dimension(nx,nyp,block+Nxmy);
-  g0.Dimension(nx,nyp,block+2*Nxmy);
-  g1.Dimension(nx,nyp,block+3*Nxmy);
+  f1.Dimension(Nx,my,block);
+  g0.Dimension(Nx,my,block+Nxmy);
+  g1.Dimension(Nx,my,block+2*Nxmy);
 
-  F[0]=F0;
   F[1]=f1;
   F[2]=g0;
   F[3]=g1;
 
-//  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,4);
-  Convolution=new fftwpp::ExplicitHConvolution2(nx,ny,mx,my,F0,2); // aliased
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,4);
 
   Allocate(count,nshells);
   setcount();
