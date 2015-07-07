@@ -1,8 +1,6 @@
 #ifndef __InitialCondition_h__
 #define __InitialCondition_h__ 1
 
-#include "Mode.h"
-
 #define INITIALCONDITION(key) \
 {(void) new Entry<key,InitialConditionBase>(#key,InitialConditionTable);}
 
