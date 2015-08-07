@@ -24,7 +24,7 @@ while(nextrun()) {
 }
 
 if(n == 1) {
-  currentpicture.legend[0].label=Etext;
+  //  currentpicture.legend[0].label=Etext;
   //currentpicture.legend[1].label=Ztext;
   //currentpicture.legend[2].label=Ptext;
 }
