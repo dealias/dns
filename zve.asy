@@ -10,17 +10,17 @@ string Ztext="$Z$";
 string Ptext="$P$";
 
 real[] t,E,Z,P;
-
-real G=sqrt(2*eta)/(k0*nuH)^2;
+real f;
 
 while(nextrun()) {
   file fin=input(rundir()+"evt").line();
   real[][] a=fin.dimension(0,0);
   a=transpose(a);
-  t=a[0]; E=a[1]/G^2; Z=a[2]/G^2; P=a[3];
+  f=sqrt(2*eta/kforce^2);
+  t=a[0]; E=a[1]/f^2; Z=a[2]/f^2; P=a[3];
   string runtext=" ("+run+")";
-  draw(graph(t,E,E > 0),p+Pen(3*n),Etext+runtext);
-  draw(graph(t,Z,Z > 0),p+Pen(3*n+1),Ztext+runtext);
+  draw(graph(t,E),p+Pen(3*n),Etext+runtext);
+  draw(graph(t,Z),p+Pen(3*n+1),Ztext+runtext);
 }
 
 if(n == 1) {
