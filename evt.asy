@@ -17,16 +17,15 @@ while(nextrun()) {
   a=transpose(a);
   t=a[0]; E=a[1]; Z=a[2]; P=a[3];
   string runtext=" ("+run+")";
-  draw(graph(t,E,E > 0),p+Pen(n),Etext+runtext);
-  //  draw(graph(t,E,E > 0),p+Pen(3*n),Etext+runtext);
-  //  draw(graph(t,Z,Z > 0),p+Pen(3*n+1),Ztext+runtext);
-  //  draw(graph(t,P,P > 0),p+Pen(3*n+2),Ptext+runtext);
+  draw(graph(t,E,E > 0),p+Pen(3*n),Etext+runtext);
+  draw(graph(t,Z,Z > 0),p+Pen(3*n+1),Ztext+runtext);
+  draw(graph(t,P,P > 0),p+Pen(3*n+2),Ptext+runtext);
 }
 
 if(n == 1) {
   currentpicture.legend[0].label=Etext;
-  //currentpicture.legend[1].label=Ztext;
-  //currentpicture.legend[2].label=Ptext;
+  currentpicture.legend[1].label=Ztext;
+  currentpicture.legend[2].label=Ptext;
 }
 
 xaxis("$t$",BottomTop,LeftTicks);

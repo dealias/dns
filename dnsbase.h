@@ -395,13 +395,6 @@ public:
   }
 
   virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);
-  void AddInvariants(unsigned k2int, Real w2, Real& E, Real& Z, Real& P) {
-    Z += w2;
-    Real k2=k2int*k02;
-    E += w2/k2;
-    P += k2*w2;
-  }
-  
   virtual Real getSpectrum(unsigned i) {
     double c=count[i];
     return c > 0 ? T[i].re*twopi/c : 0.0;
