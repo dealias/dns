@@ -2,7 +2,6 @@ include getparam;
 include averages;
 
 scale(Linear,Linear);
-
 pen p=linewidth(1);
 
 string Etext="$E$";
