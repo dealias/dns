@@ -6,6 +6,8 @@ const double ProblemVersion=1.0;
 #error DNS requires COMPLEX=1 in options.h
 #endif
 
+using namespace utils;
+
 const char *problem="Direct Numerical Simulation of Turbulence";
 
 const char *method="DNS";
@@ -214,7 +216,7 @@ DNS::DNS()
 
 DNS::~DNS()
 {
-  fftwpp::deleteAlign(block);
+  deleteAlign(block);
 }
 
 // wrapper for outcurve routines
@@ -278,7 +280,7 @@ void DNS::InitialConditions()
   if(movie)
     nbuf=::max(nbuf,Nx0*my0);
 
-  block=fftwpp::ComplexAlign(nbuf);
+  block=ComplexAlign(nbuf);
   f1.Dimension(Nx,my,block);
   g0.Dimension(Nx,my,block+Nxmy);
   g1.Dimension(Nx,my,block+2*Nxmy);
@@ -287,7 +289,7 @@ void DNS::InitialConditions()
   F[2]=g0;
   F[3]=g1;
 
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,4);
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,true,true,4,1);
 
   Allocate(count,nshells);
   setcount();
