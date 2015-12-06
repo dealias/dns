@@ -8,10 +8,11 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   w.Set(Y[OMEGA]);
   f0.Set(Src[PAD]);
 
-  for(int i=0; i < my; ++i) {
-    f1(i)=0;
-    g0(i)=0;
-    g1(i)=0;
+  for(unsigned int j=0; j < my; ++j) {
+    f0(j)=0; // Required?
+    f1(j)=0;
+    g0(j)=0;
+    g1(j)=0;
   }
   
   f0[xorigin][0]=0.0;
@@ -118,22 +119,18 @@ void DNSBase::setcount()
 
 void DNSBase::OutFrame(int)
 {
-  unsigned int Nx0=Nx+xpad;
-  unsigned int Ny0=Ny+ypad;
-  unsigned int offset=Nx0/2-mx+1;
-  for(unsigned int i=0; i < Nx; ++i) {
-    unsigned int I=i+offset;
-    for(unsigned int j=0; j < my; j++)
-      buffer(I,j)=w(i,j);
-  }
+  for(unsigned int j=0; j < my; ++j)
+    f1(j)=0;
+    
+  for(unsigned int i=0; i < Nx; ++i)
+    for(unsigned int j=0; j < my; ++j)
+    f1[i][j]=w(i,j);
+  
+  Backward->fft0(f1,wr);
 
-//  Padded->pad(buffer);
-//  Padded->backwards(buffer);//,true);
-  Backward->fft0(w);
-
-  fw << 1 << 2*my << Nx0;
-  for(int j=2*my; j >= 0; j--) {
-    for(unsigned i=0; i < Nx0; i++) {
+  fw << 1 << 2*my-1 << Nx+1;
+  for(int j=2*my-2; j >= 0; j--) {
+    for(unsigned i=0; i <= Nx; i++) {
       fw << (float) wr(i,j);
     }
   }

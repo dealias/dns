@@ -272,19 +272,16 @@ void DNS::InitialConditions()
   w.Dimension(Nx,my);
   f0.Dimension(Nx+1,my,-1,0);
 
-  unsigned int Nxmy=(Nx+1)*my;
-  unsigned int nbuf=3*Nxmy;
+  unsigned int Nx1my=(Nx+1)*my;
+  unsigned int nbuf=3*Nx1my;
   
-  unsigned int Nx0=Nx+xpad;
-  unsigned int Ny0=Ny+ypad;
-  int my0=my;//(Ny0+1)/2;
   if(movie)
-    nbuf=::max(nbuf,Nx0*my0);
+    nbuf=::max(nbuf,Nx1my);
 
   block=ComplexAlign(nbuf);
   f1.Dimension(Nx+1,my,block,-1,0);
-  g0.Dimension(Nx+1,my,block+Nxmy,-1,0);
-  g1.Dimension(Nx+1,my,block+2*Nxmy,-1,0);
+  g0.Dimension(Nx+1,my,block+Nx1my,-1,0);
+  g1.Dimension(Nx+1,my,block+2*Nx1my,-1,0);
 
   F[1]=f1;
   F[2]=g0;
@@ -296,10 +293,8 @@ void DNS::InitialConditions()
   setcount();
 
   if(movie) {
-    buffer.Dimension(Nx0,my0,block);
-    wr.Dimension(Nx0,2*my0,(Real *) block);
-    Backward=new fftwpp::crfft2d(Nx0,2*my0,block);
-//    Padded=new fftwpp::ExplicitHConvolution2(Nx0,Ny0,mx,my,block);
+    wr.Dimension(Nx+1,2*my-1,(Real *) g1());
+    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,g0,(Real *) block);
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
@@ -363,7 +358,8 @@ void DNS::Output(int it)
 
   if(output) out_curve(fw,y,"w",NY[OMEGA]);
 
-  if(movie) OutFrame(it);
+  if(movie)
+    OutFrame(it);
 
   if(spectrum) {
     ostringstream buf;

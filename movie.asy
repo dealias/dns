@@ -78,4 +78,4 @@ for(int i=first; i <= last; ++i) {
   purge();
 }
 
-label(a.pdf("controls"));
+label(a.pdf("controls,loop"));
