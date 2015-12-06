@@ -255,7 +255,8 @@ void DNS::InitialConditions()
   origin=xorigin*my;
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
-  NY[OMEGA]=Nx*my;
+  NY[PAD]=my;
+  NY[OMEGA]=Nx*my; // Allow for X Hermitian padding
   NY[TRANSFER]=nshells;
   NY[EK]=nshells;
 
@@ -269,27 +270,27 @@ void DNS::InitialConditions()
   Dimension(T,nshells);
 
   w.Dimension(Nx,my);
-  f0.Dimension(Nx,my);
+  f0.Dimension(Nx+1,my,-1,0);
 
-  unsigned int Nxmy=Nx*my;
+  unsigned int Nxmy=(Nx+1)*my;
   unsigned int nbuf=3*Nxmy;
   
   unsigned int Nx0=Nx+xpad;
   unsigned int Ny0=Ny+ypad;
-  int my0=Ny0/2+1;
+  int my0=my;//(Ny0+1)/2;
   if(movie)
     nbuf=::max(nbuf,Nx0*my0);
 
   block=ComplexAlign(nbuf);
-  f1.Dimension(Nx,my,block);
-  g0.Dimension(Nx,my,block+Nxmy);
-  g1.Dimension(Nx,my,block+2*Nxmy);
+  f1.Dimension(Nx+1,my,block,-1,0);
+  g0.Dimension(Nx+1,my,block+Nxmy,-1,0);
+  g1.Dimension(Nx+1,my,block+2*Nxmy,-1,0);
 
   F[1]=f1;
   F[2]=g0;
   F[3]=g1;
 
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,true,true,4,1);
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,4,1);
 
   Allocate(count,nshells);
   setcount();
@@ -297,11 +298,16 @@ void DNS::InitialConditions()
   if(movie) {
     buffer.Dimension(Nx0,my0,block);
     wr.Dimension(Nx0,2*my0,(Real *) block);
-    Padded=new fftwpp::ExplicitHConvolution2(Nx0,Ny0,mx,my,block);
+    Backward=new fftwpp::crfft2d(Nx0,2*my0,block);
+//    Padded=new fftwpp::ExplicitHConvolution2(Nx0,Ny0,mx,my,block);
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
   
+  vector f=Y[PAD];
+  for(unsigned int i=0; i < my; ++i)
+    f[i]=0.0;
+        
   w.Set(Y[OMEGA]);
 
   Init(T,Y[TRANSFER]);
@@ -349,12 +355,13 @@ void DNS::Output(int it)
 {
   Real E,Z,P;
 
+  vector y=Y[OMEGA];
+  
   w.Set(y);
   ComputeInvariants(w,E,Z,P);
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
-  Complex *y=Y[0];
-  if(output) out_curve(fw,y,"w",NY[0]);
+  if(output) out_curve(fw,y,"w",NY[OMEGA]);
 
   if(movie) OutFrame(it);
 

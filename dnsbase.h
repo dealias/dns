@@ -30,7 +30,7 @@ protected:
   Real nuH, nuL;
   static const int xpad,ypad;
   
-  enum Field {OMEGA,TRANSFER,EK};
+  enum Field {PAD,OMEGA,TRANSFER,EK};
 
   // derived variables:
   unsigned mx, my; // size of data arrays
@@ -48,12 +48,14 @@ protected:
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
-  array2<Complex> f0,f1,g0,g1;
+  Array2<Complex> f0,f1,g0,g1;
   array2<Complex> buffer;
   Complex *F[4];
   Complex *block;
   ImplicitHConvolution2 *Convolution;
-  ExplicitHConvolution2 *Padded;
+  crfft2d *Backward;
+//  ExplicitHConvolution2 *Padded;
+  
 
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;

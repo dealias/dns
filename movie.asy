@@ -2,7 +2,7 @@
 
 import animate;
 
-bool transpose=true;
+bool transpose=false;
 
 settings.tex="pdflatex";
 
@@ -16,8 +16,23 @@ string[][] t={{"C","C"},{"w","\omega"},{"vx","v_x"},{"vy","v_y"}};
 
 string dir=getstring("directory","r");
 string field=getstring("field","vort");
+
+// figure out how many frames there are
+real[][] T;
+file fin=input(dir+"/t").line();
+real[][] T=fin.dimension(0,0);
+T=transpose(T);
+int count=T[0].length-1;
+
 int first=getint("first frame");
 int last=getint("last frame");
+
+if(first < 0) first += count;
+else if(first > count) first=count;
+
+if(last < 0) last += count;
+else if(last > count) last=count;
+
 file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
 
 bounds range;
@@ -37,8 +52,8 @@ for(int i=first; i <= last; ++i) {
     buf=fin.read(3);
 
   if(eof(fin)) {
-    write();
-    write("last frame is "+(string) (i-1));
+    //    write();
+    //    write("last frame is "+(string) (i-1));
     break;
   }
 

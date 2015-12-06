@@ -1,17 +1,23 @@
 #include "dnsbase.h"
 
-const int DNSBase::xpad=1;
-const int DNSBase::ypad=1;
+const int DNSBase::xpad=0;
+const int DNSBase::ypad=0;
 
 void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 {
   w.Set(Y[OMEGA]);
-  f0.Set(Src[OMEGA]);
+  f0.Set(Src[PAD]);
 
-  f0(origin)=0.0;
-  f1(origin)=0.0;
-  g0(origin)=0.0;
-  g1(origin)=0.0;
+  for(int i=0; i < my; ++i) {
+    f1(i)=0;
+    g0(i)=0;
+    g1(i)=0;
+  }
+  
+  f0[xorigin][0]=0.0;
+  f1[xorigin][0]=0.0;
+  g0[xorigin][0]=0.0;
+  g1[xorigin][0]=0.0;
   
   int imx=(int) mx;
 #pragma omp parallel for num_threads(threads)
@@ -39,9 +45,9 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 
   F[0]=f0;
   Convolution->convolve(F,multbinary2);
-  f0(origin)=0.0;
+  f0[xorigin][0]=0.0;
   
-  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,f0);
+  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,&f0[0][0]);
   
 #if 0
   Real sum=0.0;
@@ -121,11 +127,12 @@ void DNSBase::OutFrame(int)
       buffer(I,j)=w(i,j);
   }
 
-  Padded->pad(buffer);
-  Padded->backwards(buffer,true);
+//  Padded->pad(buffer);
+//  Padded->backwards(buffer);//,true);
+  Backward->fft0(w);
 
-  fw << 1 << Ny0 << Nx0;
-  for(int j=Ny0-1; j >= 0; j--) {
+  fw << 1 << 2*my << Nx0;
+  for(int j=2*my; j >= 0; j--) {
     for(unsigned i=0; i < Nx0; i++) {
       fw << (float) wr(i,j);
     }
