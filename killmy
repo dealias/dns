@@ -1,0 +1,7 @@
+#!/bin/sh
+if [ $# = 0 ]; then echo Usage: "$0 name"; exit 1; fi
+while [ $# != 0 ];
+do
+ps hx -o %p%c | grep "^..... $1"\$ | sed -e 's/\(^.....\) .*/\1/' | xargs --replace=% kill %
+shift;
+done
