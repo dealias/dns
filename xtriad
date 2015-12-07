@@ -19,7 +19,7 @@
 #
 # =========================== title ====================================
 set movieprog "mplayer"
-set movieopt "-nofs -idle -fixed-vo"
+set movieopt "-nofs -idle -fixed-vo -noconsolecontrols"
 
 cd ~/dns
 set colour "lemon chiffon"
@@ -260,7 +260,7 @@ proc replay {} \
 global movieprog
 global movieopt
 exec sh -c "killmy $movieprog"
-exec sh -c "$movieprog $movieopt movie.mpg" >& /dev/null &
+exec sh -c "$movieprog $movieopt -fs movie.mpg" &
 }
 
 # =================== OPTIONAL PARAMETERS =============================
