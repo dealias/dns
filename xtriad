@@ -260,7 +260,7 @@ proc replay {} \
 global movieprog
 global movieopt
 exec sh -c "killmy $movieprog"
-exec sh -c "$movieprog $movieopt -fs movie.mpg" &
+exec sh -c "$movieprog $movieopt -fs movie.mpg" >& /dev/null &
 }
 
 # =================== OPTIONAL PARAMETERS =============================
