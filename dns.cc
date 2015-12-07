@@ -270,7 +270,7 @@ void DNS::InitialConditions()
   Dimension(T,nshells);
 
   w.Dimension(Nx,my);
-  f0.Dimension(Nx+1,my,-1,0);
+  S.Dimension(Nx,my);
 
   unsigned int Nx1my=(Nx+1)*my;
   unsigned int nbuf=3*Nx1my;
@@ -279,6 +279,7 @@ void DNS::InitialConditions()
     nbuf=::max(nbuf,Nx1my);
 
   block=ComplexAlign(nbuf);
+  f0.Dimension(Nx+1,my,-1,0);
   f1.Dimension(Nx+1,my,block,-1,0);
   g0.Dimension(Nx+1,my,block+Nx1my,-1,0);
   g1.Dimension(Nx+1,my,block+2*Nx1my,-1,0);
@@ -299,10 +300,6 @@ void DNS::InitialConditions()
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
   
-  vector f=Y[PAD];
-  for(unsigned int i=0; i < my; ++i)
-    f[i]=0.0;
-        
   w.Set(Y[OMEGA]);
 
   Init(T,Y[TRANSFER]);
@@ -350,6 +347,10 @@ void DNS::Output(int it)
 {
   Real E,Z,P;
 
+  vector f=Y[PAD];
+  for(unsigned int i=0; i < my; ++i)
+    f[i]=0.0;
+  
   vector y=Y[OMEGA];
   
   w.Set(y);

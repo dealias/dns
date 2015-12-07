@@ -5,6 +5,8 @@ const int DNSBase::ypad=0;
 
 void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 {
+  f0.Dimension(Nx+1,my,-1,0);
+  
   w.Set(Y[OMEGA]);
   f0.Set(Src[PAD]);
 
@@ -124,7 +126,7 @@ void DNSBase::OutFrame(int)
     
   for(unsigned int i=0; i < Nx; ++i)
     for(unsigned int j=0; j < my; ++j)
-    f1[i][j]=w(i,j);
+      f1[i][j]=w(i,j);
   
   Backward->fft0(f1,wr);
 

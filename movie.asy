@@ -27,10 +27,10 @@ int count=T[0].length-1;
 int first=getint("first frame");
 int last=getint("last frame");
 
-if(first < 0) first += count;
+if(first < 0) first += count+1;
 else if(first > count) first=count;
 
-if(last < 0) last += count;
+if(last < 0) last += count+1;
 else if(last > count) last=count;
 
 file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
@@ -78,4 +78,5 @@ for(int i=first; i <= last; ++i) {
   purge();
 }
 
-label(a.pdf("controls,loop"));
+// label(a.pdf("controls,loop"));
+a.movie();

@@ -49,6 +49,7 @@ protected:
   unsigned nshells;  // Number of spectral shells
 
   Array2<Complex> f0,f1,g0,g1;
+  Array2<Complex> S;
   array2<Complex> buffer;
   Complex *F[4];
   Complex *block;
@@ -183,10 +184,9 @@ public:
       Real k=k0*kint;
       Complex wij=wi[j];
       Nu nu=b->nuk(k2int);
-      Complex Sij=Si[j];
       double T;
       Forcing->Force(wij,T,k);
-      Si[j]=Sij-nu*wij;
+      Si[j] -= nu*wij;
     }
   };
   
@@ -272,7 +272,7 @@ public:
     InitwS(DNSBase *b) : b(b) {}
     inline void operator()(vector& wi, vector& Si, unsigned i) {
       Dimension(wi,b->w[i]);
-      Dimension(Si,b->f0[i]);
+      Dimension(Si,b->S[i]);
     }
   };
   
@@ -366,7 +366,7 @@ public:
   template<class T>
   void Compute(T fcn, const vector2& Src, const vector2& Y)
   {
-    f0.Set(Src[OMEGA]);
+    S.Set(Src[OMEGA]);
     w.Set(Y[OMEGA]);
 
     Loop(InitwS(this),fcn);

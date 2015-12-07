@@ -17,7 +17,7 @@ T=transpose(T);
 int last=T[0].length-1;
 
 int frame=getint("frame (<="+(string) last+")");
-if(frame < 0) frame += last;
+if(frame < 0) frame += last+1;
 else if(frame > last) frame=last;
 
 string name=dir+"/"+field;
