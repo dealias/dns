@@ -22,23 +22,23 @@ real[][] T;
 file fin=input(dir+"/t").line();
 real[][] T=fin.dimension(0,0);
 T=transpose(T);
-int count=T[0].length-1;
+int count=T[0].length;
 
 int first=getint("first frame");
 int last=getint("last frame");
 
-if(first < 0) first += count+1;
-else if(first > count) first=count;
+if(first < 0) first += count;
+else if(first >= count) first=count-1;
 
-if(last < 0) last += count+1;
-else if(last > count) last=count;
+if(last < 0) last += count;
+else if(last >= count) last=count-1;
 
 file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
 
 bounds range;
 pen[] Palette=BWRainbow2();
 
-for(int i=first; i <= last; ++i) {
+for(int i=0; i <= last; ++i) {
   picture pic;
   real[][][] buf;
   size(pic,300);
@@ -51,11 +51,10 @@ for(int i=first; i <= last; ++i) {
   } else
     buf=fin.read(3);
 
-  if(eof(fin)) {
-    //    write();
-    //    write("last frame is "+(string) (i-1));
+  if(eof(fin))
     break;
-  }
+
+  if(i < first) continue;
 
   real[][] v=buf[0];
 
