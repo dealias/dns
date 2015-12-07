@@ -19,7 +19,7 @@
 #
 # =========================== title ====================================
 set movieprog "mplayer"
-set movieopt "-nofs -loop 5"
+set movieopt "-nofs -idle -fixed-vo"
 
 cd ~/dns
 set colour "lemon chiffon"
@@ -249,10 +249,18 @@ exec sh -c "echo -e 'lab\n$a\n-1' | asy -inpipe 0 -V image" >& /dev/null &
 proc movie {a} \
 {
 global maxframes
-global zoom
 global movieprog
 global movieopt
-    exec sh -c "echo -e 'lab\n$a\n-$maxframes\n-1' | asy -inpipe 0 movie -f mpg; $movieprog $movieopt movie.mpg" >& /dev/null &
+exec sh -c "killmy $movieprog"
+exec sh -c "echo -e 'lab\n$a\n-$maxframes\n-1' | asy -inpipe 0 movie -f mpg; $movieprog $movieopt movie.mpg" >& /dev/null &
+}
+
+proc replay {} \
+{
+global movieprog
+global movieopt
+exec sh -c "killmy $movieprog"
+exec sh -c "$movieprog $movieopt movie.mpg" >& /dev/null &
 }
 
 # =================== OPTIONAL PARAMETERS =============================
@@ -315,6 +323,14 @@ menu .makemovie.menu.sub -tearoff {0}
 
 pack .makemovie.menu
 
+# =========================== REPLAYMOVIE ====================================
+
+frame .replay -relief raised -borderwidth 2 
+button .replay.button -text "REPLAY" -relief flat -background red \
+-command {replay}
+
+pack .replay.button
+
 # =========================== QUIT ====================================
 frame .quit -relief raised -borderwidth 2 
 button .quit.button -text "QUIT" -relief flat -background blue -foreground white \
@@ -342,6 +358,7 @@ pack .movie -padx 5 -pady 5
 pack .optional -padx 5 -pady 5 -anchor s
 pack .resolution -side left -padx 5 -pady 5
 pack .quit -side bottom -side right -padx 80 -pady 5
+pack .replay -side bottom -side right -padx 30 -pady 5
 pack .makemovie -side bottom -side right -padx 30 -pady 5
 pack .graph -side bottom -side right -padx 30 -pady 5
 pack .stop -side bottom -side right -padx 30 -pady 5
