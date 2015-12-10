@@ -275,9 +275,6 @@ void DNS::InitialConditions()
   unsigned int Nx1my=(Nx+1)*my;
   unsigned int nbuf=3*Nx1my;
   
-  if(movie)
-    nbuf=::max(nbuf,Nx1my);
-
   block=ComplexAlign(nbuf);
   f0.Dimension(Nx+1,my,-1,0);
   f1.Dimension(Nx+1,my,block,-1,0);
