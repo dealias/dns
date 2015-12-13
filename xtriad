@@ -301,8 +301,7 @@ menu .graph.menu.sub -tearoff {0}
 .graph.menu.sub add command -command {graph e} -label {Evolution of E and Z}
 .graph.menu.sub add command -command {graph ekvk} -label {Energy Spectrum}
 .graph.menu.sub add command -command {graph slope} -label {Logarithmic Slope}
-.graph.menu.sub add command -command {graph transfer} -label {Energy Transfer}
-.graph.menu.sub add command -command {graph transferz} -label {Enstrophy Transfer}
+.graph.menu.sub add command -command {graph transfer} -label {Enstrophy Transfer}
 .graph.menu.sub add command -command {image w} -label {Vorticity Field}
 #.graph.menu.sub add command -command {image psi} -label {Stream Function Field}
 #.graph.menu.sub add command -command {image weiss} -label {Weiss Q Field}
