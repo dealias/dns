@@ -20,7 +20,7 @@ string field=getstring("field","vort");
 // figure out how many frames there are
 real[][] T;
 file fin=input(dir+"/t").line();
-real[][] T=fin.dimension(0,0);
+real[][] T=fin;
 T=transpose(T);
 int count=T[0].length;
 
@@ -47,7 +47,7 @@ for(int i=0; i <= last; ++i) {
     int nx=fin;
     int ny=fin;
     int nz=fin;
-    buf=fin.dimension(nz,ny,nx);
+    buf=fin(nz,ny,nx);
   } else
     buf=fin.read(3);
 

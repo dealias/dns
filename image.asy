@@ -12,7 +12,7 @@ string field=getstring("field","vort");
 // figure out how many frames there are
 real[][] T;
 file fin=input(dir+"/t").line();
-real[][] T=fin.dimension(0,0);
+real[][] T=fin;
 T=transpose(T);
 int last=T[0].length-1;
 

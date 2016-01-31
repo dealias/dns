@@ -63,7 +63,7 @@ while(nextrun()) {
   draw(graph(k,Ek),p+Pen(2*n),texify(run));
 
   file fin=input(rundir()+"evt").line();
-  real[][] a=fin.dimension(0,0);
+  real[][] a=fin;
   a=transpose(a);
   real E=a[1][0], Z=a[2][0];
   equil eq=equil(E,Z);

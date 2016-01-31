@@ -13,7 +13,7 @@ real[] t,E,Z,P;
 
 while(nextrun()) {
   file fin=input(rundir()+"evt").line();
-  real[][] a=fin.dimension(0,0);
+  real[][] a=fin;
   a=transpose(a);
   t=a[0]; E=a[1]; Z=a[2]; P=a[3];
   string runtext=" ("+run+")";
