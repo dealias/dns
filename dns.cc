@@ -363,7 +363,8 @@ void DNS::Output(int it)
     ostringstream buf;
     Set(T,Y[EK]);
     buf << "ekvk" << dirsep << "t" << tcount;
-    open_output(fekvk,dirsep,buf.str().c_str(),0);
+    const string& s=buf.str();
+    open_output(fekvk,dirsep,s.c_str(),0);
     out_curve(fekvk,t,"t");
     out_curve(fekvk,cwrap::Spectrum,"Ek",nshells);
     out_curve(fekvk,cwrap::Dissipation,"nuk*Ek",nshells);
@@ -373,7 +374,8 @@ void DNS::Output(int it)
     Set(T,Y[TRANSFER]);
     buf.str("");
     buf << "transfer" << dirsep << "t" << tcount;
-    open_output(ftransfer,dirsep,buf.str().c_str(),0);
+    const string& S=buf.str();
+    open_output(ftransfer,dirsep,S.c_str(),0);
     out_curve(ftransfer,t,"t");
     out_curve(ftransfer,cwrap::Pi,"Pi",nshells);
     out_curve(ftransfer,cwrap::Eta,"Eta",nshells);
