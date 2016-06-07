@@ -41,19 +41,19 @@ void Source(const vector2& w, vector2 &S)
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       double k2=i*i+j*j;
-      Complex kxw=Complex(-i*w[i][j].im,i*w[i][j].re);
-      Complex kyw=Complex(-j*w[i][j].im,j*w[i][j].re);
-      f0[i][j]=kxw;
-      f1[i][j]=kyw;
+      Complex Ikxw=Complex(-i*w[i][j].im,i*w[i][j].re);
+      Complex Ikyw=Complex(-j*w[i][j].im,j*w[i][j].re);
+      f0[i][j]=Ikxw;
+      f1[i][j]=Ikyw;
       double k2inv=1.0/k2;
-      g0[i][j]=kyw*k2inv;
-      g1[i][j]=-kxw*k2inv;
+      g0[i][j]=-Ikyw*k2inv;
+      g1[i][j]=Ikxw*k2inv;
     }
   }
 
   Complex *F[]={f0,f1,g0,g1};
   Convolution->convolve(F,multbinary2);
-  f0[0][0]=0.0;
+  f0[0][0]=0.0; // Enforce no mean flow.
   
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f0);
   
@@ -62,8 +62,8 @@ void Source(const vector2& w, vector2 &S)
   double sumZ=0.0;
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      sumE += (f0[i][j]*conj(w[i][j])/(i*i+j*j)).re;
       sumZ += (f0[i][j]*conj(w[i][j])).re;
+      sumE += (f0[i][j]*conj(w[i][j])/(i*i+j*j)).re;
     }
   }
   cout << sumZ << endl;
