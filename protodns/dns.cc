@@ -3,17 +3,16 @@
 #include "Array.h"
 
 using namespace std;
-using namespace utils;
 using namespace Array;
 using namespace fftwpp;
 
 // size of problem
 
-unsigned int Nx=15;
-unsigned int Ny=15;
+int Nx=15;
+int Ny=15;
 
 int mx;
-unsigned int my;
+int my;
 
 typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
@@ -26,7 +25,7 @@ ImplicitHConvolution2 *Convolution;
 void init(vector2& w)
 {
   for(int i=-mx+1; i < mx; ++i) {
-    for(unsigned j=(i <= 0 ? 1 : 0); j < my; ++j) {
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       w[i][j]=Complex(i,j);
     }
   }
@@ -40,10 +39,10 @@ void Source(const vector2& w, vector2 &S)
   g1[0][0]=0.0;
   
   for(int i=-mx+1; i < mx; ++i) {
-    for(unsigned j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      Real k2=i*i+j*j;
-      Complex kxw=Complex(-w[i][j].im*i,w[i][j].re*i);
-      Complex kyw=Complex(-w[i][j].im*j,w[i][j].re*j);
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+      double k2=i*i+j*j;
+      Complex kxw=Complex(-i*w[i][j].im,i*w[i][j].re);
+      Complex kyw=Complex(-j*w[i][j].im,j*w[i][j].re);
       f0[i][j]=kxw;
       f1[i][j]=kyw;
       double k2inv=1.0/k2;
@@ -58,13 +57,17 @@ void Source(const vector2& w, vector2 &S)
   
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f0);
   
-#if 1
-  Real sum=0.0;
+#if 1 // Check enstrophy and energy symmetries
+  double sumE=0.0;
+  double sumZ=0.0;
   for(int i=-mx+1; i < mx; ++i) {
-    for(unsigned j=(i <= 0 ? 1 : 0); j < my; ++j)
-      sum += (f0[i][j]*conj(w[i][j])/(i*i+j*j)).re;
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+      sumE += (f0[i][j]*conj(w[i][j])/(i*i+j*j)).re;
+      sumZ += (f0[i][j]*conj(w[i][j])).re;
+    }
   }
-  cout << sum << endl;
+  cout << sumZ << endl;
+  cout << sumE << endl;
   cout << endl;
 #endif
 }
