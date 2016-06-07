@@ -36,13 +36,13 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
     for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
       Real ky=k0*j;
       Complex wij=wi[j];
-      Complex kxw=Complex(-kx*wij.im,kx*wij.re);
-      Complex kyw=Complex(-ky*wij.im,ky*wij.re);
-      f0i[j]=kxw;
-      f1i[j]=kyw;
+      Complex Ikxw=Complex(-kx*wij.im,kx*wij.re);
+      Complex Ikyw=Complex(-ky*wij.im,ky*wij.re);
+      f0i[j]=Ikxw;
+      f1i[j]=Ikyw;
       Real k2invij=k2invi[j];
-      g0i[j]=k2invij*kyw;
-      g1i[j]=-k2invij*kxw;
+      g0i[j]=-k2invij*Ikyw;
+      g1i[j]=k2invij*Ikxw;
     }
   }
 
