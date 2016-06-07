@@ -53,7 +53,7 @@ void Source(const vector2& w, vector2 &S)
 
   Complex *F[]={f0,f1,g0,g1};
   Convolution->convolve(F,multbinary2);
-  f0[0][0]=0.0; // Enforce no mean flow.
+  f0(0,0)=0.0; // Enforce no mean flow.
   
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f0);
   
@@ -62,12 +62,13 @@ void Source(const vector2& w, vector2 &S)
   double sumZ=0.0;
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      sumZ += (f0[i][j]*conj(w[i][j])).re;
-      sumE += (f0[i][j]*conj(w[i][j])/(i*i+j*j)).re;
+      double product=real(f0[i][j]*conj(w[i][j]));
+      sumE += product/(i*i+j*j);
+      sumZ += product;
     }
   }
-  cout << sumZ << endl;
-  cout << sumE << endl;
+  cout << "sum wS=" << sumZ << endl;
+  cout << "sum wS/k^2=" << sumE << endl;
   cout << endl;
 #endif
 }
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
   
   init(w);
   
-  w(0,0)=0;
+  w(0,0)=0; // Enforce no mean flow.
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
 
   Source(w,f0);
