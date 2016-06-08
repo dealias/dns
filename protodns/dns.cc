@@ -1,3 +1,5 @@
+#include <cmath>
+#include <fstream>
 #include "Complex.h"
 #include "convolution.h"
 #include "Array.h"
@@ -13,6 +15,7 @@ int Ny=15;
 
 int mx;
 int my;
+const double nu=0.0;
 
 typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
@@ -26,7 +29,7 @@ void init(vector2& w)
 {
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      w[i][j]=Complex(i,j);
+      w[i][j]=1.0/(i*i+j*j);
     }
   }
 }
@@ -53,6 +56,13 @@ void Source(const vector2& w, vector2 &S)
 
   Complex *F[]={f0,f1,g0,g1};
   Convolution->convolve(F,multbinary2);
+  
+  for(int i=0; i<mx ;++i){
+    for(int j=0; j<my ;++j){
+       double k2=i*i+j*j;     
+       f0[i][j] += -nu*k2*w[i][j];
+    }
+  }
   f0(0,0)=0.0; // Enforce no mean flow.
   
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f0);
@@ -77,7 +87,9 @@ int main(int argc, char* argv[])
 {
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
-    
+  const int kmax=(int) hypot(mx-1,my-1);
+  double Z[kmax+1]={};
+  ofstream fout("Zk.dat",ios::out);
   size_t align=sizeof(Complex);
   
   f0.Allocate(Nx,my,-mx+1,0,align);
@@ -90,11 +102,30 @@ int main(int argc, char* argv[])
   w.Allocate(Nx,my,-mx+1,0,align);
   
   init(w);
-  
-  w(0,0)=0; // Enforce no mean flow.
+  w(0,0)=0.0; // Enforce no mean flow.
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
 
-  Source(w,f0);
-    
+  double dt=1.0e-6;
+  for(int step=0; step < 100; ++step){
+     Source(w,f0);
+     for(int i=0; i < mx; ++i){
+       for(int j=0; j < my; ++j){
+	 w[i][j] += f0[i][j]*dt;
+       }
+     }
+     cout << "step:" << step << endl;
+     int k=0;
+     for(int i=0; i < mx; ++i){
+       for(int j=0; j < my; ++j){
+	 k=sqrt(i*i+j*j);
+	 Z[(int) (k+0.5)] += 0.5*abs(w[i][j])*abs(w[i][j]);
+       }
+     }
+  }
+  for(int i=1; i <= kmax; ++i){
+    cout << i << "\t" << Z[i] <<endl;
+    fout << i << "\t" << Z[i] <<endl;
+  }
+  fout.close();
   return 0;
 }
