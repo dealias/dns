@@ -1,0 +1,145 @@
+\documentclass[10pt]{article}
+
+%TITLE
+%=====
+\title{\huge{\textbf{Vorticity Equation \\ \vspace{1cm} Fourier Representation and protodns code}}}
+\date{}
+\setlength{\oddsidemargin}{0pt}
+\setlength{\evensidemargin}{0pt}
+\setlength{\marginparwidth}{0pt}
+\setlength{\marginparpush}{0pt}
+\setlength{\marginparsep}{0pt}
+\setlength{\textwidth}{464pt}
+\addtolength{\topmargin}{-2.0cm}
+\addtolength{\textheight}{4.0cm}
+
+%USE PACKAGES
+%============
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage{mathrsfs}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+%BODY OF THE DOCUMENT
+%====================
+\begin{document}
+\maketitle
+The main advantage of solving vorticity equation instead of momentum equation is the fact that vorticity equation does not involve pressure term which in turn involves solving Poisson's equation, so for our purpose which is direct numerical simulation of isotropic homogeneous turbulence, taking this approach makes it possible to have faster numerical simulation. Considering vorticity equation, we would have :
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-1
+\begin{equation}\label{Vorticity}	
+\frac{\partial{\bm{\omega}}}{\partial t} + (\bm{u}\cdot\bm{\nabla})\bm{\omega}=(\bm{\omega}\cdot\bm{\nabla})\bm{u} + \nu\bm{\nabla}^2\bm{\omega} + \bm{\nabla}\bm{\times}\bm{F}
+\end{equation}
+%
+now for the case of 2D incompressible fluid flow we have:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-2
+\begin{equation}
+\bm{u}=u(x,y)\bm{\hat{i}}+v(x,y)\bm{\hat{j}}\qquad, \qquad \bm{\nabla}\cdot\bm{u}=0
+\end{equation}
+%
+so it is well known that for this type of fluid flow we can represent the velocity field by using stream function $\psi$ such that:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-3
+\begin{equation}\label{Eq-3}
+u=-\frac{\partial\psi}{\partial y}, v=\frac{\partial\psi}{\partial x}
+\end{equation}
+%
+now by the definition of vorticity which is $\bm{\omega}=\bm{\nabla}\times\bm{u}$, then we will have:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-4
+\begin{equation}\label{Eq-4}
+\bm{\omega}=(\frac{\partial v}{\partial x}-\frac{\partial u}{\partial y})\bm{\hat{k}}
+\end{equation}
+%
+which in fact shows that in the case of 2D incompressible fluid flow, $\bm{\omega}$ is a vector whose direction is always prependicular to the velocity vector, so what is matter regarding the velocity vector is its length. Thus, we can look at the vorticity as an scalar. Now using the equation \eqref{Eq-3} in \eqref{Eq-4}, we will have:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-5
+\begin{equation}\label{Eq-5}
+\bm{\omega}=({\bm{\nabla}}^2\psi)\bm{\hat{k}}
+\end{equation}
+%
+while we can write:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-6
+\begin{equation}\label{Eq-6}
+\bm{u}=\frac{\partial\psi}{\partial y}\bm{\hat{i}}+\frac{\partial\psi}{\partial x}\bm{\hat{j}}=\bm{\hat{k}}\times\bm{\nabla}\psi
+\end{equation}
+so using equations \eqref{Eq-5},\eqref{Eq-6}, we can represent the velocity vector with respect to the stream function and consequently the vorticity as:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-7
+\begin{equation}\label{Eq-7}
+\bm{u}=\bm{\hat{k}}\times\bm{\nabla}({\bm{\nabla}}^{-2}\omega)
+\end{equation}
+%
+as we mentioned above, because in 2D fluid flow, the vorticity is always prependicular to the velocity, and also because of continuity, then the first term in the right hand side of the vorticity equation vanishes, so the vorticity equation becomes:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-8
+\begin{equation}\label{Eq-8}
+\frac{\partial{\omega}}{\partial t} + (\bm{u}\cdot\bm{\nabla})\omega= \nu\bm{\nabla}^2\omega + f
+\end{equation}
+%
+now by expanding equation\eqref{Eq-8}, we would have:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-9
+\begin{equation}\label{Eq-9}
+\frac{\partial{\omega}}{\partial t} + (\bm{\hat{k}}\times\bm{\nabla}({\bm{\nabla}}^{-2}\omega)\cdot\bm{\nabla})\omega= \nu\bm{\nabla}^2\omega + f
+\end{equation}
+now using inverse discrete Fourier transform, we would have:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-10
+\begin{align}
+\omega(\bm{x})&=\sum_{\bm{p}}{e^{i\bm{p}\cdot\bm{x}}\omega(\bm{p})}=\sum_{\bm{p}}{e^{i\bm{p}\cdot\bm{x}}\omega_{\bm{p}}} \tag*{} \\
+(\bm{\hat{k}}\times\bm{\nabla}({\bm{\nabla}}^{-2}\omega(\bm{x}))\cdot\bm{\nabla})\omega(\bm{x}) &=(\bm{\hat{k}}\times\bm{\nabla}({\bm{\nabla}}^{-2}\sum_{\bm{p}}{e^{i\bm{p}\cdot\bm{x}}\omega_{\bm{p}}})\cdot\bm{\nabla})\sum_{\bm{q}}{e^{i\bm{q}\cdot\bm{x}}\omega_{\bm{q}}} \tag*{} \\
+&=\sum_{\bm{p},\bm{q}}{\frac{(\bm{\hat{k}}\times\bm{p})\cdot\bm{q}}{|\bm{p}|^2}\omega_{\bm{p}}\omega_{\bm{q}}e^{i(\bm{p}+\bm{q})\cdot\bm{x}}} \tag*{} \\
+\nu\bm{\nabla}^2\omega(\bm{x})&=\nu\sum_{\bm{p}}{|\bm{p}|^2e^{i\bm{p}\cdot\bm{x}}\omega_{\bm{p}}}  \tag*{} \\
+f(\bm{x})&=\sum_{\bm{p}}{e^{i\bm{p}\cdot\bm{x}}f_{\bm{p}}} \label{Eq-10}
+\end{align}
+%
+now, using \eqref{Eq-10} and taking discrete Fourier transform of \eqref{Eq-9}, we have:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-11
+\begin{equation}\label{Eq-11}
+\frac{\partial}{\partial t}({\sum_{\bm{p},\bm{r}}{e^{i(\bm{p}-\bm{r})\cdot\bm{x}}\omega_{\bm{p}}}}) + \sum_{\bm{p},\bm{q},\bm{r}}{\frac{(\bm{\hat{k}}\times\bm{p})\cdot\bm{q}}{|\bm{p}|^2}\omega_{\bm{p}}\omega_{\bm{q}}e^{i(\bm{p}+\bm{q}-\bm{r})\cdot\bm{x}}}= \nu\sum_{\bm{p},\bm{r}}{|\bm{p}|^2e^{i(\bm{p}-\bm{r})\cdot\bm{x}}\omega_{\bm{p}}} + \sum_{\bm{p},\bm{r}}{e^{(i\bm{p}-\bm{r})\cdot\bm{x}}f_{\bm{p}}}
+\end{equation}
+%
+now by simplifying the above equation, the final governing equation in the wave space would be:
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-12
+\begin{equation}\label{Eq-12}
+\frac{\partial\omega_{\bm{r}}}{\partial t} + \sum_{\bm{r}}{\frac{(\bm{\hat{k}}\times\bm{p})\cdot\bm{r}}{|\bm{p}|^2}\omega_{\bm{p}}\omega_{\bm{r}-\bm{p}}}= \nu{|\bm{r}|}^2\omega_{\bm{r}} + f_{\bm{r}}
+\end{equation}
+%
+%%%%%%%%%%%%%%%%%%%%%%% FIG-1
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{domain}
+\caption{Domain of simulation}\label{Fig-1}
+\end{figure}
+%
+now as we want to study homogeneous isotropic turbulence, we have to avoid having walls or in fact we have to stay far enough from walls , so the best approach is to take our domain with periodic boundary conditions. In the schematic figure \ref{Fig-1}, our domain has been represented. Now using equation \eqref{Eq-12}, we can rewrite the equation as :
+%
+%%%%%%%%%%%%%%%%%%%%%%% Eq-13
+\begin{align}
+\frac{\partial\omega_{\bm{r}}}{\partial t} &= -\sum_{\bm{r}}{\frac{(\bm{\hat{k}}\times\bm{p})\cdot\bm{r}}{|\bm{p}|^2}\omega_{\bm{p}}\omega_{\bm{r}-\bm{p}}}+\nu{|\bm{r}|}^2\omega_{\bm{r}} + f_{\bm{r}} \tag*{} \\
+&=: S_{\bm{r}}\label{Eq-13}
+\end{align}
+%
+where $S_{\bm{r}}$ is the source term which is a function of $\omega_{\bm{r}}$. Now it is clear that the\eqref{Eq-13} is a first order ODE that can be solved using implicit time marching method. The main solution algorithm has been shown in \ref{Fig-2}. It should be noticed that \ref{Fig-2} is the most general solution algorithm while in action, many different optimization and generalizations must be added to the shown algorithm to make the final numerical simulation as most efficient(regarding CPU time and memory usage) as possible.
+%
+%%%%%%%%%%%%%%%%%%%%%%% FIG-2
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{algorithm}
+\caption{Solution algorithm}\label{Fig-2}
+\end{figure}
+%
+\end{document}
+
+
+
+
+
