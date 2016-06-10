@@ -69,21 +69,6 @@ void Source(const vector2& w, vector2 &S)
   f0(0,0)=0.0; // Enforce no mean flow.
   
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f0);
-  
-#if 1 // Check enstrophy and energy symmetries
-  double sumE=0.0;
-  double sumZ=0.0;
-  for(int i=-mx+1; i < mx; ++i) {
-    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      double product=real(f0[i][j]*conj(w[i][j]));
-      sumE += product/(i*i+j*j);
-      sumZ += product;
-    }
-  }
-  cout << "sum wS=" << sumZ << endl;
-  cout << "sum wS/k^2=" << sumE << endl;
-  cout << endl;
-#endif
 }
 
 int main(int argc, char* argv[])
@@ -92,10 +77,8 @@ int main(int argc, char* argv[])
   my=(Ny+1)/2;
   const int kmax=(int) hypot(mx-1,my-1);
   double Z[kmax+1]={};
-  double E[kmax+1]={};
-  double Enstrophy=0,Energy=0;
-  ofstream zout("Zk.dat",ios::out);
-  ofstream eout("Ek.dat",ios::out);
+  double Enstrophy=0, Energy=0;
+  ofstream fout("ekvk.dat",ios::out);
   size_t align=sizeof(Complex);
   
   f0.Allocate(Nx,my,-mx+1,0,align);
@@ -112,38 +95,34 @@ int main(int argc, char* argv[])
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
 
   double dt=1.0e-6;
-  for(int step=0; step < 100; ++step){
+  int n=100;
+  for(int step=0; step < n; ++step) {
      Source(w,f0);
      for(int i=0; i < mx; ++i){
        for(int j=0; j < my; ++j){
 	 w[i][j] += f0[i][j]*dt;
        }
      }
-     cout << "step:" << step << endl;
+     cout << "[" << step << "] ";
      int k=0;
-     for(int i=0; i < mx; ++i){
-       for(int j=0; j < my; ++j){
+     for(int i=0; i < mx; ++i) {
+       for(int j=0; j < my; ++j) {
 	 k=sqrt(i*i+j*j);
 	 Z[(int) (k+0.5)] += 0.5*abs(w[i][j])*abs(w[i][j]);
        }
      }
   }
+  
   cout << endl << endl;
-  cout << "k" << setw(15) << "Z[k]" << setw(15) << "E[k]" << endl;
-  cout << "--------------------------------" << endl;  
-  for(int i=1; i <= kmax; ++i){
-    E[i]=Z[i]/(i*i);
-    cout << i << setw(15) << Z[i] << setw(15) << E[i] << endl;
-    zout << i << "\t" << Z[i] <<endl;
-    eout << i << "\t" << E[i] <<endl;
-    Energy +=2*E[i];
-    Enstrophy +=2*Z[i];
+  cout << "t=" << n*dt << endl;
+  fout << "k" << "\t" << "Z(k)" << endl;
+  for(int k=1; k <= kmax; ++k) {
+    fout << k << "\t" << Z[k] << endl;
+    Energy += 2*Z[k]/(k*k);
+    Enstrophy += 2*Z[k];
   }
-  cout << "--------------------------------" << endl;
   cout << "Energy=" << "\t\t" << Energy << endl;
   cout << "Enstrophy=" <<  "\t" << Enstrophy << endl;
-  cout << "--------------------------------" << endl;  
-  zout.close();
-  eout.close();  
+  fout.close();
   return 0;
 }
