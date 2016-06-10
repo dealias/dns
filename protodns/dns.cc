@@ -9,22 +9,22 @@ using namespace std;
 using namespace Array;
 using namespace fftwpp;
 
+int Nx=15; // Number of modes in x direction
+int Ny=15; // Number of modes in y direction
 
-
-// size of problem
-
-int Nx=15;
-int Ny=15;
+double dt=1.0e-3;
+double nu=0.0; // kinematic viscosity
 
 int mx;
 int my;
-const double nu=0.0;
 
 typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
 
 vector2 w;
 vector2 f0,f1,g0,g1;
+
+ofstream ezvt("ezvt",ios::out);
 
 ImplicitHConvolution2 *Convolution;
 
@@ -71,14 +71,50 @@ void Source(const vector2& w, vector2 &S)
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f0);
 }
 
+void Spectrum()
+{
+  ofstream zkvk("zkvk",ios::out);
+  
+  int kmax=(int) hypot(mx-1,my-1);
+  double Z[kmax+1];
+  for(int k=0; k <= kmax; ++k) Z[k]=0.0;
+     
+  for(int i=-mx+1; i < mx; ++i) {
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+      int k=sqrt(i*i+j*j);
+      Z[(int) (k+0.5)] += abs2(w[i][j]);
+    }
+  }
+  zkvk << "# k\tZ(k)" << endl;
+  
+  for(int k=1; k <= kmax; ++k) {
+    zkvk << k << "\t" << Z[k] << endl;
+  }
+}
+
+void Output(int step, bool verbose=false)
+{
+  double E=0.0, Z=0.0;
+  for(int i=-mx+1; i < mx; ++i) {
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+      double w2=abs2(w[i][j]);
+      double k2=i*i+j*j;
+      Z += w2;
+      E += w2/k2;
+    }
+  }
+  if(verbose) {
+    cout << "t=" << step*dt << endl;
+    cout << "Energy=" << E << endl;
+    cout << "Enstrophy=" << Z << endl;
+  }
+  ezvt << E << "\t" << Z << endl;
+}
+
 int main(int argc, char* argv[])
 {
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
-  const int kmax=(int) hypot(mx-1,my-1);
-  double Z[kmax+1]={};
-  double Enstrophy=0, Energy=0;
-  ofstream fout("ekvk.dat",ios::out);
   size_t align=sizeof(Complex);
   
   f0.Allocate(Nx,my,-mx+1,0,align);
@@ -94,35 +130,23 @@ int main(int argc, char* argv[])
   w(0,0)=0.0; // Enforce no mean flow.
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
 
-  double dt=1.0e-6;
-  int n=100;
+  int n=10000;
+  
+  cout.precision(15);
+  
   for(int step=0; step < n; ++step) {
+    Output(step,step == 0);
      Source(w,f0);
-     for(int i=0; i < mx; ++i){
-       for(int j=0; j < my; ++j){
+     for(int i=0; i < mx; ++i) {
+       for(int j=0; j < my; ++j) {
 	 w[i][j] += f0[i][j]*dt;
        }
      }
-     cout << "[" << step << "] ";
-     int k=0;
-     for(int i=0; i < mx; ++i) {
-       for(int j=0; j < my; ++j) {
-	 k=sqrt(i*i+j*j);
-	 Z[(int) (k+0.5)] += 0.5*abs(w[i][j])*abs(w[i][j]);
-       }
-     }
+//     cout << "[" << step << "] ";
   }
-  
-  cout << endl << endl;
-  cout << "t=" << n*dt << endl;
-  fout << "k" << "\t" << "Z(k)" << endl;
-  for(int k=1; k <= kmax; ++k) {
-    fout << k << "\t" << Z[k] << endl;
-    Energy += 2*Z[k]/(k*k);
-    Enstrophy += 2*Z[k];
-  }
-  cout << "Energy=" << "\t\t" << Energy << endl;
-  cout << "Enstrophy=" <<  "\t" << Enstrophy << endl;
-  fout.close();
+  cout << endl;
+  Output(n,true);
+  Spectrum();
+     
   return 0;
 }

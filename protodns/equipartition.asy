@@ -1,140 +1,83 @@
 import graph;
-size(200,IgnoreAspect);
+scale(Log);
 
-// parameters for the calculation:
+pen p=linewidth(1);
 
-// initial conditions with alpha=25, beta=1
-int mx=4,my=4;
-real E=0.738786091677117;
-real Z=5.53034770807208;
+int mx,my,N;
+real k0=1;
 
-int itmax=1000;
-
-real alpha(real beta, real n, real E, real Z)
+struct equil 
 {
-  return (n-beta*Z)/E;
-}
+  real alpha, beta;
 
-real prod(real beta,real[] k2,real E,real Z)
-{
-  real alpha=alpha(beta,k2.length,E,Z);
-  real val=1.0;
-  int n=k2.length;
-  real alpha=alpha(beta,n,E,Z);
-  for(int i=0; i < n; ++i)
-    val *= alpha + beta*k2[i];
-  return val;
-}
-real prodskip(real beta, real[] k2, real E, real Z, int s)
-{
-  real alpha=alpha(beta,k2.length,E,Z);
-  real val=1.0;
-  int n=k2.length;
-  real alpha=alpha(beta,n,E,Z);
-  for(int i=0; i < n; ++i)
-    if(i != s) val *= alpha + beta*k2[i];
-  return val;
-}
-real prodskip(real beta, real[] k2, real E, real Z, int s, int r)
-{
-  real alpha=alpha(beta,k2.length,E,Z);
-  real val=1.0;
-  int n=k2.length;
-  real alpha=alpha(beta,n,E,Z);
-  for(int i=0; i < n; ++i)
-    if(i != s && i != r) val *= alpha + beta*k2[i];
-  return val;
-}
-
-void setk2(int mx, int my, real[] k2) {
-  for(int i=1; i < mx; ++i) {
-    int i2=i*i;
-    for(int j=0; j < my; ++j) {
-      k2.push(i2+j*j);
+  real f(real rho) {
+    real sum=0.0;
+    for(int i=-mx+1; i < mx; ++i) {
+      real i2=i*i;
+      for(int j=-my+1; j < my; ++j) {
+        real k2=k0*k0*(i2+j*j);
+        if(k2 != 0)
+          sum += 1.0/(rho+k2);
+      }
     }
+    return N/sum-rho;
   }
-}
 
-// divide by two since we only look at one quadrant
-E *= 0.5;
-Z *= 0.5;
-real[] k2;
-setk2(mx,my,k2);
-int n=k2.length;
-
-real f(real beta)
-{
-  real prod=prod(beta,k2,E,Z);
-  real alpha=alpha(beta,n,E,Z);
-  real val=E*prod;
-  for(int i=0; i < n; ++i) val -= prodskip(beta,k2,E,Z,i);
-  return val;
-}
-
-real dadb=-Z/E;
-real fp(real beta)
-{
-  real alpha=alpha(beta,n,E,Z);
-  real prod=prod(beta,k2,E,Z);
-  real ret=0.0;
-  for(int i=0; i< n; ++i) 
-    ret += (dadb+k2[i])*prodskip(beta,k2,E,Z,i);
-  
-  ret *= E;
-  
-  for(int i=0; i < n; ++ i) {
-    for(int j=0; j < n; ++ j) {
-      if(j!=i) ret -= (dadb+k2[j])*prodskip(beta,k2,E,Z,i,j);
+  real fprime(real rho) {
+    real sum,sumprime;
+    for(int i=-mx+1; i < mx; ++i) {
+      real i2=i*i;
+      for(int j=-my+1; j < my; ++j) {
+        real k2=k0*k0*(i2+j*j);
+        if(k2 != 0) {
+          real denom=rho+k2;
+          sum += 1.0/denom;
+          sumprime += 1.0/denom^2;
+        }
+      }
     }
+    return N/sum^2*sumprime-1;
   }
-  return ret;
-}
 
-{
-  picture pic;
-  size(pic,200,IgnoreAspect);
-  draw(pic,graph(f,0.5,2.1));
-  yequals(pic,0,Dotted);
-  xaxis(pic,"$\beta$",BottomTop,LeftTicks);
-  yaxis(pic,"$f$",LeftRight,RightTicks);
-  shipout("root",pic);
-}
-
-real beta;
-bool bracket=true;
-bracket=false;
-if(bracket) {
-  real lower=-n/E;
-  real upper=k2[k2.length-1]*Z/E;
-  write(upper);
-  beta=newton(itmax,f,fp,lower,upper,true);
-} else {
-  real betaguess=0.5*n/(E+Z); // correct if alpha=beta
-  beta=newton(itmax,f,fp,betaguess,true);
-}
-write("found beta to be "+(string)beta);
-
-if(beta < 1e100) {
-  real alpha=alpha(beta,k2.length,E,Z);
-  real e(real alpha,real beta, real ktwo){return 1.0/(alpha+beta*ktwo);}
-  real testE=0.0, testZ=0.0;
-  for(int i=0; i < k2.length; ++i) {
-    testE += e(alpha,beta,k2[i]);
-    testZ += k2[i]*e(alpha,beta,k2[i]);
+  void operator init(real E, real Z) {
+    real r=Z/E;
+    write(r);
+    
+    real rho=1;
+    rho=newton(new real(real rho) {return f(rho)-r;},fprime,rho,
+               verbose=true);
+    beta=0.5*N/(rho*E+Z);
+    alpha=rho*beta;
   }
-  E *=2.0;
-  Z *=2.0;
-  write("alpha="+(string)alpha + " beta=" +(string)beta);
-  write("original E="+(string) E + ", original Z="+(string) Z);
-  write("computed E="+(string) 2testE + ", computed Z="+(string) 2testZ);
-
-  picture pic;
-  size(pic,200,IgnoreAspect);
-  scale(pic,Log,Log);
-  real Ek(real k) {  return 2*pi*k/(alpha+beta*k^2);}
-  draw(pic,graph(Ek,sqrt(min(k2)),sqrt(max(k2))));
-  xaxis(pic,"$k$",BottomTop,LeftTicks);
-  yaxis(pic,"$E(k)$",LeftRight,RightTicks);
-  shipout("spec",pic);
 }
 
+int Nx=getint("Nx=");
+int Ny=getint("Ny=");
+
+mx=quotient(Nx+1,2);
+my=quotient(Ny+1,2);
+N=Nx*Ny-1;
+
+file in=input("zkvk").line();
+real[][] a=in;
+a=transpose(a);
+
+real[] k=a[0];
+real[] Zk=a[1];
+real[] Ek=Zk/k^2;
+
+draw(graph(k,Ek),p+red);
+
+real E=getreal("E=");
+real Z=getreal("Z=");
+
+equil eq=equil(E,Z);
+
+real equiparition(real k) {return pi*k/(eq.alpha+eq.beta*k^2);}
+draw(graph(equiparition,min(k),max(k)),p+blue+dashed,
+     "$\displaystyle\frac{\pi k}{\alpha+\beta k^2}$");
+
+xaxis("$k$",BottomTop,LeftTicks);
+yaxis("$E(k)$",LeftRight,RightTicks);
+
+if(currentpicture.legend.length > 1) attach(legend(),point(E),20E);
