@@ -1,4 +1,5 @@
 #include <cmath>
+#include <iomanip>
 #include <fstream>
 #include "Complex.h"
 #include "convolution.h"
@@ -7,6 +8,8 @@
 using namespace std;
 using namespace Array;
 using namespace fftwpp;
+
+
 
 // size of problem
 
@@ -89,7 +92,10 @@ int main(int argc, char* argv[])
   my=(Ny+1)/2;
   const int kmax=(int) hypot(mx-1,my-1);
   double Z[kmax+1]={};
-  ofstream fout("Zk.dat",ios::out);
+  double E[kmax+1]={};
+  double Enstrophy=0,Energy=0;
+  ofstream zout("Zk.dat",ios::out);
+  ofstream eout("Ek.dat",ios::out);
   size_t align=sizeof(Complex);
   
   f0.Allocate(Nx,my,-mx+1,0,align);
@@ -122,10 +128,22 @@ int main(int argc, char* argv[])
        }
      }
   }
+  cout << endl << endl;
+  cout << "k" << setw(15) << "Z[k]" << setw(15) << "E[k]" << endl;
+  cout << "--------------------------------" << endl;  
   for(int i=1; i <= kmax; ++i){
-    cout << i << "\t" << Z[i] <<endl;
-    fout << i << "\t" << Z[i] <<endl;
+    E[i]=Z[i]/(i*i);
+    cout << i << setw(15) << Z[i] << setw(15) << E[i] << endl;
+    zout << i << "\t" << Z[i] <<endl;
+    eout << i << "\t" << E[i] <<endl;
+    Energy +=2*E[i];
+    Enstrophy +=2*Z[i];
   }
-  fout.close();
+  cout << "--------------------------------" << endl;
+  cout << "Energy=" << "\t\t" << Energy << endl;
+  cout << "Enstrophy=" <<  "\t" << Enstrophy << endl;
+  cout << "--------------------------------" << endl;  
+  zout.close();
+  eout.close();  
   return 0;
 }
