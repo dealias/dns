@@ -76,9 +76,6 @@ real[] k=a[0];
 real[] Zk=a[1];
 real[] Ek=Zk/k^2;
 
-write(sum(Zk));
-write(sum(Ek));
-
 real E=getreal("E=");
 real Z=getreal("Z=");
 
