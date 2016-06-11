@@ -1,5 +1,7 @@
 import graph;
-scale(Log);
+size(500);
+
+//scale(Log,Log);
 
 pen p=linewidth(1);
 
@@ -9,30 +11,31 @@ real k0=1;
 struct equil 
 {
   real alpha, beta;
+  real r;
 
   real f(real rho) {
-    real sum=0.0;
+    real sum;
     for(int i=-mx+1; i < mx; ++i) {
-      real i2=i*i;
+      int i2=i*i;
       for(int j=-my+1; j < my; ++j) {
-        real k2=k0*k0*(i2+j*j);
-        if(k2 != 0)
-          sum += 1.0/(rho+k2);
+        int norm2=i2+j*j;
+        if(norm2 > 0)
+          sum += 1.0/(rho+k0*k0*norm2);
       }
     }
-    return N/sum-rho;
+    return N/sum-rho-r;
   }
 
   real fprime(real rho) {
     real sum,sumprime;
     for(int i=-mx+1; i < mx; ++i) {
-      real i2=i*i;
+      int i2=i*i;
       for(int j=-my+1; j < my; ++j) {
-        real k2=k0*k0*(i2+j*j);
-        if(k2 != 0) {
-          real denom=rho+k2;
-          sum += 1.0/denom;
-          sumprime += 1.0/denom^2;
+        int norm2=i2+j*j;
+        if(norm2 > 0) {
+          real factor=1.0/(rho+k0*k0*norm2);
+          sum += factor;
+          sumprime += factor^2;
         }
       }
     }
@@ -40,23 +43,30 @@ struct equil
   }
 
   void operator init(real E, real Z) {
-    real r=Z/E;
-    write(r);
+    r=Z/E;
     
-    real rho=1;
-    rho=newton(new real(real rho) {return f(rho)-r;},fprime,rho,
-               verbose=true);
+    real rho=newton(f,fprime,1,verbose=true);
     beta=0.5*N/(rho*E+Z);
     alpha=rho*beta;
+    write();
+    write("alpha=",alpha);
+    write("beta=",beta);
   }
+
+  guide graph(real a, real b) {
+    return graph(f,a,b);
+  }
+
 }
 
 int Nx=getint("Nx=");
 int Ny=getint("Ny=");
 
-mx=quotient(Nx+1,2);
-my=quotient(Ny+1,2);
+mx=(Nx+1)#2;
+my=(Ny+1)#2;
 N=Nx*Ny-1;
+
+real kmax=hypot(mx,my);
 
 file in=input("zkvk").line();
 real[][] a=in;
@@ -66,12 +76,22 @@ real[] k=a[0];
 real[] Zk=a[1];
 real[] Ek=Zk/k^2;
 
-draw(graph(k,Ek),p+red);
+write(sum(Zk));
+write(sum(Ek));
 
 real E=getreal("E=");
 real Z=getreal("Z=");
 
 equil eq=equil(E,Z);
+
+picture pic;
+size(pic,500,IgnoreAspect);
+draw(pic,eq.graph(0,kmax));
+xaxis(pic,"$\beta$",BottomTop,LeftTicks);
+yaxis(pic,"$f$",LeftRight,RightTicks);
+shipout(pic);
+
+draw(graph(k,Ek),p+red);
 
 real equiparition(real k) {return pi*k/(eq.alpha+eq.beta*k^2);}
 draw(graph(equiparition,min(k),max(k)),p+blue+dashed,
