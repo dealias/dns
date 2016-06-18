@@ -84,7 +84,7 @@ equil eq=equil(E,Z);
 picture pic;
 size(pic,500,IgnoreAspect);
 draw(pic,eq.graph(0,kmax));
-xaxis(pic,"$\beta$",BottomTop,LeftTicks);
+xaxis(pic,"$\rho$",BottomTop,LeftTicks);
 yaxis(pic,"$f$",LeftRight,RightTicks);
 shipout(pic);
 

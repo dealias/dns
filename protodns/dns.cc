@@ -60,8 +60,8 @@ void Source(const vector2& w, vector2 &S)
   Complex *F[]={f0,f1,g0,g1};
   Convolution->convolve(F,multbinary2);
   
-  for(int i=0; i<mx ;++i){
-    for(int j=0; j<my ;++j){
+  for(int i=0; i < mx ;++i){
+    for(int j=0; j < my ;++j){
        double k2=i*i+j*j;     
        f0[i][j] += -nu*k2*w[i][j];
     }
