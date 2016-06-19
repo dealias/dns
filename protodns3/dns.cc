@@ -22,6 +22,7 @@ int mz;
 
 typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
+typedef Array3<Complex> vector3;
 
 vector3 u,v,w;
 vector3 f0,f1,g0,g1;
@@ -34,86 +35,124 @@ void init(vector3& u, vector3& v, vector3& w)
 {
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
-      for(int l=-my+1; l < my; ++l) {
-	u[i][j][l]=1.0/(i*i+j*j);
-	v[i][j][l]=1.0/(i*i+j*j);
-        w[i][j][l]=1.0/(i*i+j*j);
+      for(int k=-my+1; k < my; ++k) {
+        Complex val=1.0/(i*i+j*j+k*k);
+	u[i][j][k]=val;
+	v[i][j][k]=val;
+        w[i][j][k]=val;
+      }
     }
+  }
+}  
+
+void multadvection3(double **F, unsigned int m,
+                    const unsigned int indexsize,
+                    const unsigned int *index,
+                    unsigned int r, unsigned int threads)
+{
+  double* F0=F[0];
+  double* F1=F[1];
+  double* F2=F[2];
+  double* F3=F[3];
+  double* F4=F[4];
+  double* F5=F[5];
+  double* F6=F[6];
+  double* F7=F[7];
+  double* F8=F[8];
+  double* F9=F[9];
+  double* F10=F[10];
+  
+  for(unsigned int j=0; j < m; ++j) {
+    // I*(u*kx+v*ky+w*kz)*u
+    // I*(u*kx+v*ky+w*kz)*v
+    // I*(u*kx+v*ky+w*kz)*w
+    F0[j]=F0[j]*F3[j]+F1[j]*F4[j]+F2[j]*F5[j];
+    F1[j]=F0[j]*F6[j]+F1[j]*F7[j]+F2[j]*F8[j];
+    F2[j]=F0[j]*F9[j]+F1[j]*F10[j]-F2[j]*(F3[j]+F7[j]);
   }
 }
-    
-  void Source_component(const vector3& u, const vector3& v, const vector3& w, char component, vector3 &S){
-    f0[0][0]=0.0;
-    f1[0][0]=0.0;
-    g0[0][0]=0.0;
-    g1[0][0]=0.0;
+
+void Source(const vector4& u, vector4 &S)
+{
+  f0[0][0][0]=0.0;
+  f1[0][0][0]=0.0;
+  f2[0][0][0]=0.0;
+  f3[0][0][0]=0.0;
+  f4[0][0][0]=0.0;
+  f5[0][0][0]=0.0;
+  f6[0][0][0]=0.0;
+  f7[0][0][0]=0.0;
+  f8[0][0][0]=0.0;
+  f9[0][0][0]=0.0;
+  f10[0][0][0]=0.0;
   
-    switch (char component) {
-    case 'u':
-      for(int i=-mx+1; i < mx; ++i) {
-	for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-	  for(int l=((i || j) <=0?1:0); l < mz; ++l{
-	      Complex Ikxu=Complex(-i*u[i][j][l].im,i*u[i][j][l].re);
-	      Complex Ikyu=Complex(-j*u[i][j][l].im,j*u[i][j][l].re);
-	      Complex Ikzu=Complex(-l*u[i][j][l].im,l*u[i][j][l].re);
-	      f0[i][j][l]=Ikxu;
-	      f1[i][j][l]=Ikyu;
-	      f2[i][j][l]=Ikzu;
-	      
-	      g0[i][j][l]=u[i][j][l];
-	      g1[i][j][l]=v[i][j][l];
-	      g3[i][j][l]=w[i][j][l];
-	  }
-	}
-      }
-      Complex *F[]={f0,f1,f2,g0,g1,g3};
-      Convolution->convolve(F,multbinary2);
-      for(int i=0; i<mx ;++i){
-	for(int j=0; j<my ;++j){
-	  for(int l=0; l<mz ;++l){
-	     double kx2=i*i;
-	     f0[i][j][l] += -nu*i*i*u[i][j][l];
-	  }
-	}
-      }
-    break;
-  case 'v':
-    ....
-    break;
-  case 'w':
-    ....
-    break;
-  default:
-    cout << "Character does not match any of the components!" < <endl;
-  }
-
-
-      
   for(int i=-mx+1; i < mx; ++i) {
-    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      double k2=i*i+j*j;
-      Complex Ikxw=Complex(-i*w[i][j].im,i*w[i][j].re);
-      Complex Ikyw=Complex(-j*w[i][j].im,j*w[i][j].re);
-      f0[i][j]=Ikxw;
-      f1[i][j]=Ikyw;
-      double k2inv=1.0/k2;
-      g0[i][j]=-Ikyw*k2inv;
-      g1[i][j]=Ikxw*k2inv;
-    }
-  }
+    for(int j=-my+1; j < my; ++j) {
+      for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
+        Complex U=u[0][i][j][k];
+        Complex V=u[1][i][j][k];
+        Complex W=u[2][i][j][k];
+        
+        f0[i][j][k]=U;
+        f1[i][j][k]=V;
+        f2[i][j][k]=W;
 
-  Complex *F[]={f0,f1,g0,g1};
-  Convolution->convolve(F,multbinary2);
+        f3[i][j][k]=Complex(-i*U.im,i*U.re);  // I*kx*U
+        f4[i][j][k]=Complex(-j*U.im,j*U.re);  // I*ky*U
+        f5[i][j][k]=Complex(-k*U.im,k*U.re);  // I*kz*U
+
+        f6[i][j][k]=Complex(-i*V.im,i*V.re);  // I*kx*V
+        f7[i][j][k]=Complex(-j*V.im,j*V.re);  // I*ky*V
+        f8[i][j][k]=Complex(-k*V.im,k*V.re);  // I*kz*V
+
+        f9[i][j][k]=Complex(-i*W.im,i*W.re);  // I*kx*W
+        f10[i][j][k]=Complex(-j*W.im,j*W.re); // I*ky*W
+      }
+    } 
+  }
   
-  for(int i=0; i<mx ;++i){
-    for(int j=0; j<my ;++j){
-       double k2=i*i+j*j;     
-       f0[i][j] += -nu*k2*w[i][j];
+  Complex *F[]={f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10};
+  Convolution->convolve(F,multadvection3);
+  
+  vector3 S0=S[0];
+  vector3 S1=S[1];
+  vector3 S2=S[2];
+  
+  // The purpose of pressure is to enforce incompressibility!
+  // Apply projection operator.
+  for(int i=-mx+1; i < mx; ++i) {
+    for(int j=-my+1; j < my; ++j) {
+      for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
+        Complex s0=f0[i][j][k];
+        Complex s1=f1[i][j][k];
+        Complex s2=f2[i][j][k];
+        // Calculate -i*P
+        Complex miP=(i*s0+j*s1+k*s2)/(i*i+j*j+k*k);
+        S0[i][j][k]=i*miP-s0;
+        S1[i][j][k]=j*miP-s1;
+        S2[i][j][k]=k*miP-s2;
+      }
     }
   }
-  f0(0,0)=0.0; // Enforce no mean flow.
   
-  fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f0);
+/*  
+    for(int i=0; i < mx; ++i) {
+    for(int j=0; j < my; ++j) {
+    for(int k=0; k < mz; ++k) {
+    double k2=i*i+j*j+k*k;
+    f0[i][j][k] += -nu*k2*u[i][j][k];
+    }
+    }
+    }
+*/
+
+  S0(0,0,0)=0.0; // Enforce no mean flow.
+  S1(0,0,0)=0.0;
+  S2(0,0,0)=0.0;
+  
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S0);
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S1);
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S2);
 }
 
 void Spectrum()
@@ -183,12 +222,12 @@ int main(int argc, char* argv[])
   
   for(int step=0; step < n; ++step) {
     Output(step,step == 0);
-     Source(w,f0);
-     for(int i=0; i < mx; ++i) {
-       for(int j=0; j < my; ++j) {
-	 w[i][j] += f0[i][j]*dt;
-       }
-     }
+    Source(w,f0);
+    for(int i=0; i < mx; ++i) {
+      for(int j=0; j < my; ++j) {
+        w[i][j] += f0[i][j]*dt;
+      }
+    }
 //     cout << "[" << step << "] ";
   }
   cout << endl;
