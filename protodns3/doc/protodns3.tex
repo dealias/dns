@@ -1,0 +1,119 @@
+\documentclass[10pt]{article}
+
+%TITLE
+%=====
+\title{\huge{\textbf{Three dimensional  \\ \vspace{1cm} protodns code}}}
+\date{}
+\setlength{\oddsidemargin}{0pt}
+\setlength{\evensidemargin}{0pt}
+\setlength{\marginparwidth}{0pt}
+\setlength{\marginparpush}{0pt}
+\setlength{\marginparsep}{0pt}
+\setlength{\textwidth}{464pt}
+\addtolength{\topmargin}{-2.0cm}
+\addtolength{\textheight}{4.0cm}
+
+%USE PACKAGES
+%============
+\usepackage{bm}
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{colordvi,color}
+
+%OTHER COMMANDS
+%==============
+\definecolor{heavyred}{cmyk}{0,1,1,0.25}
+\definecolor{heavyblue}{cmyk}{1,1,0,0.25}
+\hypersetup{
+  pdftitle=Clebsch Vector Potential,
+  pdfpagemode=UseOutlines,
+  citebordercolor=0 0 1,
+  colorlinks=true,
+  allcolors=heavyred,
+  breaklinks=true,
+  pdfauthor={Pedram Emami},
+  pdfpagetransition=Dissolve,
+  bookmarks=true
+}
+
+%BODY OF THE DOCUMENT
+%====================
+\begin{document}
+\maketitle
+
+\section{Basic formulation}
+As we are interested in the 3D incompressible fluid flow simulation with DNS method, so the 3D \textbf{Navier-Stokes} equation, which is represented in the following, would be our basic equation in this numerical approach. For a 3D velocity field $\bm{u}=(u,v,w)$, the \textbf{Navier-Stokes} is:\\
+\\
+%
+%==================== Eq-1
+\begin{align}
+\text{in x direction:}\qquad &\frac{\partial u}{\partial t} + u\frac{\partial u}{\partial x} + v\frac{\partial u}{\partial y} + w\frac{\partial u}{\partial z} = - \frac{\partial p}{\partial x} + \nu(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}+\frac{\partial^2 u}{\partial z^2})        \notag \\
+\text{in y direction:}\qquad &\frac{\partial v}{\partial t} + u\frac{\partial v}{\partial x} + v\frac{\partial v}{\partial y} + w\frac{\partial v}{\partial z} = - \frac{\partial p}{\partial y} + \nu(\frac{\partial^2 v}{\partial x^2}+\frac{\partial^2 v}{\partial y^2}+\frac{\partial^2 v}{\partial z^2}) 		         \\
+\text{in z direction:}\qquad &\frac{\partial w}{\partial t} + u\frac{\partial w}{\partial x} + v\frac{\partial w}{\partial y} + w\frac{\partial w}{\partial z} = - \frac{\partial p}{\partial z} + \nu(\frac{\partial^2 w}{\partial x^2}+\frac{\partial^2 w}{\partial y^2}+\frac{\partial^2 w}{\partial z^2})         \notag
+\end{align}
+%
+now we have in fact 12 nonlinear terms whose Fourier transform would be convolution of Fourier transform of each component in that multiplication in the wave space. For example the discrete Fourier transform of $u\frac{\partial u}{\partial x}$ would be:
+%
+%==================== Eq-1
+\begin{equation}
+u\frac{\partial u}{\partial x} \qquad\rightarrow^{\text{under the discrete}}_{\text{Fourier transform}}\rightarrow\qquad \sum_{\bm{q}}{iq_{x}u_{\bm{k}-\bm{q}}u_{\bm{q}}}
+\end{equation}
+%
+so after taking the discrete Fourier transform, for the \textbf{Navier-Stokes} equation in the x,y and z directions we would have:
+%
+%==================== Eq-1
+\begin{align}
+\text{in x direction:}&\qquad \frac{\partial u_{\bm{k}}}{\partial t} + \sum_{\bm{q}}{-iq_{x}u_{\bm{k}-\bm{q}}u_{\bm{q}}} + \sum_{\bm{q}}{-iq_{y}u_{\bm{k}-\bm{q}}v_{\bm{q}}} + \sum_{\bm{q}}{-iq_{z}u_{\bm{k}-\bm{q}}w_{\bm{q}}} = ik_{x}p_{\bm{k}} + \nu k^2 u_{\bm{k}} \notag \\
+\text{in y direction:}&\qquad \frac{\partial v_{\bm{k}}}{\partial t} + \sum_{\bm{q}}{-iq_{x}v_{\bm{k}-\bm{q}}u_{\bm{q}}} + \sum_{\bm{q}}{-iq_{y}v_{\bm{k}-\bm{q}}v_{\bm{q}}} + \sum_{\bm{q}}{-iq_{z}v_{\bm{k}-\bm{q}}w_{\bm{q}}} = ik_{y}p_{\bm{k}} + \nu k^2 v_{\bm{k}} \\
+\text{in z direction:}&\qquad \frac{\partial w_{\bm{k}}}{\partial t} + \sum_{\bm{q}}{-iq_{x}w_{\bm{k}-\bm{q}}u_{\bm{q}}} + \sum_{\bm{q}}{-iq_{y}w_{\bm{k}-\bm{q}}v_{\bm{q}}} + \sum_{\bm{q}}{-iq_{z}w_{\bm{k}-\bm{q}}w_{\bm{q}}} = ik_{z}p_{\bm{k}} + \nu k^2 w_{\bm{k}} \notag
+\end{align}
+%
+now because we assumed that fluid flow is incompressible, so by taking the divergence from both sides of the \textbf{Navier-Stokes} equation, we would have:
+%
+%==================== Eq-1
+\begin{equation}
+\bm{\nabla}\cdot(\bm{u}\cdot\bm{\nabla})\bm{u}=-\bm{\nabla}^2 p \qquad\Rightarrow\qquad p=-\bm{\nabla}^{-2}(\bm{\nabla}\cdot(\bm{u}\cdot\bm{\nabla})\bm{u})
+\end{equation}
+%
+so $p$ can be written as:
+%
+%==================== Eq-2
+\begin{align}
+p=\frac{1}{|\bm{k}|^2}[&-ik_{x}(\sum_{\bm{q}}{-iq_{x}u_{\bm{k}-\bm{q}}u_{\bm{q}}} + \sum_{\bm{q}}{-iq_{y}u_{\bm{k}-\bm{q}}v_{\bm{q}}} + \sum_{\bm{q}}{-iq_{z}u_{\bm{k}-\bm{q}}w_{\bm{q}}}) \notag \\ 
+&-ik_{y}(\sum_{\bm{q}}{-iq_{x}v_{\bm{k}-\bm{q}}u_{\bm{q}}} + \sum_{\bm{q}}{-iq_{y}v_{\bm{k}-\bm{q}}v_{\bm{q}}} + \sum_{\bm{q}}{-iq_{z}v_{\bm{k}-\bm{q}}w_{\bm{q}}})  \\
+&-ik_{z}(\sum_{\bm{q}}{-iq_{x}w_{\bm{k}-\bm{q}}u_{\bm{q}}} + \sum_{\bm{q}}{-iq_{y}w_{\bm{k}-\bm{q}}v_{\bm{q}}} + \sum_{\bm{q}}{-iq_{z}w_{\bm{k}-\bm{q}}w_{\bm{q}}})] \notag
+\end{align}
+%
+and consequently, we can calculate the gradient of p as:
+%
+%==================== Eq-3
+\begin{equation}
+-\bm{\nabla}p=-\frac{\bm{kk}}{|\bm{k}|^2}((\bm{u}\cdot\bm{\nabla})\bm{u})
+\end{equation}
+%
+where $\bm{kk}$ is the matrix obtained by having direct product of wave vector $\bm{k}$ by itself. Now, if we replace $\bm{\nabla}p$ in \textbf{Navier-Stokes} equation and take the discrete Fourier transform, we would get to the final governing equations in the wave space whose most compact representation in vector form is:
+%
+%==================== Eq-4
+\begin{equation}
+\frac{\partial {\bm{u}}_{\bm{k}}}{\partial t} = {\bm{S}}_{\bm{k}} -\nu{|\bm{k}|}^2{\bm{u}}_{\bm{k}}
+\end{equation}
+where:
+%
+%==================== Eq-5
+\begin{align}
+\bm{S}_{\bm{k}}&=-(\bm{I} + \frac{\bm{kk}}{|\bm{k}|^2})((\bm{u}\cdot\bm{\nabla})\bm{u})_{\bm{k}} \notag \\
+-i\bm{k}\cdot{\bm{u}}_{\bm{k}}&=0 \qquad\Rightarrow\qquad \bm{k}\cdot{\bm{u}}_{\bm{k}}=0
+\end{align}
+%
+where the second equation is just incompressiblity  and by using that, we can reduce the 12 number of convolutions to 11 as the last one can be calculated based on incompressiblity.
+\end{document}
+
+
+
+
+
+
