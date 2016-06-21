@@ -25,7 +25,7 @@ typedef Array2<Complex> vector2;
 typedef Array3<Complex> vector3;
 
 vector3 u,v,w;
-vector3 f0,f1,g0,g1;
+vector3 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10;
 
 ofstream ezvt("ezvt",ios::out);
 
@@ -134,17 +134,17 @@ void Source(const vector4& u, vector4 &S)
       }
     }
   }
-  
-/*  
-    for(int i=0; i < mx; ++i) {
+    
+  for(int i=0; i < mx; ++i) {
     for(int j=0; j < my; ++j) {
-    for(int k=0; k < mz; ++k) {
-    double k2=i*i+j*j+k*k;
-    f0[i][j][k] += -nu*k2*u[i][j][k];
+      for(int k=0; k < mz; ++k) {
+	double k2=i*i+j*j+k*k;
+	s0[i][j][k] += -nu*k2*s0;
+	s1[i][j][k] += -nu*k2*s1;
+	s2[i][j][k] += -nu*k2*s2;
+      }
     }
-    }
-    }
-*/
+  }
 
   S0(0,0,0)=0.0; // Enforce no mean flow.
   S1(0,0,0)=0.0;
