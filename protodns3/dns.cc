@@ -25,7 +25,7 @@ typedef Array2<Complex> vector2;
 typedef Array3<Complex> vector3;
 typedef Array4<Complex> vector4;
 
-vector3 u,v,w;
+vector4 u;
 vector3 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10;
 
 ofstream ezvt("ezvt",ios::out);
@@ -163,6 +163,11 @@ inline double hypot(double x, double y, double z)
   return sqrt(x*x+y*y+z*z);
 }
 
+inline double abs2(Complex x, Complex y, Complex z)
+{
+  return abs2(x)+abs2(y)+abs2(z);
+}
+
 void Spectrum()
 {
   ofstream ekvk("ekvk",ios::out);
@@ -177,7 +182,7 @@ void Spectrum()
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
         int K=sqrt(i*i+j*j+k*k);
         int index=(int) (K+0.5);
-        double e=abs2(f0[i][j][k])+abs2(f1[i][j][k])+abs2(f2[i][j][k]);
+        double e=abs2(u[0][i][j][k],u[1][i][j][k],u[2][i][j][k]);
         E[index] += e;
         Z[index] += K*K*e;
       }
@@ -197,7 +202,7 @@ void Output(int step, bool verbose=false)
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
 	double k2=i*i+j*j+k*k;
-	double e=abs2(f0[i][j][k])+abs2(f1[i][j][k])+abs2(f2[i][j][k]);
+        double e=abs2(u[0][i][j][k],u[1][i][j][k],u[2][i][j][k]);
 	E += e;
 	Z += k2*e;
       }
@@ -213,7 +218,7 @@ void Output(int step, bool verbose=false)
 
 int main(int argc, char* argv[])
 {
-  vector4 u,S;
+  vector4 S;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   mz=(Nz+1)/2;
@@ -245,7 +250,7 @@ int main(int argc, char* argv[])
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[1]);
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[2]);
 
-  int n=10000;
+  int n=10;
   
   cout.precision(15);
   
