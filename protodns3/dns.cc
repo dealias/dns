@@ -175,7 +175,10 @@ void Spectrum()
   int kmax=(int) hypot(mx-1,my-1,mz-1);
   double E[kmax+1];
   double Z[kmax+1];
-  for(int K=0; K <= kmax; ++K) Z[K]=0.0;
+  for(int K=0; K <= kmax; ++K) {
+    E[K]=0.0;
+    Z[K]=0.0;
+  }
      
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
@@ -250,7 +253,7 @@ int main(int argc, char* argv[])
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[1]);
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[2]);
 
-  int n=10;
+  int n=1;
   
   cout.precision(15);
   
