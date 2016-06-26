@@ -35,7 +35,7 @@ void init(vector3& u, vector3& v, vector3& w)
 {
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
-      for(int k=-my+1; k < my; ++k) {
+      for(int k=-mz+1; k < mz; ++k) {
         Complex val=1.0/(i*i+j*j+k*k);
 	u[i][j][k]=val;
 	v[i][j][k]=val;
@@ -159,20 +159,25 @@ void Spectrum()
 {
   ofstream zkvk("zkvk",ios::out);
   
-  int kmax=(int) hypot(mx-1,my-1);
+  int kmax=(int) hypot(mx-1,my-1,mz-1);
   double Z[kmax+1];
-  for(int k=0; k <= kmax; ++k) Z[k]=0.0;
+  for(int KK=0; KK <= kmax; ++KK) Z[KK]=0.0;
      
   for(int i=-mx+1; i < mx; ++i) {
-    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      int k=sqrt(i*i+j*j);
-      Z[(int) (k+0.5)] += abs2(w[i][j]);
+    for(int j=-my+1; j < my; ++j) {
+      for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
+      int KK=sqrt(i*i+j*j+k*k);
+      E[(int) (KK+0.5)] += (f0[i][j][k]*f0[i][j][k]+f1[i][j][k]*f1[i][j][k]
+			    +f2[i][j][k]*f2[i][j][k]);
+      Z[(int) (KK+0.5)] += E[(int) (KK+0.5)]/(KK*KK);
+      }
     }
   }
+    
   zkvk << "# k\tZ(k)" << endl;
   
-  for(int k=1; k <= kmax; ++k) {
-    zkvk << k << "\t" << Z[k] << endl;
+  for(int wn=1; wn <= kmax; ++wn) {
+    zkvk << wn << "\t" << Z[wn] << endl;
   }
 }
 
@@ -180,11 +185,13 @@ void Output(int step, bool verbose=false)
 {
   double E=0.0, Z=0.0;
   for(int i=-mx+1; i < mx; ++i) {
-    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      double w2=abs2(w[i][j]);
-      double k2=i*i+j*j;
-      Z += w2;
-      E += w2/k2;
+    for(int j=-my+1; j < my; ++j) {
+      for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
+	double k2=i*i+j*j+k*k;
+	double e=(f0[i][j][k]*f0[i][j][k]+f1[i][j][k]*f1[i][j][k]
+			    +f2[i][j][k]*f2[i][j][k]);
+	E += e;
+	Z += k2*e;
     }
   }
   if(verbose) {
@@ -197,24 +204,36 @@ void Output(int step, bool verbose=false)
 
 int main(int argc, char* argv[])
 {
+  vector4& u,S;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   mz=(Nz+1)/2;
   size_t align=sizeof(Complex);
-  
+  ????????????
   f0.Allocate(Nx,my,-mx+1,0,align);
   f1.Allocate(Nx,my,-mx+1,0,align);
-  
-  g0.Allocate(Nx,my,-mx+1,0,align);
-  g1.Allocate(Nx,my,-mx+1,0,align);
+  f2.Allocate(Nx,my,-mx+1,0,align);
+  f3.Allocate(Nx,my,-mx+1,0,align);
+  f4.Allocate(Nx,my,-mx+1,0,align);
+  f5.Allocate(Nx,my,-mx+1,0,align);
+  f6.Allocate(Nx,my,-mx+1,0,align);
+  f7.Allocate(Nx,my,-mx+1,0,align);
+  f8.Allocate(Nx,my,-mx+1,0,align);
+  f9.Allocate(Nx,my,-mx+1,0,align);
+  f10.Allocate(Nx,my,-mx+1,0,align);
 
+  ?????????????
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,true,true,4,1);
   
-  w.Allocate(Nx,my,-mx+1,0,align);
+  S[0].Allocate(Nx,my,-mx+1,0,align);
+  S[1].Allocate(Nx,my,-mx+1,0,align);
+  S[2].Allocate(Nx,my,-mx+1,0,align);
   
-  init(w);
-  w(0,0)=0.0; // Enforce no mean flow.
-  fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
+  init(u[0],u[1],u[2]);
+  S(0,0,0,0)=0.0; // Enforce no mean flow.
+  S(1,0,0,0)=0.0;
+  S(2,0,0,0)=0.0;
+      fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
 
   int n=10000;
   
@@ -222,10 +241,13 @@ int main(int argc, char* argv[])
   
   for(int step=0; step < n; ++step) {
     Output(step,step == 0);
-    Source(w,f0);
-    for(int i=0; i < mx; ++i) {
-      for(int j=0; j < my; ++j) {
-        w[i][j] += f0[i][j]*dt;
+    Source(u,S);
+    for(int i=-mx+1; i < mx; ++i) {
+      for(int j=-my+1; j < my; ++j) {
+	for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
+	  u[0][i][j][k] += S[0][i][j][k]*dt;
+	  u[1][i][j][k] += S[1][i][j][k]*dt;
+	  u[2][i][j][k] += S[2][i][j][k]*dt;	  
       }
     }
 //     cout << "[" << step << "] ";
