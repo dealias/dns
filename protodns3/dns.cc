@@ -13,7 +13,7 @@ int Nx=15; // Number of modes in x direction
 int Ny=15; // Number of modes in y direction
 int Nz=15; // Number of modes in z direction
 
-double dt=1.0e-3;
+double dt=1.0e-8;
 double nu=0.0; // kinematic viscosity
 
 int mx;
@@ -183,11 +183,12 @@ void Spectrum()
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
-        int K=sqrt(i*i+j*j+k*k);
+	int k2=i*i+j*j+k*k;
+        int K=sqrt(k2);	
         int index=(int) (K+0.5);
         double e=abs2(u[0][i][j][k],u[1][i][j][k],u[2][i][j][k]);
         E[index] += e;
-        Z[index] += K*K*e;
+        Z[index] +=k2*e;
       }
     }
   }
@@ -207,7 +208,7 @@ void Output(int step, bool verbose=false)
 	double k2=i*i+j*j+k*k;
         double e=abs2(u[0][i][j][k],u[1][i][j][k],u[2][i][j][k]);
 	E += e;
-	Z += k2*e;
+	Z +=k2*e;
       }
     }
   }
@@ -221,6 +222,9 @@ void Output(int step, bool verbose=false)
 
 int main(int argc, char* argv[])
 {
+  int n=1;
+  cout << "Number of steps? " << endl;
+  cin >> n;
   vector4 S;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
@@ -253,7 +257,7 @@ int main(int argc, char* argv[])
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[1]);
   fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[2]);
 
-  int n=1;
+  // int n=10000;
   
   cout.precision(15);
   
@@ -270,6 +274,7 @@ int main(int argc, char* argv[])
       }
     }
      cout << "[" << step << "] ";
+     Output(step,true);
   }
   cout << endl;
   Output(n,true);

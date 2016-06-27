@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
   cout.precision(15);
   
   for(int step=0; step < n; ++step) {
-    Output(step,step == 0);
+    Output(step,1);
      Source(w,f0);
      for(int i=0; i < mx; ++i) {
        for(int j=0; j < my; ++j) {
