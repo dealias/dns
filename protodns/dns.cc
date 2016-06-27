@@ -12,7 +12,7 @@ using namespace fftwpp;
 int Nx=15; // Number of modes in x direction
 int Ny=15; // Number of modes in y direction
 
-double dt=1.0e-3;
+double dt=1.0e-8;
 double nu=0.0; // kinematic viscosity
 
 int mx;
@@ -68,7 +68,7 @@ void Source(const vector2& w, vector2 &S)
   }
   f0(0,0)=0.0; // Enforce no mean flow.
   
-  fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f0);
+  HermitianSymmetrizeX(mx,my,mx-1,f0);
 }
 
 void Spectrum()
@@ -113,6 +113,10 @@ void Output(int step, bool verbose=false)
 
 int main(int argc, char* argv[])
 {
+  int n;
+  cout << "Number of time steps? " << endl;
+  cin >> n;
+  
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   size_t align=sizeof(Complex);
@@ -122,20 +126,18 @@ int main(int argc, char* argv[])
   g0.Allocate(Nx,my,-mx+1,0,align);
   g1.Allocate(Nx,my,-mx+1,0,align);
 
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,true,true,4,1);
+  Convolution=new ImplicitHConvolution2(mx,my,true,true,4,1);
   
   w.Allocate(Nx,my,-mx+1,0,align);
   
   init(w);
   w(0,0)=0.0; // Enforce no mean flow.
-  fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
+  HermitianSymmetrizeX(mx,my,mx-1,w);
 
-  int n=10000;
-  
   cout.precision(15);
   
   for(int step=0; step < n; ++step) {
-    Output(step,1);
+    Output(step,step == 0);
      Source(w,f0);
      for(int i=0; i < mx; ++i) {
        for(int j=0; j < my; ++j) {
