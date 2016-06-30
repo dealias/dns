@@ -26,7 +26,7 @@ typedef Array3<Complex> vector3;
 typedef Array4<Complex> vector4;
 
 vector4 u;
-vector3 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10;
+vector3 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11;
 
 ofstream ezvt("ezvt",ios::out);
 
@@ -38,9 +38,18 @@ void init(vector4& u)
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
         Complex val=1.0/(i*i+j*j+k*k);
-        for(int c=0; c < 3; ++c) {
-          u[c][i][j][k]=val;
-        }
+        Complex U=val;
+        Complex V=val;
+        Complex W=val;
+        if(k != 0)
+          W=-(i*U+j*V)/k;
+        else if(j != 0)
+          V=-(i*U)/j;
+        else
+          U=0.0;
+        u[0][i][j][k]=U;
+        u[1][i][j][k]=V;
+        u[2][i][j][k]=W;
       }
     }
   }
@@ -62,14 +71,16 @@ void multadvection3(double **F, unsigned int m,
   double* F8=F[8];
   double* F9=F[9];
   double* F10=F[10];
+  double* F11=F[11];
   
   for(unsigned int j=0; j < m; ++j) {
-    // I*(u*kx+v*ky+w*kz)*u
-    // I*(u*kx+v*ky+w*kz)*v
-    // I*(u*kx+v*ky+w*kz)*w
+    // I*(u*kx*u+v*ky*u+w*kz*u)
+    // I*(u*kx*v+v*ky*v+w*kz*v)
+    // I*(u*kx*w+v*ky*w+w*kz*w)
     F0[j]=F0[j]*F3[j]+F1[j]*F4[j]+F2[j]*F5[j];
     F1[j]=F0[j]*F6[j]+F1[j]*F7[j]+F2[j]*F8[j];
-    F2[j]=F0[j]*F9[j]+F1[j]*F10[j]-F2[j]*(F3[j]+F7[j]);
+//    F2[j]=F0[j]*F9[j]+F1[j]*F10[j]-F2[j]*(F3[j]+F7[j]);
+    F2[j]=F0[j]*F9[j]+F1[j]*F10[j]+F2[j]*F11[j];
   }
 }
 
@@ -86,6 +97,7 @@ void Source(const vector4& u, vector4 &S)
   f8[0][0][0]=0.0;
   f9[0][0][0]=0.0;
   f10[0][0][0]=0.0;
+  f11[0][0][0]=0.0;
   
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
@@ -108,16 +120,25 @@ void Source(const vector4& u, vector4 &S)
 
         f9[i][j][k]=Complex(-i*W.im,i*W.re);  // I*kx*W
         f10[i][j][k]=Complex(-j*W.im,j*W.re); // I*ky*W
+        f11[i][j][k]=Complex(-k*W.im,k*W.re); // I*kz*W
       }
     } 
   }
   
-  Complex *F[]={f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10};
+  Complex *F[]={f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11};
   Convolution->convolve(F,multadvection3);
   
   vector3 S0=S[0];
   vector3 S1=S[1];
   vector3 S2=S[2];
+  
+  S0(0,0,0)=0.0; // Enforce no mean flow.
+  S1(0,0,0)=0.0;
+  S2(0,0,0)=0.0;
+  
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S0);
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S1);
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S2);
   
   // The purpose of pressure is to enforce incompressibility!
   // Apply projection operator.
@@ -136,26 +157,33 @@ void Source(const vector4& u, vector4 &S)
     }
   }
     
+  Complex sum=0.0;
+  for(int i=-mx+1; i < mx; ++i) {
+    for(int j=-my+1; j < my; ++j) {
+      for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
+//        sum += S0[i][j][k]*i+S1[i][j][k]*j+S2[i][j][k]*k;
+        sum += (S0[i][j][k]*conj(u[0][i][j][k])).re
+          +(S1[i][j][k]*conj(u[1][i][j][k])).re
+          +(S2[i][j][k]*conj(u[2][i][j][k])).re;
+      }
+    }
+  }
+  cout << sum << endl;
+  cout << endl;
+  
   /*
     for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
     for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
     double k2=i*i+j*j+k*k;
-    S0[i][j][k] += -nu*k2*S0;
-    S1[i][j][k] += -nu*k2*S1;
-    S2[i][j][k] += -nu*k2*S2;
+    S0[i][j][k] -= nu*k2*S0;
+    S1[i][j][k] -= nu*k2*S1;
+    S2[i][j][k] -= nu*k2*S2;
     }
     }
     }
   */
 
-  S0(0,0,0)=0.0; // Enforce no mean flow.
-  S1(0,0,0)=0.0;
-  S2(0,0,0)=0.0;
-  
-  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S0);
-  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S1);
-  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S2);
 }
 
 inline double hypot(double x, double y, double z)
@@ -188,7 +216,7 @@ void Spectrum()
         int index=(int) (K+0.5);
         double e=abs2(u[0][i][j][k],u[1][i][j][k],u[2][i][j][k]);
         E[index] += e;
-        Z[index] +=k2*e;
+        Z[index] += k2*e;
       }
     }
   }
@@ -208,7 +236,7 @@ void Output(int step, bool verbose=false)
 	double k2=i*i+j*j+k*k;
         double e=abs2(u[0][i][j][k],u[1][i][j][k],u[2][i][j][k]);
 	E += e;
-	Z +=k2*e;
+	Z += k2*e;
       }
     }
   }
@@ -216,15 +244,18 @@ void Output(int step, bool verbose=false)
     cout << "t=" << step*dt << endl;
     cout << "Energy=" << E << endl;
     cout << "Enstrophy=" << Z << endl;
+    cout << endl;
   }
   ezvt << E << "\t" << Z << endl;
 }
 
 int main(int argc, char* argv[])
 {
-  int n=1;
-  cout << "Number of steps? " << endl;
+  int n;
+  cout << "Number of time steps? " << endl;
   cin >> n;
+  cout << endl;
+
   vector4 S;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
@@ -242,8 +273,9 @@ int main(int argc, char* argv[])
   f8.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
   f9.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
   f10.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
+  f11.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
 
-  Convolution=new fftwpp::ImplicitHConvolution3(mx,my,mz,true,true,true,11,3);
+  Convolution=new ImplicitHConvolution3(mx,my,mz,true,true,true,12,3);
   
   u.Allocate(3,Nx,Ny,mz,0,-mx+1,-my+1,0,align);
   S.Allocate(3,Nx,Ny,mz,0,-mx+1,-my+1,0,align);
@@ -253,16 +285,15 @@ int main(int argc, char* argv[])
   u(1,0,0,0)=0.0;
   u(2,0,0,0)=0.0;
   
-  fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[0]);
-  fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[1]);
-  fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u[2]);
-
-  // int n=10000;
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,u[0]);
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,u[1]);
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,u[2]);
   
   cout.precision(15);
   
   for(int step=0; step < n; ++step) {
-    Output(step,step == 0);
+//    Output(step,step == 0);
+    Output(step,true);
     Source(u,S);
     for(int i=-mx+1; i < mx; ++i) {
       for(int j=-my+1; j < my; ++j) {
@@ -273,8 +304,7 @@ int main(int argc, char* argv[])
         }
       }
     }
-     cout << "[" << step << "] ";
-     Output(step,true);
+    cout << "[" << step << "] ";
   }
   cout << endl;
   Output(n,true);
