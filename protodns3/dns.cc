@@ -76,14 +76,14 @@ void multadvection3(double **F, unsigned int m,
     // I*(u*kx*u+v*ky*u+w*kz*u)
     // I*(u*kx*v+v*ky*v+w*kz*v)
     // I*(u*kx*w+v*ky*w+w*kz*w)
-    double f0=F0[j];
-    double f1=F1[j];
-    double f2=F2[j];
-    double f3=F3[j];
-    double f7=F7[j];
-    F0[j]=f0*f3+f1*F4[j]+f2*F5[j];
-    F1[j]=f0*F6[j]+f1*f7+f2*F8[j];
-    F2[j]=f0*F9[j]+f1*F10[j]-f2*(f3+f7);
+    double u=F0[j];
+    double v=F1[j];
+    double w=F2[j];
+    double f3=F3[j]; // I*kx*u
+    double f7=F7[j]; // I*ky*v
+    F0[j]=u*f3+v*F4[j]+w*F5[j];
+    F1[j]=u*F6[j]+v*f7+w*F8[j];
+    F2[j]=u*F9[j]+v*F10[j]-w*(f3+f7);
   }
 }
 
@@ -112,16 +112,16 @@ void Source(const vector4& u, vector4 &S)
         f1[i][j][k]=V;
         f2[i][j][k]=W;
 
-        f3[i][j][k]=Complex(-i*U.im,i*U.re);  // I*kx*U
-        f4[i][j][k]=Complex(-j*U.im,j*U.re);  // I*ky*U
-        f5[i][j][k]=Complex(-k*U.im,k*U.re);  // I*kz*U
+        f3[i][j][k]=Complex(-i*U.im,i*U.re);  // I*kx*u
+        f4[i][j][k]=Complex(-j*U.im,j*U.re);  // I*ky*u
+        f5[i][j][k]=Complex(-k*U.im,k*U.re);  // I*kz*u
 
-        f6[i][j][k]=Complex(-i*V.im,i*V.re);  // I*kx*V
-        f7[i][j][k]=Complex(-j*V.im,j*V.re);  // I*ky*V
-        f8[i][j][k]=Complex(-k*V.im,k*V.re);  // I*kz*V
+        f6[i][j][k]=Complex(-i*V.im,i*V.re);  // I*kx*v
+        f7[i][j][k]=Complex(-j*V.im,j*V.re);  // I*ky*v
+        f8[i][j][k]=Complex(-k*V.im,k*V.re);  // I*kz*v
 
-        f9[i][j][k]=Complex(-i*W.im,i*W.re);  // I*kx*W
-        f10[i][j][k]=Complex(-j*W.im,j*W.re); // I*ky*W
+        f9[i][j][k]=Complex(-i*W.im,i*W.re);  // I*kx*w
+        f10[i][j][k]=Complex(-j*W.im,j*W.re); // I*ky*w
       }
     } 
   }
