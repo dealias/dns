@@ -26,7 +26,7 @@ typedef Array3<Complex> vector3;
 typedef Array4<Complex> vector4;
 
 vector4 u;
-vector3 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11;
+vector3 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10;
 
 ofstream ezvt("ezvt",ios::out);
 
@@ -71,16 +71,19 @@ void multadvection3(double **F, unsigned int m,
   double* F8=F[8];
   double* F9=F[9];
   double* F10=F[10];
-  double* F11=F[11];
   
   for(unsigned int j=0; j < m; ++j) {
     // I*(u*kx*u+v*ky*u+w*kz*u)
     // I*(u*kx*v+v*ky*v+w*kz*v)
     // I*(u*kx*w+v*ky*w+w*kz*w)
-    F0[j]=F0[j]*F3[j]+F1[j]*F4[j]+F2[j]*F5[j];
-    F1[j]=F0[j]*F6[j]+F1[j]*F7[j]+F2[j]*F8[j];
-//    F2[j]=F0[j]*F9[j]+F1[j]*F10[j]-F2[j]*(F3[j]+F7[j]);
-    F2[j]=F0[j]*F9[j]+F1[j]*F10[j]+F2[j]*F11[j];
+    double f0=F0[j];
+    double f1=F1[j];
+    double f2=F2[j];
+    double f3=F3[j];
+    double f7=F7[j];
+    F0[j]=f0*f3+f1*F4[j]+f2*F5[j];
+    F1[j]=f0*F6[j]+f1*f7+f2*F8[j];
+    F2[j]=f0*F9[j]+f1*F10[j]-f2*(f3+f7);
   }
 }
 
@@ -97,7 +100,6 @@ void Source(const vector4& u, vector4 &S)
   f8[0][0][0]=0.0;
   f9[0][0][0]=0.0;
   f10[0][0][0]=0.0;
-  f11[0][0][0]=0.0;
   
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
@@ -120,12 +122,12 @@ void Source(const vector4& u, vector4 &S)
 
         f9[i][j][k]=Complex(-i*W.im,i*W.re);  // I*kx*W
         f10[i][j][k]=Complex(-j*W.im,j*W.re); // I*ky*W
-        f11[i][j][k]=Complex(-k*W.im,k*W.re); // I*kz*W
       }
     } 
   }
   
-  Complex *F[]={f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11};
+
+  Complex *F[]={f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10};
   Convolution->convolve(F,multadvection3);
   
   vector3 S0=S[0];
@@ -162,13 +164,14 @@ void Source(const vector4& u, vector4 &S)
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
 //        sum += S0[i][j][k]*i+S1[i][j][k]*j+S2[i][j][k]*k;
+//        sum += u[0][i][j][k]*i+u[1][i][j][k]*j+u[2][i][j][k]*k;
         sum += (S0[i][j][k]*conj(u[0][i][j][k])).re
           +(S1[i][j][k]*conj(u[1][i][j][k])).re
           +(S2[i][j][k]*conj(u[2][i][j][k])).re;
       }
     }
   }
-  cout << sum << endl;
+  cout << "sum=" << sum << endl;
   cout << endl;
   
   /*
@@ -253,7 +256,8 @@ int main(int argc, char* argv[])
 {
   int n;
   cout << "Number of time steps? " << endl;
-  cin >> n;
+//  cin >> n;
+  n=1;
   cout << endl;
 
   vector4 S;
@@ -273,9 +277,8 @@ int main(int argc, char* argv[])
   f8.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
   f9.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
   f10.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
-  f11.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
 
-  Convolution=new ImplicitHConvolution3(mx,my,mz,true,true,true,12,3);
+  Convolution=new ImplicitHConvolution3(mx,my,mz,true,true,true,11,3);
   
   u.Allocate(3,Nx,Ny,mz,0,-mx+1,-my+1,0,align);
   S.Allocate(3,Nx,Ny,mz,0,-mx+1,-my+1,0,align);
