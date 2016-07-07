@@ -159,6 +159,7 @@ void Source(const vector4& u, vector4 &S)
     }
   }
     
+#if 0 
   Complex sum=0.0;
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
@@ -173,6 +174,7 @@ void Source(const vector4& u, vector4 &S)
   }
   cout << "sum=" << sum << endl;
   cout << endl;
+#endif  
   
   /*
     for(int i=-mx+1; i < mx; ++i) {
@@ -256,8 +258,7 @@ int main(int argc, char* argv[])
 {
   int n;
   cout << "Number of time steps? " << endl;
-//  cin >> n;
-  n=1;
+  cin >> n;
   cout << endl;
 
   vector4 S;
