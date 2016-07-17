@@ -20,13 +20,15 @@ int mx;
 int my;
 int mz;
 
+Complex I(0.0,1.0);
+
 typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
 typedef Array3<Complex> vector3;
 typedef Array4<Complex> vector4;
 
 vector4 u;
-vector3 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10;
+vector3 f0,f1,f2,f3,f4,f5;
 
 ofstream ezvt("ezvt",ios::out);
 
@@ -66,24 +68,17 @@ void multadvection3(double **F, unsigned int m,
   double* F3=F[3];
   double* F4=F[4];
   double* F5=F[5];
-  double* F6=F[6];
-  double* F7=F[7];
-  double* F8=F[8];
-  double* F9=F[9];
-  double* F10=F[10];
   
   for(unsigned int j=0; j < m; ++j) {
-    // I*(u*kx*u+v*ky*u+w*kz*u)
-    // I*(u*kx*v+v*ky*v+w*kz*v)
-    // I*(u*kx*w+v*ky*w+w*kz*w)
     double u=F0[j];
     double v=F1[j];
     double w=F2[j];
-    double f3=F3[j]; // I*kx*u
-    double f7=F7[j]; // I*ky*v
-    F0[j]=u*f3+v*F4[j]+w*F5[j];
-    F1[j]=u*F6[j]+v*f7+w*F8[j];
-    F2[j]=u*F9[j]+v*F10[j]-w*(f3+f7);
+    F0[j]=u*u;
+    F1[j]=u*v;
+    F2[j]=u*w;
+    F3[j]=v*v;
+    F4[j]=v*w;
+    F5[j]=w*w;
   }
 }
 
@@ -92,42 +87,18 @@ void Source(const vector4& u, vector4 &S)
   f0[0][0][0]=0.0;
   f1[0][0][0]=0.0;
   f2[0][0][0]=0.0;
-  f3[0][0][0]=0.0;
-  f4[0][0][0]=0.0;
-  f5[0][0][0]=0.0;
-  f6[0][0][0]=0.0;
-  f7[0][0][0]=0.0;
-  f8[0][0][0]=0.0;
-  f9[0][0][0]=0.0;
-  f10[0][0][0]=0.0;
   
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
-        Complex U=u[0][i][j][k];
-        Complex V=u[1][i][j][k];
-        Complex W=u[2][i][j][k];
-        
-        f0[i][j][k]=U;
-        f1[i][j][k]=V;
-        f2[i][j][k]=W;
-
-        f3[i][j][k]=Complex(-i*U.im,i*U.re);  // I*kx*u
-        f4[i][j][k]=Complex(-j*U.im,j*U.re);  // I*ky*u
-        f5[i][j][k]=Complex(-k*U.im,k*U.re);  // I*kz*u
-
-        f6[i][j][k]=Complex(-i*V.im,i*V.re);  // I*kx*v
-        f7[i][j][k]=Complex(-j*V.im,j*V.re);  // I*ky*v
-        f8[i][j][k]=Complex(-k*V.im,k*V.re);  // I*kz*v
-
-        f9[i][j][k]=Complex(-i*W.im,i*W.re);  // I*kx*w
-        f10[i][j][k]=Complex(-j*W.im,j*W.re); // I*ky*w
+        f0[i][j][k]=u[0][i][j][k];
+        f1[i][j][k]=u[1][i][j][k];
+        f2[i][j][k]=u[2][i][j][k];
       }
     } 
   }
-  
 
-  Complex *F[]={f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10};
+  Complex *F[]={f0,f1,f2,f3,f4,f5};
   Convolution->convolve(F,multadvection3);
   
   vector3 S0=S[0];
@@ -138,18 +109,22 @@ void Source(const vector4& u, vector4 &S)
   S1(0,0,0)=0.0;
   S2(0,0,0)=0.0;
   
-  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S0);
-  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S1);
-  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S2);
-  
   // The purpose of pressure is to enforce incompressibility!
   // Apply projection operator.
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
-        Complex s0=f0[i][j][k];
-        Complex s1=f1[i][j][k];
-        Complex s2=f2[i][j][k];
+        Complex S00=f0[i][j][k];
+        Complex S01=f1[i][j][k];
+        Complex S02=f2[i][j][k];
+        Complex S11=f3[i][j][k];
+        Complex S12=f4[i][j][k];
+        Complex S22=f5[i][j][k];
+        
+        Complex s0=I*(i*S00+j*S01+k*S02);
+        Complex s1=I*(i*S01+j*S11+k*S12);
+        Complex s2=I*(i*S02+j*S12+k*S22);
+        
         // Calculate -i*P
         Complex miP=(i*s0+j*s1+k*s2)/(i*i+j*j+k*k);
         S0[i][j][k]=i*miP-s0;
@@ -159,6 +134,11 @@ void Source(const vector4& u, vector4 &S)
     }
   }
     
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S0);
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S1);
+  HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S2);
+  
+#if 0
   Complex sum=0.0;
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
@@ -173,15 +153,16 @@ void Source(const vector4& u, vector4 &S)
   }
   cout << "sum=" << sum << endl;
   cout << endl;
+#endif  
   
   /*
     for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
     for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
-    double k2=i*i+j*j+k*k;
-    S0[i][j][k] -= nu*k2*S0;
-    S1[i][j][k] -= nu*k2*S1;
-    S2[i][j][k] -= nu*k2*S2;
+    double nuk2=nu*(i*i+j*j+k*k);
+    S0[i][j][k] -= nuk2*S0;
+    S1[i][j][k] -= nuk2*S1;
+    S2[i][j][k] -= nuk2*S2;
     }
     }
     }
@@ -256,8 +237,7 @@ int main(int argc, char* argv[])
 {
   int n;
   cout << "Number of time steps? " << endl;
-//  cin >> n;
-  n=1;
+  cin >> n;
   cout << endl;
 
   vector4 S;
@@ -272,13 +252,8 @@ int main(int argc, char* argv[])
   f3.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
   f4.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
   f5.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
-  f6.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
-  f7.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
-  f8.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
-  f9.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
-  f10.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
 
-  Convolution=new ImplicitHConvolution3(mx,my,mz,true,true,true,11,3);
+  Convolution=new ImplicitHConvolution3(mx,my,mz,true,true,true,3,6);
   
   u.Allocate(3,Nx,Ny,mz,0,-mx+1,-my+1,0,align);
   S.Allocate(3,Nx,Ny,mz,0,-mx+1,-my+1,0,align);
