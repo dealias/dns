@@ -24,6 +24,10 @@ unsigned Ny=15;
 Real eta=0.0;
 Complex force=0.0;
 Real kforce=1.0;
+const int Nforce=2;
+Complex forces[Nforce];
+int kxforces[Nforce];
+int kyforces[Nforce];
 Real deltaf=1.0;
 unsigned movie=0;
 unsigned rezero=0;
@@ -116,8 +120,28 @@ public:
     return abs(k-kforce) < h;
   }
   
- void Force(Complex& w, double& T, double k) {
+  void Force(Complex& w, double& T, double k, double, double) {
     if(active(k)) {
+      T += realproduct(force,w);
+      w += force;
+    }
+  }
+};
+
+class ConstantList : public ForcingBase {
+protected:  
+public:
+  const char *Name() {return "Constant List";}
+  
+  int active(double i, double j) {
+    for(int index=0; index < Nforce; ++index)
+      if(i == kxforces[index] && j == kyforces[index]) return index;
+    return -1;
+  }
+  
+  void Force(Complex& w, double& T, double k, double i, double j) {
+    int index=active(i,j);
+    if(index >= 0) {
       T += realproduct(force,w);
       w += force;
     }
@@ -199,9 +223,13 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(eta,0.0,REAL_MAX,"vorticity injection rate");
   VOCAB(force,(Complex) 0.0, (Complex) 0.0,"constant external force");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
+  VOCAB_ARRAY(kxforces,"kx force wavenumbers");
+  VOCAB_ARRAY(kyforces,"ky force wavenumbers");
+  VOCAB_ARRAY(forces,"force ampligudes");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   FORCING(None);
   FORCING(ConstantBanded);
+  FORCING(ConstantList);
   FORCING(WhiteNoiseBanded);
 }
 

@@ -98,7 +98,7 @@ public:
       Complex Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Tindex.im,k);
+      Forcing->Force(wij,Tindex.im,k,I,j);
       Si[j]=Sij-nu*wij;
     }
   };
@@ -121,7 +121,7 @@ public:
       Complex Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Tindex.im,k);
+      Forcing->Force(wij,Tindex.im,k,I,j);
       Si[j]=Sij-nu*wij;
     }
   };
@@ -147,7 +147,7 @@ public:
       Complex Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Tindex.im,k);
+      Forcing->Force(wij,Tindex.im,k,I,j);
     }
   };
   
@@ -185,7 +185,7 @@ public:
       Complex wij=wi[j];
       Nu nu=b->nuk(k2int);
       double T;
-      Forcing->Force(wij,T,k);
+      Forcing->Force(wij,T,k,I,j);
       Si[j] -= nu*wij;
     }
   };
