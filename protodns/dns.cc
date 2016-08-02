@@ -9,8 +9,8 @@ using namespace std;
 using namespace Array;
 using namespace fftwpp;
 
-int Nx=15; // Number of modes in x direction
-int Ny=15; // Number of modes in y direction
+int Nx=1023; // Number of modes in x direction
+int Ny=1023; // Number of modes in y direction
 
 double dt=1.0e-8;
 double nu=0.0; // kinematic viscosity
@@ -139,8 +139,8 @@ int main(int argc, char* argv[])
   for(int step=0; step < n; ++step) {
     Output(step,step == 0);
      Source(w,f0);
-     for(int i=0; i < mx; ++i) {
-       for(int j=0; j < my; ++j) {
+     for(int i=-mx+1; i < mx; ++i) {
+       for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
 	 w[i][j] += f0[i][j]*dt;
        }
      }
