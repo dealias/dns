@@ -60,12 +60,11 @@ void Source(const vector2& w, vector2 &S)
   
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      double k2=i*i+j*j;
-      Complex Ikxw=Complex(-i*w[i][j].im,i*w[i][j].re);
-      Complex Ikyw=Complex(-j*w[i][j].im,j*w[i][j].re);
-      double k2inv=1.0/k2;
-      f0[i][j]=Ikyw*k2inv; // u
-      f1[i][j]=-Ikxw*k2inv; // v
+      double k2inv=1.0/(i*i+j*j);
+      double jk2inv=j*k2inv;
+      double ik2inv=i*k2inv;
+      f0[i][j]=Complex(w[i][j].im*jk2inv,w[i][j].re*jk2inv);  // u
+      f1[i][j]=Complex(w[i][j].im*ik2inv,-w[i][j].re*ik2inv); // v
     }
   }
 
@@ -76,8 +75,7 @@ void Source(const vector2& w, vector2 &S)
   
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      double k2=i*i+j*j;     
-      f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f1[i][j]-nu*k2*w[i][j];
+      f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f1[i][j]-nu*(i*i+j*j)*w[i][j];
     }
   }
   
