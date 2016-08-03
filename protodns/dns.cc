@@ -58,6 +58,8 @@ void Source(const vector2& w, vector2 &S)
   f0[0][0]=0.0;
   f1[0][0]=0.0;
   
+  // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
+  // requires only 4 FFTs per stage.
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       double k2inv=1.0/(i*i+j*j);
