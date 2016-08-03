@@ -67,7 +67,7 @@ void Source(const vector2& w, vector2 &S)
       double k2inv=1.0/(i*i+j*j);
       double jk2inv=j*k2inv;
       double ik2inv=i*k2inv;
-      f0[i][j]=Complex(w[i][j].im*jk2inv,w[i][j].re*jk2inv);  // u
+      f0[i][j]=Complex(-w[i][j].im*jk2inv,w[i][j].re*jk2inv); // u
       f1[i][j]=Complex(w[i][j].im*ik2inv,-w[i][j].re*ik2inv); // v
     }
   }
