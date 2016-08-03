@@ -155,19 +155,16 @@ void Source(const vector4& u, vector4 &S)
   cout << endl;
 #endif  
   
-  /*
-    for(int i=-mx+1; i < mx; ++i) {
+  for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
-    for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
-    double nuk2=nu*(i*i+j*j+k*k);
-    S0[i][j][k] -= nuk2*S0;
-    S1[i][j][k] -= nuk2*S1;
-    S2[i][j][k] -= nuk2*S2;
+      for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
+        double nuk2=nu*(i*i+j*j+k*k);
+        S0[i][j][k] -= nuk2*S0;
+        S1[i][j][k] -= nuk2*S1;
+        S2[i][j][k] -= nuk2*S2;
+      }
     }
-    }
-    }
-  */
-
+  }
 }
 
 inline double hypot(double x, double y, double z)
