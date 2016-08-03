@@ -94,10 +94,10 @@ public:
   const char *Name() {return "Equipartition";}
 
   Var Value(Real k) {
-// Distribute the enstrophy evenly between the real and imaginary components
+// Distribute enstrophy evenly between the real and imaginary components.
     Real k2=k*k;
     Real v=icalpha+icbeta*k2;
-    v=v ? k/sqrt(v) : 0.0;
+    v=v ? k/sqrt(2.0*v) : 0.0;
     return randomIC ? v*expi(twopi*drand()) : sqrt(0.5)*Complex(v,v);
   }
 };
@@ -142,6 +142,7 @@ public:
   void Force(Complex& w, double& T, double k, double i, double j) {
     int index=active(i,j);
     if(index >= 0) {
+      Complex force=forces[index];
       T += realproduct(force,w);
       w += force;
     }
