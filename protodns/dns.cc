@@ -9,10 +9,10 @@ using namespace std;
 using namespace Array;
 using namespace fftwpp;
 
-int Nx=1023; // Number of modes in x direction
-int Ny=1023; // Number of modes in y direction
+int Nx=171; // Number of modes in x direction
+int Ny=171; // Number of modes in y direction
 
-double dt=1.0e-6;
+double dt=1.0e-4;
 double nu=0.0; // kinematic viscosity
 
 int mx;
@@ -20,6 +20,8 @@ int my;
 
 typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
+
+Complex I(0,1);
 
 vector2 w;
 vector2 f0,f1;
@@ -32,7 +34,7 @@ void init(vector2& w)
 {
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      w[i][j]=1.0/(i*i+j*j);
+      w[i][j]=(1+I)*sqrt(i*i+j*j)/sqrt(1+i*i+j*j);
     }
   }
 }
