@@ -55,7 +55,7 @@ void multadvection2(double **F, unsigned int m,
 
 void Source(const vector2& w, vector2 &S)
 {
-  f0[0][0]=0.0;
+  f0[0][0]=0.0; // Enforce no mean flow.
   f1[0][0]=0.0;
   
   // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
