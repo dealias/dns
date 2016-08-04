@@ -23,7 +23,7 @@ typedef Array2<Complex> vector2;
 
 Complex I(0,1);
 
-vector2 w;
+vector2 w,w1;
 vector2 f0,f1;
 
 ofstream ezvt("ezvt",ios::out);
@@ -144,6 +144,7 @@ int main(int argc, char* argv[])
   Convolution=new ImplicitHConvolution2(mx,my,true,true,2,2);
   
   w.Allocate(Nx,my,-mx+1,0,align);
+  w1.Allocate(Nx,my,-mx+1,0,align);
   
   init(w);
   w(0,0)=0.0; // Enforce no mean flow.
@@ -156,9 +157,17 @@ int main(int argc, char* argv[])
      Source(w,f0);
      for(int i=-mx+1; i < mx; ++i) {
        for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-	 w[i][j] += f0[i][j]*dt;
+	 w1[i][j]=w[i][j]+0.5*dt*f0[i][j];
        }
      }
+     Source(w1,f0);
+     for(int i=-mx+1; i < mx; ++i) {
+       for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+	 w[i][j] += dt*f0[i][j];
+       }
+     }
+     
+     
 //     cout << "[" << step << "] ";
   }
   cout << endl;
