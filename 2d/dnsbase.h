@@ -95,11 +95,11 @@ public:
       Real w2=abs2(wij);
       Nu nu=b->nuk(k2int);
       E[index] += Complex(w2/k,nu*w2);
-      Complex Sij=Si[j];
+      Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Tindex.im,k,I,j);
-      Si[j]=Sij-nu*wij;
+      Forcing->Force(wij,Sij,Tindex.im,k,I,j);
+      Sij -= nu*wij;
     }
   };
   
@@ -118,11 +118,11 @@ public:
       unsigned index=(unsigned)(kint-0.5);
       Complex wij=wi[j];
       Nu nu=b->nuk(k2int);
-      Complex Sij=Si[j];
+      Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Tindex.im,k,I,j);
-      Si[j]=Sij-nu*wij;
+      Forcing->Force(wij,Sij,Tindex.im,k,I,j);
+      Sij -= nu*wij;
     }
   };
   
@@ -144,10 +144,10 @@ public:
       Real w2=abs2(wij);
       Nu nu=b->nuk(k2int);
       E[index] += Complex(w2/k,nu*w2);
-      Complex Sij=Si[j];
+      Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Tindex.im,k,I,j);
+      Forcing->Force(wij,Sij,Tindex.im,k,I,j);
     }
   };
   
@@ -185,7 +185,7 @@ public:
       Complex wij=wi[j];
       Nu nu=b->nuk(k2int);
       double T;
-      Forcing->Force(wij,T,k,I,j);
+      Forcing->Force(wij,Si[j],T,k,I,j);
       Si[j] -= nu*wij;
     }
   };

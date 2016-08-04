@@ -120,10 +120,10 @@ public:
     return abs(k-kforce) < h;
   }
   
-  void Force(Complex& w, double& T, double k, int, int) {
+  void Force(Complex& w, Complex& S, double& T, double k, int, int) {
     if(active(k)) {
       T += realproduct(force,w);
-      w += force;
+      S += force;
     }
   }
 };
@@ -139,12 +139,12 @@ public:
     return -1;
   }
   
-  void Force(Complex& w, double& T, double k, int i, int j) {
+  void Force(Complex& w, Complex &S, double& T, double k, int i, int j) {
     int index=active(i,j);
     if(index >= 0) {
       Complex force=forces[index];
       T += realproduct(force,w);
-      w += force;
+      S += force;
     }
   }
 };
@@ -380,7 +380,7 @@ void DNS::Output(int it)
   vector y=Y[OMEGA];
   
   w.Set(y);
-  cout << w[xorigin+4][5] << endl;
+  cout << w[xorigin+5][12] << endl;
   cout << w[xorigin+6][8] << endl;
   cout << conj(w[xorigin-3][2]) << endl;
      
