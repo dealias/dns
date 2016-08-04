@@ -73,15 +73,11 @@ void Source(const vector2& w, vector2 &S)
   Complex *F[]={f0,f1};
   Convolution->convolve(F,multadvection2);
   
-  f0(0,0)=0.0; // Enforce no mean flow.
-  
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f1[i][j]-nu*(i*i+j*j)*w[i][j];
     }
   }
-  
-  HermitianSymmetrizeX(mx,my,mx-1,f0);
 }
 
 void Spectrum()
@@ -145,7 +141,6 @@ int main(int argc, char* argv[])
   
   init(w);
   w(0,0)=0.0; // Enforce no mean flow.
-  HermitianSymmetrizeX(mx,my,mx-1,w);
 
   cout.precision(15);
   
