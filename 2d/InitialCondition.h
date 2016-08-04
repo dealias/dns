@@ -8,7 +8,7 @@ class InitialConditionBase {
  public:	
   virtual ~InitialConditionBase() {};
   virtual const char *Name() {return "None";}
-  virtual Var Value(Real k) {return 0;}
+  virtual Var Value(Real k, int i, int j) {return 0;}
 };
 
 extern InitialConditionBase *InitialCondition;

@@ -229,7 +229,7 @@ public:
       unsigned k2int=I*I+j*j;
       Real kint=sqrt(k2int);
       Real k=k0*kint;
-      wi[j]=InitialCondition->Value(k);
+      wi[j]=InitialCondition->Value(k,I,j);
     }
   };
   
