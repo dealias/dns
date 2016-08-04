@@ -356,7 +356,7 @@ public:
   {
     vector wi,Si;
     for(unsigned i=0; i < Nx; i++) {
-      unsigned I=(int) i-(int) xorigin;
+      int I=(int) i-(int) xorigin;
       init(wi,Si,i);
       for(unsigned j=i <= xorigin ? 1 : 0; j < my; ++j)
         fcn(wi,Si,I,j);
