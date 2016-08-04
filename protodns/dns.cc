@@ -34,7 +34,7 @@ void init(vector2& w)
 {
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      w[i][j]=(1+I)*sqrt(i*i+j*j)/sqrt(1+i*i+j*j);
+      w[i][j]=(sqrt(i*i+j*j)+I*(i+j))/sqrt(1+i*i+j*j);
     }
   }
 }
@@ -57,7 +57,7 @@ void multadvection2(double **F, unsigned int m,
 
 void Source(const vector2& w, vector2 &S)
 {
-  f0[0][0]=0.0; // Enforce no mean flow.
+  f0[0][0]=0.0; // Enforce zero mean flow
   f1[0][0]=0.0;
   
   // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
@@ -80,6 +80,16 @@ void Source(const vector2& w, vector2 &S)
       f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f1[i][j]-nu*(i*i+j*j)*w[i][j];
     }
   }
+  
+#if 1
+  double sum=0.0;
+  for(int i=-mx+1; i < mx; ++i) {
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+      sum += (f0[i][j]*conj(w[i][j])).re;
+    }
+  }
+    cout << sum << endl;
+#endif    
 }
 
 void Spectrum()
@@ -140,15 +150,19 @@ int main(int argc, char* argv[])
   Convolution=new ImplicitHConvolution2(mx,my,true,true,2,2);
   
   w.Allocate(Nx,my,-mx+1,0,align);
+  w=0.0;
   
   init(w);
-  w(0,0)=0.0; // Enforce no mean flow.
-
   cout.precision(15);
   
+     cout << w[4][5] << endl;
+     cout << w[6][8] << endl;
+     cout << conj(w[-3][2]) << endl;
+     cout << endl;
   for(int step=0; step < n; ++step) {
+    cout << endl;
     Output(step,step == 0);
-     Source(w,f0);
+    Source(w,f0);
      for(int i=-mx+1; i < mx; ++i) {
        for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
 	 w[i][j] += f0[i][j]*dt;
@@ -162,3 +176,4 @@ int main(int argc, char* argv[])
      
   return 0;
 }
+;
