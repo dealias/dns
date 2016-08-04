@@ -79,26 +79,40 @@ class Zero : public InitialConditionBase {
 public:
   const char *Name() {return "Zero";}
   
-  Var Value(Real) {return 0.0;}
+  Var Value(Real,int,int) {return 0.0;}
 };
 
 class Constant : public InitialConditionBase {
 public:
   const char *Name() {return "Constant";}
   
-  Var Value(Real) {return Complex(icalpha,icbeta);}
+  Var Value(Real,int,int) {return Complex(icalpha,icbeta);}
 };
 
 class Equipartition : public InitialConditionBase {
 public:
   const char *Name() {return "Equipartition";}
 
-  Var Value(Real k) {
+  Var Value(Real k, int, int) {
 // Distribute enstrophy evenly between the real and imaginary components.
     Real k2=k*k;
     Real v=icalpha+icbeta*k2;
     v=v ? k*sqrt(2.0/v) : 0.0;
     return randomIC ? v*expi(twopi*drand()) : v*sqrt(0.5)*Complex(1,1);
+  }
+};
+
+class Benchmark : public InitialConditionBase {
+public:
+  const char *Name() {return "Equipartition";}
+
+  Var Value(Real k, int i, int j) {
+// Distribute enstrophy evenly between the real and imaginary components.
+    Real k2=k*k;
+    Real v=icalpha+icbeta*k2;
+    v=v ? sqrt(2.0/v) : 0.0;
+    return randomIC ? k*v*expi(twopi*drand()) : 
+      v*sqrt(0.5)*Complex(k,k0*(i+j));
   }
 };
 
@@ -211,6 +225,7 @@ DNSVocabulary::DNSVocabulary()
   INITIALCONDITION(Zero);
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
+  INITIALCONDITION(Benchmark);
 
   VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
