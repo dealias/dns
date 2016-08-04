@@ -132,7 +132,7 @@ void DNSBase::OutFrame(int)
 
   fw << 1 << 2*my-1 << Nx+1;
   for(int j=2*my-2; j >= 0; j--) {
-    for(unsigned i=0; i <= Nx; i++) {
+    for(unsigned int i=0; i <= Nx; i++) {
       fw << (float) wr(i,j);
     }
   }
