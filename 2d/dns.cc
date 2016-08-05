@@ -17,6 +17,7 @@ const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
 Real nuH=0.0, nuL=0.0;
+Real kH=0.0, kL=0.0;
 int pH=1;
 int pL=0;
 unsigned Nx=15;
@@ -215,6 +216,8 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
+  VOCAB(kL,0.0,STD_MAX,"Restrict low wavenumber dissipation to [k0,kL]");
+  VOCAB(kH,0.0,STD_MAX,"Restrict high wavenumber dissipation to [kH,infinity)");
   VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
   VOCAB(pL,0,0,"Power of Laplacian for molecular viscosity");
 
@@ -273,6 +276,8 @@ void DNS::InitialConditions()
   Ny=::Ny;
   nuH=::nuH;
   nuL=::nuL;
+  kH2=kH*kH;
+  kL2=kL*kL;
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 

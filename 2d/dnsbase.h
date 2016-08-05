@@ -28,6 +28,7 @@ protected:
   unsigned Nx;
   unsigned Ny;
   Real nuH, nuL;
+  Real kH2, kL2;
   static const int xpad,ypad;
   
   enum Field {PAD,OMEGA,TRANSFER,EK};
@@ -393,7 +394,10 @@ public:
 
   Real nuk(unsigned i2) {
     double k2=i2*k02;
-    return nuL*pow(k2,pL)+nuH*pow(k2,pH);
+    Real diss=0.0;
+    if(k2 <= kL2) diss += nuL*pow(k2,pL);
+    if(k2 >= kH2) diss += nuH*pow(k2,pH);
+    return diss;
   }
 
   virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);
