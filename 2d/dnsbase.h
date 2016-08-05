@@ -392,7 +392,7 @@ public:
   Real nuk(unsigned i2) {
     double k2=i2*k02;
     Real diss=0.0;
-    if(k2 <= kL2) diss += nuL*pow(k2,pL);
+    if(k2 < kL2) diss += nuL*pow(k2,pL);
     if(k2 >= kH2) diss += nuH*pow(k2,pH);
     return diss;
   }
