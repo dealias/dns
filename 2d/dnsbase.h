@@ -226,10 +226,7 @@ public:
     InitializeValue(DNSBase *b) : k0(b->k0) {}
     inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I*I+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      wi[j]=InitialCondition->Value(k,I,j);
+      wi[j]=InitialCondition->Value(k0*I,k0*j);
     }
   };
   
