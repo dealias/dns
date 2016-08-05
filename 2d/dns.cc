@@ -380,10 +380,6 @@ void DNS::Output(int it)
   vector y=Y[OMEGA];
   
   w.Set(y);
-  cout << w[xorigin+5][12] << endl;
-  cout << w[xorigin+6][8] << endl;
-  cout << conj(w[xorigin-3][2]) << endl;
-     
   ComputeInvariants(w,E,Z,P);
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
