@@ -80,23 +80,24 @@ class Zero : public InitialConditionBase {
 public:
   const char *Name() {return "Zero";}
   
-  Var Value(Real,int,int) {return 0.0;}
+  Var Value(Real,Real) {return 0.0;}
 };
 
 class Constant : public InitialConditionBase {
 public:
   const char *Name() {return "Constant";}
   
-  Var Value(Real,int,int) {return Complex(icalpha,icbeta);}
+  Var Value(Real,Real) {return Complex(icalpha,icbeta);}
 };
 
 class Equipartition : public InitialConditionBase {
 public:
   const char *Name() {return "Equipartition";}
 
-  Var Value(Real k, int, int) {
+  Var Value(Real kx, Real ky) {
 // Distribute enstrophy evenly between the real and imaginary components.
-    Real k2=k*k;
+    Real k2=kx*kx+ky*ky;
+    Real k=sqrt(k2);
     Real v=icalpha+icbeta*k2;
     v=v ? k*sqrt(2.0/v) : 0.0;
     return randomIC ? v*expi(twopi*drand()) : v;
@@ -107,13 +108,25 @@ class Benchmark : public InitialConditionBase {
 public:
   const char *Name() {return "Equipartition";}
 
-  Var Value(Real k, int i, int j) {
+  Var Value(Real kx, Real ky) {
 // Distribute enstrophy evenly between the real and imaginary components.
-    Real k2=k*k;
+    Real k2=kx*kx+ky*ky;
+    Real k=sqrt(k2);
     Real v=icalpha+icbeta*k2;
     v=v ? sqrt(2.0/v) : 0.0;
-    return randomIC ? k*v*expi(twopi*drand()) : 
-      v*sqrt(0.5)*Complex(k,k0*(i+j));
+    return randomIC ? k*v*expi(twopi*drand()) : v*sqrt(0.5)*Complex(k,kx+ky);
+  }
+};
+
+class Power : public InitialConditionBase {
+public:
+  const char *Name() {return "Equipartition";}
+
+  Var Value(Real kx, Real ky) {
+// Distribute enstrophy evenly between the real and imaginary components.
+    Real k2=kx*kx+ky*ky;
+    Real v=icbeta*pow(k2,-0.5*icalpha);
+    return randomIC ? v*expi(twopi*drand()) : v;
   }
 };
 
@@ -227,6 +240,7 @@ DNSVocabulary::DNSVocabulary()
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
   INITIALCONDITION(Benchmark);
+  INITIALCONDITION(Power);
 
   VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
