@@ -98,7 +98,7 @@ public:
     Real k2=k*k;
     Real v=icalpha+icbeta*k2;
     v=v ? k*sqrt(2.0/v) : 0.0;
-    return randomIC ? v*expi(twopi*drand()) : v*sqrt(0.5)*Complex(1,1);
+    return randomIC ? v*expi(twopi*drand()) : v;
   }
 };
 
