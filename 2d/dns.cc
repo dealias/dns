@@ -17,6 +17,7 @@ const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
 Real nuH=0.0, nuL=0.0;
+Real kH=0.0, kL=0.0;
 int pH=1;
 int pL=0;
 unsigned Nx=15;
@@ -98,7 +99,7 @@ public:
     Real k2=k*k;
     Real v=icalpha+icbeta*k2;
     v=v ? k*sqrt(2.0/v) : 0.0;
-    return randomIC ? v*expi(twopi*drand()) : v*sqrt(0.5)*Complex(1,1);
+    return randomIC ? v*expi(twopi*drand()) : v;
   }
 };
 
@@ -230,6 +231,8 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
+  VOCAB(kL,0.0,STD_MAX,"Restrict low wavenumber dissipation to [k0,kL]");
+  VOCAB(kH,0.0,STD_MAX,"Restrict high wavenumber dissipation to [kH,infinity)");
   VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
   VOCAB(pL,0,0,"Power of Laplacian for molecular viscosity");
 
@@ -288,6 +291,8 @@ void DNS::InitialConditions()
   Ny=::Ny;
   nuH=::nuH;
   nuL=::nuL;
+  kH2=kH*kH;
+  kL2=kL*kL;
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
@@ -395,10 +400,6 @@ void DNS::Output(int it)
   vector y=Y[OMEGA];
   
   w.Set(y);
-  cout << w[xorigin+5][12] << endl;
-  cout << w[xorigin+6][8] << endl;
-  cout << conj(w[xorigin-3][2]) << endl;
-     
   ComputeInvariants(w,E,Z,P);
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
