@@ -336,26 +336,22 @@ void DNS::InitialConditions()
   S.Dimension(Nx,my);
 
   unsigned int Nx1my=(Nx+1)*my;
-  unsigned int nbuf=3*Nx1my;
+  unsigned int nbuf=Nx1my;
   
   block=ComplexAlign(nbuf);
   f0.Dimension(Nx+1,my,-1,0);
   f1.Dimension(Nx+1,my,block,-1,0);
-  g0.Dimension(Nx+1,my,block+Nx1my,-1,0);
-  g1.Dimension(Nx+1,my,block+2*Nx1my,-1,0);
 
   F[1]=f1;
-  F[2]=g0;
-  F[3]=g1;
 
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,4,1);
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
 
   Allocate(count,nshells);
   setcount();
 
   if(movie) {
-    wr.Dimension(Nx+1,2*my-1,(Real *) g1());
-    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,g0,(Real *) block);
+    wr.Dimension(Nx+1,2*my-1,(Real *) f1());
+    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,f1);
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);

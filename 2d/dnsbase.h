@@ -49,16 +49,15 @@ protected:
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
-  Array2<Complex> f0,f1,g0,g1;
+  Array2<Complex> f0,f1;
   Array2<Complex> S;
   array2<Complex> buffer;
-  Complex *F[4];
+  Complex *F[2];
   Complex *block;
   ImplicitHConvolution2 *Convolution;
   crfft2d *Backward;
 //  ExplicitHConvolution2 *Padded;
   
-
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;
   ofstream ft,fevt;
