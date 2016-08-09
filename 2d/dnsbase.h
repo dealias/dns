@@ -28,6 +28,7 @@ protected:
   unsigned Nx;
   unsigned Ny;
   Real nuH, nuL;
+  Real kH2, kL2;
   static const int xpad,ypad;
   
   enum Field {PAD,OMEGA,TRANSFER,EK};
@@ -48,16 +49,15 @@ protected:
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
-  Array2<Complex> f0,f1,g0,g1;
+  Array2<Complex> f0,f1;
   Array2<Complex> S;
   array2<Complex> buffer;
-  Complex *F[4];
+  Complex *F[2];
   Complex *block;
   ImplicitHConvolution2 *Convolution;
   crfft2d *Backward;
 //  ExplicitHConvolution2 *Padded;
   
-
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;
   ofstream ft,fevt;
@@ -225,10 +225,7 @@ public:
     InitializeValue(DNSBase *b) : k0(b->k0) {}
     inline void operator()(const vector& wi, const vector& Si, int I,
                            unsigned j) {
-      unsigned k2int=I*I+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      wi[j]=InitialCondition->Value(k);
+      wi[j]=InitialCondition->Value(k0*I,k0*j);
     }
   };
   
@@ -393,7 +390,10 @@ public:
 
   Real nuk(unsigned i2) {
     double k2=i2*k02;
-    return nuL*pow(k2,pL)+nuH*pow(k2,pH);
+    Real diss=0.0;
+    if(k2 < kL2) diss += nuL*pow(k2,pL);
+    if(k2 >= kH2) diss += nuH*pow(k2,pH);
+    return diss;
   }
 
   virtual void ComputeInvariants(const array2<Complex>&, Real&, Real&, Real&);

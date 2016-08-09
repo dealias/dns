@@ -17,6 +17,7 @@ const char *forcing="WhiteNoiseBanded";
 
 // Vocabulary
 Real nuH=0.0, nuL=0.0;
+Real kH=0.0, kL=0.0;
 int pH=1;
 int pL=0;
 unsigned Nx=15;
@@ -79,26 +80,53 @@ class Zero : public InitialConditionBase {
 public:
   const char *Name() {return "Zero";}
   
-  Var Value(Real) {return 0.0;}
+  Var Value(Real,Real) {return 0.0;}
 };
 
 class Constant : public InitialConditionBase {
 public:
   const char *Name() {return "Constant";}
   
-  Var Value(Real) {return Complex(icalpha,icbeta);}
+  Var Value(Real,Real) {return Complex(icalpha,icbeta);}
 };
 
 class Equipartition : public InitialConditionBase {
 public:
   const char *Name() {return "Equipartition";}
 
-  Var Value(Real k) {
+  Var Value(Real kx, Real ky) {
 // Distribute enstrophy evenly between the real and imaginary components.
-    Real k2=k*k;
+    Real k2=kx*kx+ky*ky;
+    Real k=sqrt(k2);
     Real v=icalpha+icbeta*k2;
     v=v ? k*sqrt(2.0/v) : 0.0;
-    return randomIC ? v*expi(twopi*drand()) : v*sqrt(0.5)*Complex(1,1);
+    return randomIC ? v*expi(twopi*drand()) : v;
+  }
+};
+
+class Benchmark : public InitialConditionBase {
+public:
+  const char *Name() {return "Equipartition";}
+
+  Var Value(Real kx, Real ky) {
+// Distribute enstrophy evenly between the real and imaginary components.
+    Real k2=kx*kx+ky*ky;
+    Real k=sqrt(k2);
+    Real v=icalpha+icbeta*k2;
+    v=v ? sqrt(2.0/v) : 0.0;
+    return randomIC ? k*v*expi(twopi*drand()) : v*sqrt(0.5)*Complex(k,kx+ky);
+  }
+};
+
+class Power : public InitialConditionBase {
+public:
+  const char *Name() {return "Equipartition";}
+
+  Var Value(Real kx, Real ky) {
+// Distribute enstrophy evenly between the real and imaginary components.
+    Real k2=kx*kx+ky*ky;
+    Real v=icbeta*pow(k2,-0.5*icalpha);
+    return randomIC ? v*expi(twopi*drand()) : v;
   }
 };
 
@@ -211,10 +239,14 @@ DNSVocabulary::DNSVocabulary()
   INITIALCONDITION(Zero);
   INITIALCONDITION(Constant);
   INITIALCONDITION(Equipartition);
+  INITIALCONDITION(Benchmark);
+  INITIALCONDITION(Power);
 
   VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
+  VOCAB(kL,0.0,STD_MAX,"Restrict low wavenumber dissipation to [k0,kL]");
+  VOCAB(kH,0.0,STD_MAX,"Restrict high wavenumber dissipation to [kH,infinity)");
   VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
   VOCAB(pL,0,0,"Power of Laplacian for molecular viscosity");
 
@@ -273,6 +305,8 @@ void DNS::InitialConditions()
   Ny=::Ny;
   nuH=::nuH;
   nuL=::nuL;
+  kH2=kH*kH;
+  kL2=kL*kL;
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
@@ -302,26 +336,22 @@ void DNS::InitialConditions()
   S.Dimension(Nx,my);
 
   unsigned int Nx1my=(Nx+1)*my;
-  unsigned int nbuf=3*Nx1my;
+  unsigned int nbuf=Nx1my;
   
   block=ComplexAlign(nbuf);
   f0.Dimension(Nx+1,my,-1,0);
   f1.Dimension(Nx+1,my,block,-1,0);
-  g0.Dimension(Nx+1,my,block+Nx1my,-1,0);
-  g1.Dimension(Nx+1,my,block+2*Nx1my,-1,0);
 
   F[1]=f1;
-  F[2]=g0;
-  F[3]=g1;
 
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,4,1);
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
 
   Allocate(count,nshells);
   setcount();
 
   if(movie) {
-    wr.Dimension(Nx+1,2*my-1,(Real *) g1());
-    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,g0,(Real *) block);
+    wr.Dimension(Nx+1,2*my-1,(Real *) f1());
+    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,f1);
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
@@ -380,10 +410,6 @@ void DNS::Output(int it)
   vector y=Y[OMEGA];
   
   w.Set(y);
-  cout << w[xorigin+5][12] << endl;
-  cout << w[xorigin+6][8] << endl;
-  cout << conj(w[xorigin-3][2]) << endl;
-     
   ComputeInvariants(w,E,Z,P);
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
