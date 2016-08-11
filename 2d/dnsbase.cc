@@ -10,11 +10,6 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
   w.Set(Y[OMEGA]);
   f0.Set(Src[PAD]);
 
-  for(unsigned int j=0; j < my; ++j) {
-    f0(j)=0; // Required?
-    f1(j)=0;
-  }
-  
   f0[xorigin][0]=0.0;
   f1[xorigin][0]=0.0;
   
@@ -35,8 +30,8 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
       Real k2invij=k2invi[j];
       Real kyk2inv=ky*k2invij;
       Real kxk2inv=kx*k2invij;
-      f0[i][j]=Complex(-wij.im*kyk2inv,wij.re*kyk2inv); // u
-      f1[i][j]=Complex(wij.im*kxk2inv,-wij.re*kxk2inv); // v
+      f0i[j]=Complex(-wij.im*kyk2inv,wij.re*kyk2inv); // u
+      f1i[j]=Complex(wij.im*kxk2inv,-wij.re*kxk2inv); // v
     }
   }
 
@@ -48,14 +43,14 @@ void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
     unsigned i=I+xorigin;
     Real kx=k0*I;
     Real kx2=kx*kx;
+    vector f0i=f0[i];
+    vector f1i=f1[i];
     for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
       Real ky=k0*j;
       Real ky2=ky*ky;
-      f0[i][j]=kx*ky*f0[i][j]+(kx2-ky2)*f1[i][j];
+      f0i[j]=kx*ky*f0i[j]+(kx2-ky2)*f1i[j];
     }
   }
-  
-  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,&f0[0][0]);
   
 #if 0
   Real sum=0.0;

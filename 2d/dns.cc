@@ -106,7 +106,7 @@ public:
 
 class Benchmark : public InitialConditionBase {
 public:
-  const char *Name() {return "Equipartition";}
+  const char *Name() {return "Benchmark";}
 
   Var Value(Real kx, Real ky) {
 // Distribute enstrophy evenly between the real and imaginary components.
