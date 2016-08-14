@@ -314,8 +314,8 @@ void DNS::InitialConditions()
   k02=k0*k0;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
-  xorigin=mx-1;
-  origin=xorigin*my;
+  
+  imx=(int) mx;
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
   NY[PAD]=my;
@@ -332,15 +332,15 @@ void DNS::InitialConditions()
   Dimension(E,nshells);
   Dimension(T,nshells);
 
-  w.Dimension(Nx,my);
-  S.Dimension(Nx,my);
+  w.Dimension(Nx,my,-imx+1,0);
+  S.Dimension(Nx,my,-imx+1,0);
 
   unsigned int Nx1my=(Nx+1)*my;
   unsigned int nbuf=Nx1my;
   
   block=ComplexAlign(nbuf);
-  f0.Dimension(Nx+1,my,-1,0);
-  f1.Dimension(Nx+1,my,block,-1,0);
+  f0.Dimension(Nx+1,my,-imx,0);
+  f1.Dimension(Nx+1,my,block,-imx,0);
 
   F[1]=f1;
 
@@ -404,8 +404,8 @@ void DNS::Output(int it)
   Real E,Z,P;
 
   vector f=Y[PAD];
-  for(unsigned int i=0; i < my; ++i)
-    f[i]=0.0;
+  for(unsigned int j=0; j < my; ++j)
+    f[j]=0.0;
   
   vector y=Y[OMEGA];
   
