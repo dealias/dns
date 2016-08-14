@@ -417,6 +417,11 @@ void DNS::Output(int it)
   if(movie)
     OutFrame(it);
 
+  cout << w[4][5] << endl;
+  cout << w[6][8] << endl;
+  cout << conj(w[-3][2]) << endl;
+  cout << endl;
+  
   if(spectrum) {
     ostringstream buf;
     Set(T,Y[EK]);
