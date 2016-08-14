@@ -35,7 +35,7 @@ protected:
 
   // derived variables:
   unsigned mx, my; // size of data arrays
-  int imx;
+  int imx; // (int) mx
 
   Real k0; // grid spacing factor
   Real k02; // k0^2
@@ -55,7 +55,6 @@ protected:
   Complex *block;
   ImplicitHConvolution2 *Convolution;
   crfft2d *Backward;
-//  ExplicitHConvolution2 *Padded;
   
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;
