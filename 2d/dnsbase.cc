@@ -5,60 +5,56 @@ const int DNSBase::ypad=0;
 
 void DNSBase::NonLinearSource(const vector2& Src, const vector2& Y, double t)
 {
-  f0.Dimension(Nx+1,my,-1,0);
+  f0.Dimension(Nx+1,my,-imx,0);
   
   w.Set(Y[OMEGA]);
   f0.Set(Src[PAD]);
 
-  for(unsigned int j=0; j < my; ++j) {
-    f0(j)=0; // Required?
-    f1(j)=0;
-    g0(j)=0;
-    g1(j)=0;
-  }
+  f0[0][0]=0.0;
+  f1[0][0]=0.0;
   
-  f0[xorigin][0]=0.0;
-  f1[xorigin][0]=0.0;
-  g0[xorigin][0]=0.0;
-  g1[xorigin][0]=0.0;
-  
-  int imx=(int) mx;
+  // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
+  // requires only 4 FFTs per stage.
 #pragma omp parallel for num_threads(threads)
-  for(int I=-imx+1; I < imx; ++I) {
-    Real kx=k0*I;
-    unsigned i=I+xorigin;
+  for(int i=-imx+1; i < imx; ++i) {
+    Real kx=k0*i;
     vector wi=w[i];
     vector f0i=f0[i];
     vector f1i=f1[i];
-    vector g0i=g0[i];
-    vector g1i=g1[i];
     rvector k2invi=k2inv[i];
-    for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
+    for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
       Real ky=k0*j;
       Complex wij=wi[j];
-      Complex Ikxw=Complex(-kx*wij.im,kx*wij.re);
-      Complex Ikyw=Complex(-ky*wij.im,ky*wij.re);
-      f0i[j]=Ikxw;
-      f1i[j]=Ikyw;
       Real k2invij=k2invi[j];
-      g0i[j]=-k2invij*Ikyw;
-      g1i[j]=k2invij*Ikxw;
+      Real kyk2inv=ky*k2invij;
+      Real kxk2inv=kx*k2invij;
+      f0i[j]=Complex(-wij.im*kyk2inv,wij.re*kyk2inv); // u
+      f1i[j]=Complex(wij.im*kxk2inv,-wij.re*kxk2inv); // v
     }
   }
 
   F[0]=f0;
-  Convolution->convolve(F,multbinary2);
-  f0[xorigin][0]=0.0;
+  Convolution->convolve(F,multadvection2);
+  f0[0][0]=0.0;
   
-  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,&f0[0][0]);
+  for(int i=-imx+1; i < imx; ++i) {
+    Real kx=k0*i;
+    Real kx2=kx*kx;
+    vector f0i=f0[i];
+    vector f1i=f1[i];
+    for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
+      Real ky=k0*j;
+      Real ky2=ky*ky;
+      f0i[j]=kx*ky*f0i[j]+(kx2-ky2)*f1i[j];
+    }
+  }
   
 #if 0
   Real sum=0.0;
-  for(int I=-imx+1; I < imx; ++I) {
-    Real kx=k0*I;
-    unsigned i=I+xorigin;
+  for(int i=-imx+1; i < imx; ++i) {
+    Real kx=k0*i;
     vector wi=w[i];
-    for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
+    for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
       Real ky=k0*j;
       Complex wij=wi[j];
 //      sum += (f0[i][j]*conj(wij)).re;
@@ -88,13 +84,12 @@ void DNSBase::SetParameters()
 
   Forcing->Init(fcount);
   
-  k2inv.Allocate(Nx,my);
-  int imx=(int) mx;
-  for(int I=-imx+1; I < imx; ++I) {
-    Real kx=k0*I;
+  k2inv.Allocate(Nx,my,-imx+1,0);
+  for(int i=-imx+1; i < imx; ++i) {
+    Real kx=k0*i;
     Real kx2=kx*kx;
-    rvector k2invi=k2inv[I+xorigin];
-    for(unsigned j=I <= 0 ? 1 : 0; j < my; ++j) {
+    rvector k2invi=k2inv[i];
+    for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
       Real ky=k0*j;
       k2invi[j]=1.0/(kx2+ky*ky);
     }
@@ -103,10 +98,10 @@ void DNSBase::SetParameters()
   
 void DNSBase::InitialConditions()
 {
-  w(xorigin,0)=0;
+  w(0,0)=0;
   
   Loop(Initw(this),InitializeValue(this));
-  fftwpp::HermitianSymmetrizeX(mx,my,xorigin,w);
+  fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
 }
 
 void DNSBase::setcount()
@@ -124,11 +119,11 @@ void DNSBase::OutFrame(int)
   for(unsigned int j=0; j < my; ++j)
     f1(j)=0;
     
-  for(unsigned int i=0; i < Nx; ++i)
+  for(int i=-imx+1; i < imx; ++i)
     for(unsigned int j=0; j < my; ++j)
       f1[i][j]=w(i,j);
   
-  Backward->fft0(f1,wr);
+  Backward->fft0(f1);
 
   fw << 1 << 2*my-1 << Nx+1;
   for(int j=2*my-2; j >= 0; j--) {

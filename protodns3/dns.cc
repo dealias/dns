@@ -20,8 +20,6 @@ int mx;
 int my;
 int mz;
 
-Complex I(0.0,1.0);
-
 typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
 typedef Array3<Complex> vector3;
@@ -121,9 +119,9 @@ void Source(const vector4& u, vector4 &S)
         Complex S12=f4[i][j][k];
         Complex S22=f5[i][j][k];
         
-        Complex s0=I*(i*S00+j*S01+k*S02);
-        Complex s1=I*(i*S01+j*S11+k*S12);
-        Complex s2=I*(i*S02+j*S12+k*S22);
+        Complex s0=Complex(0.0,i*S00+j*S01+k*S02);
+        Complex s1=Complex(0.0,i*S01+j*S11+k*S12);
+        Complex s2=Complex(0.0,i*S02+j*S12+k*S22);
         
         // Calculate -i*P
         Complex miP=(i*s0+j*s1+k*s2)/(i*i+j*j+k*k);
