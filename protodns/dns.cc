@@ -9,10 +9,10 @@ using namespace std;
 using namespace Array;
 using namespace fftwpp;
 
-int Nx=15; // Number of modes in x direction
-int Ny=15; // Number of modes in y direction
+int Nx=1023; // Number of modes in x direction
+int Ny=1023; // Number of modes in y direction
 
-double dt=1.0e-8;
+double dt=1.0e-6;
 double nu=0.0; // kinematic viscosity
 
 int mx;
@@ -22,7 +22,7 @@ typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
 
 vector2 w;
-vector2 f0,f1,g0,g1;
+vector2 f0,f1;
 
 ofstream ezvt("ezvt",ios::out);
 
@@ -39,36 +39,29 @@ void init(vector2& w)
     
 void Source(const vector2& w, vector2 &S)
 {
-  f0[0][0]=0.0;
+  f0[0][0]=0.0; // Enforce no mean flow.
   f1[0][0]=0.0;
-  g0[0][0]=0.0;
-  g1[0][0]=0.0;
   
+  // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
+  // requires only 4 FFTs per stage.
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      double k2=i*i+j*j;
-      Complex Ikxw=Complex(-i*w[i][j].im,i*w[i][j].re);
-      Complex Ikyw=Complex(-j*w[i][j].im,j*w[i][j].re);
-      f0[i][j]=Ikxw;
-      f1[i][j]=Ikyw;
-      double k2inv=1.0/k2;
-      g0[i][j]=-Ikyw*k2inv;
-      g1[i][j]=Ikxw*k2inv;
+      double k2inv=1.0/(i*i+j*j);
+      double jk2inv=j*k2inv;
+      double ik2inv=i*k2inv;
+      f0[i][j]=Complex(-w[i][j].im*jk2inv,w[i][j].re*jk2inv); // u
+      f1[i][j]=Complex(w[i][j].im*ik2inv,-w[i][j].re*ik2inv); // v
     }
   }
 
-  Complex *F[]={f0,f1,g0,g1};
-  Convolution->convolve(F,multbinary2);
+  Complex *F[]={f0,f1};
+  Convolution->convolve(F,multadvection2);
   
-  for(int i=0; i < mx ;++i){
-    for(int j=0; j < my ;++j){
-       double k2=i*i+j*j;     
-       f0[i][j] += -nu*k2*w[i][j];
+  for(int i=-mx+1; i < mx; ++i) {
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+      f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f1[i][j]-nu*(i*i+j*j)*w[i][j];
     }
   }
-  f0(0,0)=0.0; // Enforce no mean flow.
-  
-  HermitianSymmetrizeX(mx,my,mx-1,f0);
 }
 
 void Spectrum()
@@ -94,11 +87,12 @@ void Spectrum()
 
 void Output(int step, bool verbose=false)
 {
-  double E=0.0, Z=0.0;
+  double E=0.0, Z=0.0, P=0.0;
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       double w2=abs2(w[i][j]);
       double k2=i*i+j*j;
+      P += k2*w2;
       Z += w2;
       E += w2/k2;
     }
@@ -107,8 +101,9 @@ void Output(int step, bool verbose=false)
     cout << "t=" << step*dt << endl;
     cout << "Energy=" << E << endl;
     cout << "Enstrophy=" << Z << endl;
+    cout << "Palenstrophy=" << P << endl;
   }
-  ezvt << E << "\t" << Z << endl;
+  ezvt << E << "\t" << Z << "\t" << P << endl;
 }
 
 int main(int argc, char* argv[])
@@ -123,24 +118,21 @@ int main(int argc, char* argv[])
   
   f0.Allocate(Nx,my,-mx+1,0,align);
   f1.Allocate(Nx,my,-mx+1,0,align);
-  g0.Allocate(Nx,my,-mx+1,0,align);
-  g1.Allocate(Nx,my,-mx+1,0,align);
 
-  Convolution=new ImplicitHConvolution2(mx,my,true,true,4,1);
+  Convolution=new ImplicitHConvolution2(mx,my,true,true,2,2);
   
   w.Allocate(Nx,my,-mx+1,0,align);
   
   init(w);
   w(0,0)=0.0; // Enforce no mean flow.
-  HermitianSymmetrizeX(mx,my,mx-1,w);
 
   cout.precision(15);
   
   for(int step=0; step < n; ++step) {
     Output(step,step == 0);
      Source(w,f0);
-     for(int i=0; i < mx; ++i) {
-       for(int j=0; j < my; ++j) {
+     for(int i=-mx+1; i < mx; ++i) {
+       for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
 	 w[i][j] += f0[i][j]*dt;
        }
      }
