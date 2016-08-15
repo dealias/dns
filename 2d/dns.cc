@@ -1,4 +1,4 @@
-#include "dnsbase.h"
+#include "dns.h"
 
 const double ProblemVersion=1.0;
 
@@ -280,12 +280,12 @@ DNS::~DNS()
 // wrapper for outcurve routines
 class cwrap {
 public:
-  static Real Spectrum(unsigned int i) {return DNSProblem->getSpectrum(i);}
-  static Real Dissipation(unsigned int i) {return DNSProblem->Dissipation(i);}
-  static Real Pi(unsigned int i) {return DNSProblem->Pi(i);}
-  static Real Eta(unsigned int i) {return DNSProblem->Eta(i);}
-  static Real kb(unsigned int i) {return DNSProblem->kb(i);}
-  static Real kc(unsigned int i) {return DNSProblem->kc(i);}
+  static Real Spectrum(unsigned i) {return DNSProblem->getSpectrum(i);}
+  static Real Dissipation(unsigned i) {return DNSProblem->Dissipation(i);}
+  static Real Pi(unsigned i) {return DNSProblem->Pi(i);}
+  static Real Eta(unsigned i) {return DNSProblem->Eta(i);}
+  static Real kb(unsigned i) {return DNSProblem->kb(i);}
+  static Real kc(unsigned i) {return DNSProblem->kc(i);}
 };
 
 void DNS::Initialize()
@@ -398,7 +398,7 @@ void DNS::Output(int it)
   Real E,Z,P;
 
   vector f=Y[PAD];
-  for(unsigned int j=0; j < my; ++j)
+  for(unsigned j=0; j < my; ++j)
     f[j]=0.0;
   
   vector y=Y[OMEGA];

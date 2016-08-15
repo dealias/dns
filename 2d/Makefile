@@ -11,7 +11,7 @@ INCL += -I$(HOME)/nw -I$(HOME)/fftw++ -I$(HOME)/fftw/include
 vpath %.cc $(HOME)/fftw++/tests # TEMPORARY until compact=false upgrade
 INCL += -I$(HOME)/fftw++/tests # TEMPORARY until compact=false upgrade
 
-EXTRA = dnsbase fftw++ convolution explicit $(CORE) $(UTILS)
+EXTRA = fftw++ convolution explicit $(CORE) $(UTILS)
 FILES = dns $(EXTRA)
 OTHER = 
 
