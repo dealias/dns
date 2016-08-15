@@ -27,14 +27,14 @@ protected:
   // Vocabulary:
   unsigned Nx;
   unsigned Ny;
-  Real nuH, nuL;
-  Real kH2, kL2;
+  Real nuH,nuL;
+  Real kH2,kL2;
   static const int xpad,ypad;
   
   enum Field {PAD,OMEGA,TRANSFER,EK};
 
   // derived variables:
-  unsigned mx, my; // size of data arrays
+  unsigned mx,my; // size of data arrays
   int imx; // (int) mx
 
   Real k0; // grid spacing factor

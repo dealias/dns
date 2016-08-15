@@ -95,7 +95,6 @@ public:
   const char *Name() {return "Equipartition";}
 
   Var Value(Real kx, Real ky) {
-// Distribute enstrophy evenly between the real and imaginary components.
     Real k2=kx*kx+ky*ky;
     Real k=sqrt(k2);
     Real v=icalpha+icbeta*k2;
@@ -109,7 +108,6 @@ public:
   const char *Name() {return "Benchmark";}
 
   Var Value(Real kx, Real ky) {
-// Distribute enstrophy evenly between the real and imaginary components.
     Real k2=kx*kx+ky*ky;
     Real k=sqrt(k2);
     Real v=icalpha+icbeta*k2;
@@ -123,7 +121,6 @@ public:
   const char *Name() {return "Equipartition";}
 
   Var Value(Real kx, Real ky) {
-// Distribute enstrophy evenly between the real and imaginary components.
     Real k2=kx*kx+ky*ky;
     Real v=icbeta*pow(k2,-0.5*icalpha);
     return randomIC ? v*expi(twopi*drand()) : v;
@@ -281,7 +278,7 @@ DNS::~DNS()
 }
 
 // wrapper for outcurve routines
-class cwrap{
+class cwrap {
 public:
   static Real Spectrum(unsigned int i) {return DNSProblem->getSpectrum(i);}
   static Real Dissipation(unsigned int i) {return DNSProblem->Dissipation(i);}
@@ -319,7 +316,7 @@ void DNS::InitialConditions()
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
   NY[PAD]=my;
-  NY[OMEGA]=Nx*my; // Allow for X Hermitian padding
+  NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
   NY[EK]=nshells;
 
@@ -335,10 +332,7 @@ void DNS::InitialConditions()
   w.Dimension(Nx,my,-imx+1,0);
   S.Dimension(Nx,my,-imx+1,0);
 
-  unsigned int Nx1my=(Nx+1)*my;
-  unsigned int nbuf=Nx1my;
-  
-  block=ComplexAlign(nbuf);
+  block=ComplexAlign((Nx+1)*my);
   f0.Dimension(Nx+1,my,-imx,0);
   f1.Dimension(Nx+1,my,block,-imx,0);
 
