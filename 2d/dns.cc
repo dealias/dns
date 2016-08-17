@@ -118,7 +118,7 @@ public:
 
 class Power : public InitialConditionBase {
 public:
-  const char *Name() {return "Equipartition";}
+  const char *Name() {return "Power";}
 
   Var Value(Real kx, Real ky) {
     Real k2=kx*kx+ky*ky;
@@ -336,6 +336,10 @@ void DNS::InitialConditions()
   f0.Dimension(Nx+1,my,-imx,0);
   f1.Dimension(Nx+1,my,block,-imx,0);
 
+  vector f=Y[PAD];
+  for(unsigned j=0; j < my; ++j)
+    f1(j)=f(j)=0.0;
+    
   F[1]=f1;
 
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
@@ -344,7 +348,7 @@ void DNS::InitialConditions()
   setcount();
 
   if(movie) {
-    wr.Dimension(Nx+1,2*my-1,(Real *) f1());
+    wr.Dimension(Nx+1,2*my,(Real *) f1());
     Backward=new fftwpp::crfft2d(Nx+1,2*my-1,f1);
   }
 
@@ -397,10 +401,6 @@ void DNS::Output(int it)
 {
   Real E,Z,P;
 
-  vector f=Y[PAD];
-  for(unsigned j=0; j < my; ++j)
-    f[j]=0.0;
-  
   vector y=Y[OMEGA];
   
   w.Set(y);

@@ -17,6 +17,9 @@ using namespace Array;
 using namespace fftwpp;
 using std::ostringstream;
 
+typedef Array1<Var>::opt Vector;
+typedef Array1<Real>::opt rVector;
+
 extern unsigned spectrum;
 
 extern int pH;
@@ -59,8 +62,7 @@ protected:
   oxstream fwk,fw,fekvk,ftransfer;
   ofstream ft,fevt;
   
-  Array2<Complex> f,g,h;
-  uvector count;
+   uvector count;
   vector E; // Spectrum
   vector T; // Transfer
   Real Energy,Enstrophy,Palenstrophy;
@@ -72,8 +74,7 @@ public:
   }
   
   void InitialConditions() {
-    w(0,0)=0;
-  
+    w[0][0]=0.0; // Enforce no mean flow
     Loop(Initw(this),InitializeValue(this));
     fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
   }
@@ -94,7 +95,7 @@ public:
     for(int i=-imx+1; i < imx; ++i) {
       Real kx=k0*i;
       Real kx2=kx*kx;
-      rvector k2invi=k2inv[i];
+      rVector k2invi=k2inv[i];
       for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
         Real ky=k0*j;
         k2invi[j]=1.0/(kx2+ky*ky);
@@ -121,21 +122,19 @@ public:
   }
   
   void OutFrame(int it) {
-    for(unsigned j=0; j < my; ++j)
-      f1(j)=0;
-    
     for(int i=-imx+1; i < imx; ++i)
       for(unsigned j=0; j < my; ++j)
         f1[i][j]=w(i,j);
-  
-    Backward->fft0(f1);
 
-    fw << 1 << 2*my-1 << Nx+1;
-    for(int j=2*my-2; j >= 0; j--) {
-      for(unsigned i=0; i <= Nx; i++) {
+    for(unsigned j=0; j < my; ++j) // Fill in Nyquist mode assuming continuity.
+      f1[-imx][j]=f1[-imx+1][j];
+    
+    Backward->fft0(f1);
+     
+    fw << 1 << 2*my << Nx+1;
+    for(int j=2*my-1; j >= 0; j--)
+      for(unsigned i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
-      }
-    }
     fw.flush();
   }
 
@@ -147,7 +146,7 @@ public:
     
   public: 
     FETL(DNSBase *b) : b(b), E(b->E), T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -172,7 +171,7 @@ public:
     
   public: 
     FTL(DNSBase *b) : b(b), T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -196,7 +195,7 @@ public:
     
   public: 
     FET(DNSBase *b) : b(b), E(b->E), T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -220,7 +219,7 @@ public:
     
   public: 
     FE(DNSBase *b) : b(b), E(b->E), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -239,7 +238,7 @@ public:
     
   public: 
     FL(DNSBase *b) : b(b), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -257,7 +256,7 @@ public:
     Real k0;
   public: 
     ForceStochastic(DNSBase *b) : T(b->T), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector&, int i,
+    inline void operator()(const Vector& wi, const Vector&, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -271,7 +270,7 @@ public:
     Real k0;
   public: 
     ForceStochasticNO(DNSBase *b) : k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector&, int i,
+    inline void operator()(const Vector& wi, const Vector&, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -285,7 +284,7 @@ public:
     Real k0;
   public: 
     InitializeValue(DNSBase *b) : k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       wi[j]=InitialCondition->Value(k0*i,k0*j);
     }
@@ -296,7 +295,7 @@ public:
     Real k0;
   public: 
     ForcingCount(DNSBase *b) : b(b), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -312,7 +311,7 @@ public:
   public: 
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
                              Palenstrophy(b->Palenstrophy), k0(b->k0) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       Real w2=abs2(wi[j]);
       Enstrophy += w2;
@@ -329,7 +328,7 @@ public:
     DNSBase *b;
   public: 
     InitwS(DNSBase *b) : b(b) {}
-    inline void operator()(vector& wi, vector& Si, int i) {
+    inline void operator()(Vector& wi, Vector& Si, int i) {
       Dimension(wi,b->w[i]);
       Dimension(Si,b->S[i]);
     }
@@ -339,7 +338,7 @@ public:
     DNSBase *b;
   public: 
     Initw(DNSBase *b) : b(b) {}
-    inline void operator()(vector& wi, vector& Si, int i) {
+    inline void operator()(Vector& wi, Vector& Si, int i) {
       Dimension(wi,b->w[i]);
     }
   };
@@ -347,7 +346,7 @@ public:
   class InitNone {
   public: 
     InitNone(DNSBase *b) {}
-    inline void operator()(vector& wi, vector& Si, int i) {
+    inline void operator()(Vector& wi, Vector& Si, int i) {
     }
   };
   
@@ -356,7 +355,7 @@ public:
     const uvector& count;
   public: 
     Count(DNSBase *b) : b(b), count(b->count) {}
-    inline void operator()(const vector& wi, const vector& Si, int i,
+    inline void operator()(const Vector& wi, const Vector& Si, int i,
                            unsigned j) {
       unsigned k2int=i*i+j*j;
       Real kint=sqrt(k2int);
@@ -379,10 +378,10 @@ public:
 #pragma omp parallel for num_threads(threads)
     for(int i=-imx+1; i < imx; ++i) {
       Real kx=k0*i;
-      vector wi=w[i];
-      vector f0i=f0[i];
-      vector f1i=f1[i];
-      rvector k2invi=k2inv[i];
+      Vector wi=w[i];
+      Vector f0i=f0[i];
+      Vector f1i=f1[i];
+      rVector k2invi=k2inv[i];
       for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
         Real ky=k0*j;
         Complex wij=wi[j];
@@ -401,20 +400,21 @@ public:
     for(int i=-imx+1; i < imx; ++i) {
       Real kx=k0*i;
       Real kx2=kx*kx;
-      vector f0i=f0[i];
-      vector f1i=f1[i];
+      Vector f0i=f0[i];
+      Vector f1i=f1[i];
       for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
         Real ky=k0*j;
         Real ky2=ky*ky;
         f0i[j]=kx*ky*f0i[j]+(kx2-ky2)*f1i[j];
       }
     }
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
   
 #if 0
     Real sum=0.0;
     for(int i=-imx+1; i < imx; ++i) {
       Real kx=k0*i;
-      vector wi=w[i];
+      Vector wi=w[i];
       for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
         Real ky=k0*j;
         Complex wij=wi[j];
@@ -473,7 +473,7 @@ public:
   template<class S, class T>
   void Loop(S init, T fcn)
   {
-    vector wi,Si;
+    Vector wi,Si;
     for(int i=-imx+1; i < imx; ++i) {
       init(wi,Si,i);
       for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j)
