@@ -338,7 +338,7 @@ void DNS::InitialConditions()
 
   vector f=Y[PAD];
   for(unsigned j=0; j < my; ++j)
-    f1(j)=f(j)=0.0;
+    f1(j)=f[j]=0.0;
     
   F[1]=f1;
 
