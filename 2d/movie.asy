@@ -2,8 +2,6 @@
 
 import animate;
 
-bool transpose=false;
-
 settings.tex="pdflatex";
 
 animation a=animation(global=false);
@@ -40,16 +38,9 @@ pen[] Palette=BWRainbow2();
 
 for(int i=0; i <= last; ++i) {
   picture pic;
-  real[][][] buf;
-  size(pic,300);
- 
-  if(transpose) {
-    int nx=fin;
-    int ny=fin;
-    int nz=fin;
-    buf=fin(nz,ny,nx);
-  } else
-    buf=fin.read(3);
+  size(pic,20cm);
+
+  real[][][] buf=fin.read(3);
 
   if(eof(fin))
     break;
