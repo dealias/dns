@@ -27,7 +27,9 @@
 \usepackage{asymptote}
 \usepackage{mathdef}
 \usepackage{hyperref}
+\usepackage{makeidx}
 \def\v{\bm}
+\usepackage{hypercitebracket}
 \usepackage{showlabels}
 
 % MACRO DEFINITION
@@ -68,6 +70,10 @@
   bookmarks=true
 }
 \hyphenation{protodns}
+
+\bibliographystyle{rmp2}
+
+\makeindex
 
 % BODY OF THE DOCUMENT
 \begin{document}
@@ -226,9 +232,8 @@ The flowchart of the above numerical algorithm is shown in Figure~\ref{algorithm
 Counting the number of $\text{FFTs}$ required for the numerical solution of the equation \Eq{Eq-15}, it can be observed that there are 5 $\text{FFTs}$ (three inverse $\text{FFTs}$ for $u,v,\omega$, and two forward for the multiplicative terms. Now, it is possible to ask is it generally possible to reduce the number of $\text{FFTs}$ required in the numerical solution as they are the most expensive parts of calculation(regarding CPU time)?\\
 The answer is positive if we rewrite the governing equation more
 intelligently using some sort of symmetries available by using
-incompressibility. This was done both for 2D and 3D cases by C. Basdevant
-(1982), however it seems that it has not been well appreciated during these
-years. In the following, we will represent this kind of formulation of
+incompressibility. This was done both for 2D and 3D cases by
+\citename{Basdevant83}, however it seems that it has not been well appreciated since then. In the following, we will represent this kind of formulation of
 vorticity equation. At the end, the reader will notice that this approach
 will reduce the number of required $\text{FFTs}$ from 5 to 4. Regarding the
 fact that taking fast Fourier transforms (both forward or backward) is the most expensive part of the calculation, it can be easily understood that this new representation of governing equations can significantly speed up the solution. \\
@@ -262,7 +267,18 @@ so the vorticity equation in Fourier space can be written using the above formul
 \begin{equation}\label{Eq-22}
 \frac{\partial\omega_{\vk}}{\partial t} =- \mathcal{F}\left\lbrace\left(\dfrac{\partial^2}{\partial x^2}-\dfrac{\partial^2}{\partial y^2}\right)(uv)+\dfrac{\partial^2}{\partial x \partial y}\left(v^2 - u^2 \right)\right\rbrace-\nu{k}^2\omega_{\vk} + f_{\vk}.
 \end{equation}
-Having $u,v$ in physical space is enough to calculate two new terms, $(uv), (v^2 - u^2)$, and consequently we will need totally 4 $\text{FFTs}$.
+Having $u$ and $v$ in physical space is enough to calculate two new terms, $uv, (v^2 - u^2)$, and consequently we will need totally 4 $\text{FFTs}$.
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliography{refs}
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{Index}
+\printindex
+
 \end{document}
 
 
