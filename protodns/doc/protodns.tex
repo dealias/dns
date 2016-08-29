@@ -76,7 +76,7 @@
 \thispagestyle{empty}
 \begin{figure}[h]
 \centering
-\includegraphics{Logo}
+\includegraphics{uofa}
 \end{figure}
 \newpage
 \thispagestyle{empty}
@@ -226,14 +226,14 @@ This equation can be written as an evolutional equation for $\omega$ by taking a
 %
 %====================== Eq-15
 \begin{equation}\label{Eq-15}
-\frac{\partial\omega_{\k}}{\partial t} =- \mathcal{F}\left\lbrace u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}\right\rbrace -\nu{|\k|}^2\omega_{\k} + f_{\k} :=S_{\k}
+\frac{\partial\omega_{\k}}{\partial t} =- \mathcal{F}\left\lbrace u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}\right\rbrace -\nu{|\k|}^2\omega_{\k} + f_{\k}.
 \end{equation}
 %
 The numerical solution steps are as the following steps:
 \begin{enumerate}
 \item Initialize $\omega_{\k}$ in the Fourier space
 \item Calculate velocity components $u,v$ based on $\omega$.
-\item Take the inverse discrete fast Fourier transform($FFT^{-1}$) of $u,v,\omega$ to go to physical space
+\item Take the inverse discrete fast Fourier transform($\text{FFT}^{-1}$) of $u,v,\omega$ to go to physical space
 \item Calculate the multiplicative terms appeared in the inertial term in physical space
 \item Take the discrete fast Fourier transform($\text{FFT}$) of the multiplicative terms to get back to Fourier space
 \item Update the values of $\omega$ by marching one step in time
@@ -259,11 +259,11 @@ we start with inertial term in vorticity equation:
 \u\cdot\grad\omega=u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}
 \end{equation}
 %
-now using incompressibility, we can rewrite the inertial terms(I.T):
+now using incompressibility, we can rewrite the inertial terms $S$:
 %
 %====================== Eq-17
 \begin{equation}\label{Eq-17}
-\text{I.T.} :=u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}=\dfrac{\partial (u\omega)}{\partial x}+\dfrac{\partial (v\omega)}{\partial y}
+S :=u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}=\dfrac{\partial (u\omega)}{\partial x}+\dfrac{\partial (v\omega)}{\partial y}
 \end{equation}
 %
 on the other hand:
@@ -277,14 +277,14 @@ so we can write:
 %
 %====================== Eq-19
 \begin{equation}\label{Eq-19}
-\text{I.T.} =\dfrac{\partial (u\omega)}{\partial x}+\dfrac{\partial (v\omega)}{\partial y}=\dfrac{\partial}{\partial x} \left(u\dfrac{\partial v}{\partial x}-u\dfrac{\partial u}{\partial y}\right)+\dfrac{\partial}{\partial y} \left(v\dfrac{\partial v}{\partial x}-v\dfrac{\partial u}{\partial y}\right)
+S =\dfrac{\partial (u\omega)}{\partial x}+\dfrac{\partial (v\omega)}{\partial y}=\dfrac{\partial}{\partial x} \left(u\dfrac{\partial v}{\partial x}-u\dfrac{\partial u}{\partial y}\right)+\dfrac{\partial}{\partial y} \left(v\dfrac{\partial v}{\partial x}-v\dfrac{\partial u}{\partial y}\right)
 \end{equation}
 %
 so we can write:
 %
 %====================== Eq-20
 \begin{align}\label{Eq-20}
-\text{I.T.} &= \dfrac{\partial}{\partial x} \left(u\dfrac{\partial uv}{\partial x}-v\dfrac{\partial u}{\partial x}-\dfrac{1}{2}\dfrac{\partial u^2}{\partial y}\right)+\dfrac{\partial}{\partial y} \left(\dfrac{1}{2}\dfrac{\partial v^2}{\partial x}- \dfrac{\partial uv}{\partial y}-u\dfrac{\partial v}{\partial y}\right) \notag \\
+S &= \dfrac{\partial}{\partial x} \left(u\dfrac{\partial uv}{\partial x}-v\dfrac{\partial u}{\partial x}-\dfrac{1}{2}\dfrac{\partial u^2}{\partial y}\right)+\dfrac{\partial}{\partial y} \left(\dfrac{1}{2}\dfrac{\partial v^2}{\partial x}- \dfrac{\partial uv}{\partial y}-u\dfrac{\partial v}{\partial y}\right) \notag \\
 &= \dfrac{\partial^2 (uv)}{\partial x^2}-\dfrac{1}{2}\dfrac{\partial^2 u^2}{\partial x \partial y}-\dfrac{\partial }{\partial x}\left(v\dfrac{\partial u}{\partial x}\right)+\dfrac{1}{2}\dfrac{\partial^2 v^2}{\partial x \partial y}-\dfrac{\partial^2 (uv)}{\partial y^2}+\dfrac{\partial }{\partial y}\left(u\dfrac{\partial v}{\partial y}\right) \\
 &= \left(\dfrac{\partial^2}{\partial x^2}-\dfrac{\partial^2}{\partial y^2}\right)(uv)+\dfrac{1}{2}\dfrac{\partial^2}{\partial x \partial y}\left(v^2 - u^2 \right)+\dfrac{\partial }{\partial y}\left(u\dfrac{\partial v}{\partial y}\right)-\dfrac{\partial }{\partial x}\left(v\dfrac{\partial u}{\partial x}\right) \notag
 \end{align}
@@ -300,7 +300,7 @@ so the vorticity equation in Fourier space can be written using the above formul
 %
 %====================== Eq-22
 \begin{equation}\label{Eq-22}
-\frac{\partial\omega_{\k}}{\partial t} =- \mathcal{F}\left\lbrace\left(\dfrac{\partial^2}{\partial x^2}-\dfrac{\partial^2}{\partial y^2}\right)(uv)+\dfrac{\partial^2}{\partial x \partial y}\left(v^2 - u^2 \right)\right\rbrace-\nu{|\k|}^2\omega_{\k} + f_{\k} :=S_{\k}
+\frac{\partial\omega_{\k}}{\partial t} =- \mathcal{F}\left\lbrace\left(\dfrac{\partial^2}{\partial x^2}-\dfrac{\partial^2}{\partial y^2}\right)(uv)+\dfrac{\partial^2}{\partial x \partial y}\left(v^2 - u^2 \right)\right\rbrace-\nu{|\k|}^2\omega_{\k} + f_{\k}.
 \end{equation}
 %
 now it can be observed that having $u,v$ in the physical space is enough to calculate two new terms, $(uv), (v^2 - u^2)$, and consequently we will need totally 4 $\text{FFTs}$.
