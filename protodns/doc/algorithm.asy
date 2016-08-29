@@ -2,11 +2,11 @@ size(300,0);
 
 import flowchart;
 
-block block1=rectangle("Initialize $w_k$",(0,2.5),minwidth=100,palered);
+block block1=rectangle("Initialize $\omega_k$",(0,2.5),minwidth=100,palered);
 block block2=rectangle("Calculate  $S_k$",(0,2.0),minwidth=100,palered);
-block block3=rectangle("Update $w_k$",(0,1.5),minwidth=100,palered);
+block block3=rectangle("Update $\omega_k$",(0,1.5),minwidth=100,palered);
 block block4=rectangle("Calculate $E_k, Z_k$",(0,1.0),minwidth=100,palered);
-block block5=rectangle("Calculate $u,v $ based on $w_k$",(0.8,2.25),minwidth=150,palered);
+block block5=rectangle("Calculate $u,v $ based on $\omega_k$",(0.8,2.25),minwidth=150,palered);
 block block6=rectangle("Calculate convolutions",(0.8,2),minwidth=150,palered);
 block block7=rectangle("No mean flow",(0.8,1.75),minwidth=150,palered);
 
