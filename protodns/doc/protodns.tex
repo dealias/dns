@@ -1,6 +1,5 @@
 \documentclass[12pt]{article}
 
-% TITLE
 \title{\huge{\textbf{\\Two-Dimensional {\tt Protodns} Code}}}
 \author{Pedram Emami and John C. Bowman\\University of Alberta\\Edmonton,
   Alberta, Canada}
@@ -16,7 +15,6 @@
 \addtolength{\topmargin}{-2.0cm}
 \addtolength{\textheight}{4.0cm}
 
-% PACKAGES
 \usepackage{bm}
 \usepackage{mathrsfs}
 \usepackage{amsmath}
@@ -26,33 +24,22 @@
 \usepackage{asymptote}
 \usepackage{mathdef}
 \usepackage{hyperref}
-\usepackage{makeidx}
 \usepackage{colordvi,color}
 \def\v{\bm}
 \usepackage{hypercitebracket}
 \usepackage{showlabels}
+\usepackage{makeidx}
 
-% MACRO DEFINITION
-
+% MACRO DEFINITIONS
 \let\divsign\div
 \def\div{\grad\dot}
 \def\lap{{\nabla}^2}
 \def\lapinv{{\nabla}^{-2}}
-\def\so{\quad\Rightarrow\quad}
-\def\soo{\qquad\Rightarrow\qquad}
-\def\A{\bm{A}}
-\def\S{\bm{S}}
-\def\F{\bm{F}}
-\def\p{\bm{p}}
-\def\q{\bm{q}}
-\def\r{\bm{r}}
-\def\vk{\bm{k}}
-\def\u{\bm{u}}
-\def\x{\bm{x}}
-\def\vw{\v\w}
-\def\en{\bm{\hat{n}}}
+\def\vw{{\v\w}}
+\def\hyperindex#1{\index{#1}\hypertarget{#1}}
+\def\In#1{\hyperindex{#1}{\emph{#1}}}
 
-% COMMANDS OPTIONS
+% PACKAGE OPTIONS
 \definecolor{heavyred}{cmyk}{0,1,1,0.25}
 \definecolor{heavyblue}{cmyk}{1,1,0,0.25}
 \hypersetup{
@@ -64,7 +51,6 @@
   breaklinks=true,
   pdfauthor=,
   pdfpagetransition=Dissolve,
-  bookmarks=true
 }
 \hyphenation{protodns}
 
@@ -72,7 +58,6 @@
 
 \makeindex
 
-% BODY OF THE DOCUMENT
 \begin{document}
 \maketitle
 
@@ -90,7 +75,7 @@ ALL RIGHTS RESERVED\\
 Reproduction of these notes in any form, in whole or in part, is permitted only for nonprofit educational use.
 \end{center}
 \newpage
-\setcounter{page}{1}
+
 \section{Introduction}
 {\tt Protodns} is a pseudospectral code for
 direct numerical simulation (DNS) of two-dimensional (2D) incompressible homogeneous
@@ -104,33 +89,33 @@ We start our work with the set of governing equations for incompressible
 turbulent flows. The main set of governing equations are the Navier--Stokes equation for momentum and the incompressibilty condition:
 \begin{equation}
 \begin{cases}
-\dfrac{\partial \u}{\partial t} + \u\cdot\grad\u = -\grad p + \nu\lap\u + \F,\\
+\dfrac{\partial \vu}{\partial t} + \vu\cdot\grad\vu = -\grad \p + \nu\lap\vu + \vF,\\
 \\
-\div \u=0.\label{NS}
+\div \vu=0.\label{NS}
 \end{cases}
 \end{equation}
 However, there is another possible set of equations,
-the \emph{vorticity} representation, that is equivalent to \Eq{NS} but is
+the \In{vorticity} representation, that is equivalent to \Eq{NS} but is
 sometimes more convenient:
 \begin{equation}\label{vorticity}
 \begin{cases}
-\dfrac{\partial{\vw}}{\partial t} + (\u\dot\grad)\vw=(\vw\dot\grad)\u + \nu\lap\vw + \curl\F,\\
+\dfrac{\partial{\vw}}{\partial t} + (\vu\dot\grad)\vw=(\vw\dot\grad)\vu + \nu\lap\vw + \curl\vF,\\
 \\
-\div \u=0.
+\div \vu=0.
 \end{cases}
 \end{equation}
 The main advantage of using the \emph{vorticity} equation instead of momentum equation is the fact that vorticity equation does not involve pressure term which in turn involves solving Poisson's equation. So as we stated above, considering our problem with periodic boundary conditions, we do not concern about the pressure term and so the vorticity equation will save us from dealing with Poisson's equation. Taking into account that our problem is 2D, it is still possible to make use of the existence of the
 \emph{stream function}, and so for the case of 2D incompressible turbulent flow in the $xoy$ plane, we would have
 \begin{equation}
 \begin{cases}
-\u=u(x,y)\hat{\vx}+v(x,y)\hat{\vy}, \\
-\hspace{3.5cm}\soo \div\u=0. 		\\
+\vu=u(x,y)\hat{\vx}+v(x,y)\hat{\vy}, \\
+\hspace{3.5cm} 		\\
 u=-\dfrac{\partial\psi}{\partial y},\quad v=\dfrac{\partial\psi}{\partial x}, \label{streamfunction}
-\end{cases}
+\end{cases}\implies \div\vu=0.
 \end{equation}
-now by the definition of vorticity which is $\vw=\grad\cross\u$, then we will have:
+now by the definition of vorticity which is $\vw=\grad\cross\vu$, then we will have
 \begin{equation}\label{Eq-4}
-\vw=\left(\frac{\partial v}{\partial x}-\frac{\partial u}{\partial y}\right)\hat{\vz}.
+\vw=\left(\frac{\partial v}{\partial x}-\frac{\partial u}{\partial y}\right)\hat{\vz},
 \end{equation}
 which in fact shows that in the case of 2D incompressible flow, $\vw$ is a vector whose direction is always prependicular to the velocity vector, so what is important is just the length of the vorticity vector. Thus, we can look at the vorticity as an scalar function. Now using the equation \Eq{streamfunction} in \Eq{Eq-4}, we will have
 \begin{equation}\label{Eq-5}
@@ -138,15 +123,15 @@ which in fact shows that in the case of 2D incompressible flow, $\vw$ is a vecto
 \end{equation}
 while we can write
 \begin{equation}\label{Eq-6}
-\u=\frac{\partial\psi}{\partial y}\hat{\vx}+\frac{\partial\psi}{\partial x}\hat{\vy}=\hat{\vz}\cross\grad\psi.
+\vu=\frac{\partial\psi}{\partial y}\hat{\vx}+\frac{\partial\psi}{\partial x}\hat{\vy}=\hat{\vz}\cross\grad\psi.
 \end{equation}
 so using equations \Eq{Eq-5},\Eq{Eq-6}, we can represent the velocity vector with respect to the stream function as:
 \begin{equation}\label{Eq-7}
-\u=\hat{\vz}\cross\grad(\lapinv\omega).
+\vu=\hat{\vz}\cross\grad(\lapinv\omega).
 \end{equation}
 as we mentioned above, because in 2D flow, the vorticity is always prependicular to the velocity vector, and also because of incompressibility, the first term in the right hand side of the vorticity equation vanishes, so the vorticity equation will be simplified as:
 \begin{equation}\label{Eq-8}
-\frac{\partial \omega}{\partial t} + (\u\dot\grad)\omega= \nu\lap\omega + f.
+\frac{\partial \omega}{\partial t} + (\vu\dot\grad)\omega= \nu\lap\omega + f.
 \end{equation}
 now by expanding equation \Eq{Eq-8}, we will obtain
 \begin{equation}\label{Eq-9}
@@ -154,26 +139,28 @@ now by expanding equation \Eq{Eq-8}, we will obtain
 \end{equation}
 using the inverse discrete Fourier transform, we can write
 \begin{equation*}
-\omega(\x)=\sum_{\p}{e^{i\p\dot\x}\omega_{\p}}, 
+\omega(\x)=\sum_{\vp}{e^{i\vp\dot\x}\omega_{\vp}}, 
 \end{equation*}
 \begin{align*}
-(\hat{\vz}\cross\grad(\lapinv\omega(\x))\dot\grad)\omega(\x) &=(\hat{\vz}\cross\grad(\lapinv\sum_{\p}{e^{i\p\dot\x}\omega_{\p}})\dot\grad)\sum_{\q}{e^{i\q\dot\x}\omega_{\q}} \\
-&=\sum_{\p,\q}{\frac{(\hat{\vz}\cross\p)\dot\q}{p^2}\omega_{\p}\omega_{\q}e^{i(\p+\q)\dot\x}},
+(\hat{\vz}\cross\grad(\lapinv\omega(\x))\dot\grad)\omega(\x) &=(\hat{\vz}\cross\grad(\lapinv\sum_{\vp}{e^{i\vp\dot\x}\omega_{\vp}})\dot\grad)\sum_{\vq}{e^{i\vq\dot\x}\omega_{\vq}} \\
+&=\sum_{\vp,\vq}{\frac{(\hat{\vz}\cross\vp)\dot\vq}{\p^2}\omega_{\vp}\omega_{\vq}e^{i(\vp+\vq)\dot\x}},
 \end{align*}
 \begin{equation*}
-\nu\lap\omega(\x)=\nu\sum_{\p}{p^2 e^{i\p\dot\x}\omega_{\p}},\quad f(\x)=\sum_{\p}{e^{i\p\dot\x}f_{\p}}.
+\nu\lap\omega(\x)=\nu\sum_{\vp}{\p^2 e^{i\vp\dot\x}\omega_{\vp}},\quad f(\x)=\sum_{\vp}{e^{i\vp\dot\x}f_{\vp}}.
 \end{equation*}
-On taking the discrete Fourier transform of \Eq{Eq-9}, we then obtain
+On taking the discrete Fourier transform $\mathcal{F}$ of \Eq{Eq-9}, we then obtain
 \begin{equation}\label{Eq-10}
-\frac{\partial}{\partial t}({\sum_{\p,\vk}{e^{i(\p-\vk)\dot\x}\omega_{\p}}}) + \sum_{\p,\q,\vk}{\frac{(\hat{\vz}\cross\p)\dot\q}{p^2}e^{i(\p+\q-\vk)\dot\x}\omega_{\p}\omega_{\q}}= \nu\sum_{\p,\vk}{p^2e^{i(\p-\vk)\dot\x}\omega_{\p}} + \sum_{\p,\vk}{e^{(i\p-\vk)\dot\x}f_{\p}}.
+\frac{\partial}{\partial
+  t}\({\sum_{\vp,\vk}{e^{i(\vp-\vk)\dot\x}\omega_{\vp}}}\) +
+\sum_{\vp,\vq,\vk}{\frac{(\hat{\vz}\cross\vp)\dot\vq}{\p^2}e^{i(\vp+\vq-\vk)\dot\x}\omega_{\vp}\omega_{\vq}}= \nu\sum_{\vp,\vk}{\p^2e^{i(\vp-\vk)\dot\x}\omega_{\vp}} + \sum_{\vp,\vk}{e^{(i\vp-\vk)\dot\x}f_{\vp}}.
 \end{equation}
 so by simplifying the above equation, the final governing equation in the wave space(Fourier space) would be
 \begin{equation}\label{Eq-11}
-\frac{\partial\omega_{\vk}}{\partial t} + \sum_{\p}{\frac{(\hat{\vz}\cross\p)\dot\vk}{p^2}\omega_{\p}\omega_{\vk-\p}}= -\nu k^2\omega_{\vk} + f_{\vk}.
+\frac{\partial\omega_{\vk}}{\partial t} + \sum_{\vp}{\frac{(\hat{\vz}\cross\vp)\dot\vk}{\p^2}\omega_{\vp}\omega_{\vk-\vp}}= -\nu k^2\omega_{\vk} + f_{\vk}.
 \end{equation}
 Although the equation \Eq{Eq-11} is obtained as the governing equation in Fourier space that must get solved numerically, but that representation is not used in action. So for finding the practical governing equation, we can represent the equation \Eq{Eq-11} in the following form:
 \begin{equation}\label{Eq-12}
-\frac{\partial\omega_{\vk}}{\partial t} + \mathcal{F}\{\u\cdot\grad\omega\}= -\nu k^2\omega_{\vk} + f_{\vk}.
+\frac{\partial\omega_{\vk}}{\partial t} + \mathcal{F}\{\vu\cdot\grad\omega\}= -\nu k^2\omega_{\vk} + f_{\vk}.
 \end{equation}
 so as it was presented above $u$, and $v$ can be obtained based on the $\omega$, and this is what that makes the numerical simulation easier as it is represented in the next section.
 \section{Numerical simulation}
@@ -188,7 +175,7 @@ Now that we have our governing equation \Eq{Eq-12} in Fourier space, then we nee
 \subsection{Solution algorithm}
 Now, we are to represent the numerical scheme that we have to take for solving our governing equation. As we stated in the previous section, the governing equation is:
 \begin{equation}\label{Eq-13}
-\frac{\partial\omega_{\vk}}{\partial t} + \mathcal{F}\{\u\cdot\grad\omega\}= -\nu{k}^2\omega_{\vk} + f_{\vk}.
+\frac{\partial\omega_{\vk}}{\partial t} + \mathcal{F}\{\vu\cdot\grad\omega\}= -\nu{k}^2\omega_{\vk} + f_{\vk}.
 \end{equation}
 %
 This equation can be written as an evolutional equation for $\omega$ by taking all the terms except the time-derivative of $\omega$ to the right-hand side:
@@ -215,13 +202,18 @@ The flowchart of the above numerical algorithm is shown in Figure~\ref{algorithm
 \end{center}
 \end{figure}
 \section{Governing Equations Revisited}
-Counting the number of $\text{FFTs}$ required for the numerical solution of the equation \Eq{Eq-14}, it can be observed that there are 5 $\text{FFTs}$ (three inverse $\text{FFTs}$ for $u,v,\omega$, and two forward for the multiplicative terms. Now, it is possible to ask is it generally possible to reduce the number of $\text{FFTs}$ required in the numerical solution as they are the most expensive parts of calculation(regarding CPU time)?		\\
+Counting the number of $\text{FFTs}$ required for the numerical solution of
+the equation \Eq{Eq-14}, it can be observed that there are 5 $\text{FFTs}$
+(three inverse $\text{FFTs}$ for $u$, $v$, and $\omega$, and two forward
+for the multiplicative terms. Now, it is possible to ask is it generally
+possible to reduce the number of $\text{FFTs}$ required in the numerical
+solution as they are the most expensive parts of calculation (regarding CPU time)?		\\
 The answer is positive if we rewrite the governing equation more intelligently using some sort of symmetries available by using incompressibility. This was done both for 2D and 3D cases by
 \citename{Basdevant83}, however it seems that it has not been well appreciated since then. In the following, we will represent this kind of formulation of vorticity equation. At the end, the reader will notice that this approach will reduce the number of required $\text{FFTs}$ from five to four. Regarding the
 fact that taking fast Fourier transforms (both forward or backward) is the most expensive part of the calculation, it can be easily understood that this new representation of governing equations can significantly speed up the solution. 	\\
 we start with inertial term in vorticity equation:
 \begin{equation}\label{Eq-15}
-\u\cdot\grad\omega=u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}.
+\vu\cdot\grad\omega=u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}.
 \end{equation}
 now using incompressibility, we can rewrite the inertial terms $S$:
 \begin{equation}\label{Eq-16}
@@ -249,21 +241,18 @@ so the vorticity equation in Fourier space can be written using the above formul
 \begin{equation}\label{Eq-21}
 \frac{\partial\omega_{\vk}}{\partial t} =- \mathcal{F}\left\lbrace\left(\dfrac{\partial^2}{\partial x^2}-\dfrac{\partial^2}{\partial y^2}\right)(uv)+\dfrac{\partial^2}{\partial x \partial y}\left(v^2 - u^2 \right)\right\rbrace-\nu k^2\omega_{\vk} + f_{\vk}.
 \end{equation}
-Having $u$ and $v$ in physical space is enough to calculate two new terms, $uv, (v^2 - u^2)$, and consequently we will need totally four $\text{FFTs}$.
+Two transforms are required to compute $u$ and $v$ in physical space,
+from which the quantities $uv$ and $v^2-u^2$ can then be calculated and 
+transformed back to Fourier space with two additional transforms.
+The advective term in 2D can thus be calculated with four $\text{FFTs}$.
 
-\clearpage
-\phantomsection
-\addcontentsline{toc}{chapter}{Bibliography}
+\hypertarget{Bibliography}{}
+\pdfbookmark{Bibliography}{Bibliography}
 \bibliography{refs}
 
-\clearpage
-\phantomsection
-\addcontentsline{toc}{chapter}{Index}
+\hypertarget{Index}{}
+\pdfbookmark{Index}{Index}
 \printindex
 
+
 \end{document}
-
-
-
-
-
