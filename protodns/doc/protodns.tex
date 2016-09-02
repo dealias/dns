@@ -139,20 +139,20 @@ now by expanding equation \Eq{Eq-8}, we will obtain
 \end{equation}
 using the inverse discrete Fourier transform, we can write
 \begin{equation*}
-\omega(\x)=\sum_{\vp}{e^{i\vp\dot\x}\omega_{\vp}}, 
+\omega(\vx)=\sum_{\vp}{e^{i\vp\dot\vx}\omega_{\vp}}, 
 \end{equation*}
 \begin{align*}
-(\hat{\vz}\cross\grad(\lapinv\omega(\x))\dot\grad)\omega(\x) &=(\hat{\vz}\cross\grad(\lapinv\sum_{\vp}{e^{i\vp\dot\x}\omega_{\vp}})\dot\grad)\sum_{\vq}{e^{i\vq\dot\x}\omega_{\vq}} \\
-&=\sum_{\vp,\vq}{\frac{(\hat{\vz}\cross\vp)\dot\vq}{\p^2}\omega_{\vp}\omega_{\vq}e^{i(\vp+\vq)\dot\x}},
+(\hat{\vz}\cross\grad(\lapinv\omega(\vx))\dot\grad)\omega(\vx) &=(\hat{\vz}\cross\grad(\lapinv\sum_{\vp}{e^{i\vp\dot\vx}\omega_{\vp}})\dot\grad)\sum_{\vq}{e^{i\vq\dot\vx}\omega_{\vq}} \\
+&=\sum_{\vp,\vq}{\frac{(\hat{\vz}\cross\vp)\dot\vq}{\p^2}\omega_{\vp}\omega_{\vq}e^{i(\vp+\vq)\dot\vx}},
 \end{align*}
 \begin{equation*}
-\nu\lap\omega(\x)=\nu\sum_{\vp}{\p^2 e^{i\vp\dot\x}\omega_{\vp}},\quad f(\x)=\sum_{\vp}{e^{i\vp\dot\x}f_{\vp}}.
+\nu\lap\omega(\vx)=\nu\sum_{\vp}{\p^2 e^{i\vp\dot\vx}\omega_{\vp}},\quad f(\vx)=\sum_{\vp}{e^{i\vp\dot\vx}f_{\vp}}.
 \end{equation*}
 On taking the discrete Fourier transform $\mathcal{F}$ of \Eq{Eq-9}, we then obtain
 \begin{equation}\label{Eq-10}
 \frac{\partial}{\partial
-  t}\({\sum_{\vp,\vk}{e^{i(\vp-\vk)\dot\x}\omega_{\vp}}}\) +
-\sum_{\vp,\vq,\vk}{\frac{(\hat{\vz}\cross\vp)\dot\vq}{\p^2}e^{i(\vp+\vq-\vk)\dot\x}\omega_{\vp}\omega_{\vq}}= \nu\sum_{\vp,\vk}{\p^2e^{i(\vp-\vk)\dot\x}\omega_{\vp}} + \sum_{\vp,\vk}{e^{(i\vp-\vk)\dot\x}f_{\vp}}.
+  t}\({\sum_{\vp,\vk}{e^{i(\vp-\vk)\dot\vx}\omega_{\vp}}}\) +
+\sum_{\vp,\vq,\vk}{\frac{(\hat{\vz}\cross\vp)\dot\vq}{\p^2}e^{i(\vp+\vq-\vk)\dot\vx}\omega_{\vp}\omega_{\vq}}= \nu\sum_{\vp,\vk}{\p^2e^{i(\vp-\vk)\dot\vx}\omega_{\vp}} + \sum_{\vp,\vk}{e^{(i\vp-\vk)\dot\vx}f_{\vp}}.
 \end{equation}
 so by simplifying the above equation, the final governing equation in the wave space(Fourier space) would be
 \begin{equation}\label{Eq-11}

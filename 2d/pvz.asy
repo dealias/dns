@@ -18,8 +18,8 @@ while(nextrun()) {
   file fin=input(rundir()+"evt").line();
   real[][] a=fin;
   a=transpose(a);
-  f=sqrt(2*eta/kforce^2);
-  t=a[0]; E=a[1]/f^2; Z=a[2]/f^2; P=a[3]/f^2;
+  real norm=nuH^2*k0^2/eta;
+  t=a[0]; E=a[1]*norm; Z=a[2]*norm; P=a[3]*norm;
   for(int i=start; i < E.length; ++i)
     dot((Z[i],P[i]),Pen(k));
   ++k;
