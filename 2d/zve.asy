@@ -1,6 +1,8 @@
 include getparam;
 include averages;
 
+import palette;
+
 scale(Linear,Linear);
 pen p=linewidth(1);
 
@@ -19,13 +21,13 @@ while(nextrun()) {
   a=transpose(a);
   real norm=nuH^2*k0^2/eta;
   t=a[0]; E=a[1]*norm; Z=a[2]*norm;
-  dot((E[start],Z[start]),Pen(k));
-  for(int i=start+1; i < E.length; ++i) {
-    dot((E[i],Z[i]),Pen(k));
-    //          draw((E[i-1],Z[i-1])--(E[i],Z[i]),blue,Arrow);
-  }
+  pen[] p=BWRainbow(E.length-start);
+  for(int i=start; i < E.length; ++i)
+    dot((E[i],Z[i]),p[i-start]);
   draw(graph(new real(real E) {return E;},0,point(plain.E).x),blue);
-  draw(graph(new real(real E) {return sqrt(E);},0,(point(plain.N).y)^2),blue);
+  draw(graph(new real(real E) {return kforce^2*E;},
+             0,min(point(plain.N).y/kforce^2,point(plain.E).x)),brown);
+  draw(graph(new real(real E) {return sqrt(E);},0,(point(plain.N).y)^2),red);
 
   ++k;
 }
