@@ -13,7 +13,6 @@ string Ptext="$P$";
 real[] t,E,Z,P;
 
 int k=0;
-int start=getint("start");
 
 while(nextrun()) {
   file fin=input(rundir()+"evt").line();
@@ -21,6 +20,8 @@ while(nextrun()) {
   a=transpose(a);
   real norm=nuH^2*k0^2/eta;
   t=a[0]; E=a[1]*norm; Z=a[2]*norm;
+  int start=getint("start",E.length#2,store=false);
+  start=min(start,E.length-2);
   pen[] p=BWRainbow(E.length-start);
   for(int i=start; i < E.length; ++i)
     dot((E[i],Z[i]),p[i-start]);
