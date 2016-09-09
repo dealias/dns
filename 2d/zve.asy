@@ -23,8 +23,12 @@ while(nextrun()) {
   int start=getint("start",E.length#2,store=false);
   start=min(start,E.length-2);
   pen[] p=BWRainbow(E.length-start);
-  for(int i=start; i < E.length; ++i)
-    dot((E[i],Z[i]),p[i-start]);
+  frame mark;
+  for(int i=start; i < E.length; ++i) {
+    frame mark;
+    fill(mark,scale(0.8mm)*polygon(3+k),p[i-start]);
+    add(mark,(E[i],Z[i]));
+  }
   draw(graph(new real(real E) {return E;},0,point(plain.E).x),blue);
   draw(graph(new real(real E) {return kforce^2*E;},
              0,min(point(plain.N).y/kforce^2,point(plain.E).x)),brown);
