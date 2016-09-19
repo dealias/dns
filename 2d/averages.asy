@@ -100,3 +100,8 @@ bool nextrun()
   return true;
 }
 
+real kd(real fraction=0.5) {
+  real[] eta=2*0.5*moment2()[NU];
+  real[] ratio=partialsum(eta)/sum(eta);
+  return exp(interpolate(ratio,log(kb),fraction));
+}

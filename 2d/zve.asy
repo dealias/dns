@@ -26,12 +26,16 @@ while(nextrun()) {
   frame mark;
   for(int i=start; i < E.length; ++i) {
     frame mark;
-    fill(mark,scale(0.8mm)*polygon(3+k),p[i-start]);
+    fill(mark,scale(0.4mm)*polygon(3+k),p[i-start]);
     add(mark,(E[i],Z[i]));
   }
+  //  real kfm=kforce-deltaf/2;
+  real kfp=kforce+deltaf/2;
   draw(graph(new real(real E) {return E;},0,point(plain.E).x),blue);
-  draw(graph(new real(real E) {return kforce^2*E;},
-             0,min(point(plain.N).y/kforce^2,point(plain.E).x)),brown);
+  //  draw(graph(new real(real E) {return kfm^2*E;},
+  //             0,min(point(plain.N).y/kfm^2,point(plain.E).x)),brown);
+  draw(graph(new real(real E) {return kfp^2*E;},
+             0,min(point(plain.N).y/kfp^2,point(plain.E).x)),magenta);
   draw(graph(new real(real E) {return sqrt(E);},0,(point(plain.N).y)^2),red);
 
   ++k;

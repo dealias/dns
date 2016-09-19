@@ -255,7 +255,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
   VOCAB_ARRAY(kxforces,"kx force wavenumbers");
   VOCAB_ARRAY(kyforces,"ky force wavenumbers");
-  VOCAB_ARRAY(forces,"force ampligudes");
+  VOCAB_ARRAY(forces,"force amplitudes");
   VOCAB(deltaf,0.0,REAL_MAX,"forcing band width");
   FORCING(None);
   FORCING(ConstantBanded);
