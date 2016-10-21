@@ -96,7 +96,7 @@ bool nextrun()
   prolog();
   k=kc;
   kB=kb;
-
+  
   return true;
 }
 

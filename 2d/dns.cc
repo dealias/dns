@@ -71,6 +71,22 @@ public:
   void Initialize();
 };
 
+class ForcingMask {
+  DNS *b;
+public: 
+  ForcingMask(DNS *b) : b(b) {}
+  inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    if(Forcing->active(i,j)) {
+      Complex w=0.0;
+      double T=0.0;
+      Complex S=0.0;
+      Forcing->Force(w,S,T,i,j);
+      if(S != 0.0)
+        b->fprolog << i << j << abs(S);
+    }
+  }
+};
+  
 DNS *DNSProblem;
 
 InitialConditionBase *InitialCondition;
@@ -375,15 +391,8 @@ void DNS::InitialConditions()
     ftin.close();
   }
 
-  open_output(fprolog,dirsep,"prolog",0);
-  out_curve(fprolog,cwrap::kb,"kb",nshells+1);
-  out_curve(fprolog,cwrap::kc,"kc",nshells);
-  
-  fprolog.close();
-
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
-  open_output(fforce,dirsep,"force",false);
 
   if(!restart) {
     remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
@@ -395,10 +404,17 @@ void DNS::InitialConditions()
 
   errno=0;
 
-  fforce << "# i\tj\tF" << endl;
-  
   DNSBase::InitialConditions();
   DNSBase::SetParameters();
+
+  open_output(fprolog,dirsep,"prolog",false);
+  
+  out_curve(fprolog,cwrap::kb,"kb",nshells+1);
+  out_curve(fprolog,cwrap::kc,"kc",nshells);
+  
+  Loop(InitNone(this),ForcingMask(this));
+  
+  fprolog.close();
 
   if(output)
     open_output(fwk,dirsep,"wk");

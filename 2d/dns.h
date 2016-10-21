@@ -57,7 +57,7 @@ protected:
   
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;
-  ofstream ft,fevt,fforce;
+  ofstream ft,fevt;
   
    uvector count;
   vector E; // Spectrum
@@ -266,13 +266,6 @@ public:
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       if(Forcing->active(i,j)) {
         ++b->fcount;
-
-        Complex w=0.0;
-        double T=0.0;
-        Complex S=0.0;
-        Forcing->Force(w,S,T,i,j);
-        if(S != 0.0)
-          b->fforce << i << " " << j << " " << S << endl;
       }
     }
   };

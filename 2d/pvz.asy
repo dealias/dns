@@ -15,6 +15,18 @@ real f, CA=0.5^0.25;
 
 int k=0;
 
+real fnorm() {
+  real sum=0;
+  for(int k=0; k < F.length; ++k) {
+    int i=Fi[k];
+    int j=Fj[k];
+    real f=F[k];
+    sum += f*f/(i*i+j*j);
+  }
+  return sqrt(sum);
+}
+
+
 while(nextrun()) {
   file fin=input(rundir()+"evt").line();
   real[][] a=fin;
