@@ -35,7 +35,7 @@ unsigned rezero=0;
 unsigned spectrum=1;
 Real icalpha=1.0;
 Real icbeta=1.0;
-Real k0=1.0;
+Real k0=1.0; // Obsolete
 int randomIC=0;
 
 class DNS : public DNSBase, public ProblemBase {
@@ -133,20 +133,25 @@ class None : public ForcingBase {
 
 class ConstantBanded : public ForcingBase {
 protected:  
-  double h;
+  double K1,K2;
 public:
   const char *Name() {return "Constant Banded";}
   
   void Init() {
-    h=0.5*deltaf;
+    double h=0.5*deltaf;
+    K1=kforce-h;
+    K1 *= K1;
+    K2=kforce+h;
+    K2 *= K2;
   }
   
-  bool active(double k) {
-    return abs(k-kforce) < h;
+  bool active(int i, int j) {
+    int k=i*i+j*j;
+    return K1 < k && k < K2;
   }
   
-  void Force(Complex& w, Complex& S, double& T, double k, int, int) {
-    if(active(k)) {
+  void Force(Complex& w, Complex& S, double& T, int i, int j) {
+    if(active(i,j)) {
       T += realproduct(force,w);
       S += force;
     }
@@ -158,14 +163,18 @@ protected:
 public:
   const char *Name() {return "Constant List";}
   
-  int active(int i, int j) {
+  int Active(int i, int j) {
     for(int index=0; index < Nforce; ++index)
       if(i == kxforces[index] && j == kyforces[index]) return index;
     return -1;
   }
   
-  void Force(Complex& w, Complex &S, double& T, double k, int i, int j) {
-    int index=active(i,j);
+  bool active(int i, int j) {
+    return Active(i,j) >= 0;
+  }
+  
+  void Force(Complex& w, Complex& S, double& T, int i, int j) {
+    int index=Active(i,j);
     if(index >= 0) {
       Complex force=forces[index];
       T += realproduct(force,w);
@@ -189,8 +198,8 @@ public:
     return true;
   }
   
-   void ForceStochastic(Complex& w, double& T, double k) {
-    if(active(k)) {
+  void ForceStochastic(Complex& w, double& T, int i, int j) {
+     if(active(i,j)) {
       T += realproduct(f,w)+0.5*abs2(f);
       w += f;
     }
@@ -239,10 +248,10 @@ DNSVocabulary::DNSVocabulary()
   INITIALCONDITION(Benchmark);
   INITIALCONDITION(Power);
 
-  VOCAB(k0,0.0,0.0,"spectral spacing coefficient");
+  VOCAB_OBSOLETE(k0,0.0,0.0,"spectral spacing coefficient");
   VOCAB(nuH,0.0,REAL_MAX,"High-wavenumber viscosity");
   VOCAB(nuL,0.0,REAL_MAX,"Low-wavenumber viscosity");
-  VOCAB(kL,0.0,STD_MAX,"Restrict low wavenumber dissipation to [k0,kL]");
+  VOCAB(kL,0.0,STD_MAX,"Restrict low wavenumber dissipation to [1,kL]");
   VOCAB(kH,0.0,STD_MAX,"Restrict high wavenumber dissipation to [kH,infinity)");
   VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
   VOCAB(pL,0,0,"Power of Laplacian for molecular viscosity");
@@ -307,12 +316,9 @@ void DNS::InitialConditions()
 
   if(Nx % 2 == 0 || Ny % 2 == 0) msg(ERROR,"Nx and Ny must be odd");
 
-  k0=::k0;
-  k02=k0*k0;
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   
-  imx=(int) mx;
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
   NY[PAD]=my;
@@ -329,15 +335,15 @@ void DNS::InitialConditions()
   Dimension(E,nshells);
   Dimension(T,nshells);
 
-  w.Dimension(Nx,my,-imx+1,0);
-  S.Dimension(Nx,my,-imx+1,0);
+  w.Dimension(Nx,my,-mx+1,0);
+  S.Dimension(Nx,my,-mx+1,0);
 
   block=ComplexAlign((Nx+1)*my);
-  f0.Dimension(Nx+1,my,-imx,0);
-  f1.Dimension(Nx+1,my,block,-imx,0);
+  f0.Dimension(Nx+1,my,-mx,0);
+  f1.Dimension(Nx+1,my,block,-mx,0);
 
   vector f=Y[PAD];
-  for(unsigned j=0; j < my; ++j)
+  for(int j=0; j < my; ++j)
     f1(j)=f[j]=0.0;
     
   F[1]=f1;
@@ -372,10 +378,12 @@ void DNS::InitialConditions()
   open_output(fprolog,dirsep,"prolog",0);
   out_curve(fprolog,cwrap::kb,"kb",nshells+1);
   out_curve(fprolog,cwrap::kc,"kc",nshells);
+  
   fprolog.close();
 
   open_output(ft,dirsep,"t");
   open_output(fevt,dirsep,"evt");
+  open_output(fforce,dirsep,"force",false);
 
   if(!restart) {
     remove_dir(Vocabulary->FileName(dirsep,"ekvk"));
@@ -387,6 +395,8 @@ void DNS::InitialConditions()
 
   errno=0;
 
+  fforce << "# i\tj\tF" << endl;
+  
   DNSBase::InitialConditions();
   DNSBase::SetParameters();
 

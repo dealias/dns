@@ -11,11 +11,10 @@ class ForcingBase {
   
   virtual void Init() {}
   virtual void Init(unsigned fcount) {}
-  virtual bool active(double k) {return false;} 
+  virtual bool active(int i, int j) {return false;} 
   virtual bool Stochastic(double dt=0.0) {return false;}
-  virtual void Force(Complex& w, Complex& S, double& T, double k, int i,
-                     int j) {}
-  virtual void ForceStochastic(Complex& w, double& T, double k) {}
+  virtual void Force(Complex& w, Complex& S, double& T, int i, int j) {}
+  virtual void ForceStochastic(Complex& w, double& T, int i, int j) {}
 };
 
 extern ForcingBase *Forcing;

@@ -36,11 +36,8 @@ protected:
   enum Field {PAD,OMEGA,TRANSFER,EK};
 
   // derived variables:
-  unsigned mx,my; // size of data arrays
-  int imx; // (int) mx
+  int mx,my; // size of data arrays
 
-  Real k0; // grid spacing factor
-  Real k02; // k0^2
   Array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field;
 
@@ -60,7 +57,7 @@ protected:
   
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;
-  ofstream ft,fevt;
+  ofstream ft,fevt,fforce;
   
    uvector count;
   vector E; // Spectrum
@@ -91,14 +88,12 @@ public:
 
     Forcing->Init(fcount);
   
-    k2inv.Allocate(Nx,my,-imx+1,0);
-    for(int i=-imx+1; i < imx; ++i) {
-      Real kx=k0*i;
-      Real kx2=kx*kx;
+    k2inv.Allocate(Nx,my,-mx+1,0);
+    for(int i=-mx+1; i < mx; ++i) {
+      int i2=i*i;
       rVector k2invi=k2inv[i];
-      for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
-        Real ky=k0*j;
-        k2invi[j]=1.0/(kx2+ky*ky);
+      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+        k2invi[j]=1.0/(i2+j*j);
       }
     }
   }
@@ -122,12 +117,12 @@ public:
   }
   
   void OutFrame(int it) {
-    for(int i=-imx+1; i < imx; ++i)
-      for(unsigned j=0; j < my; ++j)
+    for(int i=-mx+1; i < mx; ++i)
+      for(int j=0; j < my; ++j)
         f1[i][j]=w(i,j);
 
-    for(unsigned j=0; j < my; ++j) // Fill in Nyquist mode assuming continuity.
-      f1[-imx][j]=f1[-imx+1][j];
+    for(int j=0; j < my; ++j) // Fill in Nyquist mode assuming continuity.
+      f1[-mx][j]=f1[-mx+1][j];
     
     Backward->fft0(f1);
      
@@ -142,24 +137,21 @@ public:
     DNSBase *b;
     const vector& E;
     const vector& T;
-    Real k0;
     
   public: 
-    FETL(DNSBase *b) : b(b), E(b->E), T(b->T), k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      unsigned index=(unsigned)(kint-0.5);
+    FETL(DNSBase *b) : b(b), E(b->E), T(b->T) {}
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+      unsigned k2=i*i+j*j;
+      Real k=sqrt(k2);
+      unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
-      Nu nu=b->nuk(k2int);
+      Nu nu=b->nuk(k2);
       E[index] += Complex(w2/k,nu*w2);
       Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Sij,Tindex.im,k,i,j);
+      Forcing->Force(wij,Sij,Tindex.im,i,j);
       Sij -= nu*wij;
     }
   };
@@ -167,22 +159,19 @@ public:
   class FTL {
     DNSBase *b;
     const vector& T;
-    Real k0;
     
   public: 
-    FTL(DNSBase *b) : b(b), T(b->T), k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      unsigned index=(unsigned)(kint-0.5);
+    FTL(DNSBase *b) : b(b), T(b->T) {}
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+      unsigned k2=i*i+j*j;
+      Real k=sqrt(k2);
+      unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
-      Nu nu=b->nuk(k2int);
+      Nu nu=b->nuk(k2);
       Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Sij,Tindex.im,k,i,j);
+      Forcing->Force(wij,Sij,Tindex.im,i,j);
       Sij -= nu*wij;
     }
   };
@@ -191,134 +180,113 @@ public:
     DNSBase *b;
     const vector& E;
     const vector& T;
-    Real k0;
     
   public: 
-    FET(DNSBase *b) : b(b), E(b->E), T(b->T), k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      unsigned index=(unsigned)(kint-0.5);
+    FET(DNSBase *b) : b(b), E(b->E), T(b->T) {}
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+      unsigned k2=i*i+j*j;
+      Real k=sqrt(k2);
+      unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
-      Nu nu=b->nuk(k2int);
+      Nu nu=b->nuk(k2);
       E[index] += Complex(w2/k,nu*w2);
       Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Sij,Tindex.im,k,i,j);
+      Forcing->Force(wij,Sij,Tindex.im,i,j);
     }
   };
   
   class FE {
     DNSBase *b;
     const vector& E;
-    Real k0;
     
   public: 
-    FE(DNSBase *b) : b(b), E(b->E), k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      unsigned index=(unsigned)(kint-0.5);
+    FE(DNSBase *b) : b(b), E(b->E) {}
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+      unsigned k2=i*i+j*j;
+      Real k=sqrt(k2);
+      unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
-      Nu nu=b->nuk(k2int);
+      Nu nu=b->nuk(k2);
       E[index] += Complex(w2/k,nu*w2);
     }
   };
   
   class FL {
     DNSBase *b;
-    Real k0;
     
   public: 
-    FL(DNSBase *b) : b(b), k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
+    FL(DNSBase *b) : b(b) {}
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+      unsigned k2=i*i+j*j;
       Complex wij=wi[j];
-      Nu nu=b->nuk(k2int);
+      Nu nu=b->nuk(k2);
       double T;
-      Forcing->Force(wij,Si[j],T,k,i,j);
+      Forcing->Force(wij,Si[j],T,i,j);
       Si[j] -= nu*wij;
     }
   };
   
   class ForceStochastic {
     const vector& T;
-    Real k0;
   public: 
-    ForceStochastic(DNSBase *b) : T(b->T), k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector&, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      unsigned index=(unsigned)(kint-0.5);
-      Forcing->ForceStochastic(wi[j],T[index].im,k);
+    ForceStochastic(DNSBase *b) : T(b->T) {}
+    inline void operator()(const Vector& wi, const Vector&, int i, int j) {
+      unsigned k2=i*i+j*j;
+      Real k=sqrt(k2);
+      unsigned index=(unsigned)(k-0.5);
+      Forcing->ForceStochastic(wi[j],T[index].im,i,j);
     }
   };
   
   class ForceStochasticNO {
-    Real k0;
   public: 
-    ForceStochasticNO(DNSBase *b) : k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector&, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
+    ForceStochasticNO(DNSBase *b) {}
+    inline void operator()(const Vector& wi, const Vector&, int i, int j) {
       double T;
-      Forcing->ForceStochastic(wi[j],T,k);
+      Forcing->ForceStochastic(wi[j],T,i,j);
     }
   };
   
   class InitializeValue {
-    Real k0;
   public: 
-    InitializeValue(DNSBase *b) : k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
-      wi[j]=InitialCondition->Value(k0*i,k0*j);
+    InitializeValue(DNSBase *b) {}
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+      wi[j]=InitialCondition->Value(i,j);
     }
   };
   
   class ForcingCount {
     DNSBase *b;
-    Real k0;
   public: 
-    ForcingCount(DNSBase *b) : b(b), k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      if(Forcing->active(k)) ++b->fcount;
+    ForcingCount(DNSBase *b) : b(b) {}
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+      if(Forcing->active(i,j)) {
+        ++b->fcount;
+
+        Complex w=0.0;
+        double T=0.0;
+        Complex S=0.0;
+        Forcing->Force(w,S,T,i,j);
+        if(S != 0.0)
+          b->fforce << i << " " << j << " " << S << endl;
+      }
     }
   };
   
   class Invariants {
     DNSBase *b;
     Real &Energy,&Enstrophy,&Palenstrophy;
-    Real k0;
   public: 
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
-                             Palenstrophy(b->Palenstrophy), k0(b->k0) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
+                             Palenstrophy(b->Palenstrophy) {}
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       Real w2=abs2(wi[j]);
       Enstrophy += w2;
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      Real k=k0*kint;
-      Real k2=k*k;
+      unsigned k2=i*i+j*j;
       Energy += w2/k2;
       Palenstrophy += k2*w2;
     }
@@ -355,17 +323,16 @@ public:
     const uvector& count;
   public: 
     Count(DNSBase *b) : b(b), count(b->count) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i,
-                           unsigned j) {
-      unsigned k2int=i*i+j*j;
-      Real kint=sqrt(k2int);
-      unsigned index=(unsigned)(kint-0.5);
+    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+      unsigned k2=i*i+j*j;
+      Real k=sqrt(k2);
+      unsigned index=(unsigned)(k-0.5);
       ++count[index];
     }
   };
   
   void NonLinearSource(const vector2& Src, const vector2& Y, double t) {
-    f0.Dimension(Nx+1,my,-imx,0);
+    f0.Dimension(Nx+1,my,-mx,0);
   
     w.Set(Y[OMEGA]);
     f0.Set(Src[PAD]);
@@ -376,20 +343,18 @@ public:
     // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
     // requires only 4 FFTs per stage.
 #pragma omp parallel for num_threads(threads)
-    for(int i=-imx+1; i < imx; ++i) {
-      Real kx=k0*i;
+    for(int i=-mx+1; i < mx; ++i) {
       Vector wi=w[i];
       Vector f0i=f0[i];
       Vector f1i=f1[i];
       rVector k2invi=k2inv[i];
-      for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
-        Real ky=k0*j;
+      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
         Complex wij=wi[j];
         Real k2invij=k2invi[j];
-        Real kyk2inv=ky*k2invij;
-        Real kxk2inv=kx*k2invij;
-        f0i[j]=Complex(-wij.im*kyk2inv,wij.re*kyk2inv); // u
-        f1i[j]=Complex(wij.im*kxk2inv,-wij.re*kxk2inv); // v
+        Real jk2inv=j*k2invij;
+        Real ik2inv=i*k2invij;
+        f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
+        f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
       }
     }
 
@@ -397,29 +362,24 @@ public:
     Convolution->convolve(F,multadvection2);
     f0[0][0]=0.0;
   
-    for(int i=-imx+1; i < imx; ++i) {
-      Real kx=k0*i;
-      Real kx2=kx*kx;
+    for(int i=-mx+1; i < mx; ++i) {
+      Real i2=i*i;
       Vector f0i=f0[i];
       Vector f1i=f1[i];
-      for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
-        Real ky=k0*j;
-        Real ky2=ky*ky;
-        f0i[j]=kx*ky*f0i[j]+(kx2-ky2)*f1i[j];
+      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+        f0i[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
       }
     }
     fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
   
 #if 0
     Real sum=0.0;
-    for(int i=-imx+1; i < imx; ++i) {
-      Real kx=k0*i;
+    for(int i=-mx+1; i < mx; ++i) {
       Vector wi=w[i];
-      for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j) {
-        Real ky=k0*j;
+      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
         Complex wij=wi[j];
 //      sum += (f0[i][j]*conj(wij)).re;
-        sum += (f0[i][j]*conj(wij)/(kx*kx+ky*ky)).re;
+        sum += (f0[i][j]*conj(wij)/(i*i+j*j)).re;
       }
     }
     cout << sum << endl;
@@ -474,9 +434,9 @@ public:
   void Loop(S init, T fcn)
   {
     Vector wi,Si;
-    for(int i=-imx+1; i < imx; ++i) {
+    for(int i=-mx+1; i < mx; ++i) {
       init(wi,Si,i);
-      for(unsigned j=i <= 0 ? 1 : 0; j < my; ++j)
+      for(int j=i <= 0 ? 1 : 0; j < my; ++j)
         fcn(wi,Si,i,j);
     }
   }
@@ -509,8 +469,7 @@ public:
     return nuk(i*i+j*j);
   }
 
-  Real nuk(unsigned i2) {
-    double k2=i2*k02;
+  Real nuk(double k2) {
     Real diss=0.0;
     if(k2 < kL2) diss += nuL*pow(k2,pL);
     if(k2 >= kH2) diss += nuH*pow(k2,pH);
@@ -535,8 +494,8 @@ public:
   Real Dissipation(unsigned i) {return T[i].im;}
   Real Pi(unsigned i) {return T[i].re;}
   Real Eta(unsigned i) {return T[i].im;}
-  Real kb(unsigned i) {return k0*(i+0.5);}
-  Real kc(unsigned i) {return k0*(i+1);}
+  Real kb(unsigned i) {return i+0.5;}
+  Real kc(unsigned i) {return i+1;}
 };
 
 extern InitialConditionBase *InitialCondition;
