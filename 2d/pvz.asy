@@ -12,11 +12,11 @@ string Ptext="$P$";
 
 real[] t,E,Z,P;
 real f,CG,CA=0.5^-0.25;
-real g=0,G=0,l=0,L=0;
+real G=0,l=0,L=0;
 real Z1,Z2,Z3;
 int k=0;
 
-void fnorm() {      
+real fnorm() {      
   real sum=0;
   for(int k=0; k < F.length; ++k) {
     int i=Fi[k];
@@ -25,7 +25,7 @@ void fnorm() {
     l += f;                         // l   := |A^(1/2)f|
     sum += f*f/(i*i+j*j);           // sum := |f|^2    
   }
-  g= sqrt(sum);                     // g   := |f|
+  return sqrt(sum);                 // |f|
 }
 
 void Zi(){
@@ -35,11 +35,10 @@ void Zi(){
 }
 
 while(nextrun()) {
-  fnorm();
   file fin=input(rundir()+"evt").line();
   real[][] a=fin;
   a=transpose(a);
-  G=g/nuH^2;                        // Grashof number
+  G=fnorm()/nuH^2;                  // Grashof number
   write(G);
   L=l/G;                            // L  := Lambda1^(1/2) := |A^(1/2)h|, h=f/G
   CG=CA*G;                          // CG := cG in the paper
