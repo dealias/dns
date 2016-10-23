@@ -29,7 +29,7 @@ real fnorm() {
 }
 
 void Zi(){
-  Z1=1.0;
+  Z1=1;
   Z2=Z1^(1/4)*((3/5.0)*Z1 + ((8/5)*L^(1/6))/(CG^(4/3)))^(3/4);
   Z3=25*Z2/64;
 }
@@ -59,14 +59,19 @@ while(nextrun()) {
   }
   
   //draw(graph(Z,P),yellow,mark);
-  draw(graph(new real(real Z) {return 2*L*Z^0.5;},0,1),blue); //point(plain.E).x),blue);
-  draw(graph(new real(real Z) {return Z;},0,point(plain.E).x),magenta);
-  draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,point(plain.E).x),red);
-  draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,point(plain.E).x),pink);
-  draw(graph(new real(real Z) {return ((4*L^2*Z)^(1/3)+1.5*(0.5*CG)^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);;},Z2,Z1),gray);               //phi1(Z2 to Z1)
-  draw(graph(new real(real Z) {return (0.5*CG)^2*(5*(Z*Z2)^(1/2)-4*Z)^2;;},Z3,Z2),brown);                                          //phi2(Z3 t0 Z2)
-  draw(graph(new real(real Z) {return ((2*CG/5)*(6*(Z3^5*Z)^(1/6)-Z))^2;;},0,Z3),black);                                           //phi3(0 to Z3)
-  //draw(graph(new real(real Z) {return kforce^2*Z;},0,min(point(plain.N).y/kforce^2,point(plain.E).x)),brown);
+  real Zmax=point(plain.E).x;
+  real Pmax=point(plain.N).y;
+  draw(graph(new real(real Z) {return 2*L*Z^0.5;},0,min(Zmax,(0.5Pmax/L)^2)),blue); //point(plain.E).x),blue);
+  draw(graph(new real(real Z) {return Z;},0,Zmax),magenta);
+  draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,min(Zmax,2sqrt(Pmax)/CG)),red);
+  draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,min(Zmax,0.5*sqrt(Pmax)/CG)),pink);
+  if(Z1 < Zmax)
+    draw(graph(new real(real Z) {return ((4*L^2*Z)^(1/3)+1.5*(0.5*CG)^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,min(Z1,Zmax)),gray);               //phi1(Z2 to Z1)
+  if(Z2 < Zmax)
+    draw(graph(new real(real Z) {return (0.5*CG)^2*(5*(Z*Z2)^(1/2)-4*Z)^2;;},Z3,min(Z2,Zmax)),brown);                                          //phi2(Z3 t0 Z2)
+  if(Z3 < Zmax)
+    draw(graph(new real(real Z) {return ((2*CG/5)*(6*(Z3^5*Z)^(1/6)-Z))^2;;},0,min(Z3,Zmax)),black);                                           //phi3(0 to Z3)
+  //draw(graph(new real(real Z) {return kforce^2*Z;},0,min(point(plain.N).y/kforce^2,Zmax)),brown);
   ++k;
 }
 
