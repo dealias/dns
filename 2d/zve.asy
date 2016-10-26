@@ -20,7 +20,7 @@ void fnorm() {
     int i=Fi[k];
     int j=Fj[k];
     real f=F[k];
-    l += f;                         // l   := |A^(1/2)f|
+    l += f*f;                         // l   := |A^(1/2)f|
     sum += f*f/(i*i+j*j);           // sum := |f|^2    
   }
   g= sqrt(sum);                     // g   := |f|
@@ -49,7 +49,7 @@ while(nextrun()) {
   draw(graph(new real(real E) {return E;},0,1.0), blue); //point(plain.E).x),blue);
   draw(graph(new real(real E) {return kfp^2*E;},
              0,min(point(plain.N).y/kfp^2,point(plain.E).x)),magenta);
-  draw(graph(new real(real E) {return sqrt(E);},0,(point(plain.N).y)^2),red);
+  //  draw(graph(new real(real E) {return sqrt(E);},0,(point(plain.N).y)^2),red);
 
   ++k;
 }

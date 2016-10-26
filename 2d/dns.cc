@@ -214,6 +214,13 @@ public:
     return true;
   }
   
+  // For forcing diagnostic
+  void Force(Complex& w, Complex& S, double&, int i, int j) {
+    if(active(i,j)) {
+      S=sqrt(2.0*eta*etanorm);
+    }
+  }
+  
   void ForceStochastic(Complex& w, double& T, int i, int j) {
      if(active(i,j)) {
       T += realproduct(f,w)+0.5*abs2(f);
