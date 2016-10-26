@@ -37,19 +37,28 @@ while(nextrun()) {
   t=a[0]; E=a[1]/norm; Z=a[2]/norm;
   int start=getint("start",E.length#2,store=false);
   start=min(start,E.length-2);
-  pen[] p=BWRainbow(E.length-start);
+  pen[] p=Rainbow(E.length-start);
   frame mark;
   for(int i=start; i < E.length; ++i) {
     frame mark;
     fill(mark,scale(0.4mm)*polygon(3+k),p[i-start]);
     add(mark,(E[i],Z[i]));
   }
+
+  real Emin=point(plain.W).x;
+  real Emax=point(plain.E).x;
+
   //  real kfm=kforce-deltaf/2;
   real kfp=kforce+deltaf/2;
   draw(graph(new real(real E) {return E;},0,1.0), blue); //point(plain.E).x),blue);
   draw(graph(new real(real E) {return kfp^2*E;},
              0,min(point(plain.N).y/kfp^2,point(plain.E).x)),magenta);
   //  draw(graph(new real(real E) {return sqrt(E);},0,(point(plain.N).y)^2),red);
+
+  picture bar;
+  bounds range=bounds(Emin,Emax);
+  palette(bar,"$t$",range,(0,0),(0.5cm,6cm),p,PaletteTicks(""));
+  add(bar.fit(),point(plain.E),30plain.E);
 
   ++k;
 }
