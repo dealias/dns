@@ -59,7 +59,7 @@ while(nextrun()) {
 
   int start=getint("start",Z.length#2,store=false);
   start=min(start,Z.length-2);
-  pen[] p=BWRainbow(Z.length-start);
+  pen[] p=Rainbow(Z.length-start);
   
   for(int i=start; i < E.length; ++i) {
     frame mark;
@@ -78,10 +78,11 @@ while(nextrun()) {
   }
 
   //draw(graph(Z,P),yellow,mark);
+  real Zmin=point(plain.W).x;
   real Zmax=point(plain.E).x;
   real Pmax=point(plain.N).y;
   draw(graph(new real(real Z) {return 2*sqrt(Lambda*Z);},0,crop(Zmax,(0.5Pmax)^2/Lambda)),blue); //point(plain.E).x),blue);
-  //  draw(graph(new real(real Z) {return Z;},0,Zmax),magenta);
+    draw(graph(new real(real Z) {return Z;},0,Zmax),magenta);
   //draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,crop(Zmax,2sqrt(Pmax)/CG)),red);
   //draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,crop(Zmax,0.5*sqrt(Pmax)/CG)),pink);
 
@@ -98,6 +99,11 @@ while(nextrun()) {
   draw(graph(new real(real Z) {return ((2*CG/5)*(6*(Z3^5*Z)^(1/6)-Z))^2;},0,z3),black);                                           //phi3(0 to Z3)
   }
   //draw(graph(new real(real Z) {return kforce^2*Z;},0,min(point(plain.N).y/kforce^2,Zmax)),brown);
+
+  picture bar;
+  bounds range=bounds(Zmin,Zmax);
+  palette(bar,"$t$",range,(0,0),(0.5cm,6cm),p,PaletteTicks(""));
+  add(bar.fit(),point(plain.E),30plain.E);
 
   ++k;
 }
