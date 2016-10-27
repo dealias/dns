@@ -57,7 +57,7 @@ while(nextrun()) {
 
   picture bar;
   bounds range=bounds(Emin,Emax);
-  palette(bar,"$t$",range,(0,0),(0.5cm,6cm),p,PaletteTicks(""));
+  palette(bar,"$t$",range,(0,0),(0.5cm,6cm),p,NoTicks);
   add(bar.fit(),point(plain.E),30plain.E);
 
   ++k;
