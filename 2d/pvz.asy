@@ -64,7 +64,7 @@ while(nextrun()) {
   for(int i=start; i < E.length; ++i) {
     frame mark;
     fill(mark,scale(0.8mm)*polygon(3+k),p[i-start]);
-    add(mark,(E[i],Z[i]));
+    add(mark,(Z[i],P[i]));
   }
   
   bool cropx=downcase(getstring("Crop x [Y/n]?","y")) != 'n';
@@ -78,10 +78,9 @@ while(nextrun()) {
   }
 
   //draw(graph(Z,P),yellow,mark);
-  real Zmin=point(plain.W).x;
-  real Zmax=point(plain.E).x;
-  real Pmax=point(plain.N).y;
-  draw(graph(new real(real Z) {return 2*sqrt(Lambda*Z);},0,crop(Zmax,(0.5Pmax)^2/Lambda)),blue); //point(plain.E).x),blue);
+  real Zmax=plain.E.x;
+  real Pmax=plain.N.y;
+  draw(graph(new real(real Z) {return 2*sqrt(Lambda*Z);},0,crop(Zmax,(0.5Pmax)^2/Lambda)),blue);
     draw(graph(new real(real Z) {return Z;},0,Zmax),magenta);
   //draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,crop(Zmax,2sqrt(Pmax)/CG)),red);
   //draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,crop(Zmax,0.5*sqrt(Pmax)/CG)),pink);
@@ -100,9 +99,12 @@ while(nextrun()) {
   }
   //draw(graph(new real(real Z) {return kforce^2*Z;},0,min(point(plain.N).y/kforce^2,Zmax)),brown);
 
+  real Zmin=min(Z);
+  Zmax=max(Z);
+  
   picture bar;
   bounds range=bounds(Zmin,Zmax);
-  palette(bar,"$t$",range,(0,0),(0.5cm,6cm),p,PaletteTicks(""));
+  palette(bar,"$t$",range,(0,0),(0.5cm,6cm),p,NoTicks);
   add(bar.fit(),point(plain.E),30plain.E);
 
   ++k;
