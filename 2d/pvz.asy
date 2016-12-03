@@ -63,25 +63,30 @@ while(nextrun()) {
   
   for(int i=start; i < Z.length; ++i) {
     frame mark;
+    if(P[i] <= 10000) {
     fill(mark,scale(0.8mm)*polygon(3+k),p[i-start]);
     add(mark,(Z[i],P[i]));
+    }
   }
   
   bool cropx=downcase(getstring("Crop x [Y/n]?","y")) != 'n';
   bool cropy=downcase(getstring("Crop y [Y/n]?","y")) != 'n';
 
-  real crop(real x1, real x2) {   
-    real bound=Z1;
-    if(cropx) bound=min(bound,x1);
-    if(cropy) bound=min(bound,x2);
-    return bound;
-  }
-
   real Zmin=point(plain.W).x;
   real Zmax=point(plain.E).x;
   real Pmax=point(plain.N).y;
 
-  draw(graph(new real(real Z) {return 2*sqrt(Lambda*Z);},0,crop(Zmax,(0.5Pmax)^2/Lambda)),blue);
+  real crop(real x1, real x2) {   
+    real bound=Zmax;
+    if(cropx) {
+      bound=min(bound,x1);
+      bound=min(bound,x2);
+    }
+    return bound;
+  }
+
+  //  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,Zmax),blue);
+  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,crop(Zmax,Pmax^2/Lambda)),blue);
     draw(graph(new real(real Z) {return Z;},0,Zmax),magenta);
   //draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,crop(Zmax,2sqrt(Pmax)/CG)),red);
   //draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,crop(Zmax,0.5*sqrt(Pmax)/CG)),pink);
@@ -89,7 +94,7 @@ while(nextrun()) {
   if(!cropy) {
   real z1=cropx ? min(Zmax,Z1) : Z1;
   if(Z2 < z1)
-    draw(graph(new real(real Z) {return ((4*Lambda*Z1)^(1/3)+1.5*(0.5*CG)^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,z1),gray);               //phi1(Z2 to Z1)
+    draw(graph(new real(real Z) {return ((4*Lambda*Z1)^(1/3)+1.5*(0.5*CG)^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,z1),red);               //phi1(Z2 to Z1)
 
   real z2=cropx ? min(Zmax,Z2) : Z2;
   if(Z3 < z2)
