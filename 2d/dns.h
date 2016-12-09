@@ -146,13 +146,13 @@ public:
       unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
-      Nu nu=b->nuk(k2);
-      E[index] += Complex(w2/k,nu*w2);
+      Nu nuk2=b->nuk(k2);
+      E[index] += Complex(w2/k,nuk2*w2);
       Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
       Forcing->Force(wij,Sij,Tindex.im,i,j);
-      Sij -= nu*wij;
+      Sij -= nuk2*wij;
     }
   };
   
@@ -167,12 +167,12 @@ public:
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
-      Nu nu=b->nuk(k2);
+      Nu nuk2=b->nuk(k2);
       Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
       Forcing->Force(wij,Sij,Tindex.im,i,j);
-      Sij -= nu*wij;
+      Sij -= nuk2*wij;
     }
   };
   
@@ -189,8 +189,8 @@ public:
       unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
-      Nu nu=b->nuk(k2);
-      E[index] += Complex(w2/k,nu*w2);
+      Nu nuk2=b->nuk(k2);
+      E[index] += Complex(w2/k,nuk2*w2);
       Complex& Sij=Si[j];
       Complex& Tindex=T[index];
       Tindex.re += realproduct(Sij,wij);
@@ -210,8 +210,8 @@ public:
       unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
-      Nu nu=b->nuk(k2);
-      E[index] += Complex(w2/k,nu*w2);
+      Nu nuk2=b->nuk(k2);
+      E[index] += Complex(w2/k,nuk2*w2);
     }
   };
   
@@ -223,10 +223,10 @@ public:
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Complex wij=wi[j];
-      Nu nu=b->nuk(k2);
+      Nu nuk2=b->nuk(k2);
       double T;
       Forcing->Force(wij,Si[j],T,i,j);
-      Si[j] -= nu*wij;
+      Si[j] -= nuk2*wij;
     }
   };
   
