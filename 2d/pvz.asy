@@ -49,8 +49,7 @@ while(nextrun()) {
   Lambda=(N.F/G)^2;             // Lambda := |A^(1/2)f/G|^2
   real CG=CA*G;                 // CG := cG in the paper
 
-  real norm=nuH^2*G^2;
-  write(norm);
+  real norm=G^2*nuH^3;
   t=a[0]; E=a[1]/norm; Z=a[2]/norm; P=a[3]/norm;
 
   real Z1=1;
@@ -63,10 +62,8 @@ while(nextrun()) {
   
   for(int i=start; i < Z.length; ++i) {
     frame mark;
-    if(P[i] <= 10000) {
     fill(mark,scale(0.8mm)*polygon(3+k),p[i-start]);
     add(mark,(Z[i],P[i]));
-    }
   }
   
   bool cropx=downcase(getstring("Crop x [Y/n]?","y")) != 'n';
