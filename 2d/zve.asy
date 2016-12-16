@@ -42,7 +42,7 @@ while(nextrun()) {
   norm N=fnorm(F);
   G=N.f/nuH^2;                  // Grashof number
   write(G);
-  real norm=G^2*nuH^3;
+  real norm=G^2*nuH^2;
   t=a[0]; E=a[1]/norm; Z=a[2]/norm;
   int start=getint("start",a[0].length#2,store=false);
   int end=getint("end",a[0].length,store=false);
@@ -76,12 +76,16 @@ while(nextrun()) {
 
   //  real kfm=kforce-deltaf/2;
   //  real kfp=kforce+deltaf/2;
-  draw(graph(new real(real E) {return E;},0,crop(Emax)), blue); //point(plain.E).x),blue);
+  draw(graph(new real(real E) {return E;},0,crop(Emax)),grey); //point(plain.E).x),blue);
   //    draw(graph(new real(real E) {return kfp^2*E;},
   //               0,min(point(plain.N).y/kfp^2,point(plain.E).x)),magenta);
   //    draw(graph(new real(real E) {return kfm^2*E;},
   //               0,min(point(plain.N).y/kfm^2,point(plain.E).x)),magenta);
-  draw(graph(new real(real E) {return sqrt(E);},0,crop(Emax,Zmax^2)),red);
+  draw(graph(new real(real E) {return sqrt(E);},0,crop(Emax,Zmax^2)),brown);
+
+  real tau=1-sqrt(2-sqrt(2));
+  real alpha=tau/sqrt(2);
+  draw(graph(new real(real E) {return alpha*sqrt(E);},0,crop(Emax,Zmax^2/alpha)),0.5*magenta);
 
   picture bar;
   bounds range=bounds(Emin,Emax);
@@ -93,5 +97,6 @@ while(nextrun()) {
 
 xaxis("$E$",BottomTop,LeftTicks);
 yaxis("$Z$",LeftRight,RightTicks);
-xequals(nuH/4,heavygreen);
-yequals(kforce^2*nuH/4,brown);
+
+xequals(nuH^2/4,0.5*green);
+yequals(nuH^2*kforce^2*nuH/4,0.5*blue);
