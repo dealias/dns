@@ -14,6 +14,10 @@ class ForcingBase {
   virtual bool active(int i, int j) {return false;} 
   virtual bool Stochastic(double dt=0.0) {return false;}
   virtual void Force(Complex& w, Complex& S, double& T, int i, int j) {}
+  virtual void ForceMask(Complex& w, Complex& S, double& T, int i, int j) 
+  {
+    Force(w,S,T,i,j);
+  }
   virtual void ForceStochastic(Complex& w, double& T, int i, int j) {}
 };
 

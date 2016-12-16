@@ -80,7 +80,7 @@ public:
       Complex w=0.0;
       double T=0.0;
       Complex S=0.0;
-      Forcing->Force(w,S,T,i,j);
+      Forcing->ForceMask(w,S,T,i,j);
       if(S != 0.0)
         b->fprolog << i << j << abs(S);
     }
@@ -215,7 +215,7 @@ public:
   }
   
   // For forcing diagnostic
-  void Force(Complex& w, Complex& S, double&, int i, int j) {
+  void ForceMask(Complex& w, Complex& S, double&, int i, int j) {
     if(active(i,j)) {
       S=sqrt(2.0*eta*etanorm);
     }
