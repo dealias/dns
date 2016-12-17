@@ -85,7 +85,7 @@ while(nextrun()) {
 
   real tau=1-sqrt(2-sqrt(2));
   real alpha=tau/sqrt(2);
-  draw(graph(new real(real E) {return alpha*sqrt(E);},0,crop(Emax,Zmax^2/alpha)),0.5*magenta);
+  draw(graph(new real(real E) {return alpha*sqrt(E);},0,crop(Emax,(Zmax/alpha)^2)),0.5*magenta);
 
   picture bar;
   bounds range=bounds(Emin,Emax);
@@ -99,4 +99,4 @@ xaxis("$E$",BottomTop,LeftTicks);
 yaxis("$Z$",LeftRight,RightTicks);
 
 xequals(nuH^2/4,0.5*green);
-yequals(nuH^2*kforce^2*nuH/4,0.5*blue);
+yequals(nuH^2*kforce^2/4,0.5*blue);
