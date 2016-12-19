@@ -44,10 +44,8 @@ while(nextrun()) {
   real eps=N.f^2;
   real Eta=N.F^2;
   write(eps,Eta/kforce^2,eta/kforce^2);
-  G=sqrt(eps)/nuH^(3/2);
   //  G=sqrt(eps)/nuH^(3/2);
-  write(G);
-  //  real norm=0.5*G^2*nuH^2;
+  G=sqrt(eps)/nuH^(3/2);
   real norm=0.5*G^2*nuH^2;
   t=a[0]; E=a[1]/norm; Z=a[2]/norm;
   int start=getint("start",a[0].length#2,store=false);
