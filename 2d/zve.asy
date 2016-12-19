@@ -41,11 +41,11 @@ while(nextrun()) {
   a=transpose(a);
   norm N=fnorm(F);
   G=N.f/nuH^2;                  // Grashof number
-  real eps=0.5*N.f^2;
-  real Eta=0.5*N.F^2;
+  real eps=N.f^2;
+  real Eta=N.F^2;
   write(eps,Eta/kforce^2,eta/kforce^2);
-  G=sqrt(eta/kforce^2)/nuH^(3/2);
-  //G=sqrt(eps)/nuH^(3/2);
+  G=sqrt(eps)/nuH^(3/2);
+  //  G=sqrt(eps)/nuH^(3/2);
   write(G);
   //  real norm=0.5*G^2*nuH^2;
   real norm=0.5*G^2*nuH^2;
@@ -53,6 +53,7 @@ while(nextrun()) {
   int start=getint("start",a[0].length#2,store=false);
   int end=getint("end",a[0].length,store=false);
   t=t[start:end];
+  write(t[0],t[t.length-1]);
   E=E[start:end];
   Z=Z[start:end];
   write(E.length);
