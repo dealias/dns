@@ -44,21 +44,30 @@ while(nextrun()) {
   real[][] a=fin;
   a=transpose(a);
   norm N=fnorm(F);
-  G=N.f/nuH^2;                  // Grashof number
+  real eps=N.f^2;
+  real Eta=N.F^2;
+  G=sqrt(eps)/nuH^(3/2);                   // Grashof number
   write(G);
-  Lambda=(N.F/G)^2;             // Lambda := |A^(1/2)f/G|^2
+  //  Lambda=(N.F/G)^2;             // Lambda := |A^(1/2)f/G|^2
+  Lambda=Eta/eps;
+  write("Lambda=",Lambda);
   real CG=CA*G;                 // CG := cG in the paper
 
-  real norm=G^2*nuH^3;
-  t=a[0]; E=a[1]/norm; Z=a[2]/norm; P=a[3]/norm;
+  real norm=G^2*nuH^2;
+  t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm; P=2*a[3]/norm;
 
   real Z1=1;
   real Z2=Z1^(1/4)*((3/5)*Z1+(8/5)*Lambda^(1/3)/CG^(4/3))^(3/4);
   real Z3=25*Z2/64;
 
-  int start=getint("start",Z.length#2,store=false);
-  start=min(start,Z.length-2);
-  pen[] p=Rainbow(Z.length-start);
+  int start=getint("start",a[0].length#2,store=false);
+  int end=getint("end",a[0].length,store=false);
+  t=t[start:end];
+  write(t[0],t[t.length-1]);
+  E=E[start:end];
+  Z=Z[start:end];
+  P=P[start:end];
+  pen[] p=Rainbow(Z.length);
   
   for(int i=start; i < Z.length; ++i) {
     frame mark;
@@ -71,27 +80,11 @@ while(nextrun()) {
 
   real Zmin=point(plain.W).x;
   real Zmax=point(plain.E).x;
-  real Pmax=point(plain.N).y;
-
-  real crop(real x1, real x2) {   
-    real bound=Zmax;
-    if(cropx) {
-      bound=min(bound,x1);
-      bound=min(bound,x2);
-    }
-    return bound;
-  }
-
-  //  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,Zmax),blue);
-  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,crop(Zmax,Pmax^2/Lambda)),blue);
-    draw(graph(new real(real Z) {return Z;},0,Zmax),magenta);
-  //draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,crop(Zmax,2sqrt(Pmax)/CG)),red);
-  //draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,crop(Zmax,0.5*sqrt(Pmax)/CG)),pink);
 
   if(!cropy) {
   real z1=cropx ? min(Zmax,Z1) : Z1;
   if(Z2 < z1)
-    draw(graph(new real(real Z) {return ((4*Lambda*Z1)^(1/3)+1.5*(0.5*CG)^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,z1),red);               //phi1(Z2 to Z1)
+    draw(graph(new real(real Z) {return ((4*Lambda*Z1)^(1/3)+1.5*(0.5*CG)^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,z1),darkgreen);               //phi1(Z2 to Z1)
 
   real z2=cropx ? min(Zmax,Z2) : Z2;
   if(Z3 < z2)
@@ -100,6 +93,28 @@ while(nextrun()) {
   real z3=cropx ? min(Zmax,Z3) : Z3;
   draw(graph(new real(real Z) {return ((2*CG/5)*(6*(Z3^5*Z)^(1/6)-Z))^2;},0,z3),black);                                           //phi3(0 to Z3)
   }
+
+  real Pmax=point(plain.N).y;
+
+  real crop(real x1, real x2=x1) {   
+    real bound=1;
+    if(cropx) {
+      bound=min(bound,x1);
+      bound=min(bound,x2);
+    }
+    return bound;
+  }
+
+  //  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,Zmax),blue);
+  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,crop(Pmax^2/Lambda)),blue);
+    draw(graph(new real(real Z) {return Z;},0,Zmax),magenta);
+  draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,crop(2sqrt(Pmax)/CG)),red);
+  draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,
+             min(Zmax,0.5*sqrt(Pmax)/CG)),pink);
+  //             Zmax),pink);
+
+
+
   //draw(graph(new real(real Z) {return kforce^2*Z;},0,min(point(plain.N).y/kforce^2,Zmax)),brown);
 
   picture bar;
@@ -110,5 +125,5 @@ while(nextrun()) {
   ++k;
 }
 
-xaxis("$Z$",BottomTop,LeftTicks);
-yaxis("$P$",LeftRight,RightTicks);
+xaxis("$2Z$",BottomTop,LeftTicks);
+yaxis("$2P$",LeftRight,RightTicks);

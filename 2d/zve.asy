@@ -40,14 +40,12 @@ while(nextrun()) {
   real[][] a=fin;
   a=transpose(a);
   norm N=fnorm(F);
-  G=N.f/nuH^2;                  // Grashof number
   real eps=N.f^2;
   real Eta=N.F^2;
-  write(eps,Eta/kforce^2,eta/kforce^2);
-  //  G=sqrt(eps)/nuH^(3/2);
-  G=sqrt(2.0*eps)/nuH^(3/2);
-  real norm=0.5*G^2*nuH^2;
-  t=a[0]; E=a[1]/norm; Z=a[2]/norm;
+  G=sqrt(1.26*eps)/nuH^(3/2);                   // Grashof number
+  write(G);
+  real norm=G^2*nuH^2;
+  t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm;
   int start=getint("start",a[0].length#2,store=false);
   int end=getint("end",a[0].length,store=false);
   t=t[start:end];
@@ -56,7 +54,7 @@ while(nextrun()) {
   Z=Z[start:end];
   write(E.length);
   pen[] p=Rainbow(E.length);
-  frame mark;
+
   for(int i=0; i < E.length; ++i) {
     frame mark;
     fill(mark,scale(0.4mm)*polygon(3+k),p[i]);
