@@ -120,9 +120,10 @@ public:
     for(int i=-mx+1; i < mx; ++i)
       for(int j=0; j < my; ++j)
         f1[i][j]=w(i,j);
+    
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f1);
 
-    for(int j=0; j < my; ++j) // Fill in Nyquist mode assuming continuity.
-      f1[-mx][j]=f1[-mx+1][j];
+    f1[-mx][0]=0; // Zero remaining Nyquist mode.
     
     Backward->fft0(f1);
      

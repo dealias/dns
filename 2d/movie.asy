@@ -23,7 +23,7 @@ T=transpose(T);
 int count=T[0].length;
 
 int first=getint("first frame");
-int last=getint("last frame");
+int last=getint("last frame",count-1,store=false);
 
 if(first < 0) first += count;
 else if(first >= count) first=count-1;
