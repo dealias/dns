@@ -36,6 +36,11 @@ real M=-infinity;
 
 file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
 for(int i=0; i <= last; ++i) {
+  if(eof(fin))
+    break;
+
+  if(i < first) continue;
+
   real[][][] buf=fin.read(3);
   real[][] v=buf[0];
 
