@@ -46,6 +46,7 @@ for(int i=0; i <= last; ++i) {
 
   m=min(m,min(v));
   M=max(M,max(v));
+  buf.delete();
 }
 
 file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
@@ -67,6 +68,7 @@ for(int i=0; i <= last; ++i) {
 
   picture bar;
   bounds range=image(pic,v,Range(m,M),(0,0),(1,1),Palette,transpose=false,copy=false);
+  buf.delete();
 
   int Divs=2;
 

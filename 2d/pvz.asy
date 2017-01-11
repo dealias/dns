@@ -81,23 +81,25 @@ while(nextrun()) {
   real Zmin=point(plain.W).x;
   real Zmax=point(plain.E).x;
 
-  if(!cropy) {
-  real z1=cropx ? min(Zmax,Z1) : Z1;
-  if(Z2 < z1)
-    draw(graph(new real(real Z) {return ((4*Lambda*Z1)^(1/3)+1.5*(0.5*CG)^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,z1),darkgreen);               //phi1(Z2 to Z1)
+  if(false) {
+    if(!cropy) {
+      real z1=cropx ? min(Zmax,Z1) : Z1;
+      if(Z2 < z1)
+        draw(graph(new real(real Z) {return ((4*Lambda*Z1)^(1/3)+1.5*(0.5*CG)^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,z1),darkgreen);               //phi1(Z2 to Z1)
 
-  real z2=cropx ? min(Zmax,Z2) : Z2;
-  if(Z3 < z2)
-  draw(graph(new real(real Z) {return (0.5*CG)^2*(5*(Z*Z2)^(1/2)-4*Z)^2;},Z3,z2),brown);                                          //phi2(Z3 t0 Z2)
+      real z2=cropx ? min(Zmax,Z2) : Z2;
+      if(Z3 < z2)
+        draw(graph(new real(real Z) {return (0.5*CG)^2*(5*(Z*Z2)^(1/2)-4*Z)^2;},Z3,z2),brown);                                          //phi2(Z3 t0 Z2)
 
-  real z3=cropx ? min(Zmax,Z3) : Z3;
-  draw(graph(new real(real Z) {return ((2*CG/5)*(6*(Z3^5*Z)^(1/6)-Z))^2;},0,z3),black);                                           //phi3(0 to Z3)
+      real z3=cropx ? min(Zmax,Z3) : Z3;
+      draw(graph(new real(real Z) {return ((2*CG/5)*(6*(Z3^5*Z)^(1/6)-Z))^2;},0,z3),black);                                           //phi3(0 to Z3)
+    }
   }
 
   real Pmax=point(plain.N).y;
 
   real crop(real x1, real x2=x1) {   
-    real bound=1;
+    real bound=Zmax;
     if(cropx) {
       bound=min(bound,x1);
       bound=min(bound,x2);
@@ -105,14 +107,14 @@ while(nextrun()) {
     return bound;
   }
 
+
   //  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,Zmax),blue);
   draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,crop(Pmax^2/Lambda)),blue);
-    draw(graph(new real(real Z) {return Z;},0,Zmax),magenta);
-  draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,crop(2sqrt(Pmax)/CG)),red);
-  draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,
-             min(Zmax,0.5*sqrt(Pmax)/CG)),pink);
-  //             Zmax),pink);
+  draw(graph(new real(real Z) {return Z;},0,crop(Zmax)),magenta);
 
+  //  draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,crop(2sqrt(Pmax)/CG)),red);
+  //  draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,
+  //             min(Zmax,0.5*sqrt(Pmax)/CG)),pink);
 
 
   //draw(graph(new real(real Z) {return kforce^2*Z;},0,min(point(plain.N).y/kforce^2,Zmax)),brown);

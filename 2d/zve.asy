@@ -42,7 +42,7 @@ while(nextrun()) {
   norm N=fnorm(F);
   real eps=N.f^2;
   real Eta=N.F^2;
-  G=sqrt(1.26*eps)/nuH^(3/2);                   // Grashof number
+  G=sqrt(1.30*eps)/nuH^(3/2);                   // Grashof number
   write(G);
   real norm=G^2*nuH^2;
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm;
