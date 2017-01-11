@@ -62,7 +62,7 @@ protected:
    uvector count;
   vector E; // Spectrum
   vector T; // Transfer
-  Real Energy,Enstrophy,Palenstrophy;
+  Real Energy,Enstrophy,Palinstrophy;
   Array2<Real> k2inv;
 
 public:
@@ -113,7 +113,7 @@ public:
     cout << endl;
     cout << "Energy = " << E << newl;
     cout << "Enstrophy = " << Z << newl;
-    cout << "Palenstrophy = " << P << newl;
+    cout << "Palinstrophy = " << P << newl;
   }
   
   void OutFrame(int it) {
@@ -273,16 +273,16 @@ public:
   
   class Invariants {
     DNSBase *b;
-    Real &Energy,&Enstrophy,&Palenstrophy;
+    Real &Energy,&Enstrophy,&Palinstrophy;
   public: 
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
-                             Palenstrophy(b->Palenstrophy) {}
+                             Palinstrophy(b->Palinstrophy) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       Real w2=abs2(wi[j]);
       Enstrophy += w2;
       unsigned k2=i*i+j*j;
       Energy += w2/k2;
-      Palenstrophy += k2*w2;
+      Palinstrophy += k2*w2;
     }
   };
   
@@ -472,13 +472,13 @@ public:
 
   virtual void ComputeInvariants(const array2<Complex> &w, Real& E, Real& Z,
                                  Real& P) {
-    Energy=Enstrophy=Palenstrophy=0.0;
+    Energy=Enstrophy=Palinstrophy=0.0;
   
     Loop(Initw(this),Invariants(this));
   
     E=Energy;
     Z=Enstrophy;
-    P=Palenstrophy;
+    P=Palinstrophy;
   }
   
   virtual Real getSpectrum(unsigned i) {
