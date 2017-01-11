@@ -31,9 +31,20 @@ else if(first >= count) first=count-1;
 if(last < 0) last += count;
 else if(last >= count) last=count-1;
 
+real m=infinity;
+real M=-infinity;
+
+file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
+for(int i=0; i <= last; ++i) {
+  real[][][] buf=fin.read(3);
+  real[][] v=buf[0];
+
+  m=min(m,min(v));
+  M=max(M,max(v));
+}
+
 file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
 
-bounds range;
 pen[] Palette=BWRainbow2();
 
 for(int i=0; i <= last; ++i) {
@@ -50,17 +61,15 @@ for(int i=0; i <= last; ++i) {
   real[][] v=buf[0];
 
   picture bar;
-  bounds thisrange=image(pic,v,(0,0),(1,1),Palette,transpose=false,copy=false);
-
-  if(i == first) range=thisrange;
+  bounds range=image(pic,v,Range(m,M),(0,0),(1,1),Palette,transpose=false,copy=false);
 
   int Divs=2;
 
   // real[] Cvals;
   // Cvals=sequence(Divs+1)/Divs*(range.max-range.min)+range.min;
-  // draw(pic,contour(v,(0,0),(1,1),Cvals,operator --));
+   // draw(pic,contour(v,(0,0),(1,1),Cvals,operator --));
 
-  palette(bar,math(replace(field,t)),range,(0,0),(0.5cm,8cm),Palette,
+  palette(bar,math(replace(field,t)),range,(0,0),(0.5cm,15cm),Palette,
   	  PaletteTicks("$%+#.1f$"));
   add(pic,bar.fit(),point(pic,E),30E);
   a.add(pic);

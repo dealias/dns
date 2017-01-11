@@ -1,4 +1,4 @@
-size(12cm,12cm);
+size(20cm);
 
 import graph;
 import palette;
@@ -56,7 +56,7 @@ int Divs=10;
 //Cvals=sequence(Divs+1)/Divs*(range.max-range.min)+range.min;
 //draw(contour(v,(0,0),(1,1),Cvals,operator --));
 
-palette(bar,math(replace(field,t)),range,(0,0),(0.5cm,8cm),Palette,
+palette(bar,math(replace(field,t)),range,(0,0),(0.5cm,15cm),Palette,
 	PaletteTicks);
 
 add(bar.fit(),point(E),30E);
