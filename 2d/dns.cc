@@ -490,5 +490,5 @@ void DNS::FinalOutput()
   cout << endl;
   cout << "Energy = " << E << newl;
   cout << "Enstrophy = " << Z << newl;
-  cout << "Palenstrophy = " << P << newl;
+  cout << "Palinstrophy = " << P << newl;
 }
