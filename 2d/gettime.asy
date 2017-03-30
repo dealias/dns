@@ -11,8 +11,11 @@ void gettime(bool prompt=true)
   if(prompt) {
     Tmax=t[t.length-1];
     T=min(0.5*Tmax,t[t.length-2]);
+    pair z;
+    do {
     string s=getstring("T",(string) T,message+"%s] ",false);
-    pair z=(s == "-") ? T : (pair) s;
+    z=(s == "-") ? T : (pair) s;
+    } while(!initialized(z));
     T=z.x;
     if(z.y != 0) Tmax=z.y;
     T=min(T,t[t.length-2]);
