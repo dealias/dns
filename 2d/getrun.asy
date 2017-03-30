@@ -19,7 +19,6 @@ string rundir(string dir="")
 
 getrun();
 
-size(230,200,IgnoreAspect);
 pen p=linewidth(1);
 marker mark=marker(scale(0.8mm)*cross(4),p,above=false);
 defaultpen(fontsize(10));

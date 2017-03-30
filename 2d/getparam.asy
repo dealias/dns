@@ -1,3 +1,5 @@
+size(188.80779pt,IgnoreAspect);
+
 import graph;
 include getrun;
 include param;
