@@ -1,17 +1,16 @@
-size(20cm);
+include getparam;
 
 import graph;
 import palette;
 import contour;
 
-string[][] t={{"vort","\omega"},{"vx","v_x"},{"vy","v_y"}};
+string[][] t={{"w","\omega"},{"vx","v_x"},{"vy","v_y"}};
 
-string dir=getstring("directory","r");
-string field=getstring("field","vort");
+string field=getstring("field","w");
 
 // figure out how many frames there are
 real[][] T;
-file fin=input(dir+"/t").line();
+file fin=input(run+"/t").line();
 real[][] T=fin;
 T=transpose(T);
 int last=T[0].length-1;
@@ -20,7 +19,7 @@ int frame=getint("frame (<="+(string) last+")");
 if(frame < 0) frame += last+1;
 else if(frame > last) frame=last;
 
-string name=dir+"/"+field;
+string name=run+"/"+field;
 file fin=input(name,mode="xdr").singlereal();
 
 real[][][] vinverted;
@@ -56,8 +55,9 @@ int Divs=10;
 //Cvals=sequence(Divs+1)/Divs*(range.max-range.min)+range.min;
 //draw(contour(v,(0,0),(1,1),Cvals,operator --));
 
-palette(bar,math(replace(field,t)),range,(0,0),(0.5cm,15cm),Palette,
-	PaletteTicks);
+palette(bar,Label(math(replace(field,t))),range,(0,0),
+        (0.6*currentpicture.xsize,0.25cm),Bottom,
+        Palette,PaletteTicks);
 
-add(bar.fit(),point(E),30E);
+attach(bar.fit(),point(S),10S);
 //shipout(bbox(0.25cm));
