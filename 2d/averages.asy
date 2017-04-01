@@ -5,15 +5,15 @@ include prolog;
 
 // Spectral components
 int EK=0;
-int ZETA=1; // Rate of palenstrophy injection
 
 // Transfer components
-int PIZ=0;
-int PIE=1;
-int ETA=2;
-int EPS=3;
-int DZ=4;
-int DE=5;
+int PIZ=0;  // Rate of nonlinear enstrophy transfer
+int PIE=1;  // Rate of nonlinear energy transfer
+int ETA=2;  // Rate of enstrophy injection
+int EPS=3;  // Rate of energy injection
+int DZ=4;   // Rate of enstrophy dissipation
+int DE=5;   // Rate of energy dissipation
+int ZETA=6; // Rate of palenstrophy injection
 
 real[][] getintegrals(string dir, real T, real Tmax, int n=1)
 {
@@ -65,12 +65,12 @@ real[] k,kB;
 
 real[][] moment2()
 {
-  return getintegrals("ekvk",T,Tmax,2);
+  return getintegrals("ekvk",T,Tmax,1);
 }
 
 real[][] transfer() 
 {
-  return getintegrals("transfer",T,Tmax,6);
+  return getintegrals("transfer",T,Tmax,7);
 }
 
 real[][] transferN() 

@@ -465,7 +465,6 @@ void DNS::Output(int it)
     open_output(fekvk,dirsep,s.c_str(),0);
     out_curve(fekvk,t,"t");
     out_curve(fekvk,cwrap::Spectrum,"Ek",nshells);
-    out_curve(fekvk,cwrap::Zeta,"Zeta",nshells);
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
 
@@ -483,6 +482,7 @@ void DNS::Output(int it)
     out_curve(ftransfer,cwrap::Eps,"eps",nshells);
     out_curve(ftransfer,cwrap::DZ,"DZ",nshells);
     out_curve(ftransfer,cwrap::DE,"DE",nshells);
+    out_curve(ftransfer,cwrap::Zeta,"Zeta",nshells);
     ftransfer.close();
     if(!ftransfer) msg(ERROR,"Cannot write to file transfer");
   }
