@@ -6,13 +6,11 @@ import palette;
 scale(Linear,Linear);
 pen p=linewidth(1);
 
-string Etext="$E$";
-string Ztext="$Z$";
-string Ptext="$P$";
-
-real[] t,E,Z,P;
+real[] t,E,Z;
 real g=0,G=0,l=0,L=0;
 int k=0;
+real eta,eps;
+real Eta,Eps;
 
 struct norm {
   real f,F;
@@ -35,29 +33,36 @@ norm fnorm(real[] F) {
   return N;
 }
 
+
 while(nextrun()) {
   file fin=input(rundir()+"evt").line();
   real[][] a=fin;
   a=transpose(a);
   norm N=fnorm(F);
-  real eps=N.f^2;
-  real Eta=N.F^2;
-  G=sqrt(1.30*eps)/nuH^(3/2);                   // Grashof number
-  write(G);
+  Eps=N.f^2;
+  Eta=N.F^2;
+  gettime();
+  real[][] Tk=transfer();
+  eta=2*sum(Tk[ETA]);
+  eps=2*sum(Tk[EPS]);
+  G=sqrt(eps)/nuH^(3/2);                   // Grashof number
+  write("G=",G);
   real norm=G^2*nuH^2;
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm;
   int start=getint("start",a[0].length#2,store=false);
   int end=getint("end",a[0].length,store=false);
   t=t[start:end];
-  write(t[0],t[t.length-1]);
+  real t0=t[0];
+  real tmax=t[t.length-1];
+  write("t:",t0,tmax);
   E=E[start:end];
   Z=Z[start:end];
-  write(E.length);
+  real incr=(E.length-1)/tmax;
   pen[] p=Rainbow(E.length);
 
   for(int i=0; i < E.length; ++i) {
     frame mark;
-    fill(mark,scale(0.4mm)*polygon(3+k),p[i]);
+    fill(mark,scale(0.4mm)*polygon(3+k),p[round(t[i]*incr)]);
     add(mark,(E[i],Z[i]));
   }
 
@@ -93,14 +98,19 @@ while(nextrun()) {
   //xequals(nuH^2/4,0.5*green);
   //yequals(nuH^2*kforce^2/4,0.5*blue);
 
+  /*
   picture bar;
   bounds range=bounds(Emin,Emax);
-  palette(bar,"$t$",range,(0,0),(0.5cm,6cm),p,NoTicks);
-  add(bar.fit(),point(plain.E),30plain.E);
+  palette(bar,"$t$",range,(0,0),
+          (0.6*currentpicture.xsize,0.25cm),Bottom,
+          p,NoTicks);
+
+  add(bar.fit(),point(plain.S),30plain.S);
+  */
 
   ++k;
 }
 
-xaxis("$2E$",BottomTop,LeftTicks);
-yaxis("$2Z$",LeftRight,RightTicks);
+xaxis("$2E/(\nu G)^2$",BottomTop,LeftTicks);
+yaxis("$2Z/(\nu G)^2$",LeftRight,RightTicks);
 

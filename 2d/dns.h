@@ -33,7 +33,8 @@ protected:
   Real nuH,nuL;
   Real kH2,kL2;
   
-  enum Field {PAD,OMEGA,TRANSFER,EK};
+  // TRANSFER, INJECTION, and DISSIPATION must be contiguous!
+  enum Field {PAD,OMEGA,TRANSFER,INJECTION,DISSIPATION,EK};
 
   // derived variables:
   int mx,my; // size of data arrays
@@ -59,9 +60,13 @@ protected:
   oxstream fwk,fw,fekvk,ftransfer;
   ofstream ft,fevt;
   
-   uvector count;
-  vector E; // Spectrum
-  vector T; // Transfer
+  uvector count;
+  
+  vector E; // Spectrum and palenstrophy injection
+  vector T; // Enstrophy and energy transfer (Pi_Z and PI_E)
+  vector I; // Enstrophy and energy injection (eps and eta)
+  vector D; // Enstrophy and energy dissipation
+  
   Real Energy,Enstrophy,Palinstrophy;
   Array2<Real> k2inv;
 
@@ -136,66 +141,78 @@ public:
 
   class FETL {
     DNSBase *b;
-    const vector& E;
-    const vector& T;
+    const vector& E,T,I,D;
     
   public: 
-    FETL(DNSBase *b) : b(b), E(b->E), T(b->T) {}
+    FETL(DNSBase *b) : b(b), E(b->E), T(b->T), I(b->I), D(b->D) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
-      Nu nuk2=b->nuk(k2);
-      E[index] += Complex(w2/k,nuk2*w2);
       Complex& Sij=Si[j];
-      Complex& Tindex=T[index];
-      Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Sij,Tindex.im,i,j);
+      Real transfer=realproduct(Sij,wij);
+      Real eta=Forcing->Force(wij,Sij,i,j);
+      Real kinv=1.0/k;
+      Real kinv2=kinv*kinv;
+      Nu nuk2=b->nuk(k2);
+      Real nuk2Z=b->nuk(k2)*w2;
+      E[index] += Complex(kinv*w2,k2*transfer);
+      T[index] += Complex(transfer,kinv2*transfer);
+      I[index] += Complex(eta,kinv2*eta);
+      D[index] += Complex(nuk2Z,kinv2*nuk2Z);
       Sij -= nuk2*wij;
     }
   };
   
   class FTL {
     DNSBase *b;
-    const vector& T;
+    const vector& T,I,D;
     
   public: 
-    FTL(DNSBase *b) : b(b), T(b->T) {}
+    FTL(DNSBase *b) : b(b), T(b->T), I(b->I), D(b->D) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
-      Nu nuk2=b->nuk(k2);
       Complex& Sij=Si[j];
-      Complex& Tindex=T[index];
-      Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Sij,Tindex.im,i,j);
+      Real transfer=realproduct(Sij,wij);
+      Real eta=Forcing->Force(wij,Sij,i,j);
+      Real kinv2=1.0/k2;
+      Nu nuk2=b->nuk(k2);
+      Real nuk2Z=b->nuk(k2)*abs2(wij);
+      T[index] += Complex(transfer,kinv2*transfer);
+      I[index] += Complex(eta,kinv2*eta);
+      D[index] += Complex(nuk2Z,kinv2*nuk2Z);
       Sij -= nuk2*wij;
     }
   };
   
   class FET {
     DNSBase *b;
-    const vector& E;
-    const vector& T;
+    const vector& E,T,I,D;
     
   public: 
-    FET(DNSBase *b) : b(b), E(b->E), T(b->T) {}
+    FET(DNSBase *b) : b(b), E(b->E), T(b->T), I(b->I), D(b->D) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
-      Nu nuk2=b->nuk(k2);
-      E[index] += Complex(w2/k,nuk2*w2);
       Complex& Sij=Si[j];
-      Complex& Tindex=T[index];
-      Tindex.re += realproduct(Sij,wij);
-      Forcing->Force(wij,Sij,Tindex.im,i,j);
+      Real transfer=realproduct(Sij,wij);
+      Real eta=Forcing->Force(wij,Sij,i,j);
+      Real kinv=1.0/k;
+      Real kinv2=kinv*kinv;
+      Nu nuk2=b->nuk(k2);
+      Real nuk2Z=nuk2*w2;
+      E[index] += Complex(kinv*w2,k2*transfer);
+      T[index] += Complex(transfer,kinv2*transfer);
+      I[index] += Complex(eta,kinv2*eta);
+      D[index] += Complex(nuk2Z,kinv2*nuk2Z);
     }
   };
   
@@ -209,10 +226,7 @@ public:
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
-      Complex wij=wi[j];
-      Real w2=abs2(wij);
-      Nu nuk2=b->nuk(k2);
-      E[index] += Complex(w2/k,nuk2*w2);
+      E[index] += abs2(wi[j])/k;
     }
   };
   
@@ -224,22 +238,22 @@ public:
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Complex wij=wi[j];
-      Nu nuk2=b->nuk(k2);
-      double T;
-      Forcing->Force(wij,Si[j],T,i,j);
-      Si[j] -= nuk2*wij;
+      Forcing->Force(wij,Si[j],i,j);
+      Si[j] -= b->nuk(k2)*wij;
     }
   };
   
   class ForceStochastic {
-    const vector& T;
+    const vector& I;
   public: 
-    ForceStochastic(DNSBase *b) : T(b->T) {}
+    ForceStochastic(DNSBase *b) : I(b->I) {}
     inline void operator()(const Vector& wi, const Vector&, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
-      Forcing->ForceStochastic(wi[j],T[index].im,i,j);
+      double eta=Forcing->ForceStochastic(wi[j],i,j);
+      Real kinv2=1.0/k2;
+      I[index] += Complex(eta,kinv2*eta);
     }
   };
   
@@ -247,8 +261,7 @@ public:
   public: 
     ForceStochasticNO(DNSBase *b) {}
     inline void operator()(const Vector& wi, const Vector&, int i, int j) {
-      double T;
-      Forcing->ForceStochastic(wi[j],T,i,j);
+      Forcing->ForceStochastic(wi[j],i,j);
     }
   };
   
@@ -392,6 +405,8 @@ public:
     NonLinearSource(Src,Y,t);
     if(spectrum) {
       Init(T,Src[TRANSFER]);
+      Init(I,Src[INJECTION]);
+      Init(D,Src[DISSIPATION]);
       Compute(FTL(this),Src,Y);
     }
     else
@@ -408,8 +423,10 @@ public:
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
     if(spectrum) {
-      Init(T,Src[TRANSFER]);
       Init(E,Src[EK]);
+      Init(T,Src[TRANSFER]);
+      Init(I,Src[INJECTION]);
+      Init(D,Src[DISSIPATION]);
       Compute(FET(this),Src,Y);
     }
   }
@@ -417,8 +434,10 @@ public:
   void Source(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
     if(spectrum) {
-      Init(T,Src[TRANSFER]);
       Init(E,Src[EK]);
+      Init(T,Src[TRANSFER]);
+      Init(I,Src[INJECTION]);
+      Init(D,Src[DISSIPATION]);
       Compute(FETL(this),Src,Y);
     } else
       Compute(FL(this),Src,Y);
@@ -452,7 +471,7 @@ public:
     if(spectrum == 0) {
       Loop(Initw(this),ForceStochasticNO(this));
     } else {
-      Set(T,Y[TRANSFER]);
+      Set(I,Y[INJECTION]);
       Loop(Initw(this),ForceStochastic(this));
     }
   }
@@ -483,11 +502,19 @@ public:
   
   virtual Real getSpectrum(unsigned i) {
     double c=count[i];
-    return c > 0 ? T[i].re*twopi/c : 0.0;
+    return c > 0 ? E[i].re*twopi/c : 0.0;
   }
-  Real Dissipation(unsigned i) {return T[i].im;}
-  Real Pi(unsigned i) {return T[i].re;}
-  Real Eta(unsigned i) {return T[i].im;}
+  Real Zeta(unsigned i) {return E[i].im;}
+  
+  Real PiZ(unsigned i) {return T[i].re;}
+  Real PiE(unsigned i) {return T[i].im;}
+  
+  Real Eta(unsigned i) {return I[i].re;}
+  Real Eps(unsigned i) {return I[i].im;}
+  
+  Real DZ(unsigned i) {return D[i].re;}
+  Real DE(unsigned i) {return D[i].im;}
+  
   Real kb(unsigned i) {return i+0.5;}
   Real kc(unsigned i) {return i+1;}
 };

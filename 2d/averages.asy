@@ -5,11 +5,15 @@ include prolog;
 
 // Spectral components
 int EK=0;
-int NU=1;
+int ZETA=1; // Rate of palenstrophy injection
 
 // Transfer components
-int NL=0;
-int LIN=1;
+int PIZ=0;
+int PIE=1;
+int ETA=2;
+int EPS=3;
+int DZ=4;
+int DE=5;
 
 real[][] getintegrals(string dir, real T, real Tmax, int n=1)
 {
@@ -66,7 +70,7 @@ real[][] moment2()
 
 real[][] transfer() 
 {
-  return getintegrals("transfer",T,Tmax,2);
+  return getintegrals("transfer",T,Tmax,6);
 }
 
 real[][] transferN() 
@@ -101,7 +105,7 @@ bool nextrun()
 }
 
 real kd(real fraction=0.5) {
-  real[] eta=2*0.5*moment2()[NU];
+  real[] eta=2*0.5*transfer()[ETA];
   real[] ratio=partialsum(eta)/sum(eta);
   return exp(interpolate(ratio,log(kb),fraction));
 }

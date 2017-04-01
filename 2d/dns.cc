@@ -55,7 +55,7 @@ public:
     start=Start(OMEGA);
     stop=Stop(OMEGA);
     startT=Start(TRANSFER);
-    stopT=Stop(TRANSFER);
+    stopT=Stop(DISSIPATION);
     startM=Start(EK);
     stopM=Stop(EK);
   }
@@ -75,12 +75,11 @@ class ForcingMask {
   DNS *b;
 public: 
   ForcingMask(DNS *b) : b(b) {}
-  inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+  inline void operator()(const Vector&, const Vector&, int i, int j) {
     if(Forcing->active(i,j)) {
       Complex w=0.0;
-      double T=0.0;
       Complex S=0.0;
-      Forcing->ForceMask(w,S,T,i,j);
+      Forcing->ForceMask(w,S,i,j);
       if(S != 0.0)
         b->fprolog << i << j << abs(S);
     }
@@ -166,11 +165,12 @@ public:
     return K1 < k && k < K2;
   }
   
-  void Force(Complex& w, Complex& S, double& T, int i, int j) {
+  double Force(Complex& w, Complex& S, int i, int j) {
     if(active(i,j)) {
-      T += realproduct(force,w);
       S += force;
+      return realproduct(force,w);
     }
+    return 0.0;
   }
 };
 
@@ -189,13 +189,14 @@ public:
     return Active(i,j) >= 0;
   }
   
-  void Force(Complex& w, Complex& S, double& T, int i, int j) {
+  double Force(Complex& w, Complex& S, int i, int j) {
     int index=Active(i,j);
     if(index >= 0) {
       Complex force=forces[index];
-      T += realproduct(force,w);
       S += force;
+      return realproduct(force,w);
     }
+    return 0.0;
   }
 };
 
@@ -215,17 +216,19 @@ public:
   }
   
   // For forcing diagnostic
-  void ForceMask(Complex& w, Complex& S, double&, int i, int j) {
+  void ForceMask(Complex& w, Complex& S, int i, int j) {
     if(active(i,j)) {
       S=sqrt(2.0*eta*etanorm);
     }
   }
   
-  void ForceStochastic(Complex& w, double& T, int i, int j) {
+  double ForceStochastic(Complex& w, int i, int j) {
      if(active(i,j)) {
-      T += realproduct(f,w)+0.5*abs2(f);
+      double eta=realproduct(f,w)+0.5*abs2(f);
       w += f;
+      return eta;
     }
+     return 0.0;
   }
 };
 
@@ -313,9 +316,13 @@ DNS::~DNS()
 class cwrap {
 public:
   static Real Spectrum(unsigned i) {return DNSProblem->getSpectrum(i);}
-  static Real Dissipation(unsigned i) {return DNSProblem->Dissipation(i);}
-  static Real Pi(unsigned i) {return DNSProblem->Pi(i);}
+  static Real Zeta(unsigned i) {return DNSProblem->Zeta(i);}
+  static Real PiZ(unsigned i) {return DNSProblem->PiZ(i);}
+  static Real PiE(unsigned i) {return DNSProblem->PiE(i);}
   static Real Eta(unsigned i) {return DNSProblem->Eta(i);}
+  static Real Eps(unsigned i) {return DNSProblem->Eps(i);}
+  static Real DZ(unsigned i) {return DNSProblem->DZ(i);}
+  static Real DE(unsigned i) {return DNSProblem->DE(i);}
   static Real kb(unsigned i) {return DNSProblem->kb(i);}
   static Real kc(unsigned i) {return DNSProblem->kc(i);}
 };
@@ -347,6 +354,8 @@ void DNS::InitialConditions()
   NY[PAD]=my;
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
+  NY[INJECTION]=nshells;
+  NY[DISSIPATION]=nshells;
   NY[EK]=nshells;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
@@ -357,6 +366,8 @@ void DNS::InitialConditions()
 
   Dimension(E,nshells);
   Dimension(T,nshells);
+  Dimension(I,nshells);
+  Dimension(D,nshells);
 
   w.Dimension(Nx,my,-mx+1,0);
   S.Dimension(Nx,my,-mx+1,0);
@@ -386,7 +397,9 @@ void DNS::InitialConditions()
   w.Set(Y[OMEGA]);
 
   Init(T,Y[TRANSFER]);
-  Init(T,Y[EK]);
+  Init(I,Y[INJECTION]);
+  Init(D,Y[DISSIPATION]);
+  Init(E,Y[EK]);
   
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
@@ -432,11 +445,10 @@ void DNS::InitialConditions()
 
 void DNS::Output(int it)
 {
-  Real E,Z,P;
-
   vector y=Y[OMEGA];
-  
   w.Set(y);
+    
+  Real E,Z,P;
   ComputeInvariants(w,E,Z,P);
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 
@@ -447,24 +459,30 @@ void DNS::Output(int it)
 
   if(spectrum) {
     ostringstream buf;
-    Set(T,Y[EK]);
+    Set(this->E,Y[EK]);
     buf << "ekvk" << dirsep << "t" << tcount;
     const string& s=buf.str();
     open_output(fekvk,dirsep,s.c_str(),0);
     out_curve(fekvk,t,"t");
     out_curve(fekvk,cwrap::Spectrum,"Ek",nshells);
-    out_curve(fekvk,cwrap::Dissipation,"nuk*Ek",nshells);
+    out_curve(fekvk,cwrap::Zeta,"Zeta",nshells);
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
 
     Set(T,Y[TRANSFER]);
+    Set(I,Y[INJECTION]);
+    Set(D,Y[DISSIPATION]);
     buf.str("");
     buf << "transfer" << dirsep << "t" << tcount;
     const string& S=buf.str();
     open_output(ftransfer,dirsep,S.c_str(),0);
     out_curve(ftransfer,t,"t");
-    out_curve(ftransfer,cwrap::Pi,"Pi",nshells);
-    out_curve(ftransfer,cwrap::Eta,"Eta",nshells);
+    out_curve(ftransfer,cwrap::PiZ,"PiZ",nshells);
+    out_curve(ftransfer,cwrap::PiE,"PiE",nshells);
+    out_curve(ftransfer,cwrap::Eta,"eta",nshells);
+    out_curve(ftransfer,cwrap::Eps,"eps",nshells);
+    out_curve(ftransfer,cwrap::DZ,"DZ",nshells);
+    out_curve(ftransfer,cwrap::DE,"DE",nshells);
     ftransfer.close();
     if(!ftransfer) msg(ERROR,"Cannot write to file transfer");
   }
@@ -477,6 +495,12 @@ void DNS::Output(int it)
     vector T=Y[TRANSFER];
     for(unsigned i=0; i < nshells; i++)
       T[i]=0.0;
+    vector I=Y[INJECTION];
+    for(unsigned i=0; i < nshells; i++)
+      I[i]=0.0;
+    vector D=Y[DISSIPATION];
+    for(unsigned i=0; i < nshells; i++)
+      D[i]=0.0;
     vector S=Y[EK];
     for(unsigned i=0; i < nshells; i++)
       S[i]=0.0;

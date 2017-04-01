@@ -13,12 +13,12 @@ class ForcingBase {
   virtual void Init(unsigned fcount) {}
   virtual bool active(int i, int j) {return false;} 
   virtual bool Stochastic(double dt=0.0) {return false;}
-  virtual void Force(Complex& w, Complex& S, double& T, int i, int j) {}
-  virtual void ForceMask(Complex& w, Complex& S, double& T, int i, int j) 
+  virtual double Force(Complex& w, Complex& S, int i, int j) {return 0.0;}
+  virtual void ForceMask(Complex& w, Complex& S, int i, int j) 
   {
-    Force(w,S,T,i,j);
+    Force(w,S,i,j);
   }
-  virtual void ForceStochastic(Complex& w, double& T, int i, int j) {}
+  virtual double ForceStochastic(Complex& w, int i, int j) {return 0.0;}
 };
 
 extern ForcingBase *Forcing;

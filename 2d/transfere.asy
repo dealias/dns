@@ -5,10 +5,10 @@ scale(Log,Linear);
 
 pen p=linewidth(1);
 
-string Pitext="$\Pi$";
-string etatext="$\eta$";
+string Pitext="$\Pi_E$";
+string etatext="$\epsilon$";
 
-real[] Pi,Eta;
+real[] Pi,Eps;
 real[][] M2,Tk;
 
 while(nextrun()) {
@@ -17,19 +17,19 @@ while(nextrun()) {
   M2=moment2();
   Tk=transfer();
 
-  write("  Enstrophy injection rate=",2*sum(Tk[ETA]));
-  write("Enstrophy dissipation rate=",2*sum(Tk[DZ]));
+  write("  Enery injection rate=",2*sum(Tk[EPS]));
+  write("Energy dissipation rate=",2*sum(Tk[DE]));
 
-  Pi=-2*partialsum(Tk[PIZ]);
+  Pi=-2*partialsum(Tk[PIE]);
   Pi.insert(0,0);
-  Eta=2*reverse(partialsum(reverse(Tk[DZ]-Tk[ETA])));
-  Eta.push(0);
+  Eps=2*reverse(partialsum(reverse(Tk[DE]-Tk[EPS])));
+  Eps.push(0);
   kb[0]=k0;
   
   string runtext=" ("+run+")";
   draw(graph(kb,Pi),p+Pen(2*n+1),Pitext+runtext);
-  if(!all(Eta == 0)) 
-    draw(graph(kb,Eta),p+Pen(2*n)+dashed,etatext+runtext);
+  if(!all(Eps == 0)) 
+    draw(graph(kb,Eps),p+Pen(2*n)+dashed,etatext+runtext);
 };
 
 if(n == 1) {
@@ -39,7 +39,7 @@ if(n == 1) {
 }
 
 xaxis("$k$",BottomTop,LeftTicks);
-yaxis("Cumulative enstropy transfer",LeftRight,RightTicks(trailingzero));
+yaxis("Cumulative energy transfer",LeftRight,RightTicks(trailingzero));
 
 yequals(0,Dotted);
 
