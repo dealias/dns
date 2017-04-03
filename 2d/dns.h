@@ -182,7 +182,7 @@ public:
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv2=1.0/k2;
       Nu nuk2=b->nuk(k2);
-      Real nuk2Z=b->nuk(k2)*abs2(wij);
+      Real nuk2Z=nuk2*abs2(wij);
       T[index] += Complex(transfer,kinv2*transfer);
       I[index] += Complex(eta,kinv2*eta);
       D[index] += Complex(nuk2Z,kinv2*nuk2Z);
@@ -207,8 +207,7 @@ public:
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv=1.0/k;
       Real kinv2=kinv*kinv;
-      Nu nuk2=b->nuk(k2);
-      Real nuk2Z=nuk2*w2;
+      Real nuk2Z=b->nuk(k2)*w2;
       E[index] += Complex(kinv*w2,k2*transfer);
       T[index] += Complex(transfer,kinv2*transfer);
       I[index] += Complex(eta,kinv2*eta);
