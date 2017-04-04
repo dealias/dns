@@ -7,13 +7,13 @@ include prolog;
 int EK=0;
 
 // Transfer components
-int TZ=0;  // Rate of nonlinear enstrophy transfer
-int TE=1;  // Rate of nonlinear energy transfer
-int ETA=2;  // Rate of enstrophy injection
-int EPS=3;  // Rate of energy injection
-int DZ=4;   // Rate of enstrophy dissipation
+int TE=0;  // Rate of nonlinear energy transfer
+int TZ=1;  // Rate of nonlinear enstrophy transfer
+int EPS=2;  // Rate of energy injection
+int ETA=3;  // Rate of enstrophy injection
+int ZETA=4; // Rate of palenstrophy injection
 int DE=5;   // Rate of energy dissipation
-int ZETA=6; // Rate of palenstrophy injection
+int DZ=6;   // Rate of enstrophy dissipation
 
 real[][] getintegrals(string dir, real T, real Tmax, int n=1)
 {

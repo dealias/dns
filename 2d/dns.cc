@@ -316,13 +316,13 @@ DNS::~DNS()
 class cwrap {
 public:
   static Real Spectrum(unsigned i) {return DNSProblem->getSpectrum(i);}
-  static Real Zeta(unsigned i) {return DNSProblem->Zeta_(i);}
-  static Real TZ(unsigned i) {return DNSProblem->TZ_(i);}
   static Real TE(unsigned i) {return DNSProblem->TE_(i);}
-  static Real Eta(unsigned i) {return DNSProblem->Eta_(i);}
+  static Real TZ(unsigned i) {return DNSProblem->TZ_(i);}
   static Real Eps(unsigned i) {return DNSProblem->Eps_(i);}
-  static Real DZ(unsigned i) {return DNSProblem->DZ_(i);}
+  static Real Eta(unsigned i) {return DNSProblem->Eta_(i);}
+  static Real Zeta(unsigned i) {return DNSProblem->Zeta_(i);}
   static Real DE(unsigned i) {return DNSProblem->DE_(i);}
+  static Real DZ(unsigned i) {return DNSProblem->DZ_(i);}
   
   static Real kb(unsigned i) {return DNSProblem->kb(i);}
   static Real kc(unsigned i) {return DNSProblem->kc(i);}

@@ -33,8 +33,8 @@ protected:
   Real nuH,nuL;
   Real kH2,kL2;
   
-  // TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,DISSIPATIONZ
-  // must be contiguous.
+  // Contiguous: TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,DISSIPATIONZ
+  // 
   enum Field {PAD,OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
               DISSIPATIONZ,EK};
 
@@ -270,8 +270,7 @@ public:
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
       double eta=Forcing->ForceStochastic(wi[j],i,j);
-      Real kinv2=1.0/k2;
-      Eps[index] += kinv2*eta;
+      Eps[index] += eta/k2;
       Eta[index] += eta;
       Zeta[index] += k2*eta;
     }
@@ -540,8 +539,8 @@ public:
   }
   Real TE_(unsigned i) {return TE[i].re;}
   Real TZ_(unsigned i) {return TZ[i].re;}
-  Real Eta_(unsigned i) {return Eta[i].re;}
   Real Eps_(unsigned i) {return Eps[i].re;}
+  Real Eta_(unsigned i) {return Eta[i].re;}
   Real Zeta_(unsigned i) {return Zeta[i].re;}
   Real DE_(unsigned i) {return DE[i].re;}
   Real DZ_(unsigned i) {return DZ[i].re;}
