@@ -502,9 +502,9 @@ public:
     if(spectrum == 0) {
       Loop(Initw(this),ForceStochasticNO(this));
     } else {
-      Init(Eps,Y[EPS]);
-      Init(Eta,Y[ETA]);
-      Init(Zeta,Y[ZETA]);
+      Set(Eps,Y[EPS]);
+      Set(Eta,Y[ETA]);
+      Set(Zeta,Y[ZETA]);
       Loop(Initw(this),ForceStochastic(this));
     }
   }
