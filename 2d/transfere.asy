@@ -20,7 +20,7 @@ while(nextrun()) {
   write("  Enery injection rate=",2*sum(Tk[EPS]));
   write("Energy dissipation rate=",2*sum(Tk[DE]));
 
-  Pi=-2*partialsum(Tk[PIE]);
+  Pi=-2*partialsum(Tk[TE]);
   Pi.insert(0,0);
   Eps=2*reverse(partialsum(reverse(Tk[DE]-Tk[EPS])));
   Eps.push(0);

@@ -317,8 +317,8 @@ class cwrap {
 public:
   static Real Spectrum(unsigned i) {return DNSProblem->getSpectrum(i);}
   static Real Zeta(unsigned i) {return DNSProblem->Zeta(i);}
-  static Real PiZ(unsigned i) {return DNSProblem->PiZ(i);}
-  static Real PiE(unsigned i) {return DNSProblem->PiE(i);}
+  static Real TZ(unsigned i) {return DNSProblem->TZ(i);}
+  static Real TE(unsigned i) {return DNSProblem->TE(i);}
   static Real Eta(unsigned i) {return DNSProblem->Eta(i);}
   static Real Eps(unsigned i) {return DNSProblem->Eps(i);}
   static Real DZ(unsigned i) {return DNSProblem->DZ(i);}
@@ -355,6 +355,7 @@ void DNS::InitialConditions()
   NY[OMEGA]=Nx*my;
   NY[TRANSFER]=nshells;
   NY[INJECTION]=nshells;
+  NY[INJECTION2]=nshells;
   NY[DISSIPATION]=nshells;
   NY[EK]=nshells;
 
@@ -398,6 +399,7 @@ void DNS::InitialConditions()
 
   Init(T,Y[TRANSFER]);
   Init(I,Y[INJECTION]);
+  Init(I,Y[INJECTION2]);
   Init(D,Y[DISSIPATION]);
   Init(E,Y[EK]);
   
@@ -470,14 +472,15 @@ void DNS::Output(int it)
 
     Set(T,Y[TRANSFER]);
     Set(I,Y[INJECTION]);
+    Set(J,Y[INJECTION2]);
     Set(D,Y[DISSIPATION]);
     buf.str("");
     buf << "transfer" << dirsep << "t" << tcount;
     const string& S=buf.str();
     open_output(ftransfer,dirsep,S.c_str(),0);
     out_curve(ftransfer,t,"t");
-    out_curve(ftransfer,cwrap::PiZ,"PiZ",nshells);
-    out_curve(ftransfer,cwrap::PiE,"PiE",nshells);
+    out_curve(ftransfer,cwrap::TZ,"TZ",nshells);
+    out_curve(ftransfer,cwrap::TE,"TE",nshells);
     out_curve(ftransfer,cwrap::Eta,"eta",nshells);
     out_curve(ftransfer,cwrap::Eps,"eps",nshells);
     out_curve(ftransfer,cwrap::DZ,"DZ",nshells);
@@ -498,6 +501,9 @@ void DNS::Output(int it)
     vector I=Y[INJECTION];
     for(unsigned i=0; i < nshells; i++)
       I[i]=0.0;
+    vector J=Y[INJECTION];
+    for(unsigned i=0; i < nshells; i++)
+      J[i]=0.0;
     vector D=Y[DISSIPATION];
     for(unsigned i=0; i < nshells; i++)
       D[i]=0.0;

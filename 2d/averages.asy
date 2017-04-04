@@ -7,8 +7,8 @@ include prolog;
 int EK=0;
 
 // Transfer components
-int PIZ=0;  // Rate of nonlinear enstrophy transfer
-int PIE=1;  // Rate of nonlinear energy transfer
+int TZ=0;  // Rate of nonlinear enstrophy transfer
+int TE=1;  // Rate of nonlinear energy transfer
 int ETA=2;  // Rate of enstrophy injection
 int EPS=3;  // Rate of energy injection
 int DZ=4;   // Rate of enstrophy dissipation

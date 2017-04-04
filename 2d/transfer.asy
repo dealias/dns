@@ -20,7 +20,7 @@ while(nextrun()) {
   write("  Enstrophy injection rate=",2*sum(Tk[ETA]));
   write("Enstrophy dissipation rate=",2*sum(Tk[DZ]));
 
-  Pi=-2*partialsum(Tk[PIZ]);
+  Pi=-2*partialsum(Tk[TZ]);
   Pi.insert(0,0);
   Eta=2*reverse(partialsum(reverse(Tk[DZ]-Tk[ETA])));
   Eta.push(0);
