@@ -54,8 +54,8 @@ public:
 		   unsigned& startM, unsigned& stopM) {
     start=Start(OMEGA);
     stop=Stop(OMEGA);
-    startT=Start(TRANSFER);
-    stopT=Stop(DISSIPATION);
+    startT=Start(TRANSFERE);
+    stopT=Stop(DISSIPATIONZ);
     startM=Start(EK);
     stopM=Stop(EK);
   }
@@ -316,13 +316,14 @@ DNS::~DNS()
 class cwrap {
 public:
   static Real Spectrum(unsigned i) {return DNSProblem->getSpectrum(i);}
-  static Real Zeta(unsigned i) {return DNSProblem->Zeta(i);}
-  static Real TZ(unsigned i) {return DNSProblem->TZ(i);}
-  static Real TE(unsigned i) {return DNSProblem->TE(i);}
-  static Real Eta(unsigned i) {return DNSProblem->Eta(i);}
-  static Real Eps(unsigned i) {return DNSProblem->Eps(i);}
-  static Real DZ(unsigned i) {return DNSProblem->DZ(i);}
-  static Real DE(unsigned i) {return DNSProblem->DE(i);}
+  static Real Zeta(unsigned i) {return DNSProblem->Zeta_(i);}
+  static Real TZ(unsigned i) {return DNSProblem->TZ_(i);}
+  static Real TE(unsigned i) {return DNSProblem->TE_(i);}
+  static Real Eta(unsigned i) {return DNSProblem->Eta_(i);}
+  static Real Eps(unsigned i) {return DNSProblem->Eps_(i);}
+  static Real DZ(unsigned i) {return DNSProblem->DZ_(i);}
+  static Real DE(unsigned i) {return DNSProblem->DE_(i);}
+  
   static Real kb(unsigned i) {return DNSProblem->kb(i);}
   static Real kc(unsigned i) {return DNSProblem->kc(i);}
 };
@@ -353,10 +354,13 @@ void DNS::InitialConditions()
 
   NY[PAD]=my;
   NY[OMEGA]=Nx*my;
-  NY[TRANSFER]=nshells;
-  NY[INJECTION]=nshells;
-  NY[INJECTION2]=nshells;
-  NY[DISSIPATION]=nshells;
+  NY[TRANSFERE]=nshells;
+  NY[TRANSFERZ]=nshells;
+  NY[EPS]=nshells;
+  NY[ETA]=nshells;
+  NY[ZETA]=nshells;
+  NY[DISSIPATIONE]=nshells;
+  NY[DISSIPATIONZ]=nshells;
   NY[EK]=nshells;
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
@@ -365,10 +369,14 @@ void DNS::InitialConditions()
 
   Allocator(align);
 
+  Dimension(TE,nshells);
+  Dimension(TZ,nshells);
+  Dimension(Eps,nshells);
+  Dimension(Eta,nshells);
+  Dimension(Zeta,nshells);
+  Dimension(DE,nshells);
+  Dimension(DZ,nshells);
   Dimension(E,nshells);
-  Dimension(T,nshells);
-  Dimension(I,nshells);
-  Dimension(D,nshells);
 
   w.Dimension(Nx,my,-mx+1,0);
   S.Dimension(Nx,my,-mx+1,0);
@@ -397,10 +405,13 @@ void DNS::InitialConditions()
   
   w.Set(Y[OMEGA]);
 
-  Init(T,Y[TRANSFER]);
-  Init(I,Y[INJECTION]);
-  Init(I,Y[INJECTION2]);
-  Init(D,Y[DISSIPATION]);
+  Init(TE,Y[TRANSFERE]);
+  Init(TZ,Y[TRANSFERZ]);
+  Init(Eps,Y[EPS]);
+  Init(Eta,Y[ETA]);
+  Init(Zeta,Y[ZETA]);
+  Init(DE,Y[DISSIPATIONE]);
+  Init(DZ,Y[DISSIPATIONZ]);
   Init(E,Y[EK]);
   
   Forcing=DNS_Vocabulary.NewForcing(forcing);
@@ -470,22 +481,25 @@ void DNS::Output(int it)
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
 
-    Set(T,Y[TRANSFER]);
-    Set(I,Y[INJECTION]);
-    Set(J,Y[INJECTION2]);
-    Set(D,Y[DISSIPATION]);
+    Set(TE,Y[TRANSFERE]);
+    Set(TZ,Y[TRANSFERZ]);
+    Set(Eps,Y[EPS]);
+    Set(Eta,Y[ETA]);
+    Set(Zeta,Y[ZETA]);
+    Set(DE,Y[DISSIPATIONE]);
+    Set(DZ,Y[DISSIPATIONZ]);
     buf.str("");
     buf << "transfer" << dirsep << "t" << tcount;
     const string& S=buf.str();
     open_output(ftransfer,dirsep,S.c_str(),0);
     out_curve(ftransfer,t,"t");
-    out_curve(ftransfer,cwrap::TZ,"TZ",nshells);
     out_curve(ftransfer,cwrap::TE,"TE",nshells);
-    out_curve(ftransfer,cwrap::Eta,"eta",nshells);
+    out_curve(ftransfer,cwrap::TZ,"TZ",nshells);
     out_curve(ftransfer,cwrap::Eps,"eps",nshells);
-    out_curve(ftransfer,cwrap::DZ,"DZ",nshells);
+    out_curve(ftransfer,cwrap::Eta,"eta",nshells);
+    out_curve(ftransfer,cwrap::Zeta,"zeta",nshells);
     out_curve(ftransfer,cwrap::DE,"DE",nshells);
-    out_curve(ftransfer,cwrap::Zeta,"Zeta",nshells);
+    out_curve(ftransfer,cwrap::DZ,"DZ",nshells);
     ftransfer.close();
     if(!ftransfer) msg(ERROR,"Cannot write to file transfer");
   }
@@ -495,21 +509,15 @@ void DNS::Output(int it)
 
   if(rezero && it % rezero == 0 && spectrum) {
     vector2 Y=Integrator->YVector();
-    vector T=Y[TRANSFER];
-    for(unsigned i=0; i < nshells; i++)
-      T[i]=0.0;
-    vector I=Y[INJECTION];
-    for(unsigned i=0; i < nshells; i++)
-      I[i]=0.0;
-    vector J=Y[INJECTION];
-    for(unsigned i=0; i < nshells; i++)
-      J[i]=0.0;
-    vector D=Y[DISSIPATION];
-    for(unsigned i=0; i < nshells; i++)
-      D[i]=0.0;
-    vector S=Y[EK];
-    for(unsigned i=0; i < nshells; i++)
-      S[i]=0.0;
+    
+    Init(TE,Y[TRANSFERE]);
+    Init(TZ,Y[TRANSFERZ]);
+    Init(Eps,Y[EPS]);
+    Init(Eta,Y[ETA]);
+    Init(Zeta,Y[ZETA]);
+    Init(DE,Y[DISSIPATIONE]);
+    Init(DZ,Y[DISSIPATIONZ]);
+    Init(this->E,Y[EK]);
   }
 }
 
