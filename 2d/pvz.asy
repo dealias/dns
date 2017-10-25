@@ -1,6 +1,8 @@
 include getparam;
 include averages;
 
+size(400);
+
 import palette;
 
 scale(Linear,Linear);
@@ -11,9 +13,12 @@ string Ztext="$Z$";
 string Ptext="$P$";
 
 real[] t,E,Z,P;
-real CA=1/2^(1/4);
+real G,Lambda;
+int k=0;
+real eta,eps;
+string tilde;
 
-// Fk=k*fk
+real CA=1/2^(1/4);
 
 struct norm {
   real f,F;
@@ -36,20 +41,28 @@ norm fnorm(real[] F) {
   return N;
 }
 
-int k=0;
-real G,Lambda;
-
 while(nextrun()) {
   file fin=input(rundir()+"evt").line();
   real[][] a=fin;
   a=transpose(a);
   norm N=fnorm(F);
-  real eps=N.f^2;
-  real Eta=N.F^2;
-  G=sqrt(eps)/nuH^(3/2);                   // Grashof number
-  write(G);
-  //  Lambda=(N.F/G)^2;             // Lambda := |A^(1/2)f/G|^2
-  Lambda=Eta/eps;
+  gettime();
+  real[][] Tk=transfer();
+  eta=2*sum(Tk[ETA]);
+  eps=2*sum(Tk[EPS]);
+
+  if(eps == 0) {
+    G=N.f/nuH^2;                 // Grashof number for constant forcing
+    tilde="";
+    Lambda=(N.F/G)^2;             // Lambda := |A^(1/2)f/G|^2
+  } else {
+    G=sqrt(eps)/nuH^(3/2);       // Grashof number for stochastic forcing
+    write(eps);
+    tilde="\tilde ";
+    Lambda=eta/eps;
+  }
+
+  write("G=",G);
   write("Lambda=",Lambda);
   real CG=CA*G;                 // CG := cG in the paper
 
@@ -63,15 +76,18 @@ while(nextrun()) {
   int start=getint("start",a[0].length#2,store=false);
   int end=getint("end",a[0].length,store=false);
   t=t[start:end];
-  write(t[0],t[t.length-1]);
+  real t0=t[0];
+  real tmax=t[t.length-1];
+  write("t:",t0,tmax);
   E=E[start:end];
   Z=Z[start:end];
   P=P[start:end];
+  real incr=(E.length-1)/tmax;
   pen[] p=Rainbow(Z.length);
   
-  for(int i=start; i < Z.length; ++i) {
+  for(int i=0; i < Z.length; ++i) {
     frame mark;
-    fill(mark,scale(0.8mm)*polygon(3+k),p[i-start]);
+    fill(mark,scale(0.4mm)*polygon(3+k),p[round(t[i]*incr)]);
     add(mark,(Z[i],P[i]));
   }
   
@@ -108,16 +124,17 @@ while(nextrun()) {
   }
 
 
-  //  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,Zmax),blue);
-  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,crop(Pmax^2/Lambda)),blue);
+  //draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,Zmax),blue);
+  //  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,crop(Pmax^2/Lambda)),blue);
   draw(graph(new real(real Z) {return Z;},0,crop(Zmax)),magenta);
 
   //  draw(graph(new real(real Z) {return (0.5*CG*Z)^2;},0,crop(2sqrt(Pmax)/CG)),red);
-  //  draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,
-  //             min(Zmax,0.5*sqrt(Pmax)/CG)),pink);
+   draw(graph(new real(real Z) {return (2*CG*Z)^2;},0,
+              min(Zmax,0.5*sqrt(Pmax)/CG)),pink);
 
 
-  //draw(graph(new real(real Z) {return kforce^2*Z;},0,min(point(plain.N).y/kforce^2,Zmax)),brown);
+   draw(graph(new real(real Z) {return (kforce-deltaf/2)^2*Z;},0,min(point(plain.N).y/(kforce-deltaf/2)^2,Zmax)),brown);
+   draw(graph(new real(real Z) {return (kforce+deltaf/2)^2*Z;},0,min(point(plain.N).y/(kforce+deltaf/2)^2,Zmax)),brown);
 
   picture bar;
   bounds range=bounds(Zmin,Zmax);
@@ -127,5 +144,5 @@ while(nextrun()) {
   ++k;
 }
 
-xaxis("$2Z$",BottomTop,LeftTicks);
-yaxis("$2P$",LeftRight,RightTicks);
+xaxis("$2Z/(\nu "+tilde+"G)^2$",BottomTop,LeftTicks);
+yaxis("$2P/(\nu "+tilde+"G)^2$",LeftRight,RightTicks);

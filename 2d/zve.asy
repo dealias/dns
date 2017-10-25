@@ -7,10 +7,10 @@ scale(Linear,Linear);
 pen p=linewidth(1);
 
 real[] t,E,Z;
-real g=0,G=0,l=0,L=0;
+real G;
 int k=0;
 real eta,eps;
-real Eta,Eps;
+string tilde;
 
 struct norm {
   real f,F;
@@ -33,22 +33,28 @@ norm fnorm(real[] F) {
   return N;
 }
 
-
 while(nextrun()) {
   file fin=input(rundir()+"evt").line();
   real[][] a=fin;
   a=transpose(a);
   norm N=fnorm(F);
-  Eps=N.f^2;
-  Eta=N.F^2;
   gettime();
   real[][] Tk=transfer();
   eta=2*sum(Tk[ETA]);
   eps=2*sum(Tk[EPS]);
-  G=sqrt(eps)/nuH^(3/2);                   // Grashof number
+
+  if(eps == 0) {
+    G=N.f/nuH^2;                 // Grashof number for constant forcing
+    tilde="";
+  } else {
+    G=sqrt(eps)/nuH^(3/2);       // Grashof number for stochastic forcing
+    tilde="\tilde ";
+  }
+
   write("G=",G);
   real norm=G^2*nuH^2;
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm;
+
   int start=getint("start",a[0].length#2,store=false);
   int end=getint("end",a[0].length,store=false);
   t=t[start:end];
@@ -85,6 +91,7 @@ while(nextrun()) {
     real kfm=kforce-deltaf/2;
     real kfp=kforce+deltaf/2;
   draw(graph(new real(real E) {return E;},0,crop(Emax)),grey); //point(plain.E).x),blue);
+
      draw(graph(new real(real E) {return kfp^2*E;},
                 0,min(point(plain.N).y/kfp^2,point(plain.E).x)),magenta);
      draw(graph(new real(real E) {return kfm^2*E;},
@@ -111,6 +118,6 @@ while(nextrun()) {
   ++k;
 }
 
-xaxis("$2E/(\nu G)^2$",BottomTop,LeftTicks);
-yaxis("$2Z/(\nu G)^2$",LeftRight,RightTicks);
+xaxis("$2E/(\nu "+tilde+"G)^2$",BottomTop,LeftTicks);
+yaxis("$2Z/(\nu "+tilde+"G)^2$",LeftRight,RightTicks);
 

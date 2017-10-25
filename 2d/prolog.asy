@@ -11,6 +11,7 @@ void prolog() {
   in=input(run+"/prolog",mode="xdr");
   kb=in.read(1);
   kc=in.read(1);
+
   while(true) {
     int i=in;
     int j=in;

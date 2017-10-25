@@ -1,6 +1,11 @@
 include getparam;
 include averages;
 
+bool compact=true;
+
+if(compact)
+  legendlinelength=1cm;
+
 scale(Log,Linear);
 
 pen p=linewidth(1);
@@ -43,4 +48,7 @@ yaxis("Cumulative enstropy transfer",LeftRight,RightTicks(trailingzero));
 
 yequals(0,Dotted);
 
-attach(legend(),point(E),20E);
+if(compact)
+  attach(legend(invisible),point(NE),0.1SW);
+else
+  attach(legend(),point(E),20E);
