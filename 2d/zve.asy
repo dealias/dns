@@ -43,7 +43,8 @@ while(nextrun()) {
   eta=2*sum(Tk[ETA]);
   eps=2*sum(Tk[EPS]);
 
-  if(eps == 0) {
+  string Constant="Constant";
+  if(substr(forcing,0,length(Constant)) == Constant) {
     G=N.f/nuH^2;                 // Grashof number for constant forcing
     tilde="";
   } else {
