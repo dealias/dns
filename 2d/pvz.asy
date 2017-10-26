@@ -129,8 +129,7 @@ while(nextrun()) {
   draw(graph(new real(real Z) {return Z;},0,crop(Zmax)),magenta);
 
   //  draw(graph(new real(real Z) {return (0.5*cG*Z)^2;},0,crop(2sqrt(Pmax)/cG)),red);
-   draw(graph(new real(real Z) {return (2*cG*Z)^2;},0,
-              min(Zmax,0.5*sqrt(Pmax)/cG)),pink);
+   draw(graph(new real(real Z) {return (2*cG*Z)^2;},0,0.5*sqrt(Pmax)/cG),pink);
 
 
    draw(graph(new real(real Z) {return (kforce-deltaf/2)^2*Z;},0,min(point(plain.N).y/(kforce-deltaf/2)^2,Zmax)),brown);
