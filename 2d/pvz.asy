@@ -55,9 +55,10 @@ while(nextrun()) {
   if(substr(forcing,0,length(Constant)) == Constant) {
     G=N.f/nuH^2;                 // Grashof number for constant forcing
     tilde="";
-    Lambda=(N.F/N.f)^2;             // Lambda := |A^(1/2)f|^2/|f|^2
+    Lambda=(N.F/G)^2;             // Lambda := |A^(1/2)f/G|^2
   } else {
     G=sqrt(eps)/nuH^(3/2);       // Grashof number for stochastic forcing
+    write(eps);
     tilde="\tilde ";
     Lambda=eta/eps;
   }
@@ -97,7 +98,7 @@ while(nextrun()) {
   real Zmin=point(plain.W).x;
   real Zmax=point(plain.E).x;
 
-  if(true) {
+  if(false) {
     if(!cropy) {
       real z1=cropx ? min(Zmax,Z1) : Z1;
       if(Z2 < z1)
