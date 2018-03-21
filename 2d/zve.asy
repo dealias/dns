@@ -48,7 +48,9 @@ while(nextrun()) {
     G=N.f/nuH^2;                 // Grashof number for constant forcing
     tilde="";
   } else {
-    G=sqrt(eps)/nuH^(3/2);       // Grashof number for stochastic forcing
+    //    G=sqrt(eps)/nuH^(3/2);      // Grashof number for stochastic forcing
+    write(sqrt(eps*(nuH+nuL))/nuH^2,sqrt(eps*(nuH))/nuH^2);
+    G=sqrt(eps*(nuH+nuL))/nuH^2;       // Grashof number for stochastic forcing
     tilde="\tilde ";
   }
 

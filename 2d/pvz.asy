@@ -88,6 +88,7 @@ while(nextrun()) {
   for(int i=0; i < Z.length; ++i) {
     frame mark;
     fill(mark,scale(0.4mm)*polygon(3+k),p[round(t[i]*incr)]);
+    //    fill(mark,scale(0.4mm)*unitcircle,p[round(t[i]*incr)]);
     add(mark,(Z[i],P[i]));
   }
   
@@ -124,7 +125,7 @@ while(nextrun()) {
   }
 
 
-  //draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,Zmax),blue);
+  //  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,Zmax),blue);
   //  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},0,crop(Pmax^2/Lambda)),blue);
   draw(graph(new real(real Z) {return Z;},0,crop(Zmax)),magenta);
 

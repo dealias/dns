@@ -18,7 +18,7 @@ while(nextrun()) {
   draw(graph(kb0,slope,kb0 <= krmax),p+Pen(n),run);
 }
 
-ylimits(-5,0,Crop);
+ylimits(-10,0,Crop);
 
 xaxis("$k$",BottomTop,LeftTicks);
 yaxis("logarithmic slope of $E(k)$",LeftRight,RightTicks);

@@ -15,7 +15,9 @@
 
 using namespace Array;
 using namespace fftwpp;
+
 using std::ostringstream;
+using fftwpp::twopi;
 
 typedef Array1<Var>::opt Vector;
 typedef Array1<Real>::opt rVector;
