@@ -398,7 +398,41 @@ public:
         f0i[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
       }
     }
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
+    
+#if 1// Dirac Bracket
+  int lx=8;
+  int ly=8;
+    
+  int d=lx-ly;
+  int s=lx+ly;
+  Complex wlp;
+//  assert(d > -mx && d < mx && s < my);
+  wlp=w[d][s];
+  Complex factor=1.0/((lx*lx+ly*ly)*wlp);
+  Complex Sl=f0[lx][ly];
+  Complex Slp=f0[-ly][lx];
+  
+  for(int kx=-mx+1; kx < mx; ++kx) {
+    vector wkx=w[kx];
+    vector f0kx=f0[kx];
+    for(int ky=kx <= 0 ? 1 : 0; ky < my; ++ky) {
+      int sx=kx+lx;
+      int sy=ky+ly;
+      Complex wkl=sx < mx && sy < my ? w[sx][sy] : 0.0;
+      int px=kx-ly;
+      int py=ky+lx;
+//        wkp=py >= 0 ? w[px][py] : conj(w[-px][-py]);
+      Complex wkp=px > -mx && px < mx && py < my ? w[px][py] : 0.0;
+      f0kx[ky] -= factor*((lx*ky-ly*kx)*wkl*Slp+(lx*kx+ly*ky)*wkp*Sl);
+    }
+  }
+  
+//  cout << "l: " << f0[lx][ly] << endl;
+//  cout << "lp:" << f0[-ly][lx] << endl;
+
+#endif  
+
+  fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
   
 #if 0
     Real sum=0.0;
@@ -406,7 +440,7 @@ public:
       Vector wi=w[i];
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
         Complex wij=wi[j];
-//      sum += (f0[i][j]*conj(wij)).re;
+//        sum += (f0[i][j]*conj(wij)).re;
         sum += (f0[i][j]*conj(wij)/(i*i+j*j)).re;
       }
     }
