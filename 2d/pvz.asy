@@ -4,6 +4,7 @@ include averages;
 size(400);
 
 import palette;
+import ode;
 
 scale(Linear,Linear);
 pen p=linewidth(1);
@@ -15,7 +16,7 @@ string Ptext="$P$";
 real[] t,E,Z,P;
 real G,Lambda;
 int k=0;
-real eta,eps;
+real eta,eps,theta;
 string tilde;
 
 real CA=1/2^(1/4);
@@ -50,6 +51,7 @@ while(nextrun()) {
   real[][] Tk=transfer();
   eta=2*sum(Tk[ETA]);
   eps=2*sum(Tk[EPS]);
+  theta=eta*(N.F/N.f)^2; // Approximate
 
   string Constant="Constant";
   if(substr(forcing,0,length(Constant)) == Constant) {
@@ -66,6 +68,9 @@ while(nextrun()) {
   write("Lambda=",Lambda);
   real cG=CA*G;
 
+
+
+  
   real norm=G^2*nuH^2;
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm; P=2*a[3]/norm;
 
@@ -141,8 +146,28 @@ while(nextrun()) {
   palette(bar,"$t$",range,(0,0),(0.5cm,6cm),p,NoTicks);
   add(bar.fit(),point(plain.E),30plain.E);
 
+
+  write("integration test");
+  real f1(real Z, real P) {
+    Z=-Z;
+    //    return 3*(cG/2)^(4/3)*(P*Z)^(1/3);
+    return (theta+2*nuL*P+2*(cG*P*Z^(1/4)/sqrt(2))^(4/3))/(2*nuL*Z-P);
+  }
+
+  real f2(real Z, real P) {
+    Z=-Z;
+    //    return 3*(cG/2)^(4/3)*(P*Z)^(1/3);
+    real zeta=0;
+    return (theta+2*nuL*P-P^2/Z+2*sqrt(2)*(cG*P*Z^(1/4)*zeta)^(4/3))/(2*nuL*Z-P);
+  }
+
+  write(integrate(eta,f1,-Z1,-Z2,1e-4,dynamic=true,0.0002,0.0004,RK3BS,verbose=true));
+  write(integrate(eta,f2,-Z2,-Z3,1e-4,dynamic=true,0.0002,0.0004,RK3BS,verbose=true));
+   write("Pmax=",Pmax);
+
   ++k;
 }
 
 xaxis("$2Z/(\nu "+tilde+"G)^2$",BottomTop,LeftTicks);
 yaxis("$2P/(\nu "+tilde+"G)^2$",LeftRight,RightTicks);
+
