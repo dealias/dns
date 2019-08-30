@@ -45,6 +45,9 @@ protected:
   Array2<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field
 
+  Array2<Complex> u,v,ux,uy,vx,vy,A2u,A2v;
+  array2<Real> ur,vr,uxr,uyr,vxr,vyr,A2ur,A2vr; // Inverse Fourier transforms
+  
   int tcount;
   unsigned fcount;
 
@@ -70,12 +73,12 @@ protected:
   vector DE,DZ; // Energy and enstrophy dissipation rates
   vector E; // Energy spectrum
   
-  Real Energy,Enstrophy,Palinstrophy;
+  Real Energy,Enstrophy,Palinstrophy,Palinstrophy2;
   Array2<Real> k2inv;
 
 public:
   void Initialize() {
-    fevt << "# t\tE\tZ\tP" << endl;
+    fevt << "# t\tE\tZ\tP\tP2" << endl;
   }
   
   void InitialConditions() {
@@ -116,12 +119,13 @@ public:
   }
   
   void FinalOutput() {
-    Real E,Z,P;
-    ComputeInvariants(w,E,Z,P);
+    Real E,Z,P,P2;
+    ComputeInvariants(w,E,Z,P,P2);
     cout << endl;
     cout << "Energy = " << E << newl;
     cout << "Enstrophy = " << Z << newl;
     cout << "Palinstrophy = " << P << newl;
+    cout << "Palinstrophy2 = " << P2 << newl;
   }
   
   void OutFrame(int it) {
@@ -129,17 +133,70 @@ public:
       for(int j=0; j < my; ++j)
         f1[i][j]=w(i,j);
     
+    for(int i=-mx+1; i < mx; ++i) {
+      for(int j=0; j < my; ++j) {
+        Complex wij=w(i,j);        
+        Real k4=(i*i+j*j);
+        k4 *= k4;
+        Complex psi=wij*k2inv[i][j];
+        Complex uij=j*psi;
+        Complex vij=-I*i*psi;
+        u[i][j]=uij;
+        v[i][j]=vij;
+        ux[i][j]=I*i*uij;
+        uy[i][j]=I*j*uij;
+        vx[i][j]=I*i*vij;
+        vy[i][j]=I*j*vij;
+        A2u[i][j]=k4*uij;
+        A2v[i][j]=k4*vij;
+      }
+    }
+    
     fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f1);
+    
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,v);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,ux);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,uy);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,vx);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,vy);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,A2u);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,A2v);
 
     f1[-mx][0]=0; // Zero remaining Nyquist mode.
+    u[-mx][0]=0;
+    v[-mx][0]=0;
+    ux[-mx][0]=0;
+    uy[-mx][0]=0;
+    vx[-mx][0]=0;
+    vy[-mx][0]=0;
+    A2u[-mx][0]=0;
+    A2v[-mx][0]=0;
     
     Backward->fft0(f1);
+    Backward->fft0(u);
+    Backward->fft0(v);
+    Backward->fft0(ux);
+    Backward->fft0(uy);
+    Backward->fft0(vx);
+    Backward->fft0(vy);
+    Backward->fft0(A2u);
+    Backward->fft0(A2v);
      
     fw << 1 << 2*my << Nx+1;
     for(int j=2*my-1; j >= 0; j--)
       for(unsigned i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
+    
+    Real sum=0.0;
+    for(unsigned i=0; i <= Nx; i++)
+      for(int j=0; j < 2*my-1; j++)
+//        sum += (ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j])*A2ur[i][j]+
+//          (ur[i][j]*vxr[i][j]+vr[i][j]*vyr[i][j])*A2vr[i][j];
+        sum += ur[i][j]*ur[i][j]+vr[i][j]*vr[i][j];
+    cout << "Inner product=" << 0.5*sum/(Nx*(2*my-1)) << endl;
+    
   }
 
   class FETL {
@@ -307,16 +364,18 @@ public:
   
   class Invariants {
     DNSBase *b;
-    Real &Energy,&Enstrophy,&Palinstrophy;
+    Real &Energy,&Enstrophy,&Palinstrophy,&Palinstrophy2;
   public: 
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
-                             Palinstrophy(b->Palinstrophy) {}
+                             Palinstrophy(b->Palinstrophy),
+                             Palinstrophy2(b->Palinstrophy2) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       Real w2=abs2(wi[j]);
       Enstrophy += w2;
       unsigned k2=i*i+j*j;
       Energy += w2/k2;
       Palinstrophy += k2*w2;
+      Palinstrophy2 += k2*k2*w2;
     }
   };
   
@@ -525,14 +584,15 @@ public:
   }
 
   virtual void ComputeInvariants(const array2<Complex> &w, Real& E, Real& Z,
-                                 Real& P) {
-    Energy=Enstrophy=Palinstrophy=0.0;
+                                 Real& P, Real& P2) {
+    Energy=Enstrophy=Palinstrophy=Palinstrophy2=0.0;
   
     Loop(Initw(this),Invariants(this));
   
     E=Energy;
     Z=Enstrophy;
     P=Palinstrophy;
+    P2=Palinstrophy2;
   }
   
   virtual Real getSpectrum(unsigned i) {

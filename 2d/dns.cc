@@ -397,7 +397,26 @@ void DNS::InitialConditions()
   setcount();
 
   if(movie) {
+    size_t align=sizeof(Complex);
+    u.Allocate(Nx+1,my,-mx,0,align);
+    v.Allocate(Nx+1,my,-mx,0,align);
+    ux.Allocate(Nx+1,my,-mx,0,align);
+    uy.Allocate(Nx+1,my,-mx,0,align);
+    vx.Allocate(Nx+1,my,-mx,0,align);
+    vy.Allocate(Nx+1,my,-mx,0,align);
+    A2u.Allocate(Nx+1,my,-mx,0,align);
+    A2v.Allocate(Nx+1,my,-mx,0,align);
+    
     wr.Dimension(Nx+1,2*my,(Real *) f1());
+    ur.Dimension(Nx+1,2*my,(Real *) u());
+    vr.Dimension(Nx+1,2*my,(Real *) v());
+    uxr.Dimension(Nx+1,2*my,(Real *) ux());
+    uyr.Dimension(Nx+1,2*my,(Real *) uy());
+    vxr.Dimension(Nx+1,2*my,(Real *) vx());
+    vyr.Dimension(Nx+1,2*my,(Real *) vy());
+    A2ur.Dimension(Nx+1,2*my,(Real *) A2u());
+    A2vr.Dimension(Nx+1,2*my,(Real *) A2v());
+
     Backward=new fftwpp::crfft2d(Nx+1,2*my-1,f1);
   }
 
@@ -461,9 +480,9 @@ void DNS::Output(int it)
   vector y=Y[OMEGA];
   w.Set(y);
     
-  Real E,Z,P;
-  ComputeInvariants(w,E,Z,P);
-  fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
+  Real E,Z,P,P2;
+  ComputeInvariants(w,E,Z,P,P2);
+  fevt << t << "\t" << E << "\t" << Z << "\t" << P << "\t" << P2 << endl;
 
   if(output) out_curve(fw,y,"w",NY[OMEGA]);
 
@@ -523,10 +542,11 @@ void DNS::Output(int it)
 
 void DNS::FinalOutput()
 {
-  Real E,Z,P;
-  ComputeInvariants(w,E,Z,P);
+  Real E,Z,P,P2;
+  ComputeInvariants(w,E,Z,P,P2);
   cout << endl;
   cout << "Energy = " << E << newl;
   cout << "Enstrophy = " << Z << newl;
   cout << "Palinstrophy = " << P << newl;
+  cout << "Palinstrophy2 = " << P2 << newl;
 }
