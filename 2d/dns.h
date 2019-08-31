@@ -129,9 +129,11 @@ public:
       for(int j=0; j < my; ++j)
         f1[i][j]=w(i,j);
     
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f1);
-
-    f1[-mx][0]=0; // Zero remaining Nyquist mode.
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
+    
+// Zero Nyquist modes.
+    for(int j=0; j < my; ++j)
+      f1(j)=0.0;
     
     Backward->fft0(f1);
      
@@ -140,6 +142,10 @@ public:
       for(unsigned i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
+    
+// Zero Nyquist modes.
+    for(int j=0; j < my; ++j)
+      f1(j)=0.0;
   }
 
   class FETL {
