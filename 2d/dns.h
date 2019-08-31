@@ -132,11 +132,11 @@ public:
     for(int i=-mx+1; i < mx; ++i)
       for(int j=0; j < my; ++j)
         f1[i][j]=w(i,j);
-    
+
     for(int i=-mx+1; i < mx; ++i) {
       for(int j=0; j < my; ++j) {
         Complex wij=w(i,j);        
-        Real k4=(i*i+j*j);
+        Real k4=i*i+j*j;
         k4 *= k4;
         Complex psi=wij*k2inv[i][j];
         Complex uij=j*psi;
@@ -152,26 +152,28 @@ public:
       }
     }
     
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,f1);
-    
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,u);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,v);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,ux);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,uy);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,vx);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,vy);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,A2u);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,A2v);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,u);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,v);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,ux);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,uy);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,vx);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,vy);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v);
 
-    f1[-mx][0]=0; // Zero remaining Nyquist mode.
-    u[-mx][0]=0;
-    v[-mx][0]=0;
-    ux[-mx][0]=0;
-    uy[-mx][0]=0;
-    vx[-mx][0]=0;
-    vy[-mx][0]=0;
-    A2u[-mx][0]=0;
-    A2v[-mx][0]=0;
+   // Zero Nyquist modes.
+    for(int j=0; j < my; ++j) {
+      f1[-mx][j]=0.0;
+      u[-mx][j]=0.0;
+      v[-mx][j]=0.0;
+      ux[-mx][j]=0.0;
+      uy[-mx][j]=0.0;
+      vx[-mx][j]=0.0;
+      vy[-mx][j]=0.0;
+      A2u[-mx][j]=0.0;
+      A2v[-mx][j]=0.0;
+    }
     
     Backward->fft0(f1);
     Backward->fft0(u);
@@ -192,10 +194,10 @@ public:
     Real sum=0.0;
     for(unsigned i=0; i <= Nx; i++)
       for(int j=0; j < 2*my-1; j++)
-//        sum += (ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j])*A2ur[i][j]+
-//          (ur[i][j]*vxr[i][j]+vr[i][j]*vyr[i][j])*A2vr[i][j];
-        sum += ur[i][j]*ur[i][j]+vr[i][j]*vr[i][j];
-    cout << "Inner product=" << 0.5*sum/(Nx*(2*my-1)) << endl;
+        sum += (ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j])*A2ur[i][j]+
+          (ur[i][j]*vxr[i][j]+vr[i][j]*vyr[i][j])*A2vr[i][j];
+//        sum += 0.5*(ur(i,j)*ur(i,j)+vr(i,j)*vr(i,j));
+    cout << "Inner product=" << sum/((Nx+1)*(2*my-1)) << endl;
     
   }
 
