@@ -191,13 +191,21 @@ public:
         fw << (float) wr(i,j);
     fw.flush();
     
-    Real sum=0.0;
-    for(unsigned i=0; i <= Nx; i++)
-      for(int j=0; j < 2*my-1; j++)
-        sum += (ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j])*A2ur[i][j]+
-          (ur[i][j]*vxr[i][j]+vr[i][j]*vyr[i][j])*A2vr[i][j];
+    Real sum=0.0, norm1=0.0, norm2=0.0;
+    for(unsigned i=0; i <= Nx; i++) {
+      for(int j=0; j < 2*my-1; j++) {
+        Real bx=ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j];
+        Real by=ur[i][j]*vxr[i][j]+vr[i][j]*vyr[i][j];
+        Real ax=A2ur[i][j];
+        Real ay=A2vr[i][j];
+        sum += bx*ax+by*ay;
+        norm1 += bx*bx+by*by;
+        norm2 += ax*ax+ay*ay; 
+      }
+    }
 //        sum += 0.5*(ur(i,j)*ur(i,j)+vr(i,j)*vr(i,j));
     cout << "Inner product=" << sum/((Nx+1)*(2*my-1)) << endl;
+    cout << "Angle=" << acos(sum/sqrt(norm1*norm2))*180.0/PI << endl;
     
   }
 
