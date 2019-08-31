@@ -164,15 +164,15 @@ public:
 
    // Zero Nyquist modes.
     for(int j=0; j < my; ++j) {
-      f1[-mx][j]=0.0;
-      u[-mx][j]=0.0;
-      v[-mx][j]=0.0;
-      ux[-mx][j]=0.0;
-      uy[-mx][j]=0.0;
-      vx[-mx][j]=0.0;
-      vy[-mx][j]=0.0;
-      A2u[-mx][j]=0.0;
-      A2v[-mx][j]=0.0;
+      f1(j)=0.0;
+      u(j)=0.0;
+      v(j)=0.0;
+      ux(j)=0.0;
+      uy(j)=0.0;
+      vx(j)=0.0;
+      vy(j)=0.0;
+      A2u(j)=0.0;
+      A2v(j)=0.0;
     }
     
     Backward->fft0(f1);
@@ -207,6 +207,9 @@ public:
     cout << "Inner product=" << sum/((Nx+1)*(2*my-1)) << endl;
     cout << "Angle=" << acos(sum/sqrt(norm1*norm2))*180.0/PI << endl;
     
+// Zero Nyquist modes.
+    for(int j=0; j < my; ++j)
+      f1(j)=0.0;
   }
 
   class FETL {
