@@ -12,7 +12,7 @@ import contour;
 
 string[][] t={{"C","C"},{"w","\omega"},{"vx","v_x"},{"vy","v_y"}};
 
-string dir=getstring("directory","r");
+string dir=getstring("run");
 string field=getstring("field","vort");
 
 // figure out how many frames there are

@@ -3,7 +3,7 @@ include averages;
 
 import palette;
 
-scale(Linear,Linear);
+scale(Log,Log);
 pen p=linewidth(1);
 
 real[] t,E,Z;
@@ -72,15 +72,16 @@ while(nextrun()) {
   for(int i=0; i < E.length; ++i) {
     frame mark;
     fill(mark,scale(0.4mm)*polygon(3+k),p[round(t[i]*incr)]);
-    add(mark,(E[i],Z[i]));
+    add(mark,Scale((E[i],Z[i])));
   }
 
-  bool cropx=downcase(getstring("Crop x [Y/n]?","y")) != 'n';
-  bool cropy=downcase(getstring("Crop y [Y/n]?","y")) != 'n';
+  //  bool cropx=downcase(getstring("Crop x [Y/n]","y")) != 'n';
+  //  bool cropy=downcase(getstring("Crop y [Y/n]","y")) != 'n';
+  bool cropx=false;
 
-  real Emin=point(plain.W).x;
-  real Emax=point(plain.E).x;
-  real Zmax=point(plain.N).y;
+real Emin=10^point(plain.W).x;
+real Emax=10^point(plain.E).x;
+real Zmax=10^point(plain.N).y;
 
   real crop(real x1, real x2=x1) {
     real bound=1;
@@ -93,13 +94,14 @@ while(nextrun()) {
 
     real kfm=kforce-deltaf/2;
     real kfp=kforce+deltaf/2;
-  draw(graph(new real(real E) {return E;},0,crop(Emax)),grey); //point(plain.E).x),blue);
+    write(kfm,kfp);
+  draw(graph(new real(real E) {return E;},Emin,crop(Emax)),grey); //point(plain.E).x),blue);
 
      draw(graph(new real(real E) {return kfp^2*E;},
-                0,min(point(plain.N).y/kfp^2,point(plain.E).x)),magenta);
+                Emin,min(10^point(plain.N).y/kfp^2,10^point(plain.E).x)),magenta);
      draw(graph(new real(real E) {return kfm^2*E;},
-                 0,min(point(plain.N).y/kfm^2,point(plain.E).x)),magenta);
-  draw(graph(new real(real E) {return sqrt(E);},0,crop(Emax,Zmax^2)),brown);
+                 Emin,min(10^point(plain.N).y/kfm^2,10^point(plain.E).x)),magenta);
+  draw(graph(new real(real E) {return sqrt(E);},Emin,crop(Emax,Zmax^2)),brown);
 
   //  real tau=1-sqrt(2-sqrt(2));
   //  real alpha=tau/sqrt(2);
@@ -115,7 +117,7 @@ while(nextrun()) {
           (0.6*currentpicture.xsize,0.25cm),Bottom,
           p,NoTicks);
 
-  add(bar.fit(),point(plain.S),30plain.S);
+  add(bar.fit(),10^point(plain.S),30plain.S);
   */
 
   ++k;
