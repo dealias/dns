@@ -42,22 +42,23 @@ real e;
   
 int kmax;
 real[] Ek;
-int h;
+int h=0;
 
-for(int t=0; t < N; ++t) {
+int T=N#2;
+
+for(int t=T; t < N; ++t) {
   real[][][] u=read(Dt*(t+1),"U");
 
   n=u[0].length;
 
-  if(t == 0) {
+  if(h == 0) {
     h=(n+1)#2;
     k=concat(sequence(0,h-1),sequence(0,h-2)-(h-1));
+    kmax=ceil(sqrt(2)*(h-1));
+    Ek=array(kmax+1,0);
   }
 
   real[][] E=Ek(u);
-
-  kmax=ceil(sqrt(2)*(h-1));
-  Ek=array(kmax+1,0);
 
   for(int i=0; i < n; ++i) {
     real[] Ei=E[i];
@@ -73,11 +74,10 @@ for(int t=0; t < N; ++t) {
 write();
 write("e=",e);
 
-real krmax=kmax;
+Ek /= (N-T);
 
-real[] k=sequence(0,ceil(krmax));
-write(krmax);
-draw(graph(k,Ek,k > 0*k & k <= krmax),p+red,texify(run));
+int[] k=sequence(0,kmax);
+draw(graph(k,Ek,k > 0 & k < h),p+red,texify(run));
 
 xaxis("$k$",BottomTop,LeftTicks);
 yaxis("$E(k)$",LeftRight,RightTicks);
