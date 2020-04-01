@@ -1,9 +1,9 @@
 import graph;
 import palette;
+import getrun;
 
 size(15cm,IgnoreAspect);
 
-string run=getstring("run");
 int N=getint("number of timesteps:",1);
 real Dt=getreal("Dt:",1);
 
@@ -38,46 +38,61 @@ real[][] Ek(real[][][] U)
              //             return k2 > 0 ? abs(wk)^2*norm/k2 : 0;},n);},n);
 }
 
-real e;
-  
-int kmax;
-real[] Ek;
-int h=0;
+int nruns=-1;
 
-int T=N#2;
-
-for(int t=T; t < N; ++t) {
-  real[][][] u=read(Dt*(t+1),"U");
-
-  n=u[0].length;
-
-  if(h == 0) {
-    h=(n+1)#2;
-    k=concat(sequence(0,h-1),sequence(0,h-2)-(h-1));
-    kmax=ceil(sqrt(2)*(h-1));
-    Ek=array(kmax+1,0);
-  }
-
-  real[][] E=Ek(u);
-
-  for(int i=0; i < n; ++i) {
-    real[] Ei=E[i];
-    for(int j=0; j < n; ++j)
-      Ek[round(hypot(k[i],k[j]))] += Ei[j];
-  }
-    
-  e=0.5*sum(Ek);
-
-  write("["+string(t+1)+"] ",none);
+bool nextrun()
+{
+  ++nruns;
+  int pos=find(runs,",",lastpos);
+  if(lastpos == -1) {run=""; return false;}
+  run=substr(runs,lastpos,pos-lastpos);
+  lastpos=pos > 0 ? pos+1 : -1;
+  return true;
 }
 
-write();
-write("e=",e);
+while(nextrun()) {
 
-Ek /= (N-T);
+  real e;
+  
+  int kmax;
+  real[] Ek;
+  int h=0;
 
-int[] k=sequence(0,kmax);
-draw(graph(k,Ek,k > 0 & k < h),p+red,texify(run));
+  int T=N#2;
+
+  for(int t=T; t < N; ++t) {
+    real[][][] u=read(Dt*(t+1),"U");
+
+    n=u[0].length;
+
+    if(h == 0) {
+      h=(n+1)#2;
+      k=concat(sequence(0,h-1),sequence(0,h-2)-(h-1));
+      kmax=ceil(sqrt(2)*(h-1));
+      Ek=array(kmax+1,0);
+    }
+
+    real[][] E=Ek(u);
+
+    for(int i=0; i < n; ++i) {
+      real[] Ei=E[i];
+      for(int j=0; j < n; ++j)
+        Ek[round(hypot(k[i],k[j]))] += 0.5*Ei[j];
+    }
+    
+    e=sum(Ek);
+
+    write("["+string(t+1)+"] ",none);
+  }
+
+  write();
+  write("e=",e);
+
+  Ek /= (N-T);
+
+  int[] k=sequence(0,kmax);
+  draw(graph(k,Ek,k > 0 & k < h),p+Pen(nruns),texify(run));
+}
 
 xaxis("$k$",BottomTop,LeftTicks);
 yaxis("$E(k)$",LeftRight,RightTicks);
