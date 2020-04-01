@@ -28,6 +28,7 @@ norm fnorm(real[] F) {
     f2 += Fk2/(i*i+j*j);
   }
   norm N;
+  //  write("f2=",f2);
   N.f=sqrt(f2); // |f|
   N.F=sqrt(F2); // |A^(1/2)f|
   return N;

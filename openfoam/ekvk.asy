@@ -10,8 +10,6 @@ real Dt=getreal("Dt:",1);
 scale(Log,Log);
 pen p=linewidth(1);
 
-real[] E=new real[N];
-
 import utils;
 
 int n;
@@ -40,27 +38,47 @@ real[][] Ek(real[][][] U)
              //             return k2 > 0 ? abs(wk)^2*norm/k2 : 0;},n);},n);
 }
 
+real e;
+  
+int kmax;
+real[] Ek;
+int h;
+
 for(int t=0; t < N; ++t) {
   real[][][] u=read(Dt*(t+1),"U");
 
-  real e;
-  
   n=u[0].length;
 
   if(t == 0) {
-    int h=(n+1)#2;
+    h=(n+1)#2;
     k=concat(sequence(0,h-1),sequence(0,h-2)-(h-1));
   }
 
-  real[][] Ek=Ek(u);
+  real[][] E=Ek(u);
+
+  kmax=ceil(sqrt(2)*(h-1));
+  Ek=array(kmax+1,0);
 
   for(int i=0; i < n; ++i) {
-    e += sum(Ek[i]);
+    real[] Ei=E[i];
+    for(int j=0; j < n; ++j)
+      Ek[round(hypot(k[i],k[j]))] += Ei[j];
   }
-  E[t]=0.5*e; // TODO: explain (h-1) normalization
+    
+  e=0.5*sum(Ek);
+
   write("["+string(t+1)+"] ",none);
 }
 
 write();
-write(E);
+write("e=",e);
+
+real krmax=kmax;
+
+real[] k=sequence(0,ceil(krmax));
+write(krmax);
+draw(graph(k,Ek,k > 0*k & k <= krmax),p+red,texify(run));
+
+xaxis("$k$",BottomTop,LeftTicks);
+yaxis("$E(k)$",LeftRight,RightTicks);
 

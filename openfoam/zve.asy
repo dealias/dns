@@ -45,8 +45,9 @@ for(int i=0; i < n; ++i) {
 real nuH=0.0003;
 real nuL=0.2;
 
+write("f2=",f2);
+
 real G=sqrt(f2)/nuH^2;
-write(G);
 
 real norm=1/(G^2*nuH^2);
 
