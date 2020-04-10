@@ -1,4 +1,4 @@
-string run=getstring("run");
+string run;
 
 real[][][] read(real i, string file) {
   file in=input(run+"/"+string(i)+"/"+file).line();

@@ -4,6 +4,9 @@ import palette;
 size(188.80779pt,IgnoreAspect);
 //size(15cm,IgnoreAspect);
 
+import utils;
+
+run=getstring("run");
 int N=getint("number of timesteps:",1);
 real Dt=getreal("Dt:",1);
 
@@ -12,8 +15,6 @@ pen p=linewidth(1);
 
 real[] E=new real[N];
 real[] Z=new real[N];
-
-import utils;
 
 real[][][] f=read(0,"F");
 
