@@ -1,0 +1,24 @@
+\usepackage{hyperref}
+%\hypersetup{setpagesize=false,unicode,pdfborder=0 0 0}
+%
+% bracketed citations
+%
+% Must use with \bibliographystyle{rmp}
+%
+\newif\ifcitename
+
+\def\bibsplit#1\ #2\relax{\ifcitename#1\ [#2]\else[#1\ #2]\fi}
+\def\splitlist#1,#2\relax{\def\nexttext{#1}\def\bibtext{#2}%
+\ifx\nexttext\empty\else\def\nexttext{, #1}\fi%
+\ifx\bibtext\empty\def\bibtext{,}\fi}
+
+\def\cite{\citenamefalse\def\bibtext{[}%
+\@ifnextchar [{\@tempswatrue\@citey}{\@tempswafalse\@citex[]}}
+\def\citename{\citenametrue\def\bibtext{}%
+\@ifnextchar [{\@tempswatrue\@citey}{\@tempswafalse\@citex[]}}
+
+\def\@cite#1#2{#1\def\argtwo{#2}\ifx\argtwo\empty\else,\argtwo\fi}
+
+\def\bibcite#1#2{%
+   \@newl@bel{b}{#1\@extra@binfo}{\hyper@@link[cite]{}{cite.#1}{\bibsplit#2\relax}}%
+}%
