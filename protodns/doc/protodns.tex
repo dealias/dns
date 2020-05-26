@@ -86,17 +86,18 @@ Here we must mention that as it can be inferred from the name of the code, it is
 %
 \section{Governing Equations}
 We start our work with the set of governing equations for incompressible
-turbulent flows. The main set of governing equations are the Navier--Stokes equation for momentum and the incompressibilty condition:
+turbulent flows. The main set of governing equations are the
+Navier--Stokes equation for momentum and the incompressibilty
+condition for the velocity $\vu$,
 \begin{equation}
 \begin{cases}
-\dfrac{\partial \vu}{\partial t} + \vu\cdot\grad\vu = -\grad p + \nu\lap\vu + \vF,\\
+\dfrac{\partial \vu}{\partial t} + \vu\cdot\grad\vu = -\grad P + \nu\lap\vu + \vF,\\
 \\
 \div \vu=0.\label{GE}
 \end{cases}
 \end{equation}
-However, there is another possible set of equations,
-the \In{vorticity} representation, that is equivalent to \Eq{GE} but is
-sometimes more convenient:
+The equation describing the evolution of the \In{vorticity}
+$\vw=\curl\vu$ is sometimes more convenient:
 \begin{equation}\label{vorticity}
 \begin{cases}
 \dfrac{\partial{\vw}}{\partial t} + (\vu\dot\grad)\vw=(\vw\dot\grad)\vu + \nu\lap\vw + \curl\vF,\\
@@ -104,36 +105,38 @@ sometimes more convenient:
 \div \vu=0.
 \end{cases}
 \end{equation}
-The main advantage of using the \emph{vorticity} equation instead of momentum equation is the fact that vorticity equation does not involve pressure term which in turn involves solving Poisson's equation. So as we stated above, considering our problem with periodic boundary conditions, we do not concern about the pressure term and so the vorticity equation will save us from dealing with Poisson's equation. Taking into account that our problem is 2D, it is still possible to make use of the existence of the
-\emph{stream function}, and so for the case of 2D incompressible turbulent flow in the $x--y$ plane, we would have
-\begin{equation}
-\begin{cases}
-\vu=u(x,y)\hat{\vx}+v(x,y)\hat{\vy}, \\
-\hspace{3.5cm} 		\\
-u=-\dfrac{\partial\psi}{\partial y},\quad v=\dfrac{\partial\psi}{\partial x}, \label{streamfunction}
-\end{cases}\implies \div\vu=0.
-\end{equation}
-Now, by the definition of vorticity which is $\vw=\grad\cross\vu$, then we will have
-\begin{equation}\label{omega}
-\vw=\left(\frac{\partial v}{\partial x}-\frac{\partial u}{\partial y}\right)\hat{\vz},
-\end{equation}
-which in fact shows that in the case of 2D incompressible flow, $\vw$ is a vector whose direction is always prependicular to the velocity vector, so what is important is just the length of the vorticity vector. Thus, we can look at the vorticity as an scalar function. Now using the equation \Eq{streamfunction} in \Eq{omega}, we will have
-\begin{equation}\label{omega-psi}
-\vw=(\lap\psi)\hat{\vz},
-\end{equation}
-while we can write
+One advantage of the vorticity equation is that it does not contain
+a pressure term.
+Moreover in 2D, one can exploit the fact that the
+vorticity vector is always parallel to the normal $\zhat$ of the plane of motion.
+Since the flow is incompressible, we can express
+$\vu=\curl\vA$ in the Coulomb gauge $\div\vA=0$, so that
+$$
+\vw=\w\zhat=\curl(\curl \vA)=\grad(\div\vA)-\del^2 \vA=-\del^2 \vA.
+$$
+Hence $\del^2 A_x=\del^2 A_y=0$. Given periodic 
+conditions one may then without loss of generality take $A_x=A_y=0$ so that
+$\vA$, like $\vw$, has only one component $\w$, in the $\zhat$ direction.
+It is conventional to define $\psi\doteq -A_z$ to be
+the \In{stream function}, so that
 \begin{equation}\label{u-psi}
-\vu=\frac{\partial\psi}{\partial y}\hat{\vx}+\frac{\partial\psi}{\partial x}\hat{\vy}=\hat{\vz}\cross\grad\psi.
+\vu=\curl(-\psi \zhat)=\hat{\vz}\cross\grad\psi=
+  \frac{\partial\psi}{\partial y}\hat{\vx}+\frac{\partial\psi}{\partial x}\hat{\vy}
 \end{equation}
-So using equations \Eq{omega-psi},\Eq{u-psi}, we can represent the velocity vector with respect to the stream function as $\vu=\hat{\vz}\cross\grad(\lapinv\omega)$. As we mentioned above, because in 2D flow, the vorticity is always prependicular to the velocity vector, and also because of incompressibility, the first term in the right hand side of the vorticity equation vanishes, so the vorticity equation will be simplified as:
-\begin{equation}\label{2D-vorticity}
-\frac{\partial \omega}{\partial t} + (\vu\dot\grad)\omega= \nu\lap\omega + f.
+and
+\begin{equation}\label{omega}
+\vw=(\lap\psi)\hat{\vz}.
 \end{equation}
-Expanding the second term in the equation \Eq{2D-vorticity}, we will obtain
+
+So using \Eq{u-psi} and \Eq{omega}, we can represent the velocity
+vector with respect to the stream function as
+$\vu=\hat{\vz}\cross\grad(\lapinv\omega)$.
+Because the vorticity is always perpendicular to the plane of motion,
+the term $(\vw\dot\grad)\vu$ on the right-hand side of the vorticity equation vanishes:
 \begin{equation}\label{2D-vorticity-expand}
 \frac{\partial \omega}{\partial t} + (\hat{\vz}\cross\grad(\lapinv\omega)\dot\grad)\omega= \nu\lap\omega + f.
 \end{equation}
-using the inverse discrete Fourier transform, we can write
+Using the inverse discrete Fourier transform, we can write
 \begin{equation*}
 \omega(\vx)=\sum_{\vp}{e^{i\vp\dot\vx}\omega_{\vp}}, \quad\nu\lap\omega(\vx)=\nu\sum_{\vp}{p^2 e^{i\vp\dot\vx}\omega_{\vp}}, \quad f(\vx)=\sum_{\vp}{e^{i\vp\dot\vx}f_{\vp}}.
 \end{equation*}
