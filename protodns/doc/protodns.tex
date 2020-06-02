@@ -38,6 +38,7 @@
 \def\vw{{\v\w}}
 \def\hyperindex#1{\index{#1}\hypertarget{#1}}
 \def\In#1{\hyperindex{#1}{\emph{#1}}}
+\def\Eq#1{(\ref{#1})}
 
 % PACKAGE OPTIONS
 \definecolor{heavyred}{cmyk}{0,1,1,0.25}
@@ -136,32 +137,30 @@ the term $(\vw\dot\grad)\vu$ on the right-hand side of the vorticity equation va
 \begin{equation}\label{2D-vorticity-expand}
 \frac{\partial \omega}{\partial t} + (\hat{\vz}\cross\grad(\lapinv\omega)\dot\grad)\omega= \nu\lap\omega + f.
 \end{equation}
-Using the inverse discrete Fourier transform, we can write
-\begin{equation*}
-\omega(\vx)=\sum_{\vp}{e^{i\vp\dot\vx}\omega_{\vp}}, \quad\nu\lap\omega(\vx)=\nu\sum_{\vp}{p^2 e^{i\vp\dot\vx}\omega_{\vp}}, \quad f(\vx)=\sum_{\vp}{e^{i\vp\dot\vx}f_{\vp}}.
-\end{equation*}
-\begin{align*}
-(\hat{\vz}\cross\grad(\lapinv\omega(\vx))\dot\grad)\omega(\vx) &=(\hat{\vz}\cross\grad(\lapinv\sum_{\vp}{e^{i\vp\dot\vx}\omega_{\vp}})\dot\grad)\sum_{\vq}{e^{i\vq\dot\vx}\omega_{\vq}} \\
-&=\sum_{\vp,\vq}{\frac{(\hat{\vz}\cross\vp)\dot\vq}{p^2}\omega_{\vp}\omega_{\vq}e^{i(\vp+\vq)\dot\vx}}.
-\end{align*}
-On taking the discrete Fourier transform $\mathcal{F}$ of \Eq{2D-vorticity-expand}, we then obtain
-\begin{equation*}
-\frac{\partial}{\partial
-  t}\({\sum_{\vp,\vk}{e^{i(\vp-\vk)\dot\vx}\omega_{\vp}}}\) +
-\sum_{\vp,\vq,\vk}{\frac{(\hat{\vz}\cross\vp)\dot\vq}{p^2}e^{i(\vp+\vq-\vk)\dot\vx}\omega_{\vp}\omega_{\vq}}= \nu\sum_{\vp,\vk}{p^2e^{i(\vp-\vk)\dot\vx}\omega_{\vp}} + \sum_{\vp,\vk}{e^{(i\vp-\vk)\dot\vx}f_{\vp}}.
-\end{equation*}
-Simplifying the above equation, the final governing equation in the wave space(Fourier space) would be
-\begin{equation}\label{Fourier-expand}
-\frac{\partial\omega_{\vk}}{\partial t} + \sum_{\vp}{\frac{(\hat{\vz}\cross\vp)\dot\vk}{p^2}\omega_{\vp}\omega_{\vk-\vp}}= -\nu k^2\omega_{\vk} + f_{\vk}.
-\end{equation}
-Although the equation \Eq{Fourier-expand} is obtained as the governing equation in Fourier space that must get solved numerically, but that representation is not used in action. So for finding the practical governing equation, we can represent the equation \Eq{Fourier-expand} in the following form:
+The discrete Fourier transform ${\cal F}$ of the vorticity sampled at collocation
+points $\vw_\vj\doteq\vw(\vx_\vj)$ over a two-dimensional lattice
+$G$ of size $N\times N$,
+$$
+\vw_{\vk}=\sum_{\vj\in G} \vw_\vj e^{-\fr{2\pi i\vk\dot\vj}{N^2}}.
+$$
+evolves according to
 \begin{equation}\label{Fourier}
-\frac{\partial\omega_{\vk}}{\partial t} + \mathcal{F}\{\vu\cdot\grad\omega\}= -\nu k^2\omega_{\vk} + f_{\vk}.
+\frac{\partial\omega_{\vk}}{\partial t} + {\cal F}_\vk\{\vu\cdot\grad\omega\}= -\nu k^2\omega_{\vk} + f_{\vk}.
 \end{equation}
-so as it was presented above $u$, and $v$ can be obtained based on the $\omega$, and this is what that makes the numerical simulation easier as it is represented in the next section.
+where 
+$$
+\vf_{\vk}=\sum_{\vj\in G} \vf_\vj e^{-\fr{2\pi i\vk\dot\vj}{N^2}}
+$$
+and $\vf_\vj\doteq\vf(\vx_\vj)$,
+where the Fourier transform of the advection term
+$\vu\cdot\grad\omega$ can be written as a convolution:
+\begin{equation}\label{Fourier-expand}
+\frac{\partial\omega_{\vk}}{\partial t} + \sum_{\vp}{\frac{(\hat{\vz}\cross\vp)\dot\vk}{p^2}\omega_{\vp}\omega_{\vk-\vp}}= -\nu k^2\omega_{\vk} + f_{\vk},
+\end{equation}
+
 \section{Numerical simulation}
 \subsection{The domain of simulation}
-Now that we have our governing equation \Eq{Fourier} in Fourier space, then we need to take a numerical scheme to solve that equation. So at first we need to characterize our domain of simulation. As we mentioned before, because our intention is direct numerical simulation of homogeneous isotropic turbulence, so we have to avoid having walls or in fact we have to stay far enough from walls. This can be easily done by considering periodic boundary conditions. Considering this point, our schematic domain is shown in Figure~\ref{domain}. 
+Now that we have our governing \Eq{Fourier} in Fourier space, then we need to take a numerical scheme to solve that equation. So at first we need to characterize our domain of simulation. As we mentioned before, because our intention is direct numerical simulation of homogeneous isotropic turbulence, so we have to avoid having walls or in fact we have to stay far enough from walls. This can be easily done by considering periodic boundary conditions. Considering this point, our schematic domain is shown in Figure~\ref{domain}. 
 \begin{figure}[ht]
 \begin{center}
 \asyinclude{domain}
@@ -169,25 +168,25 @@ Now that we have our governing equation \Eq{Fourier} in Fourier space, then we n
 \end{center}
 \end{figure}
 \subsection{Solution algorithm}
-Now, we are to represent the numerical scheme that we have to take for solving our governing equation. As we stated in the previous section, the governing equation is:
-\begin{equation}\label{governing}
-\frac{\partial\omega_{\vk}}{\partial t} + \mathcal{F}\{\vu\cdot\grad\omega\}= -\nu{k}^2\omega_{\vk} + f_{\vk}.
-\end{equation}
-%
-This equation can be written as an evolutionary equation for $\omega$ by taking all the terms except the time-derivative of $\omega$ to the right-hand side:
+Now, we are to represent the numerical scheme that we have to take for solving our governing equation. 
+Equation~\Eq{Fourier} can be written as an evolutionary equation for $\omega_\vk$ by taking all the terms except the time-derivative of $\omega$ to the right-hand side:
 \begin{equation}\label{evolutionary}
-\frac{\partial\omega_{\vk}}{\partial t} =- \mathcal{F}\left\lbrace u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}\right\rbrace -\nu k^2\omega_{\vk} + f_{\vk}.
+  \frac{\partial\omega_{\vk}}{\partial t} =
+  (k_x^2-k_y^2) {\cal F}_\vk\{uv\}+k_xk_y{\cal F}_\vk\{v^2-u^2\} -\nu k^2\omega_{\vk} + f_{\vk}.
 \end{equation}
-%
-The numerical solution steps are as the following steps:
+
+\pagebreak[4]
+The numerical solution steps are:
 \begin{enumerate}
-\item Initialize $\omega_{\vk}$ in the Fourier space
-\item Calculate velocity components $u,v$ based on $\omega$.
-\item Take the inverse discrete fast Fourier transform ($\text{FFT}^{-1}$) of $u,v,\omega$ to go to physical space
-\item Calculate the multiplicative terms appeared in the inertial term in physical space
-\item Take the discrete fast Fourier transform ($\text{FFT}$) of the multiplicative terms to get back to Fourier space
-\item Update the values of $\omega$ by marching one step in time
-\item Calculate the values of energy, enstrophy, and palenstrophy.
+\item Initialize $\omega_{\vk}$ in Fourier space;
+\item Calculate the velocity components $u_\vk$ and $v_\vk$ from $\omega_{\vk}$;
+\item Take the inverse discrete fast Fourier transform
+  ($\text{FFT}^{-1}$) of $u_\vk$ and $\u_\vk$;
+\item Calculate $uv$ and $v^2-u^2$ term in physical space;
+\item Take the forward discrete fast Fourier transform ($\text{FFT}$) of
+$uv$ and $v^2-u^2$;
+\item Update the values of $\omega_\vk$ by marching one step in time;
+\item Calculate the values of energy, enstrophy, and palinstrophy;
 \item Go to Step 2.
 \end{enumerate}
 The flowchart of the above numerical algorithm is shown in Figure~\ref{algorithm}.
@@ -197,66 +196,11 @@ The flowchart of the above numerical algorithm is shown in Figure~\ref{algorithm
 \caption{Solution algorithm}\label{algorithm}
 \end{center}
 \end{figure}
-\section{Governing Equations Revisited}
-Counting the number of $\text{FFTs}$ required for the numerical solution of
-the equation \Eq{evolutionary}, it can be observed that there are 5 $\text{FFTs}$
-(three inverse $\text{FFTs}$ for $u$, $v$, and $\omega$, and two forward
-for the multiplicative terms. Now, it is possible to ask is it generally
-possible to reduce the number of $\text{FFTs}$ required in the numerical
-solution as they are the most expensive parts of calculation (regarding CPU time)?		\\
-The answer is positive if we rewrite the governing equation more intelligently using some sort of symmetries available by using incompressibility. This was done both for 2D and 3D cases by
-\citename{Basdevant83}, however it seems that it has not been well appreciated since then. In the following, we will represent this kind of formulation of vorticity equation. At the end, the reader will notice that this approach will reduce the number of required $\text{FFTs}$ from five to four. Regarding the fact that taking fast Fourier transforms (both forward or backward) is the most expensive part of the calculation, it can be easily understood that this new representation of governing equations can significantly speed up the solution. In the following we will represent the argument proposed by \citename{Basdevant83} for the three-dimensional case as well as the corresponding representation for the two-dimensional one. 	\\
-\subsection{3D case}
-we start using our governing equations \Eq{GE} equation:
-\begin{equation}
-\begin{cases}
-\dfrac{\partial \vu}{\partial t} + \vu\cdot\grad\vu = -\grad p + \nu\lap\vu + \vF,\\
-\\
-\div \vu=0.
-\end{cases}
-\end{equation}
-Expanding the above equation for the first component the velocity vector, we have:
-\begin{equation}\label{u-comp}
-\dfrac{\partial u}{\partial t} + u\dfrac{\partial u}{\partial x} +v\dfrac{\partial u}{\partial y} + w\dfrac{\partial u}{\partial z}= -\grad p + \nu\lap u + \vF.
-\end{equation}
-Using incompressibility, we can rewrite the \Eq{u-component} as what follows:
-\begin{equation}\label{u-comp+incomp}
-\dfrac{\partial u}{\partial t} + \dfrac{\partial uu}{\partial x} +\dfrac{\partial uv}{\partial y} + \dfrac{\partial uw}{\partial z}= -\grad p + \nu\lap u + \vF.
-\end{equation}
-This motivates us to define a symmetric tensor $D_{ij}=u_iu_j$, where $(u_1,u_2,u_3):=(u,v,w)$, and now changing to index notation, we can rewrite the \Eq{GE} in the following compact form:
-\begin{equation}\label{GE-index}
-\dfrac{\partial u_i}{\partial t} + \dfrac{\partial D_{ij}}{\partial x_j} = -\dfrac{\partial p}{\partial x_i} + \nu\dfrac{\partial^2 u_i}{\partial x_j\partial x_j} + F_i.
-\end{equation}
-Now, as we intend to solve our equations in the Fourier space, we need to take the Fourier transform of the above equation, the same process mentioned for \Eq{evolutionary}, so by the definition of the symmetric tensor $D_{ij}$, we have to take three inverse $\text{FFTs}$ for velocity components, and then calculate six independent components of tensor $D_{ij}$, and afterwards take their $\text{FFT}$ transforms to get back to Fourier space. So, it can be easily observed that the above method involved having 9 $\text{FFTs}$, but what \citename{Basdevant83} proposed lets us reduce the number of $\text{FFTs}$ to eight. This is done by defining another tensor, $E_{ij}=\delta_{ij}P_{jk}e_k$, where the matrix $P$ is the corresponding permutation matrix for $1\rightarrow 2\rightarrow 3\rightarrow 1$, and $e_k=u_k^2$. Using this tensor, we can rewrite \Eq{GE-index} as the following form:
-\begin{equation}\label{eight-FFTs}
-\dfrac{\partial u_i}{\partial t} + \dfrac{\partial (D_{ij}-E_{ij})}{\partial x_j} = -\dfrac{\partial (p+u_ju_j)}{\partial x_i} + \nu\dfrac{\partial^2 u_i}{\partial x_j\partial x_j} + F_i.
-\end{equation}
-Looking thoroughly at above equation, it can be noticed that instead of six independent components that we had for $D_{ij}$, in $D_{ij}-E_{ij}$ any of the diagonal components can be calculated as the negative of the addition of the other two diagonal components, so $D_{ij}-E_{ij}$ has just five independent terms which consequently requires five $\text{FFTs}$. This means that our governing equation can be solved using just eight $\text{FFTs}$ by applying \citename{Basdevant83} intelligent representation of the governing equations.(A cautious reader can easily find out the fact that the new term added to the right hand side of the equation, $u_ju_j$, does not involve any extra $\text{FFT}$ compared to when we use only $D_{ij}$.)
 \subsection{2D case}
-We start with inertial term in vorticity equation:
-\begin{equation}\label{inertial}
-\vu\cdot\grad\omega=u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}.
-\end{equation}
-now using incompressibility, we can rewrite the inertial term $S$:
-\begin{equation}\label{inertial-incomp}
-S :=u\dfrac{\partial \omega}{\partial x}+v\dfrac{\partial \omega}{\partial y}=\dfrac{\partial (u\omega)}{\partial x}+\dfrac{\partial (v\omega)}{\partial y},
-\end{equation}
-on the other hand, $\omega=\left(\dfrac{\partial v}{\partial x}-\dfrac{\partial u}{\partial y}\right)$, so we can rewrite the inertial term as follows
-\begin{align}\label{inertial-incomp-vor}
-S &=\dfrac{\partial (u\omega)}{\partial x}+\dfrac{\partial (v\omega)}{\partial y}=\dfrac{\partial}{\partial x} \left(u\dfrac{\partial v}{\partial x}-u\dfrac{\partial u}{\partial y}\right)+\dfrac{\partial}{\partial y} \left(v\dfrac{\partial v}{\partial x}-v\dfrac{\partial u}{\partial y}\right)\\
- &= \dfrac{\partial}{\partial x} \left(u\dfrac{\partial (uv)}{\partial x}-v\dfrac{\partial u}{\partial x}-\dfrac{1}{2}\dfrac{\partial u^2}{\partial y}\right)+\dfrac{\partial}{\partial y} \left(\dfrac{1}{2}\dfrac{\partial v^2}{\partial x}- \dfrac{\partial (uv)}{\partial y}-u\dfrac{\partial v}{\partial y}\right) 							  		\notag \\
-&= \dfrac{\partial^2 (uv)}{\partial x^2}-\dfrac{1}{2}\dfrac{\partial^2 u^2}{\partial x \partial y}-\dfrac{\partial }{\partial x}\left(v\dfrac{\partial u}{\partial x}\right)+\dfrac{1}{2}\dfrac{\partial^2 v^2}{\partial x \partial y}-\dfrac{\partial^2 (uv)}{\partial y^2}+\dfrac{\partial }{\partial y}\left(u\dfrac{\partial v}{\partial y}\right) 		\notag \\
-&= \left(\dfrac{\partial^2}{\partial x^2}-\dfrac{\partial^2}{\partial y^2}\right)(uv)+\dfrac{1}{2}\dfrac{\partial^2}{\partial x \partial y}\left(v^2 - u^2 \right)+\dfrac{\partial }{\partial y}\left(u\dfrac{\partial v}{\partial y}\right)-\dfrac{\partial }{\partial x}\left(v\dfrac{\partial u}{\partial x}\right).
-\end{align}
-Using incompressibility again for the last two terms on the right-hand side, we will have
-\begin{equation}\label{inertial-compact}
-S =\left(\dfrac{\partial^2}{\partial x^2}-\dfrac{\partial^2}{\partial y^2}\right)(uv)+\dfrac{\partial^2}{\partial x \partial y}\left(v^2 - u^2 \right).
-\end{equation}
-so the vorticity equation in Fourier space can be written using the above formulation:
-\begin{equation}\label{four-FFTs}
-\frac{\partial\omega_{\vk}}{\partial t} =- \mathcal{F}\left\lbrace\left(\dfrac{\partial^2}{\partial x^2}-\dfrac{\partial^2}{\partial y^2}\right)(uv)+\dfrac{\partial^2}{\partial x \partial y}\left(v^2 - u^2 \right)\right\rbrace-\nu k^2\omega_{\vk} + f_{\vk}.
-\end{equation}
-Two transforms are required to compute $u$ and $v$ in physical space, from which the quantities $uv$ and $v^2-u^2$ can then be calculated and transformed back to Fourier space with two additional transforms. The advective term in 2D can thus be calculated with four $\text{FFTs}$.
+Two inverse transforms are required to compute $u$ and $v$ in physical
+space, from which the quantities $uv$ and $v^2-u^2$ can then be
+calculated and transformed back to Fourier space with two additional
+forward transforms. The advective term in 2D can thus be calculated with four $\text{FFTs}$.
 
 \hypertarget{Bibliography}{}
 \pdfbookmark{Bibliography}{Bibliography}
