@@ -9,11 +9,15 @@ using namespace std;
 using namespace Array;
 using namespace fftwpp;
 
-int Nx=1023; // Number of modes in x direction
-int Ny=1023; // Number of modes in y direction
+
+int Nx=255; // Number of modes in x direction
+int Ny=255; // Number of modes in y direction
+
+double Cs = 0.1;
+double delta = 1/Nx;
 
 double dt=1.0e-6;
-double nu=0.0; // kinematic viscosity
+double nu=0.003; // kinematic viscosity
 
 int mx;
 int my;
@@ -22,7 +26,8 @@ typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
 
 vector2 w;
-vector2 f0,f1;
+//added new vectors
+vector2 f0,f1,f2,f3,f4;
 
 ofstream ezvt("ezvt",ios::out);
 
@@ -36,12 +41,13 @@ void init(vector2& w)
     }
   }
 }
-    
+
 void Source(const vector2& w, vector2 &S)
 {
   f0[0][0]=0.0; // Enforce no mean flow.
   f1[0][0]=0.0;
-  
+  fft2d Forward(Nx,my,-1);
+  fft2d Backward(Nx,my,1);
   // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
   // requires only 4 FFTs per stage.
   for(int i=-mx+1; i < mx; ++i) {
@@ -51,15 +57,29 @@ void Source(const vector2& w, vector2 &S)
       double ik2inv=i*k2inv;
       f0[i][j]=Complex(-w[i][j].im*jk2inv,w[i][j].re*jk2inv); // u
       f1[i][j]=Complex(w[i][j].im*ik2inv,-w[i][j].re*ik2inv); // v
+      f2[i][j] = Complex(j*f1[i][j].im,j*f1[i][j].re); //dvdy
+      f3[i][j] = Complex(i*f1[i][j].im,i*f1[i][j].re); //dvdx
+      f4[i][j] = Complex(j*f2[i][j].im,j*f2[i][j].re); //dudy
+    }
+  }
+  Backward.fftNormalized(f0);
+  Backward.fftNormalized(f1);
+  Backward.fftNormalized(f2);
+  Backward.fftNormalized(f3);
+  Backward.fftNormalized(f4);
+  for(int i=-mx+1; i < mx; ++i) {
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+        f2[i][j]= f1[i][j]*f1[i][j] - f0[i][j]*f0[i][j] - 4*(Cs*delta)*(Cs*delta)*sqrt((f2[i][j]*f2[i][j])+(f3[i][j] + f4[i][j])*(f3[i][j] + f4[i][j]))*f2[i][j]; // B(x,t)
+        f0[i][j]= f0[i][j]*f1[i][j]; // u1*u2
     }
   }
 
-  Complex *F[]={f0,f1};
-  Convolution->convolve(F,multadvection2);
-  
+  Forward.fft(f0);
+  Forward.fft(f2);
+
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f1[i][j]-nu*(i*i+j*j)*w[i][j];
+      f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f2[i][j]-nu*(i*i+j*j)*w[i][j];
     }
   }
 }
@@ -67,7 +87,7 @@ void Source(const vector2& w, vector2 &S)
 void Spectrum()
 {
   ofstream zkvk("zkvk",ios::out);
-  
+
   int kmax=(int) hypot(mx-1,my-1);
   double Z[kmax+1];
   for(int k=0; k <= kmax; ++k) Z[k]=0.0;
@@ -111,23 +131,26 @@ int main(int argc, char* argv[])
   int n;
   cout << "Number of time steps? " << endl;
   cin >> n;
-  
+
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
   size_t align=sizeof(Complex);
-  
+
   f0.Allocate(Nx,my,-mx+1,0,align);
   f1.Allocate(Nx,my,-mx+1,0,align);
+  f2.Allocate(Nx,my,-mx+1,0,align);
+  f3.Allocate(Nx,my,-mx+1,0,align);
+  f4.Allocate(Nx,my,-mx+1,0,align);
 
   Convolution=new ImplicitHConvolution2(mx,my,true,true,2,2);
-  
+
   w.Allocate(Nx,my,-mx+1,0,align);
-  
+
   init(w);
   w(0,0)=0.0; // Enforce no mean flow.
 
   cout.precision(15);
-  
+
   for(int step=0; step < n; ++step) {
     Output(step,step == 0);
      Source(w,f0);
@@ -141,6 +164,6 @@ int main(int argc, char* argv[])
   cout << endl;
   Output(n,true);
   Spectrum();
-     
+
   return 0;
 }
