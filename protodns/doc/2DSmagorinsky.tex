@@ -1,0 +1,69 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\author{Noel Murasko}
+\title{The Two-Dimensional Smagorinsky Subgrid Model}
+\date{\today}
+\begin{document}
+\maketitle
+\noindent 
+\section{Two-Dimensional Subgrid Models}
+We can write the filtered Navier--Stokes equation as
+\begin{equation}\label{filteredNS}
+\frac{\partial \overline{u}_i}{\partial t} - \frac{\partial }{\partial x_j}\overline{u}_i\overline{u}_j+\frac{\partial \overline{p}}{\partial x_i}- \nu \nabla^2 \overline{u} +\frac{\partial \tau_{ij}^r}{\partial x_i}= \overline{F}_i,
+\end{equation}
+Assume we are in 2D. If we take the curl of equation \ref{filteredNS}, the only non-zero component is in the $z$-direction. This gives us the vorticity equation:
+$$\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)u_1u_2 +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2\right)+ \frac{\partial }{\partial x_1}\frac{\partial \tau_{2j}^r}{\partial x_2} - \frac{\partial }{\partial x_2}\frac{\partial \tau_{1j}^r}{\partial x_1}= \nu \frac{\partial \omega}{\partial x_j}+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}.$$
+By expanding this equation and simplifying we can write it as:
+\begin{equation}\label{filteredVorticity}
+\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)u_1u_2 +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2\right)+ \frac{\partial^2 }{\partial x_1\partial x_2}\left( \tau_{21}^r+\tau_{22}^r-  \tau_{11}^r-\tau_{12}^r\right)= \nu \frac{\partial \omega}{\partial x_j}+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}
+\end{equation}
+Recall that the anisotropic stress tensor is symmetric so the diagonal terms of $\tau_{ij}^r$ in equation \ref{filteredVorticity} cancel to give us,
+$$\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)u_1u_2 +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2\right)+ \frac{\partial^2 }{\partial x_1\partial x_2}\left( \tau_{22}^r-  \tau_{11}^r\right)= \nu \frac{\partial \omega}{\partial x_j}+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}.$$
+This equation can be simplified even further, by combining the third and fourth terms on the LHS
+$$\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)u_1u_2 +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2 + \tau_{22}^r-  \tau_{11}^r\right)= \nu \frac{\partial \omega}{\partial x_j}+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}.$$
+Now define $B(\boldsymbol{x}, t) :=u_2^2-u_1^2+ \tau_{22}^r - \tau_{11}^r$. We can write the vorticity Equation as:
+\begin{equation}\label{vortB}
+\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)u_1u_2 + \frac{\partial^2 }{\partial x_1\partial x_2}B(\boldsymbol{x}, t)= \nu \frac{\partial \omega}{\partial x_j}+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2} .
+\end{equation}
+Notice that equation \ref{vortB} is quite general. It makes no assumptions about the type of model we are using. 
+\section{The Smagorinsky Model}
+In Large Eddy Simulations, the filtered Navier—Stokes equation includes the anisotropic residule stress tensor. This tensor requires a model (known as a subgrid scale model). The first such model is known as the Smagorinsky Model.
+
+First proposed by Joseph Smagorinsky in 1963, the model was initially used to study the dynamics of atmospheric circulation. While considered to be one of the simplest of subgrid scale models, it forms the basis for many more advanced  models. 
+
+The Smagorinsky model assumes the linear turbulent viscosity model:
+$$\tau_{ij}^r = -2\nu_t \bar{S}_{ij},$$
+where $\nu_t$ is the turbulent viscosity and $S_{ij}$ is the rate of strain tensor:
+$$\bar{S}_{ij} := \frac{1}{2}\left( \frac{\partial \bar{u}_i}{\partial x_j} + \frac{\partial \bar{u}_j}{\partial x_i}\right).$$
+To find $\tau_{ij}^r$, we need to find $\nu_t$. The turbulent viscosity is assumed to be given by
+$$\nu_t = (C_s \Delta)^2 \bar{S},$$
+Where $C_s$ is the Smagorinsky Coefficient, $\Delta$ is the filter width, and where $\bar{S}$ is the characteristic filtered rate of strain:
+$$\bar{S} := \left(2\bar{S}_{ij}\bar{S}_{ij}\right)^{1/2}$$
+Which we can write out as:
+$$\bar{S} = \left[\frac{1}{2}\left( \frac{\partial \bar{u}_i}{\partial x_j} + \frac{\partial \bar{u}_j}{\partial x_i}\right)\left( \frac{\partial \bar{u}_i}{\partial x_j} + \frac{\partial \bar{u}_j}{\partial x_i}\right)\right]^{1/2} = \left[\frac{1}{2}\left( \frac{\partial \bar{u}_1}{\partial x_1}\right)^2+\left( \frac{\partial \bar{u}_2}{\partial x_1} + \frac{\partial \bar{u}_1}{\partial x_2}\right)^2+\frac{1}{2}\left( \frac{\partial \bar{u}_2}{\partial x_2}\right)^2 \right]^{1/2}.$$
+So the anisotropic stress tensor is given by
+\begin{equation}\label{smagTau}
+\tau_{ij}^r = -(C_s \Delta)^2\left[2\left( \frac{\partial \bar{u}_1}{\partial x_1}\right)^2+4\left( \frac{\partial \bar{u}_2}{\partial x_1} + \frac{\partial \bar{u}_1}{\partial x_2}\right)^2+2\left( \frac{\partial \bar{u}_2}{\partial x_2}\right)^2 \right]^{1/2}\bar{S}_{ij}.
+\end{equation}
+\section{Smagorinsky in Two-Dimensions}
+Now we apply the Smagorinsky model. From equation \ref{smagTau}, we see that we only have to compute $\bar{S}_{11}$ and $\bar{S}_{22}$. We have 
+$$\bar{S}_{11} = \frac{1}{2}\left( \frac{\partial \bar{u}_1}{\partial x_1} + \frac{\partial \bar{u}_1}{\partial x_1}\right) = \frac{\partial \bar{u}_1}{\partial x_1},$$
+$$\bar{S}_{22} = \frac{1}{2}\left( \frac{\partial \bar{u}_2}{\partial x_2} + \frac{\partial \bar{u}_2}{\partial x_2}\right) = \frac{\partial \bar{u}_2}{\partial x_2}.$$
+Which gives us:
+\begin{equation}\label{tau22-tau11}
+\tau_{22}^r - \tau_{11}^r= -(C_s \Delta)^2\left[2\left( \frac{\partial \bar{u}_1}{\partial x_1}\right)^2+4\left( \frac{\partial \bar{u}_2}{\partial x_1} + \frac{\partial \bar{u}_1}{\partial x_2}\right)^2+2\left( \frac{\partial \bar{u}_2}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial \bar{u}_2}{\partial x_2} - \frac{\partial \bar{u}_1}{\partial x_1}\right).
+\end{equation}
+If the fluid is incompressible, i.e. $\frac{\partial \bar{u}_1}{\partial x_1} = -\frac{\partial \bar{u}_2}{\partial x_2}$, we can write equation \ref{tau22-tau11} as:
+$$\tau_{22}^r - \tau_{11}^r= -4(C_s \Delta)^2\left[\left( \frac{\partial \bar{u}_2}{\partial x_2}\right)^2+\left( \frac{\partial \bar{u}_2}{\partial x_1} + \frac{\partial \bar{u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial \bar{u}_2}{\partial x_2}\right),$$
+or (equivalently):
+$$\tau_{22}^r - \tau_{11}^r= 4(C_s \Delta)^2\left[\left( \frac{\partial \bar{u}_1}{\partial x_1}\right)^2+\left( \frac{\partial \bar{u}_2}{\partial x_1} + \frac{\partial \bar{u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial \bar{u}_1}{\partial x_1}\right).$$
+The vorticity equation with the smagorinsky subgrid model, is then given by \ref{vortB}, where
+$$B(\boldsymbol{x}, t) = u_2^2-u_1^2-4(C_s \Delta)^2\left[\left( \frac{\partial \bar{u}_2}{\partial x_2}\right)^2+\left( \frac{\partial \bar{u}_2}{\partial x_1} + \frac{\partial \bar{u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial \bar{u}_2}{\partial x_2}\right)$$
+or (equivalently)
+$$B(\boldsymbol{x}, t) = u_2^2-u_1^2+4(C_s \Delta)^2\left[\left( \frac{\partial \bar{u}_1}{\partial x_1}\right)^2+\left( \frac{\partial \bar{u}_2}{\partial x_1} + \frac{\partial \bar{u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial \bar{u}_1}{\partial x_1}\right).$$
+The advantage of writing the equation in this form, is that in a two-dimensional pseudospectral simulation (such as protodns), $B(\boldsymbol{x},t)$ simply takes the place of $u_2^2 - u_1^2$. This, however, will require at least 3 additional inverse FFTs (although it is possible this could be reduced).
+\end{document}
