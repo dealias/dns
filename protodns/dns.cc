@@ -27,7 +27,7 @@ typedef Array2<Complex> vector2;
 
 vector2 w;
 //added new vectors
-vector2 f0,f1,f2,f3,f4;
+vector2 f0,f1,f2,f3;
 
 ofstream ezvt("ezvt",ios::out);
 
@@ -57,19 +57,17 @@ void Source(const vector2& w, vector2 &S)
       double ik2inv=i*k2inv;
       f0[i][j]=Complex(-w[i][j].im*jk2inv,w[i][j].re*jk2inv); // u
       f1[i][j]=Complex(w[i][j].im*ik2inv,-w[i][j].re*ik2inv); // v
-      f2[i][j] = Complex(j*f1[i][j].im,j*f1[i][j].re); //dvdy
-      f3[i][j] = Complex(i*f1[i][j].im,i*f1[i][j].re); //dvdx
-      f4[i][j] = Complex(j*f2[i][j].im,j*f2[i][j].re); //dudy
+      f2[i][j] = Complex(i*f0[i][j].im,i*f0[i][j].re); //dvdy
+      f3[i][j] = Complex(i*f1[i][j].im,i*f1[i][j].re)+Complex(j*f2[i][j].im,j*f2[i][j].re); //dvdx + dudy
     }
   }
   Backward.fftNormalized(f0);
   Backward.fftNormalized(f1);
   Backward.fftNormalized(f2);
   Backward.fftNormalized(f3);
-  Backward.fftNormalized(f4);
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-        f2[i][j]= f1[i][j]*f1[i][j] - f0[i][j]*f0[i][j] - 4*(Cs*delta)*(Cs*delta)*sqrt((f2[i][j]*f2[i][j])+(f3[i][j] + f4[i][j])*(f3[i][j] + f4[i][j]))*f2[i][j]; // B(x,t)
+        f2[i][j]= f1[i][j]*f1[i][j] - f0[i][j]*f0[i][j] - 4*(Cs*delta)*(Cs*delta)*sqrt((f2[i][j]*f2[i][j])+(f3[i][j])*(f3[i][j]))*f2[i][j]; // B(x,t)
         f0[i][j]= f0[i][j]*f1[i][j]; // u1*u2
     }
   }
@@ -140,7 +138,6 @@ int main(int argc, char* argv[])
   f1.Allocate(Nx,my,-mx+1,0,align);
   f2.Allocate(Nx,my,-mx+1,0,align);
   f3.Allocate(Nx,my,-mx+1,0,align);
-  f4.Allocate(Nx,my,-mx+1,0,align);
 
   Convolution=new ImplicitHConvolution2(mx,my,true,true,2,2);
 
