@@ -48,17 +48,20 @@ void Source(const vector2& w, vector2 &S)
   f1[0][0]=0.0;
   fft2d Forward(Nx,my,-1);
   fft2d Backward(Nx,my,1);
-  // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
-  // requires only 4 FFTs per stage.
+  // This 2D version requires only 6 FFTs per stage (in the spirit
+  // of Basdevant, J. Comp. Phys, 50, 1983).
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       double k2inv=1.0/(i*i+j*j);
       double jk2inv=j*k2inv;
       double ik2inv=i*k2inv;
-      f0[i][j]=Complex(-w[i][j].im*jk2inv,w[i][j].re*jk2inv); // u
-      f1[i][j]=Complex(w[i][j].im*ik2inv,-w[i][j].re*ik2inv); // v
-      f2[i][j] = Complex(i*f0[i][j].im,i*f0[i][j].re); //dvdy
-      f3[i][j] = Complex(i*f1[i][j].im,i*f1[i][j].re)+Complex(j*f2[i][j].im,j*f2[i][j].re); //dvdx + dudy
+      Complex wij=w[i][j];
+      double u=Complex(-wij.im*jk2inv,wij.re*jk2inv);
+      double v=Complex(wij.im*ik2inv,-wij.re*ik2inv);
+      f0[i][j]=u;
+      f1[i][j]=v;
+      f2[i][j]=Complex(-i*u.im,i*u.re); // dudx
+      f3[i][j]=Complex(-i*v.im,i*v.re)+Complex(-j*u.im,j*u.re); // dvdx + dudy
     }
   }
   Backward.fftNormalized(f0);
@@ -67,17 +70,22 @@ void Source(const vector2& w, vector2 &S)
   Backward.fftNormalized(f3);
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-        f2[i][j]= f1[i][j]*f1[i][j] - f0[i][j]*f0[i][j] - 4*(Cs*delta)*(Cs*delta)*sqrt((f2[i][j]*f2[i][j])+(f3[i][j])*(f3[i][j]))*f2[i][j]; // B(x,t)
-        f0[i][j]= f0[i][j]*f1[i][j]; // u1*u2
+      double v=f1[i][j];
+      double u=f0[i][j];
+      double C=Cs*delta;
+      double ux=f2[i][j];
+      double s12=f3[i][j];
+      f1[i][j]=v*v-u*u+4*C*C*sqrt(ux*ux+s12*s12)*ux; // B(x,t)
+      f0[i][j]=u*v;
     }
   }
 
   Forward.fft(f0);
-  Forward.fft(f2);
+  Forward.fft(f1);
 
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f2[i][j]-nu*(i*i+j*j)*w[i][j];
+      f0[i][j]=(i*i-j*j)*f0[i][j]+i*j*f1[i][j]-nu*(i*i+j*j)*w[i][j];
     }
   }
 }
@@ -139,7 +147,7 @@ int main(int argc, char* argv[])
   f2.Allocate(Nx,my,-mx+1,0,align);
   f3.Allocate(Nx,my,-mx+1,0,align);
 
-  Convolution=new ImplicitHConvolution2(mx,my,true,true,2,2);
+  Convolution=new ImplicitHConvolution2(mx,my,true,true,4,2);
 
   w.Allocate(Nx,my,-mx+1,0,align);
 
