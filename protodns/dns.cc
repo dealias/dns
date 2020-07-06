@@ -13,8 +13,8 @@ using namespace fftwpp;
 int Nx=255; // Number of modes in x direction
 int Ny=255; // Number of modes in y direction
 
-double Cs = 0.1;
-double delta = 1/Nx;
+double Cs=0.1;
+double delta=1.0/Nx;
 
 double dt=1.0e-6;
 double nu=0.003; // kinematic viscosity
@@ -42,18 +42,6 @@ void init(vector2& w)
   }
 }
 
-#ifdef __SSE2__
-static inline Vec sqrt(const Vec& z)
-{
-  return _mm_sqrt_pd(z);
-}
-#else
-static inline Vec sqrt(const Vec& z)
-{
-  return Vec(sqrt(z.x),sqrt(z.y));
-}
-#endif
-
 // 2D Navier-Stokes advection a la Basdevant with Smagorinsky subgrid model
 // requiring only 4 inputs and 2 outputs.
 double Cd;
@@ -80,7 +68,7 @@ void multSmagorinsky2(double **F, unsigned int m,
       Vec v=LOAD(F1j);
       Vec ux=LOAD(F2j);
       Vec s12=LOAD(F3j);
-      STORE(F0j,v*v-u*u+4*Cd*Cd*sqrt(ux*ux+s12*s12)*ux); // B(x,t)
+      STORE(F0j,v*v-u*u+4*Cd*Cd*SQRT(ux*ux+s12*s12)*ux); // B(x,t)
       STORE(F1j,u*v);
     }
     );
@@ -127,7 +115,7 @@ void Source(const vector2& w, vector2 &S)
       f3[i][j]=Complex(-i*v.im,i*v.re)+Complex(-j*u.im,j*u.re); // dvdx + dudy
     }
   }
-q
+
   Complex *F[]={f0,f1,f2,f3};
   Convolution->convolve(F,multSmagorinsky2);
 
