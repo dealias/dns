@@ -92,16 +92,16 @@ Navier--Stokes equation for momentum and the incompressibilty
 condition for the velocity $\vu$,
 \begin{equation}
 \begin{cases}
-\dfrac{\partial \vu}{\partial t} + \vu\cdot\grad\vu = -\grad P + \nu\lap\vu + \vF,\\
+\dfrac{\partial \vu}{\partial t} + \vu\cdot\grad\vu = -\grad P + \nu\lap\vu ,\\
 \\
 \div \vu=0.\label{GE}
 \end{cases}
 \end{equation}
-The equation describing the evolution of the \In{vorticity}
+We assume that the there is no external forcing on the system.The equation describing the evolution of the \In{vorticity}
 $\vw=\curl\vu$ is sometimes more convenient:
 \begin{equation}\label{vorticity}
 \begin{cases}
-\dfrac{\partial{\vw}}{\partial t} + (\vu\dot\grad)\vw=(\vw\dot\grad)\vu + \nu\lap\vw + \curl\vF,\\
+\dfrac{\partial{\vw}}{\partial t} + (\vu\dot\grad)\vw=(\vw\dot\grad)\vu + \nu\lap\vw,\\
 \\
 \div \vu=0.
 \end{cases}
@@ -134,9 +134,7 @@ vector with respect to the stream function as
 $\vu=\hat{\vz}\cross\grad(\lapinv\omega)$.
 Because the vorticity is always perpendicular to the plane of motion,
 the term $(\vw\dot\grad)\vu$ on the right-hand side of the vorticity equation vanishes:
-\begin{equation}\label{2D-vorticity-expand}
-\frac{\partial \omega}{\partial t} + (\hat{\vz}\cross\grad(\lapinv\omega)\dot\grad)\omega= \nu\lap\omega + f.
-\end{equation}
+$$\frac{\partial \omega}{\partial t} + (\hat{\vz}\cross\grad(\lapinv\omega)\dot\grad)\omega= \nu\lap\omega .$$
 The discrete Fourier transform ${\cal F}$ of the vorticity sampled at collocation
 points $\vw_\vj\doteq\vw(\vx_\vj)$ over a two-dimensional lattice
 $G$ of size $N\times N$,
@@ -145,45 +143,48 @@ $$
 $$
 evolves according to
 \begin{equation}\label{Fourier}
-\frac{\partial\omega_{\vk}}{\partial t} + {\cal F}_\vk\{\vu\cdot\grad\omega\}= -\nu k^2\omega_{\vk} + f_{\vk}.
+\frac{\partial\omega_{\vk}}{\partial t} + {\cal F}_\vk\{\vu\cdot\grad\omega\}= -\nu k^2\omega_{\vk},
 \end{equation}
-where 
-$$
-\vf_{\vk}=\sum_{\vj\in G} \vf_\vj e^{-\fr{2\pi i\vk\dot\vj}{N^2}}
-$$
-and $\vf_\vj\doteq\vf(\vx_\vj)$,
 where the Fourier transform of the advection term
 $\vu\cdot\grad\omega$ can be written as a convolution:
 \begin{equation}\label{Fourier-expand}
-\frac{\partial\omega_{\vk}}{\partial t} + \sum_{\vp}{\frac{(\hat{\vz}\cross\vp)\dot\vk}{p^2}\omega_{\vp}\omega_{\vk-\vp}}= -\nu k^2\omega_{\vk} + f_{\vk},
+\frac{\partial\omega_{\vk}}{\partial t} + \sum_{\vp}{\frac{(\hat{\vz}\cross\vp)\dot\vk}{p^2}\omega_{\vp}\omega_{\vk-\vp}}= -\nu k^2\omega_{\vk}.
 \end{equation}
 
 
 \section{Reducing the Number of FFTs}
 Instead of computing the advection term in Fourier space, we first transform to physical space using an inverse Fast Fourier Transform (FFT). Now, the nonlinear terms can computed by pointwise multiplication and addition. These terms are then transformed back into Fourier space with a forward FFT.
 
+To obtain the advection term in \Eq{Fourier}, we take the $z$ component of the curl of this term:
+\begin{equation}
+\vu\cdot\grad\omega =\hat{\vz}\cdot \left[\grad \times \left(\vu\cdot\grad\vu \right)\right]
+\end{equation}
 The most computationally expensive part of this algorithm are the number of FFTs. Naively inspecting the advection term,
 \begin{equation}
 \vu\cdot\grad\omega = u_1\frac{\partial \omega}{\partial x_1}+u_2\frac{\partial \omega}{\partial x_2},
 \end{equation}
-one might think that five FFTs are required at each time step. Four inverse FFTs to transfrom $u_1$,$ u_2$, $\frac{\partial \omega}{\partial x_1}$, and $\frac{\partial \omega}{\partial x_2}$ from Fourier space to physical space and one forward FFT to transform $u_1\frac{\partial \omega}{\partial x_1}+u_2\frac{\partial \omega}{\partial x_2}$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
+one might think that five FFTs are required at each time step. Four inverse FFTs to transfrom $u_1$,$ u_2$, $\partial \omega/\partial x_1$, and $\partial \omega/\partial x_2$ from Fourier space to physical space and one forward FFT to transform $u_1\left(\partial \omega/\partial x_1\right)+u_2\left(\partial \omega/\partial x_2\right)$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
 
-First, we rewrite the advection term in the Navier stokes equation using Einstein notation (sum over repeated indices):
+First, to obtain the advection term in \Eq{Fourier}, we take the $z$ component of the curl of this term:
+\begin{equation}\label{zAdvection}
+\vu\cdot\grad\omega =\hat{\vz}\cdot \left[\grad \times \left(\vu\cdot\grad\vu \right)\right]
+\end{equation}
+To reduce the amount of writing, we write $\vu\cdot\grad\vu$ in Einstein notation (sum over repeated indices)
 $$\vu\cdot\grad\vu =u_j\dfrac{\partial u_i}{\partial x_j}.$$
 Note that with the incompressibility condition, $\dfrac{\partial u_j}{\partial x_j} =0$, this equation can be written as 
-\begin{equation}
-u_j\dfrac{\partial u_i}{\partial x_j} = \dfrac{\partial u_iu_j}{\partial x_j}.
+\begin{equation}\label{incompAdvection}
+u_j\dfrac{\partial u_i}{\partial x_j} = \dfrac{\partial (u_iu_j)}{\partial x_j}.
 \end{equation}
-When we take the curl of this equation, we get the advection term in vorticity equation:
+Now expanding \Eq{zAdvection} using \Eq{incompAdvection}, we have
 \begin{align*}
-\vu\cdot\grad\omega =\grad \times \left(\vu\cdot\grad\vu \right)&= \dfrac{\partial }{\partial x_1}\dfrac{\partial u_2u_j}{\partial x_j}  - \dfrac{\partial }{\partial x_2}\dfrac{\partial u_1u_j}{\partial x_j}\\
-&= \dfrac{\partial }{\partial x_1}\left(\dfrac{\partial u_1u_2}{\partial x_1}+\dfrac{\partial u_2^2}{\partial x_2}\right)  - \dfrac{\partial }{\partial x_2}\left(\dfrac{\partial u_1^2}{\partial x_1}+\dfrac{\partial u_1u_2}{\partial x_2}\right)\\
-&= \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)u_1u_2 +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2\right)\\
+\vu\cdot\grad\omega =\hat{\vz}\cdot \left[\grad \times \left(\vu\cdot\grad\vu \right)\right]&= \dfrac{\partial }{\partial x_1}\dfrac{\partial (u_2u_j)}{\partial x_j}  - \dfrac{\partial }{\partial x_2}\dfrac{\partial (u_1u_j)}{\partial x_j},\\
+&= \dfrac{\partial }{\partial x_1}\left(\dfrac{\partial (u_2u_1)}{\partial x_1}+\dfrac{\partial u_2^2}{\partial x_2}\right)  - \dfrac{\partial }{\partial x_2}\left(\dfrac{\partial u_1^2}{\partial x_1}+\dfrac{\partial (u_1u_2)}{\partial x_2}\right),\\
+&= \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)(u_1u_2) +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2\right).\\
 \end{align*}
-Thus, we can write \ref{Fourier} as:
+Thus, we can write \Eq{Fourier} as:
 \begin{equation}\label{evolutionary}
   \frac{\partial\omega_{\vk}}{\partial t} =
-  (k_x^2-k_y^2) {\cal F}_\vk\{uv\}+k_xk_y{\cal F}_\vk\{v^2-u^2\} -\nu k^2\omega_{\vk} + f_{\vk}.
+  (k_x^2-k_y^2) {\cal F}_\vk\{uv\}+k_xk_y{\cal F}_\vk\{v^2-u^2\} -\nu k^2\omega_{\vk}.
 \end{equation}
 Two inverse transforms are required to compute $u$ and $v$ in physical
 space, from which the quantities $uv$ and $v^2-u^2$ can then be
@@ -191,34 +192,77 @@ calculated and transformed back to Fourier space with two additional
 forward transforms. The advection term in 2D can thus be calculated with four $\text{FFTs}$.
 \section{The Energy, Enstrophy, and Palinstrophy} 
 In this code, we compute three quantities from the simulation data: the energy $E$, the enstrophy $Z$, and palinstrophy $P$.  These quantities are only used in our analysis of the simulation. They are not inputs in any part of the algorithm. 
-
-In this section, we define these quantities, and show how they are  computed. As we are working with the vorticity of the system, it will be useful to express $E$, $Z$, and $P$ in terms of $\vw_\vk$. 
-\subsection{The Enstrophy}
-In physical space, the enstrophy of the system is defined as the mean squared vorticity of the system. To compute $Z$, we sum up the squared vorticity $|\vw_\vk|^2$ for each wave vector:
-$$ Z = \sum_{\vk} |\vw_\vk|^2.$$
+\subsection{Definitions}
+The energy $E$ is a familiar concept in physics. In physical space, it is given by the mean squared velocity of the system:
+$$
+E\doteq \frac{1}{2} \int |\vu|^2.
+$$
+The enstrophy $Z$ is defined in terms of the rate of change of the energy. For an unforced and incompressible fluid, it can be shown \cite{frisch95} that
+$$
+\frac{\partial E}{\partial t} = -\nu \int |\vw|^2.
+$$
+We define the enstrophy as
+$$
+Z\doteq\frac{1}{2}\int |\vw|^2,
+$$
+so we have 
+$$
+\frac{\partial E}{\partial t} = -2\nu Z.
+$$
+Similarly, it can be shown \cite{frisch95} that rate of change of the enstrophy of a unforced, and incompressible fluid is given by
+$$
+\frac{\partial Z}{\partial t} = -\nu \int |\grad\times \vw|^2.
+$$
+The palinstrophy $P$ is then defined as
+$$
+P\doteq\frac{1}{2}\int |\grad \times \vw|^2,
+$$
+so we have 
+$$
+\frac{\partial Z}{\partial t} = -2\nu P.
+$$
+While these definitions are motivating, they do not help with computation. These definitions are in physical space, not Fourier space. Furthermore, the energy is in terms of the velocity, while in our code, we only evolve the vorticity. In the next subsections, we will express $E$, $Z$, and $P$ in terms of $\vw_\vk$. 
 \subsection{The Energy}
 In physical space, energy is defined as the mean squared velocity of the system. First, we must express the velocity in terms of the vorticity. Taking the curl of the vorticity gives us
 $$\grad \times \vw = \grad \times(\grad \times \vu) = \grad(\grad\cdot \vu)- {\nabla}^2 \vu = - {\nabla}^2 \vu,$$
 where we've used $\grad\cdot \vu = 0$. Now taking the Fourier transform of this equation and rearranging gives us:
 $$\vu_\vk = i \frac{\vk\times \vw_\vk}{k^2}. $$
 We also note that $\vk$, $\vu_\vk$, and $\vw_\vk$ are all mutually orthogonal. Now the energy is given by:
-\begin{align}
-E &= \sum_{\vk} |\vw_\vk|^2 = \sum_{\vk} \left|i \frac{\vk\times \vw_\vk}{k^2} \right|^2\\
-& =\sum_{\vk}\frac{1}{k^4} \left[(\vk\cdot \vk ) (\vw_\vk\cdot \vw_\vk) -  (\vk\cdot \vw_\vk ) (\vk\cdot \vw_\vk)  \right] \\
+\begin{align*}
+E &= \sum_{\vk} |\vw_\vk|^2 = \sum_{\vk} \left|i \frac{\vk\times \vw_\vk}{k^2} \right|^2,\\
+& =\sum_{\vk}\frac{1}{k^4}(\vk\cdot \vk ) (\vw_\vk\cdot \vw_\vk)  , \\
 & = \sum_{\vk}\frac{|\vw_\vk|^2}{k^2}.
-\end{align}
+\end{align*}
 So we have:
 $$E = \sum_{\vk}\frac{|\vw_\vk|^2}{k^2}.$$
+\subsection{The Enstrophy}
+In physical space, the enstrophy of the system is given by the mean squared vorticity of the system. To compute $Z$, we sum up the squared vorticity $|\vw_\vk|^2$ for each wave vector:
+$$ Z = \sum_{\vk} |\vw_\vk|^2.$$
 \subsection{The Palinstrophy}
-In physical space, the palinstrophy is the mean squared curl of the vorticity. First, the fourier transform of the curl of the vorticity is given by:
-$$\cal{F}_{\vk}(\grad\times \vw) = i\vk\times \vw_\vk$$
+In physical space, the palinstrophy is given by the mean squared curl of the vorticity. First, the Fourier transform of the curl of the vorticity is given by:
+$$\cal{F}_{\vk}(\grad\times \vw) = i\vk\times \vw_\vk.$$
 The palinstrophy is then given by
-$$P = \sum_{\vk} |i\vk\times \vw_\vk|^2 = \sum_{\vk} (\vk\cdot \vk ) (\vw\cdot \vw) -  (\vk\cdot \vw ) (\vk\cdot \vw)  = \sum_{\vk} k^2|\vw_\vk|^2 $$
+$$P = \sum_{\vk} |i\vk\times \vw_\vk|^2 = \sum_{\vk} (\vk\cdot \vk ) (\vw\cdot \vw)   = \sum_{\vk} k^2|\vw_\vk|^2 .$$
 So we have: 
 $$P = \sum_{\vk} k^2|\vw_\vk|^2 .$$
 \section{Numerical simulation}
 \subsection{The domain of simulation}
-%Now that we have our governing \Eq{Fourier} in Fourier space, then we need to take a numerical scheme to solve that equation. So at first we need to characterize our domain of simulation. As we mentioned before, because our intention is direct numerical simulation of homogeneous isotropic turbulence, so we have to avoid having walls or in fact we have to stay far enough from walls. This can be easily done by considering periodic boundary conditions. Considering this point, our schematic domain is shown in Figure~\ref{domain}. 
+We notice that the velocity field in physical space is real. Because of this, we have the following relation:
+\begin{equation}
+\vu_\vk = \vu_{-\vk}^*,
+\end{equation}
+where we use $*$ to denote the complex conjugate. We exploit this to reduce the number of modes we have to compute explicitly. 
+We take the domain of our solution to be: 
+$$
+\vk = (k_x, k_y): k_x \in [-m_x + 1, m_x -1],\ k_y \in 
+\begin{cases}
+[1, m_y -1]&\text{if }k_x \leq 0\\
+[0, m_y -1]&\text{if }k_x > 0\\
+\end{cases}.
+$$
+This is shown in as a diagram in Figure~(\ref{domain}). 
+
+One might notice that we do not compute the velocity at the mode $\vk = (0,0)$. This isn't a problem, as this mode doesn't evolve in time. It corresponds to the mean flow of the system. For simplicity, we assert that the system has zero mean flow, by setting $u_{(0,0)} = 0$.
 \begin{figure}[ht]
 \begin{center}
 \asyinclude{domain}
@@ -238,9 +282,9 @@ We can now summarize the steps of the algorithm:
 $uv$ and $v^2-u^2$;
 \item Update the values of $\omega_\vk$ by marching one step in time;
 \item \emph{Optionally}, compute the energy, enstrophy, and palinstrophy from $\omega_\vk$.
-\item Repeat steps 2 - 7 for the desired number of time steps.
+\item Repeat steps 2 -- 7 for the desired number of time steps.
 \end{enumerate}
-A simplified version of the numerical algorithm is shown as a flow chart in Figure~\ref{algorithm}. 
+A simplified version of the numerical algorithm is shown as a flow chart in Figure~(\ref{algorithm}). 
 
 \begin{figure}[ht]
 \begin{center}
@@ -253,9 +297,9 @@ A simplified version of the numerical algorithm is shown as a flow chart in Figu
 \pdfbookmark{Bibliography}{Bibliography}
 \bibliography{refs}
 
-\hypertarget{Index}{}
-\pdfbookmark{Index}{Index}
-\printindex
+%\hypertarget{Index}{}
+%\pdfbookmark{Index}{Index}
+%\printindex
 
 
 \end{document}

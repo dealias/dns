@@ -36,8 +36,10 @@ ImplicitHConvolution2 *Convolution;
 void init(vector2& w)
 {
   for(int i=-mx+1; i < mx; ++i) {
+    vector wi=w[i];
+    int i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      w[i][j]=1.0/(i*i+j*j);
+      wi[j]=1.0/(i2+j*j);
     }
   }
 }
@@ -102,17 +104,23 @@ void Source(const vector2& w, vector2 &S)
   // This 2D version requires only 6 FFTs per stage (in the spirit
   // of Basdevant, J. Comp. Phys, 50, 1983).
   for(int i=-mx+1; i < mx; ++i) {
+    vector wi=w[i];
+    vector f0i=f0[i];
+    vector f1i=f1[i];
+    vector f2i=f2[i];
+    vector f3i=f3[i];
+    int i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      double k2inv=1.0/(i*i+j*j);
+      double k2inv=1.0/(i2+j*j);
       double jk2inv=j*k2inv;
       double ik2inv=i*k2inv;
-      Complex wij=w[i][j];
+      Complex wij=wi[j];
       Complex u=Complex(-wij.im*jk2inv,wij.re*jk2inv);
       Complex v=Complex(wij.im*ik2inv,-wij.re*ik2inv);
-      f0[i][j]=u;
-      f1[i][j]=v;
-      f2[i][j]=Complex(-i*u.im,i*u.re); // dudx
-      f3[i][j]=Complex(-i*v.im,i*v.re)+Complex(-j*u.im,j*u.re); // dvdx + dudy
+      f0i[j]=u;
+      f1i[j]=v;
+      f2i[j]=Complex(-i*u.im,i*u.re); // F{dudx}
+      f3i[j]=Complex(-i*v.im,i*v.re)+Complex(-j*u.im,j*u.re); // F{dvdx + dudy}
     }
   }
 
@@ -120,8 +128,13 @@ void Source(const vector2& w, vector2 &S)
   Convolution->convolve(F,multSmagorinsky2);
 
   for(int i=-mx+1; i < mx; ++i) {
+    vector wi=w[i];
+    vector f0i=f0[i];
+    vector f1i=f1[i];
+    int i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      f0[i][j]=i*j*f0[i][j]+(i*i-j*j)*f1[i][j]-nu*(i*i+j*j)*w[i][j];
+      int j2=j*j;
+      f0i[j]=i*j*f0i[j]+(i2-j2)*f1i[j]-nu*(i2+j2)*wi[j];
     }
   }
 }
@@ -135,9 +148,11 @@ void Spectrum()
   for(int k=0; k <= kmax; ++k) Z[k]=0.0;
      
   for(int i=-mx+1; i < mx; ++i) {
+    vector wi=w[i];
+    int i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      int k=sqrt(i*i+j*j);
-      Z[(int) (k+0.5)] += abs2(w[i][j]);
+      int k=sqrt(i2+j*j);
+      Z[(int) (k+0.5)] += abs2(wi[j]);
     }
   }
   zkvk << "# k\tZ(k)" << endl;
@@ -151,9 +166,11 @@ void Output(int step, bool verbose=false)
 {
   double E=0.0, Z=0.0, P=0.0;
   for(int i=-mx+1; i < mx; ++i) {
+    vector wi=w[i];
+    double i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-      double w2=abs2(w[i][j]);
-      double k2=i*i+j*j;
+      double w2=abs2(wi[j]);
+      double k2=i2+j*j;
       P += k2*w2;
       Z += w2;
       E += w2/k2;
@@ -190,7 +207,7 @@ int main(int argc, char* argv[])
   w.Allocate(Nx,my,-mx+1,0,align);
 
   init(w);
-  w(0,0)=0.0; // Enforce no mean flow.
+  w[0][0]=0.0; // Enforce no mean flow.
 
   cout.precision(15);
 
@@ -198,11 +215,12 @@ int main(int argc, char* argv[])
     Output(step,step == 0);
      Source(w,f0);
      for(int i=-mx+1; i < mx; ++i) {
-       for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-	 w[i][j] += f0[i][j]*dt;
-       }
+       vector wi=w[i];
+       vector f0i=f0[i];
+       for(int j=(i <= 0 ? 1 : 0); j < my; ++j)
+	 wi[j] += f0i[j]*dt;
      }
-//     cout << "[" << step << "] ";
+     cout << "[" << step << "] " << flush;
   }
   cout << endl;
   Output(n,true);
