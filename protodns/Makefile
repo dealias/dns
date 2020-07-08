@@ -21,7 +21,7 @@ ifeq ($(shell $(CXX) -qversion 2>&1 | head -c 3),IBM)
 CXXFLAGS=-O5 -P -qsmp -qalign -qarch -qtune -qcache -qipa -qarch=qp
 endif
 
-CXXFLAGS += $(DEFS) -I$(IDIR)
+CXXFLAGS += $(DEFS) -I$(IDIR) $(CFLAGS)
 
 ifneq ($(strip $(FFTW_INCLUDE_PATH)),)
 CXXFLAGS+=-I$(FFTW_INCLUDE_PATH)
