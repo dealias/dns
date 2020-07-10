@@ -16,8 +16,13 @@ int Ny=255; // Number of modes in y direction
 double Cs=0.1;
 double delta=1.0/Nx;
 
-double dt=1.0e-6;
+double dt=1.0e-4;
 double nu=0.003; // kinematic viscosity
+double nuL=0.2;  // damping (uniform friction across all scales)
+
+double kforce=10.0;
+double deltaf=1.0;
+Complex force(1.0,1.0);
 
 int mx;
 int my;
@@ -25,21 +30,31 @@ int my;
 typedef Array1<Complex>::opt vector;
 typedef Array2<Complex> vector2;
 
-vector2 w;
-//added new vectors
-vector2 f0,f1,f2,f3;
+vector2 w; // vorticity
+vector2 f0,f1,f2,f3; // inputs and outputs to advection routine
+vector2 F; // constant vorticity forccing
 
 ofstream ezvt("ezvt",ios::out);
 
 ImplicitHConvolution2 *Convolution;
 
-void init(vector2& w)
+void init(vector2& w, vector2 &F)
 {
   for(int i=-mx+1; i < mx; ++i) {
     vector wi=w[i];
     int i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       wi[j]=1.0/(i2+j*j);
+    }
+  }
+
+  for(int i=-mx+1; i < mx; ++i) {
+    vector Fi=F[i];
+    int i2=i*i;
+    double halfdeltaf=0.5*deltaf;
+    for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+      double k=sqrt(i2+j*j);
+      Fi[j]=abs(k-kforce) < halfdeltaf ? force : 0.0;
     }
   }
 }
@@ -124,17 +139,18 @@ void Source(const vector2& w, vector2 &S)
     }
   }
 
-  Complex *F[]={f0,f1,f2,f3};
-  Convolution->convolve(F,multSmagorinsky2);
+  Complex *fAll[]={f0,f1,f2,f3};
+  Convolution->convolve(fAll,multSmagorinsky2);
 
   for(int i=-mx+1; i < mx; ++i) {
     vector wi=w[i];
     vector f0i=f0[i];
     vector f1i=f1[i];
+    vector Fi=F[i];
     int i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       int j2=j*j;
-      f0i[j]=i*j*f0i[j]+(i2-j2)*f1i[j]-nu*(i2+j2)*wi[j];
+      f0i[j]=i*j*f0i[j]+(i2-j2)*f1i[j]-nu*(i2+j2)*wi[j]-nuL*wi[j]+Fi[j];
     }
   }
 }
@@ -176,13 +192,14 @@ void Output(int step, bool verbose=false)
       E += w2/k2;
     }
   }
+  double t=step*dt;
   if(verbose) {
-    cout << "t=" << step*dt << endl;
+    cout << "t=" << t << endl;
     cout << "Energy=" << E << endl;
     cout << "Enstrophy=" << Z << endl;
     cout << "Palenstrophy=" << P << endl;
   }
-  ezvt << E << "\t" << Z << "\t" << P << endl;
+  ezvt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 }
 
 int main(int argc, char* argv[])
@@ -200,14 +217,17 @@ int main(int argc, char* argv[])
   f2.Allocate(Nx,my,-mx+1,0,align);
   f3.Allocate(Nx,my,-mx+1,0,align);
 
+  F.Allocate(Nx,my,-mx+1,0,align);
+
   Convolution=new ImplicitHConvolution2(mx,my,true,true,4,2);
 
   Cd=Cs*delta;
 
   w.Allocate(Nx,my,-mx+1,0,align);
 
-  init(w);
+  init(w,F);
   w[0][0]=0.0; // Enforce no mean flow.
+  F[0][0]=0.0;
 
   cout.precision(15);
 
