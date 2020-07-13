@@ -13,7 +13,7 @@ using namespace fftwpp;
 int Nx=255; // Number of modes in x direction
 int Ny=255; // Number of modes in y direction
 
-double Cs=0.1;
+double Cs=0.0;
 double delta=1.0/Nx;
 
 double dt=1.0e-4;
@@ -150,7 +150,7 @@ void Source(const vector2& w, vector2 &S)
     int i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       int j2=j*j;
-      f0i[j]=i*j*f0i[j]+(i2-j2)*f1i[j]-nu*(i2+j2)*wi[j]-nuL*wi[j]+Fi[j];
+        f0i[j]=i*j*f0i[j]+(i2-j2)*f1i[j]-nu*(i2+j2)*wi[j]-nuL*wi[j]+Fi[j];
     }
   }
 }
@@ -230,7 +230,11 @@ int main(int argc, char* argv[])
   F[0][0]=0.0;
 
   cout.precision(15);
-
+  int kmax=(int) hypot(mx-1,my-1);
+  double aZ[kmax+1];
+  for(int k=0; k <= kmax; ++k) aZ[k]=0.0;
+  double counter = 0.0;
+    
   for(int step=0; step < n; ++step) {
     Output(step,step == 0);
      Source(w,f0);
@@ -239,12 +243,42 @@ int main(int argc, char* argv[])
        vector f0i=f0[i];
        for(int j=(i <= 0 ? 1 : 0); j < my; ++j)
 	 wi[j] += f0i[j]*dt;
+         
      }
      cout << "[" << step << "] " << flush;
+     if (step >= (n*9)/10){
+         counter += 1.0;
+         for(int i=-mx+1; i < mx; ++i) {
+           vector wi=w[i];
+           int i2=i*i;
+           for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+             int k=sqrt(i2+j*j);
+             aZ[(int) (k+0.5)] += abs2(wi[j]);
+           }
+         }
+     }
   }
   cout << endl;
   Output(n,true);
+    
+  ofstream av_zkvk("av_zkvk",ios::out);
+    counter += 1.0;
+  for(int i=-mx+1; i < mx; ++i) {
+  vector wi=w[i];
+  int i2=i*i;
+  for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+    int k=sqrt(i2+j*j);
+    aZ[(int) (k+0.5)] += abs2(wi[j]);
+    //aZ[(int) (k+0.5)] = aZ[(int) (k+0.5)]/(counter);
+    }
+  }
+  av_zkvk << "# k\tZ(k)" << endl;
+  cout << counter << "\n";
+  for(int k=1; k <= kmax; ++k) {
+      av_zkvk << k << "\t" << aZ[k]/counter << endl;
+  }
   Spectrum();
+  
 
   return 0;
 }
