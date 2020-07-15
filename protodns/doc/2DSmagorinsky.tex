@@ -1,35 +1,39 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage{cancel}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
 \author{Noel Murasko}
-\title{The Two-Dimensional Smagorinsky Subgrid model}
+\title{Two-Dimensional Pseudospectral Large Eddy Simulation}
 \date{\today}
 \begin{document}
 \maketitle
 \noindent 
 \section{Two-Dimensional Subgrid models}
-We can write the filtered Navier--Stokes equation as
-\begin{equation}\label{filteredNS}
-\frac{\partial {u}_i}{\partial t} + \frac{\partial }{\partial x_j}({u}_i{u}_j)+\frac{\partial {p}}{\partial x_i}- \nu \nabla^2 {u} +\frac{\partial \tau_{ij}^r}{\partial x_i}= {F}_i,
-\end{equation}
-Here $u_i$ and $p$ denote the filtered velocity and pressure. $\tau^r_{ij}$ is the anisotropic residule stress tensor and is a model for the unresolved terms. 
+We can write the filtered Navier--Stokes equation (for an incompressible fluid) as
+$$\frac{\partial {u}_i}{\partial t} =- \frac{\partial }{\partial x_j}({u}_i{u}_j)-\frac{\partial {p}}{\partial x_i}+ \nu \frac{\partial^2u_i}{\partial x_j^2} -\frac{\partial \tau_{ij}^r}{\partial x_j} + {F}_i,$$
+Here $u_i$ denotes the filtered velocity component in the direction of $x_i$, and $p$ denotes the modified\footnote{The filtered equations can be derived in terms of the residual stress tensor $\tau_{ij}^R$. However, we have written them in terms of $\tau_{ij}^r := \tau^R_{ij} - \frac{1}{3}\delta_{ij}\tau^R_{kk}$. We use $\tau_{ij}^r$ in the equation and absorb $\frac{1}{3}\delta_{ij}\tau^R_{kk}$ into the pressure term. Thus $p$ in equation \ref{filteredNS} is not the true filtered pressure but a modified scalar related to it.} filtered pressure. $\tau^r_{ij}$ is the anisotropic residule stress tensor and is a model for the unresolved terms. 
 
-Assume we are in 2D. If we take the curl of equation \ref{filteredNS}, the only non-zero component is in the $z$-direction. This gives us the vorticity equation:
-$$\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)(u_1u_2) +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2\right)+ \frac{\partial }{\partial x_1}\frac{\partial \tau_{2j}^r}{\partial x_j} - \frac{\partial }{\partial x_2}\frac{\partial \tau_{1j}^r}{\partial x_j}= \nu{\nabla}^2\omega+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}.$$
-By expanding this equation and simplifying we can write it as:
-\begin{equation}\label{filteredVorticity}
-\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)(u_1u_2) +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2\right)+ \frac{\partial^2 }{\partial x_1\partial x_2}\left( \tau_{21}^r+\tau_{22}^r-  \tau_{11}^r-\tau_{12}^r\right)= \nu{\nabla}^2\omega+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}
+An immediate simplification one can make is to combine the first and fourth terms on the RHS. Then we have
+\begin{equation}\label{filteredNS}
+\frac{\partial {u}_i}{\partial t} =- \frac{\partial }{\partial x_j}\left({u}_i{u}_j +\tau_{ij}^r\right)-\frac{\partial {p}}{\partial x_i}+ \nu \frac{\partial^2u_i}{\partial x_j^2} + {F}_i.
 \end{equation}
-Recall that the anisotropic stress tensor is symmetric so the diagonal terms of $\tau_{ij}^r$ in equation \ref{filteredVorticity} cancel to give us,
-$$\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)(u_1u_2) +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2\right)+ \frac{\partial^2 }{\partial x_1\partial x_2}\left( \tau_{22}^r-  \tau_{11}^r\right)= \nu{\nabla}^2\omega+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}.$$
-This equation can be simplified even further, by combining the third and fourth terms on the LHS
-$$\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)(u_1u_2) +\frac{\partial^2}{\partial x_1\partial x_2}\left(u_2^2-u_1^2 + \tau_{22}^r-  \tau_{11}^r\right)= \nu{\nabla}^2\omega+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}.$$
-Now define $B(\boldsymbol{x}, t) :=u_2^2-u_1^2+ \tau_{22}^r - \tau_{11}^r$. We can write the vorticity Equation as:
+
+We define the vorticity of the system to be $\boldsymbol{\omega} = \boldsymbol{\nabla}\times\boldsymbol{u}$. Assume we are in 2D (i.e. $u_3=0$). Then $\omega:= \omega_3$ is the only non-zero component of the vorticity. Our goal is to obtain an equation for how $\omega$ evolves in time. We have:
+$$\frac{\partial \omega}{\partial t} = \frac{\partial }{\partial t}\left( \boldsymbol{\nabla}\times\boldsymbol{u}\right)_{3} =  \frac{\partial }{\partial t}\left(\frac{\partial u_2}{\partial x_1} -\frac{\partial u_1}{\partial x_2} \right)=  \frac{\partial }{\partial x_1}\frac{\partial u_2}{\partial t} -\frac{\partial }{\partial x_2}\frac{\partial u_1}{\partial t}$$
+We can use equation \ref{filteredNS} to obtain equations for ${\partial u_1}/{\partial t}$ and ${\partial u_2}/{\partial t}$:
+\begin{align*}
+\frac{\partial \omega}{\partial t} &= \frac{\partial }{\partial x_1}\left[- \frac{\partial }{\partial x_j}\left({u}_2{u}_j +\tau_{2j}^r\right)-\cancel{\frac{\partial {p}}{\partial x_2}}+  \nu \frac{\partial^2u_2}{\partial x_j^2}+ {F}_2\right]-\frac{\partial }{\partial x_2}\left[- \frac{\partial }{\partial x_j}\left({u}_1{u}_j +\tau_{1j}^r\right)-\cancel{\frac{\partial {p}}{\partial x_1}}+ \nu \frac{\partial^2u_1}{\partial x_j^2}+ {F}_1\right]\\
+&= \frac{\partial }{\partial x_j}\left[ \frac{\partial }{\partial x_2}\left({u}_1{u}_j +\tau_{1j}^r\right) - \frac{\partial }{\partial x_1}\left({u}_2{u}_j +\tau_{2j}^r\right)\right] +\nu \frac{\partial^2}{\partial x_j^2}\left(\frac{\partial u_2}{\partial x_1} -\frac{\partial u_1}{\partial x_2}\right) +\frac{\partial F_2}{\partial x_1} -\frac{\partial F_1}{\partial x_2}\\
+&= \frac{\partial^2 }{\partial x_1\partial x_2}\left({u}_1^2 +\tau_{11}^r\right) - \frac{\partial^2 }{\partial x_1^2}\left({u}_2{u}_1 +\tau_{21}^r\right)+\frac{\partial^2 }{\partial x_2^2}\left({u}_1{u}_2 +\tau_{12}^r\right) - \frac{\partial^2 }{\partial x_1\partial x_2}\left({u}_2^2+\tau_{22}^r\right) +\nu \frac{\partial^2\omega}{\partial x_j^2}+\frac{\partial F_2}{\partial x_1} -\frac{\partial F_1}{\partial x_2}.
+\end{align*}
+Recall that the anisotropic stress tensor is symmetric and traceless so we have $\tau_{12}^r=\tau_{21}^r$ and $\tau_{11}^r = -\tau_{22}^r$. This gives us
+$$\frac{\partial \omega}{\partial t} = \frac{\partial^2 }{\partial x_1\partial x_2}\left({u}_1^2 -{u}_2^2+2\tau_{11}^r\right) +\left(\frac{\partial^2 }{\partial x_2^2} - \frac{\partial^2 }{\partial x_1^2}\right)\left({u}_1{u}_2 +\tau_{12}^r\right) +\nu \frac{\partial^2\omega}{\partial x_j^2}+\frac{\partial F_2}{\partial x_1} -\frac{\partial F_1}{\partial x_2}.$$
+Now define $A(\boldsymbol{x}, t) :=u_1u_2 + \tau_{12}^r$ and $B(\boldsymbol{x}, t)  := u_2^2-u_1^2- 2\tau_{11}^r$. Rearranging the terms, we can write the vorticity Equation as:
 \begin{equation}\label{vortB}
-\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)(u_1u_2) + \frac{\partial^2 }{\partial x_1\partial x_2}B(\boldsymbol{x}, t)= \nu{\nabla}^2\omega+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2} .
+\frac{\partial \omega}{\partial t}  + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)A(\boldsymbol{x}, t) + \frac{\partial^2 }{\partial x_1\partial x_2}B(\boldsymbol{x}, t) = \nu{\nabla}^2\omega+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2} .
 \end{equation}
 Notice that equation \ref{vortB} is quite general. It makes no assumptions about the type of model we are using. 
 \section{The Smagorinsky model}
@@ -48,20 +52,32 @@ $${S} := \left(2{S}_{ij}{S}_{ij}\right)^{1/2}$$
 Which we can write out as:
 $${S} = \left[\frac{1}{2}\left( \frac{\partial {u}_i}{\partial x_j} + \frac{\partial {u}_j}{\partial x_i}\right)\left( \frac{\partial {u}_i}{\partial x_j} + \frac{\partial {u}_j}{\partial x_i}\right)\right]^{1/2} = \left[\frac{1}{2}\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2+\frac{1}{2}\left( \frac{\partial {u}_2}{\partial x_2}\right)^2 \right]^{1/2}.$$
 So the anisotropic stress tensor is given by
-\begin{equation}\label{smagTau}
+\begin{equation}
 \tau_{ij}^r = -(C_s \Delta)^2\left[2\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+4\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2+2\left( \frac{\partial {u}_2}{\partial x_2}\right)^2 \right]^{1/2}{S}_{ij}.
 \end{equation}
+If the fluid is incompressible, i.e. $\frac{\partial {u}_1}{\partial x_1} = -\frac{\partial {u}_2}{\partial x_2}$, we can simplify this equations
+\begin{equation}\label{smagTau}
+\tau_{ij}^r = -2(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}{S}_{ij}.
+\end{equation}
 \section{Smagorinsky in Two-Dimensions}
-Now we apply the Smagorinsky model. From equation \ref{vortB}, we see that we only have to compute $\tau^r_{11}$ and $\tau^r_{22}$. We have 
-$${S}_{11} = \frac{1}{2}\left( \frac{\partial {u}_1}{\partial x_1} + \frac{\partial {u}_1}{\partial x_1}\right) = \frac{\partial {u}_1}{\partial x_1},$$
-$${S}_{22} = \frac{1}{2}\left( \frac{\partial {u}_2}{\partial x_2} + \frac{\partial {u}_2}{\partial x_2}\right) = \frac{\partial {u}_2}{\partial x_2}.$$
+Now we apply the Smagorinsky model. From equation \ref{vortB}, we see that we only have to compute $\tau^r_{11}$ and $\tau^r_{12}$. We have 
+$${S}_{11} = \frac{1}{2}\left( \frac{\partial {u}_1}{\partial x_1} + \frac{\partial {u}_1}{\partial x_1}\right) = \frac{\partial {u}_1}{\partial x_1}.$$
+$${S}_{12} = \frac{1}{2}\left( \frac{\partial {u}_1}{\partial x_2} + \frac{\partial {u}_2}{\partial x_1}\right)$$
+So we have:
+\begin{equation}\label{tau12}
+\tau_{12}^r= -(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left( \frac{\partial {u}_1}{\partial x_2} + \frac{\partial {u}_2}{\partial x_1}\right).
+\end{equation}
+and
+\begin{equation}\label{tau11}
+\tau_{11}^r= -2(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial {u}_1}{\partial x_1}\right).
+\end{equation}
+The vorticity equation with the Smagorinsky subgrid model, is then given by \ref{vortB}, where
+$$A(\boldsymbol{x}, t) = u_1u_2 -(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left( \frac{\partial {u}_1}{\partial x_2} + \frac{\partial {u}_2}{\partial x_1}\right).$$
+and 
+$$B(\boldsymbol{x}, t) = u_2^2 - u_1^2 + 4(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial {u}_1}{\partial x_1}\right).$$
+The advantage of writing the equation in this form, is that in a two-dimensional pseudospectral simulation (such as \text{\tt{protodns}}), $B_1(\boldsymbol{x},t)$ and $B_2(\boldsymbol{x},t)$ simply take the place of $u_1u_2$ and $u_2^2 - u_1^2$ respectively. This, however, will require at least 2 additional inverse FFTs.
+\end{document}
 Which gives us:
 \begin{equation}\label{tau22-tau11}
 \tau_{22}^r - \tau_{11}^r= -(C_s \Delta)^2\left[2\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+4\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2+2\left( \frac{\partial {u}_2}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial {u}_2}{\partial x_2} - \frac{\partial {u}_1}{\partial x_1}\right).
 \end{equation}
-If the fluid is incompressible, i.e. $\frac{\partial {u}_1}{\partial x_1} = -\frac{\partial {u}_2}{\partial x_2}$, we can write equation \ref{tau22-tau11} as:
-$$\tau_{22}^r - \tau_{11}^r= 4(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial {u}_1}{\partial x_1}\right).$$
-The vorticity equation with the Smagorinsky subgrid model, is then given by \ref{vortB}, where
-$$B(\boldsymbol{x}, t) = u_2^2-u_1^2+4(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial {u}_1}{\partial x_1}\right).$$
-The advantage of writing the equation in this form, is that in a two-dimensional pseudospectral simulation (such as \text{\tt{protodns}}), $B(\boldsymbol{x},t)$ simply takes the place of $u_2^2 - u_1^2$. This, however, will require at least 2 additional inverse FFTs (although it is possible this could be reduced).
-\end{document}

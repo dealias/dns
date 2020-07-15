@@ -10,14 +10,14 @@ using namespace Array;
 using namespace fftwpp;
 
 
-int Nx=255; // Number of modes in x direction
-int Ny=255; // Number of modes in y direction
+int Nx=127; // Number of modes in x direction
+int Ny=127; // Number of modes in y direction
 
-double Cs=0.0;
-double delta=1.0/Nx;
+double Cs=0.1;
+double delta=twopi/Nx;
 
 double dt=1.0e-4;
-double nu=0.003; // kinematic viscosity
+double nu=0.002; // kinematic viscosity
 double nuL=0.2;  // damping (uniform friction across all scales)
 
 double kforce=10.0;
@@ -85,8 +85,9 @@ void multSmagorinsky2(double **F, unsigned int m,
       Vec v=LOAD(F1j);
       Vec ux=LOAD(F2j);
       Vec s12=LOAD(F3j);
+      //double nut = Cd*Cd*SQRT(ux*ux+s12*s12);
       STORE(F0j,v*v-u*u+4*Cd*Cd*SQRT(ux*ux+s12*s12)*ux); // B(x,t)
-      STORE(F1j,u*v);
+      STORE(F1j,u*v-Cd*Cd*SQRT(ux*ux+s12*s12)*s12); // A(x,t)
     }
     );
   if(m % 2) {
@@ -94,8 +95,9 @@ void multSmagorinsky2(double **F, unsigned int m,
     double v=F1[m1];
     double ux=F2[m1];
     double s12=F3[m1];
-    F0[m1]=v*v-u*u+4*Cd*Cd*sqrt(ux*ux+s12*s12)*ux; // B(x,t)
-    F1[m1]=u*v;
+    double nut = Cd*Cd*sqrt(ux*ux+s12*s12);
+    F0[m1]=v*v-u*u+4*nut*ux; // B(x,t)
+    F1[m1]=u*v-nut*s12;// A(x,t)
   }
 #else
   for(unsigned int j=0; j < m; ++j) {
@@ -103,8 +105,9 @@ void multSmagorinsky2(double **F, unsigned int m,
     double v=F1[j];
     double ux=F2[j];
     double s12=F3[j];
-    F0[j]=v*v-u*u+4*Cd*Cd*sqrt(ux*ux+s12*s12)*ux; // B(x,t)
-    F1[j]=u*v;
+    double nut = Cd*Cd*sqrt(ux*ux+s12*s12);
+    F0[j]=v*v-u*u+4*nut*ux; // B(x,t)
+    F1[j]=u*v-nut*s12;// A(x,t)
   }
 #endif
 }
@@ -236,7 +239,7 @@ int main(int argc, char* argv[])
   double counter = 0.0;
     
   for(int step=0; step < n; ++step) {
-    Output(step,step == 0);
+    //Output(step,step == 0);
      Source(w,f0);
      for(int i=-mx+1; i < mx; ++i) {
        vector wi=w[i];
@@ -269,7 +272,6 @@ int main(int argc, char* argv[])
   for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
     int k=sqrt(i2+j*j);
     aZ[(int) (k+0.5)] += abs2(wi[j]);
-    //aZ[(int) (k+0.5)] = aZ[(int) (k+0.5)]/(counter);
     }
   }
   av_zkvk << "# k\tZ(k)" << endl;
