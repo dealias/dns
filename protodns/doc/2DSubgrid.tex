@@ -21,7 +21,7 @@
 \section{Filtering Equations}
 Recall that direct numerical simulation of the `small scales' is too computationally expensive. In Large Eddy Simulations, aim to simulate only the large scales. This can be done formally by filtering our equations \cite{Leonard1974}. Consider some function $f(\boldsymbol{x}, t)$. The ``large scales'' of $f$ can be obtained by a convolution with a filter function $G$:
 $$\overline{f} = \int G(\boldsymbol{x} - \boldsymbol{x}')f(\boldsymbol{x}')\ d\boldsymbol{x}'.$$
-This filter function $G$ has an associated length scale $\Delta$. Scales smaller than $\Delta$ are removed in $\overline{f}$. 
+The filter function $G$ has an associated length scale $\Delta$. Scales smaller than $\Delta$ are removed in $\overline{f}$. 
 
 Assuming the fluid is incompressible, we can express the Navier--Stokes equation and continuity equation in terms of their components:
 $$\frac{\partial u_i}{\partial t} - \frac{\partial }{\partial x_j}(u_iu_j)+\frac{\partial P}{\partial x_i}- \nu \frac{\partial^2u_i}{\partial x_j^2} = F_i,$$
@@ -47,7 +47,7 @@ Then we can express the filtered Navier--Stokes equation as
 \end{equation}
 We use this formulation because $\tau_{ij}^r$ is traceless; it contains one less independent component than $\tau_{ij}^R$. A \emph{subgrid scale model} is a model for $\tau_{ij}^r$.
 \section{Two-Dimensional Subgrid models}
-Assume we are in two-dimensions (i.e. $u_3=0$). We rewrite the \eq{barsNS}, dropping the bars for convenience.
+Assume we are in two-dimensions (i.e.\ $u_3=0$). We rewrite the \eq{barsNS}, dropping the bars for convenience.
 \begin{equation}\label{filteredNS}
 \frac{\partial {u}_i}{\partial t} =- \frac{\partial }{\partial x_j}\left({u}_i{u}_j +\tau_{ij}^r\right)-\frac{\partial {p}}{\partial x_i}+ \nu \frac{\partial^2u_i}{\partial x_j^2} + {F}_i.
 \end{equation}
@@ -87,7 +87,7 @@ So the anisotropic stress tensor is given by
 \begin{equation}
 \tau_{ij}^r = -(C_s \Delta)^2\left[2\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+4\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2+2\left( \frac{\partial {u}_2}{\partial x_2}\right)^2 \right]^{1/2}{S}_{ij}.
 \end{equation}
-Using the fact that the fluid is incompressible, i.e. $\frac{\partial {u}_1}{\partial x_1} = -\frac{\partial {u}_2}{\partial x_2}$, we can simplify this equation as:
+Using the fact that the fluid is incompressible, i.e.\ $\frac{\partial {u}_1}{\partial x_1} = -\frac{\partial {u}_2}{\partial x_2}$, we can simplify this equation as:
 \begin{equation}\label{smagTau}
 \tau_{ij}^r = -2(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}{S}_{ij}.
 \end{equation}
