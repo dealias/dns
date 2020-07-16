@@ -11,9 +11,8 @@ real G;
 int k=0;
 string tilde;
 
+file fin=input("ezvt").line();
 
-//file fin=input(rundir()+"evt").line();
-file fin=input("ezvt_511").line();
 real[][] a=fin;
 a=transpose(a);
 
@@ -67,11 +66,14 @@ for(int i=0; i < E.length; ++i) {
   add(mark,Scale((E[i],Z[i])));
 }
 
-real E0=1e-3;
-real Z0=1e-3;
-draw(graph(new real(real E) {return E;},E0,1),grey);
+real Emin=10^point(plain.W).x;
+real Emax=10^point(plain.E).x;
+real Zmin=10^point(plain.S).y;
+real Zmax=10^point(plain.N).y;
 
-draw(graph(new real(real E) {return sqrt(E);},Z0,1),brown);
+draw(graph(new real(real E) {return E;},Emin,1),grey);
+
+draw(graph(new real(real E) {return sqrt(E);},Zmin,1),brown);
 
 ++k;
 
