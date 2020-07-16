@@ -85,9 +85,9 @@ void multSmagorinsky2(double **F, unsigned int m,
       Vec v=LOAD(F1j);
       Vec ux=LOAD(F2j);
       Vec s12=LOAD(F3j);
-      //double nut = Cd*Cd*SQRT(ux*ux+s12*s12);
-      STORE(F0j,v*v-u*u+4*Cd*Cd*SQRT(ux*ux+s12*s12)*ux); // B(x,t)
-      STORE(F1j,u*v-Cd*Cd*SQRT(ux*ux+s12*s12)*s12); // A(x,t)
+      Vec nut=Cd*Cd*SQRT(ux*ux+s12*s12);
+      STORE(F0j,v*v-u*u+4*nut*ux); // B(x,t)
+      STORE(F1j,u*v-nut*s12); // A(x,t)
     }
     );
   if(m % 2) {
@@ -95,7 +95,7 @@ void multSmagorinsky2(double **F, unsigned int m,
     double v=F1[m1];
     double ux=F2[m1];
     double s12=F3[m1];
-    double nut = Cd*Cd*sqrt(ux*ux+s12*s12);
+    double nut=Cd*Cd*sqrt(ux*ux+s12*s12);
     F0[m1]=v*v-u*u+4*nut*ux; // B(x,t)
     F1[m1]=u*v-nut*s12;// A(x,t)
   }
@@ -105,9 +105,9 @@ void multSmagorinsky2(double **F, unsigned int m,
     double v=F1[j];
     double ux=F2[j];
     double s12=F3[j];
-    double nut = Cd*Cd*sqrt(ux*ux+s12*s12);
+    double nut=Cd*Cd*sqrt(ux*ux+s12*s12);
     F0[j]=v*v-u*u+4*nut*ux; // B(x,t)
-    F1[j]=u*v-nut*s12;// A(x,t)
+    F1[j]=u*v-nut*s12; // A(x,t)
   }
 #endif
 }
@@ -138,7 +138,7 @@ void Source(const vector2& w, vector2 &S)
       f0i[j]=u;
       f1i[j]=v;
       f2i[j]=Complex(-i*u.im,i*u.re); // F{dudx}
-      f3i[j]=Complex(-i*v.im,i*v.re)+Complex(-j*u.im,j*u.re); // F{dvdx + dudy}
+      f3i[j]=Complex(-j*u.im,j*u.re)+Complex(-i*v.im,i*v.re); // F{dudy+dvdx}
     }
   }
 

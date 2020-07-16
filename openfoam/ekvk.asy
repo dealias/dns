@@ -38,18 +38,6 @@ real[][] Ek(real[][][] U)
              //             return k2 > 0 ? abs(wk)^2*norm/k2 : 0;},n);},n);
 }
 
-int nruns=-1;
-
-bool nextrun()
-{
-  ++nruns;
-  int pos=find(runs,",",lastpos);
-  if(lastpos == -1) {run=""; return false;}
-  run=substr(runs,lastpos,pos-lastpos);
-  lastpos=pos > 0 ? pos+1 : -1;
-  return true;
-}
-
 while(nextrun()) {
 
   real e;

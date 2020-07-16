@@ -19,7 +19,7 @@
 \maketitle
 \noindent 
 \section{Filtering Equations}
-Recall that direct numerical simulation of the 'small scales' is too computationally expensive. In Large Eddy Simulations, aim to simulate only the large scales. This can be done formally by filtering our equations \cite{Leonard1974}. Consider some function $f(\boldsymbol{x}, t)$. The "large scales" of $f$ can be obtained by a convolution with a filter function $G$:
+Recall that direct numerical simulation of the `small scales' is too computationally expensive. In Large Eddy Simulations, aim to simulate only the large scales. This can be done formally by filtering our equations \cite{Leonard1974}. Consider some function $f(\boldsymbol{x}, t)$. The ``large scales'' of $f$ can be obtained by a convolution with a filter function $G$:
 $$\overline{f} = \int G(\boldsymbol{x} - \boldsymbol{x}')f(\boldsymbol{x}')\ d\boldsymbol{x}'.$$
 This filter function $G$ has an associated length scale $\Delta$. Scales smaller than $\Delta$ are removed in $\overline{f}$. 
 

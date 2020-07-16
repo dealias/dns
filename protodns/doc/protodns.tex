@@ -1,7 +1,7 @@
 \documentclass[12pt]{article}
 
 \title{\huge{\textbf{\\Two-Dimensional {\tt ProtoDNS} Code}}}
-\author{Pedram Emami and John C. Bowman\\University of Alberta\\Edmonton,
+\author{Noel Murasko, Pedram Emami, and John C. Bowman\\University of Alberta\\Edmonton,
   Alberta, Canada}
 \date{\today}
 
@@ -71,7 +71,7 @@
 \thispagestyle{empty}
 \begin{center}
 \ \vspace{20cm}\\
-Pedram Emami and John C. Bowman\\
+Noel Murasko, Pedram Emami, and John C. Bowman\\
 ALL RIGHTS RESERVED\\
 Reproduction of these notes in any form, in whole or in part, is permitted only for nonprofit educational use.
 \end{center}
@@ -163,7 +163,8 @@ The most computationally expensive part of this algorithm are the number of FFTs
 \begin{equation}
 \vu\cdot\grad\omega = u_1\frac{\partial \omega}{\partial x_1}+u_2\frac{\partial \omega}{\partial x_2},
 \end{equation}
-one might think that five FFTs are required at each time step. Four inverse FFTs to transfrom $u_1$,$ u_2$, $\partial \omega/\partial x_1$, and $\partial \omega/\partial x_2$ from Fourier space to physical space and one forward FFT to transform $u_1\left(\partial \omega/\partial x_1\right)+u_2\left(\partial \omega/\partial x_2\right)$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
+one might think that five FFTs are required at each time step: four
+inverse FFTs to transfrom $u_1$, $ u_2$, $\partial \omega/\partial x_1$, and $\partial \omega/\partial x_2$ from Fourier space to physical space and one forward FFT to transform $u_1\left(\partial \omega/\partial x_1\right)+u_2\left(\partial \omega/\partial x_2\right)$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
 
 First, to obtain the advection term in \Eq{Fourier}, we take the $z$ component of the curl of this term:
 \begin{equation}\label{zAdvection}
