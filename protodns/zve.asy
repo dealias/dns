@@ -13,11 +13,30 @@ string tilde;
 
 
 //file fin=input(rundir()+"evt").line();
-file fin=input("ezvt").line();
+file fin=input("ezvt_511").line();
 real[][] a=fin;
 a=transpose(a);
-real fnorm=10; // Replace with sqrt(sum(Fk^2/(i*i+j*j)));
-real nuH=1;
+
+int Nx=511;
+int Ny=511;
+int mx=(Nx+1)#2;
+int my=(Ny+1)#2;
+
+real kforce=10.0;
+real deltaf=1.0;
+
+real fnorm;
+for(int i=-mx+1; i < mx; ++i) {
+  int i2=i*i;
+  real halfdeltaf=0.5*deltaf;
+  for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+    real k=sqrt(i2+j*j);
+    fnorm+=abs(k-kforce) < halfdeltaf ? 2/(k*k) : 0.0;
+  }
+}
+real fnorm=sqrt(fnorm);
+
+real nuH=0.002;
 // TODO: account for nuL
 
 G=fnorm/nuH^2;                 // Grashof number for constant forcing
