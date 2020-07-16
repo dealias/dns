@@ -38,7 +38,7 @@ for(int i=-mx+1; i < mx; ++i) {
 }
 
 // Account for reality condition
-fnorm=2*sqrt(fnorm);
+fnorm=sqrt(2*fnorm);
 
 real nuH=0.002;
 // TODO: account for nuL
