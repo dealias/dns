@@ -30,8 +30,8 @@ norm fnorm(real[] F) {
   norm N;
   //  write("f2=",f2);
  // Account for reality condition
-  N.f=2*sqrt(f2); // |f|
-  N.F=2*sqrt(F2); // |A^(1/2)f|
+  N.f=sqrt(2*f2); // |f|
+  N.F=sqrt(2*F2); // |A^(1/2)f|
   return N;
 }
 
