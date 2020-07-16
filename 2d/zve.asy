@@ -29,8 +29,9 @@ norm fnorm(real[] F) {
   }
   norm N;
   //  write("f2=",f2);
-  N.f=sqrt(f2); // |f|
-  N.F=sqrt(F2); // |A^(1/2)f|
+ // Account for reality condition
+  N.f=2*sqrt(f2); // |f|
+  N.F=2*sqrt(F2); // |A^(1/2)f|
   return N;
 }
 
@@ -50,8 +51,7 @@ while(nextrun()) {
     tilde="";
   } else {
     //    G=sqrt(eps)/nuH^(3/2);      // Grashof number for stochastic forcing
-    write(sqrt(eps*(nuH+nuL))/nuH^2,sqrt(eps*(nuH))/nuH^2);
-    G=sqrt(eps*(nuH+nuL))/nuH^2;       // Grashof number for stochastic forcing
+    G=sqrt(eps*(nuH+nuL))/nuH^2;      // Grashof number for stochastic forcing
     tilde="\tilde ";
   }
 

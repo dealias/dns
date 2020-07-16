@@ -26,15 +26,19 @@ real kforce=10.0;
 real deltaf=1.0;
 
 real fnorm;
+pair F=(1,1);
+real F2=abs2(F);
 for(int i=-mx+1; i < mx; ++i) {
   int i2=i*i;
   real halfdeltaf=0.5*deltaf;
   for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
     real k=sqrt(i2+j*j);
-    fnorm+=abs(k-kforce) < halfdeltaf ? 2/(k*k) : 0.0;
+    fnorm += abs(k-kforce) < halfdeltaf ? F2/(k*k) : 0.0;
   }
 }
-real fnorm=sqrt(fnorm);
+
+// Account for reality condition
+fnorm=2*sqrt(fnorm);
 
 real nuH=0.002;
 // TODO: account for nuL
