@@ -14,12 +14,12 @@ using namespace fftwpp;
 int Nx=127; // Number of modes in x direction
 int Ny=127; // Number of modes in y direction
 
-double Cs=0.1;
+double Cs=0.0;
 double delta=twopi/Nx;
 
 double dt=1.0e-4;
-double nu=0.002; // kinematic viscosity
-double nuL=0.2;  // damping (uniform friction across all scales)
+double nu=0.003; // kinematic viscosity
+double nuL=0.0;  // damping (uniform friction across all scales)
 
 double kforce=10.0;
 double deltaf=1.0;
@@ -54,10 +54,10 @@ void init(vector2& w, vector2 &F)
     }
   }
 
+  double halfdeltaf=0.5*deltaf;
   for(int i=-mx+1; i < mx; ++i) {
     vector Fi=F[i];
     int i2=i*i;
-    double halfdeltaf=0.5*deltaf;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       double k=sqrt(i2+j*j);
       Fi[j]=abs(k-kforce) < halfdeltaf ? force : 0.0;
@@ -92,8 +92,8 @@ void multSmagorinsky2(double **F, unsigned int m,
       Vec ux=LOAD(F2j);
       Vec s12=LOAD(F3j);
       Vec nut=Cd*Cd*SQRT(ux*ux+s12*s12);
-      STORE(F0j,v*v-u*u+4*nut*ux); // B(x,t)
-      STORE(F1j,u*v-nut*s12); // A(x,t)
+      STORE(F0j,v*v-u*u+4*nut*ux); // A(x,t)
+      STORE(F1j,u*v-nut*s12); // B(x,t)
     }
     );
   if(m % 2) {
@@ -102,8 +102,8 @@ void multSmagorinsky2(double **F, unsigned int m,
     double ux=F2[m1];
     double s12=F3[m1];
     double nut=Cd*Cd*sqrt(ux*ux+s12*s12);
-    F0[m1]=v*v-u*u+4*nut*ux; // B(x,t)
-    F1[m1]=u*v-nut*s12;// A(x,t)
+    F0[m1]=v*v-u*u+4*nut*ux; // A(x,t)
+    F1[m1]=u*v-nut*s12;// B(x,t)
   }
 #else
   for(unsigned int j=0; j < m; ++j) {
@@ -112,8 +112,8 @@ void multSmagorinsky2(double **F, unsigned int m,
     double ux=F2[j];
     double s12=F3[j];
     double nut=Cd*Cd*sqrt(ux*ux+s12*s12);
-    F0[j]=v*v-u*u+4*nut*ux; // B(x,t)
-    F1[j]=u*v-nut*s12; // A(x,t)
+    F0[j]=v*v-u*u+4*nut*ux; // A(x,t)
+    F1[j]=u*v-nut*s12; // B(x,t)
   }
 #endif
 }
@@ -208,7 +208,8 @@ void Output(int step, bool verbose=false)
     cout << "Enstrophy=" << Z << endl;
     cout << "Palenstrophy=" << P << endl;
   }
-  ezvt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
+    ezvt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
+
 }
 
 inline double drand()
@@ -256,14 +257,17 @@ int main(int argc, char* argv[])
   F[0][0]=0.0;
 
   cout.precision(15);
-  int kmax=(int) hypot(mx-1,my-1);
-  double aZ[kmax+1];
-  for(int k=0; k <= kmax; ++k) aZ[k]=0.0;
-  int counter=0;
-    
-  Complex forcing=sqrt(2*dt*eta)*crand_gauss();
+//  int kmax=(int) hypot(mx-1,my-1);
+//  double aZ[kmax+1];
+//  for(int k=0; k <= kmax; ++k) aZ[k]=0.0;
+//  int counter=0;
+
+  Complex Cforcing=sqrt(2*dt*eta);
   for(int step=0; step < n; ++step) {
-    Output(step,step == 0);
+    if(step % 100==0){
+        Output(step,step == 0);
+    }
+     Complex forcing=Cforcing*crand_gauss();
      Source(w,f0);
      for(int i=-mx+1; i < mx; ++i) {
        vector wi=w[i];
@@ -274,36 +278,35 @@ int main(int argc, char* argv[])
          
      }
      cout << "[" << step << "] " << flush;
-     if(step >= (n*9)/10) {
-       ++counter;
-       for(int i=-mx+1; i < mx; ++i) {
-         vector wi=w[i];
-         int i2=i*i;
-         for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-           int k=sqrt(i2+j*j);
-           aZ[(int) (k+0.5)] += abs2(wi[j]);
-         }
-       }
-     }
+  //   if(step >= (n*9)/10) {
+   //    ++counter;
+  //     for(int i=-mx+1; i < mx; ++i) {
+  //       vector wi=w[i];
+ //        int i2=i*i;
+ //        for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+  //         int k=sqrt(i2+j*j);
+  //         aZ[(int) (k+0.5)] += abs2(wi[j]);
+  //       }
+   //    }
+ //    }
   }
   cout << endl;
   Output(n,true);
     
-  ofstream av_zkvk("av_zkvk",ios::out);
-  ++counter;
-  for(int i=-mx+1; i < mx; ++i) {
-  vector wi=w[i];
-  int i2=i*i;
-  for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-    int k=sqrt(i2+j*j);
-    aZ[(int) (k+0.5)] += abs2(wi[j]);
-    }
-  }
-  av_zkvk << "# k\tZ(k)" << endl;
-  cout << counter << "\n";
-  for(int k=1; k <= kmax; ++k) {
-      av_zkvk << k << "\t" << aZ[k]/counter << endl;
-  }
+//  ofstream av_zkvk("av_zkvk",ios::out);
+//  ++counter;
+//  for(int i=-mx+1; i < mx; ++i) {
+//  vector wi=w[i];
+//  int i2=i*i;
+// for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+//    int k=sqrt(i2+j*j);
+//    aZ[(int) (k+0.5)] += abs2(wi[j]);
+ //   }
+//  }
+ // av_zkvk << "# k\tZ(k)" << endl;
+//  for(int k=1; k <= kmax; ++k) {
+//      av_zkvk << k << "\t" << aZ[k]/counter << endl;
+//  }
   Spectrum();
   
 
