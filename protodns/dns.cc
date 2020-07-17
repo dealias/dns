@@ -1,6 +1,7 @@
 #include <cmath>
 #include <iomanip>
 #include <fstream>
+#include <cstdlib>
 #include "Complex.h"
 #include "convolution.h"
 #include "Array.h"
@@ -22,7 +23,12 @@ double nuL=0.2;  // damping (uniform friction across all scales)
 
 double kforce=10.0;
 double deltaf=1.0;
-Complex force(1.0,1.0);
+
+// Complex force(1.0,1.0);
+// double eta=0.0;
+
+Complex force(1.0,0.0);
+double eta=1.0;
 
 int mx;
 int my;
@@ -153,7 +159,7 @@ void Source(const vector2& w, vector2 &S)
     int i2=i*i;
     for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
       int j2=j*j;
-        f0i[j]=i*j*f0i[j]+(i2-j2)*f1i[j]-nu*(i2+j2)*wi[j]-nuL*wi[j]+Fi[j];
+      f0i[j]=i*j*f0i[j]+(i2-j2)*f1i[j]-nu*(i2+j2)*wi[j]-nuL*wi[j]+Fi[j];
     }
   }
 }
@@ -205,6 +211,23 @@ void Output(int step, bool verbose=false)
   ezvt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
 }
 
+inline double drand()
+{
+  static const double factor=1.0/RAND_MAX;
+  return random()*factor;
+}
+
+Complex crand_gauss()
+{
+  double r2,v1,v2;
+  do {
+    v1=2.0*drand()-1.0;
+    v2=2.0*drand()-1.0;
+    r2=v1*v1+v2*v2;
+  } while (r2 >= 1.0 || r2 == 0.0);
+  return Complex(v1,v2)*sqrt(-log(r2)/r2);
+}
+
 int main(int argc, char* argv[])
 {
   int n;
@@ -236,36 +259,38 @@ int main(int argc, char* argv[])
   int kmax=(int) hypot(mx-1,my-1);
   double aZ[kmax+1];
   for(int k=0; k <= kmax; ++k) aZ[k]=0.0;
-  double counter = 0.0;
+  int counter=0;
     
+  Complex forcing=sqrt(2*dt*eta)*crand_gauss();
   for(int step=0; step < n; ++step) {
-    //Output(step,step == 0);
+    Output(step,step == 0);
      Source(w,f0);
      for(int i=-mx+1; i < mx; ++i) {
        vector wi=w[i];
        vector f0i=f0[i];
+       vector Fi=F[i];
        for(int j=(i <= 0 ? 1 : 0); j < my; ++j)
-	 wi[j] += f0i[j]*dt;
+	 wi[j] += f0i[j]*dt+Fi[j].re*forcing;
          
      }
      cout << "[" << step << "] " << flush;
-     if (step >= (n*9)/10){
-         counter += 1.0;
-         for(int i=-mx+1; i < mx; ++i) {
-           vector wi=w[i];
-           int i2=i*i;
-           for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
-             int k=sqrt(i2+j*j);
-             aZ[(int) (k+0.5)] += abs2(wi[j]);
-           }
+     if(step >= (n*9)/10) {
+       ++counter;
+       for(int i=-mx+1; i < mx; ++i) {
+         vector wi=w[i];
+         int i2=i*i;
+         for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+           int k=sqrt(i2+j*j);
+           aZ[(int) (k+0.5)] += abs2(wi[j]);
          }
+       }
      }
   }
   cout << endl;
   Output(n,true);
     
   ofstream av_zkvk("av_zkvk",ios::out);
-    counter += 1.0;
+  ++counter;
   for(int i=-mx+1; i < mx; ++i) {
   vector wi=w[i];
   int i2=i*i;
