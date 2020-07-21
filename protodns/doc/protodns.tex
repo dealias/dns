@@ -97,8 +97,17 @@ condition for the velocity $\vu$,
 \div \vu=0.\label{GE}
 \end{cases}
 \end{equation}
-We assume that the there is no external forcing on the system.The equation describing the evolution of the \In{vorticity}
+We assume that the there is no external forcing on the system. The equation describing the evolution of the \In{vorticity}
 $\vw=\curl\vu$ is sometimes more convenient:
+$$\begin{cases}
+\dfrac{\partial{\vw}}{\partial t} + (\vu\dot\grad)\vw=(\vw\dot\grad)\vu + \nu\lap\vw,\\
+\\
+\div \vu=0.
+\end{cases}$$
+This is obtained using the identity $\vu\cdot \grad\vu= \frac{1}{2}\grad u^2 - \grad\times(\grad\times \vu)$. One advantage of the vorticity equation is that it does not contain a pressure term. 
+Moreover, in 2D, one can exploit the fact that the
+vorticity vector is always parallel to the normal $\zhat$ of the plane of motion. 
+The \In{vortex stretching} term is then given by $(\vw\dot\grad)\vu = 0$. The vorticity equation in 2D is then given by:
 \begin{equation}\label{vorticity}
 \begin{cases}
 \dfrac{\partial{\vw}}{\partial t} + (\vu\dot\grad)\vw=(\vw\dot\grad)\vu + \nu\lap\vw,\\
@@ -106,10 +115,6 @@ $\vw=\curl\vu$ is sometimes more convenient:
 \div \vu=0.
 \end{cases}
 \end{equation}
-One advantage of the vorticity equation is that it does not contain
-a pressure term.
-Moreover in 2D, one can exploit the fact that the
-vorticity vector is always parallel to the normal $\zhat$ of the plane of motion.
 Since the flow is incompressible, we can express
 $\vu=\curl\vA$ in the Coulomb gauge $\div\vA=0$, so that
 $$
@@ -150,13 +155,11 @@ $\vu\cdot\grad\omega$ can be written as a convolution:
 \begin{equation}\label{Fourier-expand}
 \frac{\partial\omega_{\vk}}{\partial t} + \sum_{\vp}{\frac{(\hat{\vz}\cross\vp)\dot\vk}{p^2}\omega_{\vp}\omega_{\vk-\vp}}= -\nu k^2\omega_{\vk}.
 \end{equation}
-
-
 \section{Reducing the Number of FFTs}
 Instead of computing the advection term in Fourier space, we first transform to physical space using an inverse Fast Fourier Transform (FFT). Now, the nonlinear terms can computed by pointwise multiplication and addition. These terms are then transformed back into Fourier space with a forward FFT.
 
 To obtain the advection term in \Eq{Fourier}, we take the $z$ component of the curl of this term:
-\begin{equation}
+\begin{equation}\label{zAdvection}
 \vu\cdot\grad\omega =\hat{\vz}\cdot \left[\grad \times \left(\vu\cdot\grad\vu \right)\right]
 \end{equation}
 The most computationally expensive part of this algorithm are the number of FFTs. Naively inspecting the advection term,
@@ -166,10 +169,6 @@ The most computationally expensive part of this algorithm are the number of FFTs
 one might think that five FFTs are required at each time step: four
 inverse FFTs to transfrom $u_1$, $ u_2$, $\partial \omega/\partial x_1$, and $\partial \omega/\partial x_2$ from Fourier space to physical space and one forward FFT to transform $u_1\left(\partial \omega/\partial x_1\right)+u_2\left(\partial \omega/\partial x_2\right)$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
 
-First, to obtain the advection term in \Eq{Fourier}, we take the $z$ component of the curl of this term:
-\begin{equation}\label{zAdvection}
-\vu\cdot\grad\omega =\hat{\vz}\cdot \left[\grad \times \left(\vu\cdot\grad\vu \right)\right]
-\end{equation}
 To reduce the amount of writing, we write $\vu\cdot\grad\vu$ in Einstein notation (sum over repeated indices)
 $$\vu\cdot\grad\vu =u_j\dfrac{\partial u_i}{\partial x_j}.$$
 Note that with the incompressibility condition, $\dfrac{\partial u_j}{\partial x_j} =0$, this equation can be written as 
