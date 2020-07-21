@@ -76,33 +76,19 @@ while(nextrun()) {
     add(mark,Scale((E[i],Z[i])));
   }
 
-  //  bool cropx=downcase(getstring("Crop x [Y/n]","y")) != 'n';
-  //  bool cropy=downcase(getstring("Crop y [Y/n]","y")) != 'n';
-  bool cropx=false;
-
-real Emin=10^point(plain.W).x;
-real Emax=10^point(plain.E).x;
-real Zmax=10^point(plain.N).y;
-
-  real crop(real x1, real x2=x1) {
-    real bound=1;
-    if(cropx) {
-      bound=min(bound,x1);
-      bound=min(bound,x2);
-    }
-    return bound;
-  }
+  real Emin=min(E);
+  real Emax=max(E);
+  real Zmin=min(Z);
+  real Zmax=max(Z);
 
     real kfm=kforce-deltaf/2;
     real kfp=kforce+deltaf/2;
     write(kfm,kfp);
-  draw(graph(new real(real E) {return E;},Emin,crop(Emax)),grey); //point(plain.E).x),blue);
 
-     draw(graph(new real(real E) {return kfp^2*E;},
-                Emin,min(10^point(plain.N).y/kfp^2,10^point(plain.E).x)),magenta);
-     draw(graph(new real(real E) {return kfm^2*E;},
-                 Emin,min(10^point(plain.N).y/kfm^2,10^point(plain.E).x)),magenta);
-  draw(graph(new real(real E) {return sqrt(E);},Emin,crop(Emax,Zmax^2)),brown);
+    draw(graph(new real(real E) {return E;},Emin,1),grey);
+    draw(graph(new real(real E) {return kfp^2*E;},Emin,1/kfp^2),magenta);
+    draw(graph(new real(real E) {return kfm^2*E;},Emin,1/kfm^2),magenta);
+    draw(graph(new real(real E) {return sqrt(E);},Emin,1),brown);
 
   //  real tau=1-sqrt(2-sqrt(2));
   //  real alpha=tau/sqrt(2);
