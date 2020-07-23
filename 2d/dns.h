@@ -26,7 +26,61 @@ extern unsigned spectrum;
 
 extern int pH;
 extern int pL;
+
+extern Real Cs;
+extern Real Cd;
  
+// 2D Navier-Stokes advection a la Basdevant with Smagorinsky subgrid model
+// requiring only 4 inputs and 2 outputs.
+void multSmagorinsky2(double **F, unsigned int m,
+                      const unsigned int indexsize,
+                      const unsigned int *index,
+                      unsigned int r, unsigned int threads)
+{
+  double* F0=F[0];
+  double* F1=F[1];
+  double* F2=F[2];
+  double* F3=F[3];
+
+#ifdef __SSE2__
+  unsigned int m1=m-1;
+  PARALLEL(
+    for(unsigned int j=0; j < m1; j += 2) {
+      double *F0j=F0+j;
+      double *F1j=F1+j;
+      double *F2j=F2+j;
+      double *F3j=F3+j;
+      Vec u=LOAD(F0j);
+      Vec v=LOAD(F1j);
+      Vec ux=LOAD(F2j);
+      Vec s12=LOAD(F3j);
+      Vec nut=Cd*Cd*SQRT(ux*ux+s12*s12);
+      STORE(F0j,v*v-u*u+4*nut*ux); // A(x,t)
+      STORE(F1j,u*v-nut*s12); // B(x,t)
+    }
+    );
+  if(m % 2) {
+    double u=F0[m1];
+    double v=F1[m1];
+    double ux=F2[m1];
+    double s12=F3[m1];
+    double nut=Cd*Cd*sqrt(ux*ux+s12*s12);
+    F0[m1]=v*v-u*u+4*nut*ux; // A(x,t)
+    F1[m1]=u*v-nut*s12;// B(x,t)
+  }
+#else
+  for(unsigned int j=0; j < m; ++j) {
+    double u=F0[j];
+    double v=F1[j];
+    double ux=F2[j];
+    double s12=F3[j];
+    double nut=Cd*Cd*sqrt(ux*ux+s12*s12);
+    F0[j]=v*v-u*u+4*nut*ux; // A(x,t)
+    F1[j]=u*v-nut*s12; // B(x,t)
+  }
+#endif
+}
+
 class DNSBase {
 protected:
   // Vocabulary:
@@ -51,10 +105,9 @@ protected:
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
-  Array2<Complex> f0,f1;
+  Array2<Complex> f0,f1,f2,f3;
   Array2<Complex> S;
   array2<Complex> buffer;
-  Complex *F[2];
   Complex *block;
   ImplicitHConvolution2 *Convolution;
   crfft2d *Backward;
@@ -104,6 +157,9 @@ public:
         k2invi[j]=1.0/(i2+j*j);
       }
     }
+
+    Real delta=twopi/sqrt(Nx*Ny);
+    Cd=Cs*delta;
   }
   
   virtual void setcount() {
@@ -371,33 +427,42 @@ public:
     w.Set(Y[OMEGA]);
     f0.Set(Src[PAD]);
 
-    f0[0][0]=0.0;
+    f0[0][0]=0.0; // Enforce no mean flow.
     f1[0][0]=0.0;
-  
-    // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
-    // requires only 4 FFTs per stage.
+    f2[0][0]=0.0;
+    f3[0][0]=0.0;
+
+    // This 2D version requires only 6 FFTs per stage (in the spirit
+    // of Basdevant, J. Comp. Phys, 50, 1983).
 #pragma omp parallel for num_threads(threads)
     for(int i=-mx+1; i < mx; ++i) {
       Vector wi=w[i];
       Vector f0i=f0[i];
       Vector f1i=f1[i];
+      Vector f2i=f2[i];
+      Vector f3i=f3[i];
       rVector k2invi=k2inv[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+      for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+        Real k2inv=k2invi[j];
+        Real jk2inv=j*k2inv;
+        Real ik2inv=i*k2inv;
         Complex wij=wi[j];
-        Real k2invij=k2invi[j];
-        Real jk2inv=j*k2invij;
-        Real ik2inv=i*k2invij;
-        f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
-        f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
+        Complex u=Complex(-wij.im*jk2inv,wij.re*jk2inv);
+        Complex v=Complex(wij.im*ik2inv,-wij.re*ik2inv);
+        f0i[j]=u;
+        f1i[j]=v;
+        f2i[j]=Complex(-i*u.im,i*u.re); // F{dudx}
+        f3i[j]=Complex(-j*u.im,j*u.re)+Complex(-i*v.im,i*v.re); // F{dudy+dvdx}
       }
     }
 
-    F[0]=f0;
-    Convolution->convolve(F,multadvection2);
+    Complex *fAll[]={f0,f1,f2,f3};
+    Convolution->convolve(fAll,multSmagorinsky2);
+
     f0[0][0]=0.0;
   
     for(int i=-mx+1; i < mx; ++i) {
-      Real i2=i*i;
+      int i2=i*i;
       Vector f0i=f0[i];
       Vector f1i=f1[i];
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {

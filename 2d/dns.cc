@@ -22,6 +22,7 @@ int pH=1;
 int pL=0;
 unsigned Nx=1023;
 unsigned Ny=1023;
+Real Cs=0.0;
 Real eta=0.0;
 Complex force=0.0;
 Real kforce=1.0;
@@ -37,6 +38,8 @@ Real icalpha=1.0;
 Real icbeta=1.0;
 Real k0=1.0; // Obsolete
 int randomIC=0;
+
+Real Cd;
 
 class DNS : public DNSBase, public ProblemBase {
 public:
@@ -285,6 +288,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB_NOLIMIT(forcing,"Forcing type");
   ForcingTable=new Table<ForcingBase>("forcing");
 
+  VOCAB(Cs,0.0,REAL_MAX,"Smagorinsky coefficient");
   VOCAB(eta,0.0,REAL_MAX,"vorticity injection rate");
   VOCAB(force,(Complex) 0.0, (Complex) 0.0,"constant external force");
   VOCAB(kforce,0.0,REAL_MAX,"forcing wavenumber");
@@ -381,17 +385,18 @@ void DNS::InitialConditions()
   w.Dimension(Nx,my,-mx+1,0);
   S.Dimension(Nx,my,-mx+1,0);
 
-  block=ComplexAlign((Nx+1)*my);
+  size_t blocksize=(Nx+1)*my;
+  block=ComplexAlign(3*blocksize);
   f0.Dimension(Nx+1,my,-mx,0);
   f1.Dimension(Nx+1,my,block,-mx,0);
+  f2.Dimension(Nx+1,my,block+blocksize,-mx,0);
+  f3.Dimension(Nx+1,my,block+2*blocksize,-mx,0);
 
   vector f=Y[PAD];
   for(int j=0; j < my; ++j)
-    f1(j)=f[j]=0.0;
+    f3(j)=f2(j)=f1(j)=f[j]=0.0;
     
-  F[1]=f1;
-
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,4,2);
 
   Allocate(count,nshells);
   setcount();

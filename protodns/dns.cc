@@ -15,7 +15,7 @@ int Nx=127; // Number of modes in x direction
 int Ny=127; // Number of modes in y direction
 
 double Cs=0.0;
-double delta=twopi/Nx;
+double delta=twopi/sqrt(Nx*Ny);
 
 double dt=1.0e-4;
 double nu=0.003; // kinematic viscosity
