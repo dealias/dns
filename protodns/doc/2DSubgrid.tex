@@ -1,6 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage{mathrsfs} 
 \usepackage{cancel}
 \usepackage[colorlinks]{hyperref}
 \hypersetup{
@@ -78,7 +79,9 @@ $$\tau_{ij}^r = -2\nu_t {S}_{ij},$$
 where $\nu_t$ is the turbulent viscosity and $S_{ij}$ is the rate of strain tensor:
 $${S}_{ij} := \frac{1}{2}\left( \frac{\partial {u}_i}{\partial x_j} + \frac{\partial {u}_j}{\partial x_i}\right).$$
 To find $\tau_{ij}^r$, we need to find $\nu_t$. The turbulent viscosity is assumed to be given by
-$$\nu_t = (C_s \Delta)^2 {S},$$
+\begin{equation}\label{smag_nut}
+nu_t = (C_s \Delta)^2 {S},
+\end{equation}
 where $C_s$ is the Smagorinsky coefficient, $\Delta$ is the filter width, and ${S}$ is the characteristic filtered rate of strain:
 $${S} := \left(2{S}_{ij}{S}_{ij}\right)^{1/2}$$
 This can be written out as:
@@ -91,7 +94,7 @@ Using the fact that the fluid is incompressible, i.e.\ $\frac{\partial {u}_1}{\p
 \begin{equation}\label{smagTau}
 \tau_{ij}^r = -2(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}{S}_{ij}.
 \end{equation}
-\subsection{In Two Dimensions}
+\subsection{Smagorinsky in Two-Dimensions}
 From \eq{vortB}, we see that we only have to compute $\tau^r_{11}$ and $\tau^r_{12}$. We have 
 $${S}_{11} = \frac{\partial {u}_1}{\partial x_1},$$
 and
@@ -109,6 +112,166 @@ $$A(\boldsymbol{x}, t) = u_2^2 - u_1^2 + 4(C_s \Delta)^2\left[\left( \frac{\part
 and
 $$B(\boldsymbol{x}, t) = u_1u_2 -(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left( \frac{\partial {u}_1}{\partial x_2} + \frac{\partial {u}_2}{\partial x_1}\right).$$
 The advantage of writing the equation in this form is that in a two-dimensional pseudospectral simulation (such as \text{\tt{protodns}}), $A(\boldsymbol{x},t)$ and $B(\boldsymbol{x},t)$ simply take the place of $u_2^2 - u_1^2$ and $u_1u_2$ respectively. This, however, will require at least 2 additional inverse FFTs.
+\section{The Dynamical Model}
+\subsection{Theory}
+The dynamical subgrid-scale model, proposed in \cite{GermanoEtAl1991}, aims to deal with a problem in turbulent-viscosity subgrid scale models. Recall that the turbulent viscosity in the Smagorinsky model is given by:
+$$\nu_\tau = (C_s\Delta)^2\bar{S},$$
+where $C_s$ is the Smagorinsky coefficient. What should the value of the Smagorinsky coefficient be? Unfortunately, there isn't one value that will work in all scenarios. 
+
+The dynamical model differs from the Smagorinsky model by locally calculating the turbulent-viscosity to reflect the nature of the flow. To do this we need two filters. A grid filter $\bar{G}$ and a test filter $\tilde{G}$. We define the filter function $\tilde{\bar{G}} := \bar{G}\tilde{G}$.
+
+Using the grid filter, the filtered Navier—Stokes eqation is given by:
+$$ \frac{\partial \bar{u}_i}{\partial t} - \frac{\partial }{\partial x_j}\overline{u}_i\overline{u}_j+\frac{\partial \overline{p}}{\partial x_i}- \nu \nabla^2 \overline{u} +\frac{\partial \tau_{ij}^R}{\partial x_j}= \overline{F}_i,$$ 
+where $\tau_{ij}^R = \overline{u_iu_j}-\bar{u}_i\bar{u}_j$. Using the filter $\tilde{\bar{G}}$, the filtered Navier—Stokes equation is:
+$$ \frac{\partial \tilde{\bar{u}}_i}{\partial t} - \frac{\partial }{\partial x_j}\tilde{\bar{u}}_i\tilde{\bar{u}}_j+\frac{\partial \tilde{\bar{p}}}{\partial x_i}- \nu \nabla^2 \overline{u} +\frac{\partial T_{ij}^R}{\partial x_j}= \tilde{\bar{F_i}},$$ 
+where $T_{ij}^R = \widetilde{\overline{u_iu_j}}-\tilde{\bar{u}}_i\tilde{\bar{u}}_j$. Now define the resolved turbulent stress as
+$$\mathscr{L}_{ij}^R := \widetilde{\bar{u}_i\bar{u}_i} - \tilde{\bar{u}}_i\tilde{\bar{u}}_j.$$
+We see that the resolved turbulent stress is dependent only on the filtered velocity. Furthermore, we note that we can express the resolved turbulent stress in terms of $\tau_{ij}^R$ and $T_{ij}^R$ (the so called Germano Identity \cite[p.~621]{Pope2000}):
+$$\mathscr{L}_{ij}^R = T_{ij}^R - \tilde{\tau}_{ij}^R$$
+In the Dynamical model, we assume:
+$$\tau_{ij}^r = \tau_{ij}^R - \frac{1}{3}\delta_{ij}\tau_{kk}^R = 2C\bar{\Delta}^2|\bar{S}|\bar{S}_{ij},$$
+and 
+$$T_{ij}^r = T_{ij}^R - \frac{1}{3}\delta_{ij}T_{kk}^R = 2C\tilde{\bar{\Delta}}^2|\tilde{\bar{S}}|\tilde{\bar{S}}_{ij}.$$
+This uses a turbulent viscosity almost identical to the Smagorinsky subgrid model \eq{smag_nut}, except here $C$ is not a squared value. Using these assumptions, we can write
+\begin{equation}\label{aniso_resolved}
+\mathscr{L}_{ij}^r=  2C{M}_{ij},
+\end{equation}
+where 
+$$\mathscr{L}_{ij}^r:=\mathscr{L}_{ij}^R - \frac{1}{3}\delta_{ij}\mathscr{L}_{kk}^R,$$
+and 
+$${M}_{ij} :=\tilde{\bar{\Delta}}^2|\tilde{\bar{S}}|\tilde{\bar{S}}_{ij} - \bar{\Delta}^2\widetilde{|\bar{S}|\bar{S}_{ij}}.$$
+Now, what we would like to do, is to find $C$ that satisfies \eq{aniso_resolved}. Unfortunately, this isn't possible. Careful inspection will reveal \eq{aniso_resolved} is actually composed of 5 independent equations; therefore, we can't choose one $unknown$ $C$ that satisfies all of them. 
+
+A way around this problem was provided by Lilly \cite{Lilly1992}. His insight was to choose $C$ that resulted in the least square error between $\mathscr{L}_{ij}^r$ and $2C{M}_{ij}$. Define the squared error:
+$$J : = \left(\mathscr{L}_{ij}^r -  2C{M}_{ij}\right)^2 = \left(\mathscr{L}_{ij}^R - \frac{1}{3}\delta_{ij}\mathscr{L}_{kk}^R -  2C{M}_{ij}\right)^2$$
+Taking the derivative with respect to $C$ gives us:
+$$\frac{\partial J}{\partial C} : = -4\left(\mathscr{L}_{ij}^R - \frac{1}{3}\delta_{ij}\mathscr{L}_{kk}^R -  2C{M}_{ij}\right)M_{ij}$$
+We set the derivative to 0 to get the minimum:
+\begin{align*}
+0&=  -4\left(\mathscr{L}_{ij}^R - \frac{1}{3}\delta_{ij}\mathscr{L}_{kk}^R -  2C{M}_{ij}\right)M_{ij}\\
+&=\left(\mathscr{L}_{ij}^R - \frac{1}{3}\delta_{ij}\mathscr{L}_{kk}^R\right)M_{ij} -  2C{M}_{ij}{M}_{ij} 
+\end{align*}
+$$\Rightarrow C = \frac{\left(\mathscr{L}_{ij}^R - \frac{1}{3}\delta_{ij}\mathscr{L}_{kk}^R\right)M_{ij}}{2{M}_{ij}{M}_{ij}}$$
+Note that $\frac{1}{3}\delta_{ij}\mathscr{L}_{kk}^RM_{ij} = 0$ if $i\neq j$. If $i = j$ and the flow is incompressible, we have:
+$$\frac{1}{3}\mathscr{L}_{kk}^RM_{ii} = \frac{1}{3}\mathscr{L}_{kk}^R\left(\tilde{\bar{\Delta}}^2|\tilde{\bar{S}}|\tilde{\bar{S}}_{ii} - \bar{\Delta}^2\widetilde{|\bar{S}|\bar{S}_{ii}}\right) = \frac{1}{3}\mathscr{L}_{kk}^R\left(\tilde{\bar{\Delta}}^2|\tilde{\bar{S}}|0- \bar{\Delta}^2\widetilde{|\bar{S}|0}\right) = 0$$
+So this term vanishes completely, and we have:
+\begin{equation}
+C = \frac{\mathscr{L}_{ij}^R M_{ij}}{2{M}_{ij}{M}_{ij}}
+\end{equation}
+Notice that $C$ is now a function of $\boldsymbol{x}$ and $t$, and can take negative values. This corresponds to the effect known as turbulent backscatter (in which small portions of energy moves from the smaller scales to the larger scales).
+\subsection{The Dynamical Model in Two-Dimensions}
+Assuming we are in two dimensions, we can expand $C$ as:
+$$C = \frac{1}{2}\frac{\mathscr{L}^R_{11} M_{11}+\mathscr{L}^R_{12} M_{12}+\mathscr{L}^R_{21} M_{21}+\mathscr{L}^R_{22} M_{22}}{M_{11} M_{11}+M_{12} M_{12}+M_{21} M_{21}+M_{22} M_{22}}.$$
+Both $\mathscr{L}^R_{ij}$ and $M_{ij}$ are symmetric so we have
+$$C = \frac{1}{2}\frac{\mathscr{L}^R_{11} M_{11}+2\mathscr{L}^R_{12} M_{12}+\mathscr{L}^R_{22} M_{22}}{M_{11}^2+2M_{12}^2+M_{22}^2}.$$
+It is assumed that we are simulating the grid filtered velocity exactly. Only the test filter $\tilde{\Delta}$ needs to be applied explicitly. For this reason we drop the bars and use $\mathfrak{F}$ to denote the test filtered quantities:
+$$\mathfrak{F}(u) := \tilde{u}$$
+In this new notation, we write
+$$\mathscr{L}^R_{ij} = \mathfrak{F}\left( u_i u_j\right) - \mathfrak{F}\left(u_i\right)\mathfrak{F}\left(u_j\right),$$
+and
+$$M_{ij} = \tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{ij}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{ij}\right).$$
+Now we can compute:
+$$\mathscr{L}^R_{11} = \mathfrak{F}\left( u_1^2\right) - \mathfrak{F}\left(u_1\right)^2,$$
+$$\mathscr{L}^R_{12} = \mathfrak{F}\left( u_1u_2\right) - \mathfrak{F}\left(u_1\right)\mathfrak{F}\left(u_2\right),$$
+$$\mathscr{L}^R_{22} = \mathfrak{F}\left( u_2^2\right) - \mathfrak{F}\left(u_2\right)^2,$$
+and
+$$M_{11} = \tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{11}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{11}\right),$$
+$$M_{12} = \tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{12}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{12}\right),$$
+$$M_{22} = \tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{22}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{22}\right).$$
+For simplicity, define $C_n := \mathscr{L}^R_{11} M_{11}+2\mathscr{L}^R_{12} M_{12}+\mathscr{L}^R_{22} M_{22}$ and $C_d:= 2M_{11}^2+4M_{12}^2+2M_{22}^2$. This allows us to write
+\begin{equation}
+C = \frac{C_n}{C_d}.
+\end{equation}
+We deal with $C_n$ and $C_d$ separately. 
+\subsection{Computing $C_n$ and $C_d$}
+First, $C_n$ is given by:
+\begin{multline*}
+C_n = \left[\mathfrak{F}\left( u_1^2\right) - \mathfrak{F}\left(u_1\right)^2\right]\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left(\frac{\partial u_1}{\partial x_1}\right) - \bar{\Delta}^2\mathfrak{F}\left(S\frac{\partial u_1}{\partial x_1}\right)\right]\\+2\left[\mathfrak{F}\left( u_1u_2\right) - \mathfrak{F}\left(u_1\right)\mathfrak{F}\left(u_2\right)\right]\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{12}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{12}\right)\right]\\+\left[\mathfrak{F}\left( u_2^2\right) - \mathfrak{F}\left(u_2\right)^2\right]\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left(\frac{\partial u_2}{\partial x_2}\right)-\bar{\Delta}^2\mathfrak{F}\left(S\frac{\partial u_2}{\partial x_2}\right)\right]
+\end{multline*}
+Invoking incompressibility, we have $\frac{\partial u_1}{\partial x_1} = S_{11} = -S_{22} =-\frac{\partial u_2}{\partial x_2}$,. We can now write
+\begin{multline*}
+C_n = \left[\mathfrak{F}\left( u_1^2\right) - \mathfrak{F}\left(u_1\right)^2\right]\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left(\frac{\partial u_1}{\partial x_1}\right) - \bar{\Delta}^2\mathfrak{F}\left(S\frac{\partial u_1}{\partial x_1}\right)\right]\\
++2\left[\mathfrak{F}\left( u_1u_2\right) - \mathfrak{F}\left(u_1\right)\mathfrak{F}\left(u_2\right)\right]\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{12}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{12}\right)\right]\\
+-\left[\mathfrak{F}\left( u_2^2\right) - \mathfrak{F}\left(u_2\right)^2\right]\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left(\frac{\partial u_1}{\partial x_1}\right)-\bar{\Delta}^2\mathfrak{F}\left(S\frac{\partial u_1}{\partial x_1}\right)\right],
+\end{multline*}
+which can be simplified as
+\begin{multline}\label{C_n}
+C_n = \left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left(\frac{\partial u_1}{\partial x_1}\right) - \bar{\Delta}^2\mathfrak{F}\left(S\frac{\partial u_1}{\partial x_1}\right)\right]\left[\mathfrak{F}\left( u_1^2\right) + \mathfrak{F}\left(u_2\right)^2 - \mathfrak{F}\left(u_1\right)^2 - \mathfrak{F}\left( u_2^2\right) \right]\\
++2\left[\mathfrak{F}\left( u_1u_2\right) - \mathfrak{F}\left(u_1\right)\mathfrak{F}\left(u_2\right)\right]\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{12}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{12}\right)\right].
+\end{multline}
+Now $C_d$ is given by:
+\begin{multline*}
+C_d = 2\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{11}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{11}\right)\right]^2\\
++4\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{12}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{12}\right)\right]^2\\
++2\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{22}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{22}\right)\right]^2.
+\end{multline*}
+Again, invoking incompressibility, gives us
+\begin{multline*}
+C_d = 2\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{11}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{11}\right)\right]^2\\
++4\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{12}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{12}\right)\right]^2\\
++2\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{11}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{11}\right)\right]^2,
+\end{multline*}
+which results in the expression for $C_d$:
+\begin{equation}\label{C_d}
+C_d = 4\left\{\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{11}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{11}\right)\right]^2+\left[\tilde{\bar{\Delta}}^2\mathfrak{F}\left(S\right)\mathfrak{F}\left({S}_{12}\right) - \bar{\Delta}^2\mathfrak{F}\left(S{S}_{12}\right)\right]^2\right\}.
+\end{equation}
+This value can then be used to model the anisotropic residule stress tensor:
+$$\tau_{ij}^r = 2C\bar{\Delta}^2{S}{S}_{ij}$$.
+In the dynamic model, we then evolve the following equation:
+$$\frac{\partial \omega}{\partial t}  + \frac{\partial^2 }{\partial x_1\partial x_2}A(\boldsymbol{x}, t) + \left(\frac{\partial^2}{\partial x_1^2} - \frac{\partial^2}{\partial x_2^2}\right)B(\boldsymbol{x}, t) = \nu{\nabla}^2\omega+\frac{\partial F_2}{\partial x_1} - \frac{\partial F_1}{\partial x_2}.$$
+Where 
+$$A(\boldsymbol{x}, t) = u_2^2 - u_1^2 + 4C(\bar{\Delta})^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial {u}_1}{\partial x_1}\right),$$
+and
+$$B(\boldsymbol{x}, t) = u_1u_2 -C(\bar{\Delta})^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left( \frac{\partial {u}_1}{\partial x_2} + \frac{\partial {u}_2}{\partial x_1}\right).$$
+Notice that $C$ is now a function of $\boldsymbol{x}$ and $t$, and can take negative values. This corresponds to the effect known as turbulent backscatter (in which small portions of energy moves from the smaller scales to the larger scales).
+\subsection{Algorithm}
+An issue with using the dynamical model in a pseudospectral simulation (such as \text{\tt{protodns}}) is that a filter is best applied in Fourier space (as it is a convolution in physical space), but the non-linear terms are best computed in physical space. In a regular pseudospectral simulation, one transforms to physical space once to compute the non-linear terms and then back to Fourier space to compute the next time step. 
+
+Now, one will have to transform to physical space to compute non-linear terms, transform to Fourier space to apply the filters, transform back to physical space to compute non-linear terms using these filtered quantities, then back into Fourier space to advance to the next time step.
+
+What follows is a possible algorithm for computing the nonlinear terms $A(\boldsymbol{x}, t)$ and $B(\boldsymbol{x},t)$ at each time step. We use $\mathcal{F}_{\boldsymbol{k}}[{f}]$ to denote the Fourier transform of a function $f$.
+\begin{enumerate}
+\item In fourier space, compute $\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left({u}_{1}\right)}\right]$ and $\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left({u}_{2}\right)}\right]$.
+\item Using \textbf{eight} inverse FFTs, trasform the following:
+$$\mathcal{F}_{\boldsymbol{k}}[{u}_{2}] \mapsto {u}_{1}$$
+$$\mathcal{F}_{\boldsymbol{k}}[{u}_{2}] \mapsto {u}_{2}$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left({u}_{1}\right)}\right] \mapsto \mathfrak{F}\left({u}_{1}\right)$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left({u}_{2}\right)}\right]\mapsto \mathfrak{F}\left({u}_{2}\right)$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[\frac{\partial u_{1}}{\partial x_1}\right] \mapsto \frac{\partial {u}_{1}}{\partial x_1}$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[\frac{\partial u_{2}}{\partial x_1}+\frac{\partial u_{1}}{\partial x_2}\right] \mapsto  \frac{\partial {u}_{1}}{\partial x_2}+\frac{\partial {u}_{2}}{\partial x_1}$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[\mathfrak{F}\left(\frac{\partial u_{1}}{\partial x_1}\right)\right] \mapsto \mathfrak{F}\left(\frac{\partial u_{1}}{\partial x_1}\right)$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[\mathfrak{F}\left(\frac{\partial u_{2}}{\partial x_1}+\frac{\partial u_{1}}{\partial x_2}\right)\right] \mapsto  \mathfrak{F}\left(\frac{\partial u_{2}}{\partial x_1}+\frac{\partial u_{1}}{\partial x_2}\right)$$
+\item Compute $u_1^2$, $u_2^2$, $u_1u_2$ in physical space.
+\item Compute $S$ in physical space which is given by
+$$S = \left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2\right]^{1/2}.$$
+\item In physical space compute $S \frac{\partial u_1}{\partial x_1}$ and $S S_{12}$ where
+$$S_{12} = \frac{1}{2}\left(\frac{\partial {u}_{1}}{\partial x_2}+\frac{\partial {u}_{2}}{\partial x_1}\right).$$
+\item Using \textbf{six} FFTs, transform the following:
+$$u_1^2\mapsto \mathcal{F}_{\boldsymbol{k}}\left[{u_1^2}\right]$$
+$$u_2^2\mapsto \mathcal{F}_{\boldsymbol{k}}\left[{u_2^2}\right]$$
+$$u_1u_2\mapsto \mathcal{F}_{\boldsymbol{k}}\left[{u_1u_2}\right]$$
+$$S\mapsto \mathcal{F}_{\boldsymbol{k}}\left[{S}\right]$$
+$$S \frac{\partial u_1}{\partial x_1}\mapsto \mathcal{F}_{\boldsymbol{k}}\left[{S\frac{\partial u_1}{\partial x_1}}\right]$$
+$$S S_{12}\mapsto \mathcal{F}_{\boldsymbol{k}}\left[{S S_{12}}\right]$$
+\item Compute $\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(u_1^2\right)}\right]$, $\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(u_2^2\right)}\right]$, $\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(u_1u_2\right)}\right]$, $\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(S\right)}\right]$, $\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(S  \frac{\partial u_1}{\partial x_1}\right)}\right]$, $\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(S  S_{12}\right)}\right]$
+\item Using \textbf{six} inverse FFTs, transform the following:
+$$\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(u_1^2\right)}\right] \mapsto \mathfrak{F}\left(u_1^2\right)$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(u_2^2\right)}\right] \mapsto \mathfrak{F}\left(u_2^2\right)$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(u_1u_2\right)}\right] \mapsto \mathfrak{F}\left(u_1u_2\right)$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(S\right)}\right] \mapsto \mathfrak{F}\left(S\right)$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(S\frac{\partial u_1}{\partial x_1}\right)}\right] \mapsto \mathfrak{F}\left(S\frac{\partial u_1}{\partial x_1}\right)$$
+$$\mathcal{F}_{\boldsymbol{k}}\left[{\mathfrak{F}\left(SS_{12}\right)}\right] \mapsto \mathfrak{F}\left(SS_{12}\right)$$
+\item Compute $C = C_n/C_d$ where $C_n$ is given by \eq{C_n} and $C_d$ is given by \eq{C_d}.
+\item Compute
+$$A(\boldsymbol{x}, t) = u_2^2 - u_1^2 + 4C(\bar{\Delta})^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left(\frac{\partial {u}_1}{\partial x_1}\right),$$
+and 
+$$B(\boldsymbol{x}, t) = u_1u_2 -C(\bar{\Delta})^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}\left( \frac{\partial {u}_1}{\partial x_2} + \frac{\partial {u}_2}{\partial x_1}\right).$$
+\item Using \textbf{two} FFTs, trasform the following:
+$$A(\boldsymbol{x}, t) \mapsto \mathcal{F}_{\boldsymbol{k}}\left[A(\boldsymbol{x}, t) \right]$$
+$$B(\boldsymbol{x}, t) \mapsto \mathcal{F}_{\boldsymbol{k}}\left[B(\boldsymbol{x}, t) \right]$$
+\end{enumerate}
+
+In this algorithm, we use a total of \textbf{22} FFTs at each time step. This almost 4 times the number needed for the smagorinsky model. It is possible, however, that this number could be reduced.
 \bibliographystyle{plain}
 \clearpage
 \bibliography{refs}
