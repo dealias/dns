@@ -11,6 +11,14 @@ INCL += -I$(HOME)/nw -I$(HOME)/fftw++ -I$(HOME)/fftw/include
 vpath %.cc $(HOME)/fftw++/tests # TEMPORARY until compact=false upgrade
 INCL += -I$(HOME)/fftw++/tests # TEMPORARY until compact=false upgrade
 
+ifneq ($(strip $(FFTW_INCLUDE_PATH)),)
+INCL += -I$(FFTW_INCLUDE_PATH)
+endif
+
+ifneq ($(strip $(FFTW_LIB_PATH)),)
+LIB += -L$(FFTW_LIB_PATH)
+endif
+
 EXTRA = fftw++ convolution explicit $(CORE) $(UTILS)
 FILES = dns $(EXTRA)
 OTHER = 
