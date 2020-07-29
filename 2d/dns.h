@@ -89,6 +89,7 @@ protected:
   Real nuH,nuL;
   Real kH2,kL2;
   
+  // Contiguous: PAD,OMEGA
   // Contiguous: TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,DISSIPATIONZ
   // 
   enum Field {PAD,OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
@@ -432,6 +433,10 @@ public:
     f2[0][0]=0.0;
     f3[0][0]=0.0;
 
+    // Zero Nyquist modes of inputs (automatically zeroed for outputs).
+    for(int i=0; i < my; ++i)
+      f2(i)=f3(i)=0.0;
+
     // This 2D version requires only 6 FFTs per stage (in the spirit
     // of Basdevant, J. Comp. Phys, 50, 1983).
 #pragma omp parallel for num_threads(threads)
@@ -442,7 +447,7 @@ public:
       Vector f2i=f2[i];
       Vector f3i=f3[i];
       rVector k2invi=k2inv[i];
-      for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
         Real k2inv=k2invi[j];
         Real jk2inv=j*k2inv;
         Real ik2inv=i*k2inv;
@@ -460,7 +465,7 @@ public:
     Convolution->convolve(fAll,multSmagorinsky2);
 
     f0[0][0]=0.0;
-  
+
     for(int i=-mx+1; i < mx; ++i) {
       int i2=i*i;
       Vector f0i=f0[i];
