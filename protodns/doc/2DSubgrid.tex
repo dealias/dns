@@ -69,7 +69,6 @@ Now define $A(\boldsymbol{x}, t)  := u_2^2-u_1^2- 2\tau_{11}^r$ and $B(\boldsymb
 \end{equation}
 Notice that \eq{vortB} is quite general. It makes no assumptions about the type of model we are using. 
 \section{The Smagorinsky model}
-\subsection{Theory}
 In large eddy simulations, the filtered Navier--Stokes equation includes the anisotropic residual stress tensor. This tensor requires a model (known as a subgrid scale model). The first such model is known as the Smagorinsky model.
 
 First proposed by Joseph Smagorinsky in 1963, the model was initially used to study the dynamics of atmospheric circulation \cite{Smagorinsky1963}. While considered to be one of the simplest of subgrid scale models, it forms the basis for many more advanced  models. 
@@ -94,7 +93,6 @@ Using the fact that the fluid is incompressible, i.e.\ $\frac{\partial {u}_1}{\p
 \begin{equation}\label{smagTau}
 \tau_{ij}^r = -2(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}{S}_{ij}.
 \end{equation}
-\subsection{Smagorinsky in Two-Dimensions}
 From \eq{vortB}, we see that we only have to compute $\tau^r_{11}$ and $\tau^r_{12}$. We have 
 $${S}_{11} = \frac{\partial {u}_1}{\partial x_1},$$
 and
