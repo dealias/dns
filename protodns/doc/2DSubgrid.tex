@@ -79,17 +79,17 @@ where $\nu_t$ is the turbulent viscosity and $S_{ij}$ is the rate of strain tens
 $${S}_{ij} := \frac{1}{2}\left( \frac{\partial {u}_i}{\partial x_j} + \frac{\partial {u}_j}{\partial x_i}\right).$$
 To find $\tau_{ij}^r$, we need to find $\nu_t$. The turbulent viscosity is assumed to be given by
 \begin{equation}\label{smag_nut}
-nu_t = (C_s \Delta)^2 {S},
+\nu_t = (C_s \Delta)^2 {S},
 \end{equation}
 where $C_s$ is the Smagorinsky coefficient, $\Delta$ is the filter width, and ${S}$ is the characteristic filtered rate of strain:
-$${S} := \left(2{S}_{ij}{S}_{ij}\right)^{1/2}$$
+$${S} := \left(2{S}_{ij}{S}_{ij}\right)^{1/2}.$$
 This can be written out as:
 $${S} = \left[\frac{1}{2}\left( \frac{\partial {u}_i}{\partial x_j} + \frac{\partial {u}_j}{\partial x_i}\right)\left( \frac{\partial {u}_i}{\partial x_j} + \frac{\partial {u}_j}{\partial x_i}\right)\right]^{1/2} = \left[\frac{1}{2}\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2+\frac{1}{2}\left( \frac{\partial {u}_2}{\partial x_2}\right)^2 \right]^{1/2}.$$
 So the anisotropic stress tensor is given by
 \begin{equation}
 \tau_{ij}^r = -(C_s \Delta)^2\left[2\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+4\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2+2\left( \frac{\partial {u}_2}{\partial x_2}\right)^2 \right]^{1/2}{S}_{ij}.
 \end{equation}
-Using the fact that the fluid is incompressible, i.e.\ $\frac{\partial {u}_1}{\partial x_1} = -\frac{\partial {u}_2}{\partial x_2}$, we can simplify this equation as:
+Using the fact that the fluid is incompressible, i.e.\ $\displaystyle \frac{\partial {u}_1}{\partial x_1} = -\frac{\partial {u}_2}{\partial x_2}$, we can simplify this equation as:
 \begin{equation}\label{smagTau}
 \tau_{ij}^r = -2(C_s \Delta)^2\left[\left( \frac{\partial {u}_1}{\partial x_1}\right)^2+\left( \frac{\partial {u}_2}{\partial x_1} + \frac{\partial {u}_1}{\partial x_2}\right)^2 \right]^{1/2}{S}_{ij}.
 \end{equation}
