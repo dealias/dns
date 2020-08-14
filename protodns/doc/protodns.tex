@@ -126,7 +126,7 @@ $\vA$, like $\vw$, has only one component $\w$, in the $\zhat$ direction.
 It is conventional to define $\psi\doteq -A_z$ to be
 the \In{stream function}, so that
 \begin{equation}\label{u-psi}
-\vu=\curl(-\psi \zhat)=\hat{\vz}\cross\grad\psi=
+\vu=\curl(-\psi \zhat)=\hat{\vz}\cross\grad\psi=-
   \frac{\partial\psi}{\partial y}\hat{\vx}+\frac{\partial\psi}{\partial x}\hat{\vy}
 \end{equation}
 and
@@ -166,7 +166,8 @@ The most computationally expensive part of this algorithm are the number of FFTs
 \begin{equation}
 \vu\cdot\grad\omega = u_1\frac{\partial \omega}{\partial x_1}+u_2\frac{\partial \omega}{\partial x_2},
 \end{equation}
-one might think that five FFTs are required at each time step. Four inverse FFTs to transfrom $u_1$,$ u_2$, $\partial \omega/\partial x_1$, and $\partial \omega/\partial x_2$ from Fourier space to physical space and one forward FFT to transform $u_1\left(\partial \omega/\partial x_1\right)+u_2\left(\partial \omega/\partial x_2\right)$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
+one might think that five FFTs are required at each time step: four
+inverse FFTs to transfrom $u_1$, $ u_2$, $\partial \omega/\partial x_1$, and $\partial \omega/\partial x_2$ from Fourier space to physical space and one forward FFT to transform $u_1\left(\partial \omega/\partial x_1\right)+u_2\left(\partial \omega/\partial x_2\right)$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
 
 To reduce the amount of writing, we write $\vu\cdot\grad\vu$ in Einstein notation (sum over repeated indices)
 $$\vu\cdot\grad\vu =u_j\dfrac{\partial u_i}{\partial x_j}.$$
