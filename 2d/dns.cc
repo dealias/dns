@@ -201,7 +201,7 @@ public:
 };
 
 class WhiteNoiseBanded : public ConstantBanded {
-  Complex f;
+  Complex f0;
   Real etanorm;
 public:
   const char *Name() {return "White-Noise Banded";}
@@ -211,7 +211,7 @@ public:
   }
   
   bool Stochastic(double dt) {
-    f=sqrt(2.0*dt*eta*etanorm)*crand_gauss();
+    f0=sqrt(2.0*dt*eta*etanorm);
     return true;
   }
   
@@ -224,6 +224,7 @@ public:
   
   double ForceStochastic(Complex& w, int i, int j) {
      if(active(i,j)) {
+      Complex f=f0*crand_gauss();
       double eta=realproduct(f,w)+0.5*abs2(f);
       w += f;
       return eta;
