@@ -59,8 +59,8 @@ while(nextrun()) {
   real norm=G^2*nuH^2;
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm;
 
-  int start=getint("start",a[0].length#2,store=false);
-  int end=getint("end",a[0].length,store=false);
+  int start=0;//getint("start",a[0].length#2,store=false);
+  int end=t.length;//getint("end",a[0].length,store=false);
   t=t[start:end];
   real t0=t[0];
   real tmax=t[t.length-1];
