@@ -1,0 +1,407 @@
+%\arraycolsep=1.5pt
+
+\usepackage{amssymb,bm,graphicx,array,comment,color}
+
+\let\cal\mathcal
+
+\let\mathletters\subequations
+\let\endmathletters\endsubequations
+
+\def\implies{\Rightarrow}
+\def\goesto{\rightarrow}
+
+\def\(#1\){{\left(#1\right)}}
+\def\[#1\]{{\left[#1\right]}}
+
+\def\inv{^{-1}}
+\def\minfty{{-\infty}}
+
+% Bars
+
+\catcode`@=11
+\def\barnucl#1#2{\setbox0=\hbox{$#1 #2$}
+\vbox{\m@th\ialign{##\crcr
+      \kern.20\wd0\hrulefill\kern.25\wd0\crcr
+	\noalign{\kern1.3\p@\nointerlineskip}$\displaystyle{\box0}$\crcr}}}
+\catcode`@=12
+
+\def\Bar#1{\mathpalette\barnucl{#1}}   % For unskewed characters
+\def\bar#1{\skew2\Bar{#1}}	       % For skewed characters
+\def\BarBar#1{{\Bar{\Bar{#1}}}}
+\def\barbar#1{{\bar{\bar{#1}}}}
+
+\newbox\phabox
+\def\negphantom#1{\setbox\phabox=\hbox{$\displaystyle#1$}\kern-\wd\phabox}
+
+\def\At#1{\Big\vert_{#1}}
+\def\muchl{\ll}
+\def\muchg{\gg}
+
+\def\vs{{\it vs.}}
+\def\cf{{\it cf.}}
+\def\viz{{\it viz}}
+\def\ie{{\it i.e.}}
+\def\etc{{\it etc}}
+\def\eg{{\it e.g.}}
+\def\etal{{\it et al.}}
+\def\via{{\it via}}
+\def\adhoc{{\it ad hoc}}
+
+\def\Eq#1{Eq.~(\ref{#1})}
+\def\Eqs#1{Eqs.~(\ref{#1})}
+\def\Equations#1{Equations~(\ref{#1})}
+\def\Equation#1{Equation~(\ref{#1})}
+\def\hEq#1{(\ref{#1})}
+\def\hEqs#1{(\ref{#1})}
+
+%\def\Eq#1{Eq.~(\ref{#1})}
+%\def\Eqs#1{Eqs.~(\ref{#1})}
+%\def\Equations#1{Equations~(\ref{#1})}
+%\def\Equation#1{Equation~(\ref{#1})}
+%\def\hEq#1{~(\ref{#1})}
+
+\def\Sect#1{Section~(\ref{#1})}
+
+% -- GREEK ALPHABET --
+\let\iacc\i
+\let\cacc\c
+\let\protectoacc\o
+\def\oacc{\protect\protectoacc}
+\def\a{\alpha}
+\def\b{\beta}
+\def\c{\chi}
+\def\d{\delta} \def\D{\Delta}
+\def\e{\epsilon} \def\eps{\epsilon}
+\def\g{\gamma} \def\G{\Gamma}
+\def\h{\eta}
+\def\i{\iota} \def\io{\iota}
+\def\k{\kappa}
+\def\l{\lambda} \def\L{\Lambda}
+\def\n{\eta} % JCB
+\def\Om{\Omega}
+\def\p{\phi}\def\ph{\varphi} \def\P{\Phi}
+\def\ps{\psi}\def\Ps{\Psi}
+\def\r{\rho}
+\def\s{\sigma} \def\S{\Sigma}
+\def\t{\tau}
+\def\th{\theta}\def\Th{\Theta}
+\def\u{\upsilon} \def\U{\Upsilon}
+\def\W{\Omega}
+\def\w{\omega}
+\def\x{\xi} \def\X{\Xi}
+\def\z{\zeta}
+\def\dw{d\w}
+\def\O{{\cal O}}
+\def\o{{\scriptstyle\cal O}}
+\def\oo{{\scriptscriptstyle\cal O}}
+\def\Power{{\cal P}}
+
+\def\Rp{\R^+}
+
+\def\cA{{\cal A}}
+\def\cB{{\cal B}}
+\def\cC{{\cal C}}
+\def\cD{{\cal D}}
+\def\cE{{\cal E}}
+\def\cF{{\cal F}}
+\def\cI{{\cal I}}
+\def\cJ{{\cal J}}
+\def\cK{{\cal K}}
+\def\cL{{\cal L}}
+\def\cM{{\cal M}}
+\def\cS{{\cal S}}
+\def\cP{{\cal P}}
+\def\comp{^{\rm c}}
+\def\union{\cup}
+\def\intersection{\cap}
+\def\intersect{\cap}
+\def\Union{\bigcup}
+\def\Intersection{\bigcap}
+\def\Intersect{\bigcap}
+\def\symdiff{\bigtriangleup}
+\def\contains{\supset}
+\def\compose{\circ}
+\def\degrees{\circ}
+\def\boundary{\partial}
+\def\Abs#1{\left|#1\right|}
+
+\def\v{\bm}
+
+\def\va{{\v a}}
+\def\vb{{\v b}}
+\def\vc{{\v c}}
+\def\vd{{\v d}}
+\def\ve{{\v e}}
+\def\vf{{\v f}}
+\def\vg{{\v g}}
+\def\vh{{\v h}}
+\def\vi{{\v i}}
+\def\vj{{\v j}}
+\def\vk{{\v k}}
+\def\vl{{\v l}}
+\def\vm{{\v m}}
+\def\vn{{\v n}}
+\def\vo{{\v o}}
+\def\vp{{\v p}}
+\def\vq{{\v q}}
+\def\vr{{\v r}}
+\def\vs{{\v s}}
+\def\vt{{\v t}}
+\def\vu{{\v u}}
+\def\vv{{\v v}}
+\def\vw{{\v w}}
+\def\vx{{\v x}}
+\def\vy{{\v y}}
+\def\vz{{\v z}}
+
+\def\vA{{\v A}}
+\def\vB{{\v B}}
+\def\vC{{\v C}}
+\def\vD{{\v D}}
+\def\vE{{\v E}}
+\def\vF{{\v F}}
+\def\vG{{\v G}}
+\def\vH{{\v H}}
+\def\vI{{\v I}}
+\def\vJ{{\v J}}
+\def\vK{{\v K}}
+\def\vL{{\v L}}
+\def\vM{{\v M}}
+\def\vN{{\v N}}
+\def\vO{{\v O}}
+\def\vP{{\v P}}
+\def\vQ{{\v Q}}
+\def\vR{{\v R}}
+\def\vS{{\v S}}
+\def\vT{{\v T}}
+\def\vU{{\v U}}
+\def\vV{{\v V}}
+\def\vW{{\v W}}
+\def\vX{{\v X}}
+\def\vY{{\v Y}}
+\def\vZ{{\v Z}}
+
+\def\MA{{\M A}}
+\def\MB{{\M B}}
+\def\MC{{\M C}}
+\def\MD{{\M D}}
+\def\MI{{\M I}}
+\def\ML{{\M L}}
+\def\MP{{\M P}}
+\def\MQ{{\M Q}}
+\def\MR{{\M R}}
+\def\MU{{\M U}}
+\def\MV{{\M V}}
+
+\def\vnu{{\v\nu}}
+
+\def\dot{{\v \cdot}}
+\def\notexists{\exists\negphantom{\exists}\slash}
+\def\suchthat{\ni}
+\def\grad{\v\nabla}
+\def\max{\mathop{\rm max}}
+\def\min{\mathop{\rm min}}
+\def\Simp{\mathop{\rm Simp}}
+\def\mod{\mathop{\rm mod}\nolimits}
+\def\Ham{\mathop {\rm Ham}\nolimits}
+\def\diag{\mathop{\rm diag}\nolimits}
+\def\adj{\mathop{\rm adj}\nolimits}
+\def\rank{\mathop{\rm rank}\nolimits}
+\def\row{\mathop{\rm row}\nolimits}
+\def\col{\mathop{\rm col}\nolimits}
+\def\dim{\mathop{\rm dim}\nolimits}
+\def\nullity{\mathop{\rm nullity}\nolimits}
+\def\ran{\mathop{\rm ran}\nolimits}
+\def\ker{\mathop{\rm ker}\nolimits}
+\def\Null{\mathop{\rm null}\nolimits}
+\def\Span{\mathop{\rm span}\nolimits}
+\def\Tr{\mathop{\rm Tr}\nolimits}
+\def\tr{\mathop{\rm tr}\nolimits}
+\def\Arg{\mathop{\rm Arg}\nolimits}
+\def\Log{\mathop{\rm Log}\nolimits}
+\def\sech{\mathop{\rm sech}\nolimits}
+\def\Tan{\mathop{\rm Tan}\nolimits}
+\def\AbsC{\mathop{\rm Abs}\nolimits\cC}
+\def\Arctan{\mathop{\rm Arctan}\nolimits}
+\def\Arcsin{\mathop{\rm Arcsin}\nolimits}
+\def\Arccos{\mathop{\rm Arccos}\nolimits}
+\def\erf{\mathop{\rm erf}\nolimits}
+\def\sgn{\mathop{\rm sgn}\nolimits}
+\def\rms{\mathop{\rm rms}\nolimits}
+\def\res{\mathop{\rm res}\nolimits}
+\def\exterior{\mathop{\rm ext}\nolimits}
+\def\interior{\mathop{\rm int}\nolimits}
+\def\dist{\mathop{\rm dist}\nolimits}
+\def\cl{\mathop{\rm cl}\nolimits}
+\let\conj\overline
+
+% Cauchy Principal Value
+\def\Xint#1{\mathchoice
+{\XXint\displaystyle\textstyle{#1}}%
+{\XXint\textstyle\scriptstyle{#1}}%
+{\XXint\scriptstyle\scriptscriptstyle{#1}}%
+{\XXint\scriptscriptstyle\scriptscriptstyle{#1}}%
+\!\int}
+\def\XXint#1#2#3{{\setbox0=\hbox{$#1{#2#3}{\int}$ }
+\vcenter{\hbox{$#2#3$ }}\kern-.5\wd0}}
+\def\ddashint{\Xint=}
+\def\dashint{\Xint-}
+
+\newlength{\intwidth}
+\DeclareRobustCommand{\fpint}[2]
+   {\mathop{%
+      \text{%
+        \settowidth{\intwidth}{$\int$}%
+        \makebox[0pt][l]{\makebox[\intwidth]{$-$}}%
+        $\int_{#1}^{#2}$}}}
+
+
+
+\def\rk{\mathop{\rm rk}\nolimits}
+\def\lcm{\mathop{\rm lcm}\nolimits}
+\def\half{\fr{1}{2}}
+\def\jstar{{j_\star}}
+\def\notdivides{\!\!\not |\,}
+\def\del{\nabla}
+\def\cross{{\v\times}}
+\def\curl{\grad\cross}
+\def\twopi{{2\pi}}
+\def\halfpi{\pi/2}
+\def\exchange{\leftrightarrow}
+\def\const{\hbox{const}}
+\def\rout{{r_{\hbox{\scriptsize out}}}}
+\def\rin{{r_{\hbox{\scriptsize in}}}}
+\def\Ti#1{\widetilde{#1}}
+\let\T\intercal
+
+\def\xhat{\hat{\v x}}
+\def\zhat{\hat{\v z}}
+
+\def\floor#1{\lfloor#1\rfloor}
+\def\ceil#1{\lceil#1\rceil}
+\def\Floor#1{\left\lfloor#1\right\rfloor}
+\def\Ceil#1{\left\lceil#1\right\rceil}
+\def\integer#1{[\![#1]\!]}
+
+\def\fr#1#2{\frac{#1}{#2}}
+
+\def\Jacobian#1#2{\frac{\partial(#1)}{\partial(#2)}}
+\def\Partial#1#2{\frac{\partial#1}{\partial#2}}
+\def\di#1#2{\frac{\partial#1}{\partial#2}}
+\def\dii#1#2#3{\frac{\partial^2#1}{\partial#2\partial#3}}
+\def\Total#1#2{\frac{d#1}{d#2}}
+\def\ddt#1{\Total{#1}{t}}
+\def\Func#1#2{\frac{\delta#1}{\delta#2}}
+\def\Fr#1#2{\(\frac{#1}{#2}\)}
+
+\def\ehalf{^{1/2}}
+\def\emhalf{^{-1/2}}
+
+%\def\be{\begin{equation}}
+%\def\ee{\end{equation}}
+\def\ben{\begin{eqnarray}}
+\def\een{\end{eqnarray}}
+\def\bens{\begin{eqnarray*}}
+\def\eens{\end{eqnarray*}}
+\def\endl{\nonumber\\}
+\def\nonum{\nonumber}
+\def\ds{\displaystyle}
+
+\def\bd{\pagebreak[3]\begin{description}}
+\def\ed{\end{description}}
+
+\def\Defn#1\par{
+\pagebreak[3]
+\begin{definition}
+#1
+\end{definition}
+}
+
+\def\Remark#1\par{
+\pagebreak[3]
+\begin{remark}
+#1
+\end{remark}
+}
+
+\def\Eg#1\par{
+\pagebreak[3]
+\begin{example}
+#1
+\end{example}
+}
+
+\def\Prob#1\par{
+\pagebreak[3]
+\begin{problem}
+#1
+\end{problem}
+}
+
+\def\benum{\begin{enumerate}}
+\def\eenum{\end{enumerate}}
+
+\newif\ifsolutions
+\newif\ifspaced
+\long\def\ifsol#1\fisol{\ifsolutions{{\color{blue}\small#1}}\fi\pagebreak[3]}
+\long\def\ifnsol#1\fisol{\ifsolutions\else#1\fi}
+\long\def\ifnsolspace#1\fisol{\ifsolutions\else\ifspaced#1\fi\fi}
+\long\def\ifsolution#1\fisolution{\ifsol#1\fisol}
+\def\sol#1{\ifsolutions{{\color{blue}\small #1}}\fi\pagebreak[3]}
+
+\def\weightfactor{100}
+%\def\weight#1{\marginpar{/#1}\ifsolutions\else\ifspaced
+%\\\newcount\arg\arg=#1\multiply\arg by\weightfactor\vspace*{\arg pt}\vfill\fi\fi}
+
+\def\weightnospace#1{\marginpar{\Large\begin{tabular}{|c|}
+\ifspaced
+%\hline
+%\\
+\fi
+\hline
+#1\\
+\hline
+\end{tabular}
+}}
+\def\weight#1{\weightnospace{#1}\ifsolutions\else\ifspaced
+\\\newcount\arg\arg=#1\multiply\arg by\weightfactor\vspace*{\arg pt}\vfill\fi\fi}
+\def\weightspace#1#2{\weightnospace{#1}\ifsolutions\else\ifspaced
+\\\newdimen\arg\arg=#2pt\multiply\arg by\weightfactor\vspace*{\arg}\vfill\fi\fi}
+
+\def\negmed{\mskip-4mu}
+\def\negthick{\mskip-5mu}
+\def\negquad{\mskip-18mu}
+\def\negqquad{\mskip-36mu}
+
+%\long\def\comment#1\endcomment{}
+\def\QED{\par\rlap{\it Q.E.D.}}
+\def\ul#1{\underline{#1}}
+
+%\def\Eg{$\bullet$\ }
+\def\<#1\>{\left\langle#1\right\rangle}
+%\def\At#1{{\left.#1\right\rvert}}
+
+\def\Figurenucl#1#2{
+\begin{center}
+\includegraphics{fig/#1}
+\def\argtwo{#2}
+\ifx\argtwo\empty
+\else
+\caption{#2}
+\label{#1}
+\fi
+\end{center}
+}
+
+\def\Figure#1#2{
+\begin{figure}[tbhp]
+\Figurenucl{#1}{#2}
+\end{figure}
+}
+
+\def\Figureh#1#2{
+%Replace with this line when classes are over:
+%\Figurenucl{#1}{#2}\ \\
+\Figurenucl{#1}{#2}
+}
+

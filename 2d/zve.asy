@@ -3,7 +3,7 @@ include averages;
 
 import palette;
 
-scale(Linear,Linear);
+scale(Log,Log);
 pen p=linewidth(1);
 
 real[] t,E,Z;
@@ -28,8 +28,10 @@ norm fnorm(real[] F) {
     f2 += Fk2/(i*i+j*j);
   }
   norm N;
-  N.f=sqrt(f2); // |f|
-  N.F=sqrt(F2); // |A^(1/2)f|
+  //  write("f2=",f2);
+ // Account for reality condition
+  N.f=sqrt(2*f2); // |f|
+  N.F=sqrt(2*F2); // |A^(1/2)f|
   return N;
 }
 
@@ -49,8 +51,7 @@ while(nextrun()) {
     tilde="";
   } else {
     //    G=sqrt(eps)/nuH^(3/2);      // Grashof number for stochastic forcing
-    write(sqrt(eps*(nuH+nuL))/nuH^2,sqrt(eps*(nuH))/nuH^2);
-    G=sqrt(eps*(nuH+nuL))/nuH^2;       // Grashof number for stochastic forcing
+    G=sqrt(eps*(nuH+nuL))/nuH^2;      // Grashof number for stochastic forcing
     tilde="\tilde ";
   }
 
@@ -72,34 +73,22 @@ while(nextrun()) {
   for(int i=0; i < E.length; ++i) {
     frame mark;
     fill(mark,scale(0.4mm)*polygon(3+k),p[round(t[i]*incr)]);
-    add(mark,(E[i],Z[i]));
+    add(mark,Scale((E[i],Z[i])));
   }
 
-  bool cropx=downcase(getstring("Crop x [Y/n]?","y")) != 'n';
-  bool cropy=downcase(getstring("Crop y [Y/n]?","y")) != 'n';
-
-  real Emin=point(plain.W).x;
-  real Emax=point(plain.E).x;
-  real Zmax=point(plain.N).y;
-
-  real crop(real x1, real x2=x1) {
-    real bound=1;
-    if(cropx) {
-      bound=min(bound,x1);
-      bound=min(bound,x2);
-    }
-    return bound;
-  }
+  real Emin=min(E);
+  real Emax=max(E);
+  real Zmin=min(Z);
+  real Zmax=max(Z);
 
     real kfm=kforce-deltaf/2;
     real kfp=kforce+deltaf/2;
-  draw(graph(new real(real E) {return E;},0,crop(Emax)),grey); //point(plain.E).x),blue);
+    write(kfm,kfp);
 
-     draw(graph(new real(real E) {return kfp^2*E;},
-                0,min(point(plain.N).y/kfp^2,point(plain.E).x)),magenta);
-     draw(graph(new real(real E) {return kfm^2*E;},
-                 0,min(point(plain.N).y/kfm^2,point(plain.E).x)),magenta);
-  draw(graph(new real(real E) {return sqrt(E);},0,crop(Emax,Zmax^2)),brown);
+    draw(graph(new real(real E) {return E;},Emin,1),grey);
+    draw(graph(new real(real E) {return kfp^2*E;},Emin,1/kfp^2),magenta);
+    draw(graph(new real(real E) {return kfm^2*E;},Emin,1/kfm^2),magenta);
+    draw(graph(new real(real E) {return sqrt(E);},Emin,1),brown);
 
   //  real tau=1-sqrt(2-sqrt(2));
   //  real alpha=tau/sqrt(2);
@@ -115,7 +104,7 @@ while(nextrun()) {
           (0.6*currentpicture.xsize,0.25cm),Bottom,
           p,NoTicks);
 
-  add(bar.fit(),point(plain.S),30plain.S);
+  add(bar.fit(),10^point(plain.S),30plain.S);
   */
 
   ++k;
