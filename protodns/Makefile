@@ -1,4 +1,4 @@
-IDIR =$(HOME)/fftw++/
+IDIR=-I$(HOME)/fftw++ -I$(HOME)/fftwpp
 
 DEFS=-g
 
@@ -21,7 +21,7 @@ ifeq ($(shell $(CXX) -qversion 2>&1 | head -c 3),IBM)
 CXXFLAGS=-O5 -P -qsmp -qalign -qarch -qtune -qcache -qipa -qarch=qp
 endif
 
-CXXFLAGS += $(DEFS) -I$(IDIR) $(CFLAGS)
+CXXFLAGS += $(DEFS) $(IDIR) $(CFLAGS)
 
 ifneq ($(strip $(FFTW_INCLUDE_PATH)),)
 CXXFLAGS+=-I$(FFTW_INCLUDE_PATH)
@@ -37,7 +37,7 @@ LDFLAGS+=-lfftw3_omp -lfftw3 -lm
 
 MAKEDEPEND=$(CXXFLAGS) -O0 -M -DDEPEND
 
-vpath %.cc $(IDIR)
+vpath %.cc $(HOME)/fftw++ $(HOME)/fftwpp
 
 FILES=dns
 FFTW=fftw++

@@ -1,4 +1,4 @@
-IDIR =$(HOME)/fftw++/
+IDIR=-I$(HOME)/fftw++ -I$(HOME)/fftwpp
 
 DEFS=-g
 
@@ -37,7 +37,7 @@ LDFLAGS+=-lfftw3_omp -lfftw3 -lm
 
 MAKEDEPEND=$(CXXFLAGS) -O0 -M -DDEPEND
 
-vpath %.cc $(IDIR)
+vpath %.cc $(HOME)/fftw++ $(HOME)/fftwpp
 
 FILES=dns
 FFTW=fftw++
