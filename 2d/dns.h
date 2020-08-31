@@ -6,7 +6,6 @@
 #include "Array.h"
 #include "fftw++.h"
 #include "convolution.h"
-#include "explicit.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
 #include "Conservative.h"
