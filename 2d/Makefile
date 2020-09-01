@@ -5,11 +5,9 @@ POLL = poll
 include $(TRI)/config/Common
 
 vpath %.cc $(HOME)/nw
-vpath %.cc $(HOME)/fftw++
-INCL += -I$(HOME)/nw -I$(HOME)/fftw++ -I$(HOME)/fftw/include
+vpath %.cc $(HOME)/fftw++ $(HOME)/fftwpp
 
-vpath %.cc $(HOME)/fftw++/tests # TEMPORARY until compact=false upgrade
-INCL += -I$(HOME)/fftw++/tests # TEMPORARY until compact=false upgrade
+INCL += -I$(HOME)/nw -I$(HOME)/fftw++ -I$(HOME)/fftwpp -I$(HOME)/fftw/include
 
 ifneq ($(strip $(FFTW_INCLUDE_PATH)),)
 INCL += -I$(FFTW_INCLUDE_PATH)
@@ -19,7 +17,7 @@ ifneq ($(strip $(FFTW_LIB_PATH)),)
 LIB += -L$(FFTW_LIB_PATH)
 endif
 
-EXTRA = fftw++ convolution explicit $(CORE) $(UTILS)
+EXTRA = fftw++ convolution $(CORE) $(UTILS)
 FILES = dns $(EXTRA)
 OTHER = 
 
