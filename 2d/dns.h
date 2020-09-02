@@ -11,6 +11,7 @@
 #include "Conservative.h"
 #include "Exponential.h"
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
+#include "tests/explicit.h"
 
 using namespace Array;
 using namespace fftwpp;
@@ -31,6 +32,7 @@ protected:
   // Vocabulary:
   unsigned Nx;
   unsigned Ny;
+  unsigned nx,ny0;
   Real nuH,nuL;
   Real kH2,kL2;
   
@@ -42,6 +44,7 @@ protected:
   int mx,my; // size of data arrays
 
   Array2<Complex> w; // Vorticity field
+  Array2<Complex> w0; // Temporary expanded vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field
 
   Array2<Complex> u,v,ux,uy,vx,vy,A2u,A2v;
@@ -60,6 +63,8 @@ protected:
   Complex *block;
   ImplicitHConvolution2 *Convolution;
   crfft2d *Backward;
+  crfft2d *Backward2;
+  ExplicitHTPad2 *Pad2;
   
   ifstream ftin;
   oxstream fwk,fw,fekvk,ftransfer;
@@ -128,9 +133,19 @@ public:
   }
   
   void OutFrame(int it) {
+    w0=0.0;
+    u=0.0;
+    v=0.0;
+    ux=0.0;
+    uy=0.0;
+    vx=0.0;
+    vy=0.0;
+    A2u=0.0;
+    A2v=0.0;
+
     for(int i=-mx+1; i < mx; ++i)
       for(int j=0; j < my; ++j)
-        f1[i][j]=w(i,j);
+        w0[i][j]=w(i,j);
 
     for(int i=-mx+1; i < mx; ++i) {
       for(int j=0; j < my; ++j) {
@@ -151,19 +166,23 @@ public:
       }
     }
     
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,u);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,v);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,ux);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,uy);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,vx);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,vy);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v);
+    unsigned nyp=ny0/2+1;
 
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,w0);
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,u);
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,v);
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,ux);
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,uy);
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,vx);
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,vy);
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,A2u);
+    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,A2v);
+
+//    Pad2->pad(w0);
+    /*
    // Zero Nyquist modes.
     for(int j=0; j < my; ++j) {
-      f1(j)=0.0;
+      w0(j)=0.0;
       u(j)=0.0;
       v(j)=0.0;
       ux(j)=0.0;
@@ -173,26 +192,27 @@ public:
       A2u(j)=0.0;
       A2v(j)=0.0;
     }
+    */
     
-    Backward->fft0(f1);
-    Backward->fft0(u);
-    Backward->fft0(v);
-    Backward->fft0(ux);
-    Backward->fft0(uy);
-    Backward->fft0(vx);
-    Backward->fft0(vy);
-    Backward->fft0(A2u);
-    Backward->fft0(A2v);
+    Backward2->fft0(w0);
+    Backward2->fft0(u);
+    Backward2->fft0(v);
+    Backward2->fft0(ux);
+    Backward2->fft0(uy);
+    Backward2->fft0(vx);
+    Backward2->fft0(vy);
+    Backward2->fft0(A2u);
+    Backward2->fft0(A2v);
      
-    fw << 1 << 2*my << Nx+1;
-    for(int j=2*my-1; j >= 0; j--)
-      for(unsigned i=0; i <= Nx; i++)
+    fw << 1 << ny0 << nx;
+    for(int j=ny0-1; j >= 0; j--)
+      for(unsigned i=0; i < nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
     
     Real sum=0.0, norm1=0.0, norm2=0.0;
-    for(unsigned i=0; i <= Nx; i++) {
-      for(int j=0; j < 2*my-1; j++) {
+    for(unsigned i=0; i < nx; i++) {
+      for(unsigned j=0; j < ny0; j++) {
         Real bx=ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j];
         Real by=ur[i][j]*vxr[i][j]+vr[i][j]*vyr[i][j];
         Real ax=A2ur[i][j];
