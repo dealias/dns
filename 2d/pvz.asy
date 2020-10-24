@@ -56,11 +56,11 @@ while(nextrun()) {
 
   string Constant="Constant";
   if(substr(forcing,0,length(Constant)) == Constant) {
-    G=N.f/nuH^2;                 // Grashof number for constant forcing
+    G=N.F/nuH^2;                 // Grashof number for constant forcing
     tilde="";
     Lambda=(N.F/N.f)^2;          // Lambda := |A^(1/2)f|^2/|f|^2
   } else {
-    G=sqrt(eps*(nuH+nuL))/nuH^2;      // Grashof number for stochastic forcing
+    G=sqrt(eta*(nuH+nuL))/nuH^2;      // Grashof number for stochastic forcing
     tilde="\tilde ";
     Lambda=eta/eps;
   }
@@ -101,12 +101,12 @@ while(nextrun()) {
   real Pmax=max(P);
 
   if(Z2 < Z1)
-    draw(graph(new real(real Z) {return ((2*Lambda*Z1)^(1/3)+1.5*(cG/sqrt(2))^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,Z1),black);               //phi1(Z2 to Z1)
+    draw(graph(new real(real Z) {return ((2*Lambda*Z1)^(1/3)+1.5*(cG/sqrt(2))^(4/3)*(Z1^(4/3)-Z^(4/3)))^(3/2);},Z2,Z1),heavycyan);               //phi1(Z2 to Z1)
 
   if(Z3 < Z2)
     draw(graph(new real(real Z) {return (cG/sqrt(2))^2*(5*(Z*Z2)^(1/2)-4*Z)^2;},Z3,Z2),brown);                                          //phi2(Z3 t0 Z2)
 
-  draw(graph(new real(real Z) {return (2*sqrt(2)*cG/5*(6*(Z3^5*Z)^(1/6)-Z))^2;},Zmin,Z3),heavycyan);                                           //phi3(0 to Z3)
+  draw(graph(new real(real Z) {return (2*sqrt(2)*cG/5*(6*(Z3^5*Z)^(1/6)-Z))^2;},Zmin,Z3),grey);                                           //phi3(0 to Z3)
 
   draw(graph(new real(real Z) {return sqrt(Lambda*Z);},Zmin,1),blue);
   draw(graph(new real(real Z) {return Z;},Zmin,1),red);
