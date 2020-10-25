@@ -39,7 +39,11 @@ if(eof(fin)) abort("EOF encountered on file "+name);
 
 int hx=nx#2;
 
-v0[hx][0]=max(v0);
+real vmax=max(v0);
+
+v0[hx][0]=vmax;
+
+real logmin=log10(vmax);
 
 int ny=2*my-1;
 
@@ -47,9 +51,20 @@ real[][] v=new real[nx][ny];
 
 // Apply Hermitian symmetry
 
+real logmin=log10(vmax);
+
+real log0(real x) {
+  return x > 0 ? log10(x) : logmin;
+}
+
 for(int j=0; j < my; ++j)
   for(int i=0; i < nx; ++i)
-    v[i][my-1+j]=log(v0[i][j]);
+    logmin=min(logmin,log0(v0[i][j]));
+
+for(int j=0; j < my; ++j)
+  for(int i=0; i < nx; ++i)
+    v[i][my-1+j]=log0(v0[i][j]);
+
 
 for(int j=1; j < my; ++j)
   for(int i=0; i < nx; ++i)
@@ -117,8 +132,7 @@ real[][] thin(real[][] v, int depth)
 
 //real[][] V=v=thin(v,2);
 
-real[][] V=v;
-//real[][] V=v=thin(v,64,64); // For html
+real[][] V=settings.outformat == "html" ? thin(v,64,64) : v;
 
 write(nx#2,ny#2);
 surface s=surface(V,(-nx#2,-ny#2),(nx#2,nx#2));//,Spline);
