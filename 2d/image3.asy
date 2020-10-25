@@ -117,8 +117,7 @@ real[][] thin(real[][] v, int depth)
 
 //real[][] V=v=thin(v,2);
 
-real[][] V=v;
-//real[][] V=v=thin(v,64,64); // For html
+real[][] V=settings.outformat == "html" ? thin(v,64,64) : v;
 
 write(nx#2,ny#2);
 surface s=surface(V,(-nx#2,-ny#2),(nx#2,nx#2));//,Spline);
