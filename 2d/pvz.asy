@@ -60,7 +60,7 @@ while(nextrun()) {
     tilde="";
     Lambda=(N.F/N.f)^2;          // Lambda := |A^(1/2)f|^2/|f|^2
   } else {
-    G=sqrt(eta*(nuH+nuL))/nuH^2;      // Grashof number for stochastic forcing
+    G=sqrt(eta*(nuH+nuL))/nuH^2; // Grashof number for stochastic forcing
     tilde="\tilde ";
     Lambda=eta/eps;
   }

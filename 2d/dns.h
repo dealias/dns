@@ -25,7 +25,7 @@ extern unsigned spectrum;
 
 extern int pH;
 extern int pL;
- 
+
 class DNSBase {
 protected:
   // Vocabulary:
@@ -33,9 +33,9 @@ protected:
   unsigned Ny;
   Real nuH,nuL;
   Real kH2,kL2;
-  
+
   // Contiguous: TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,DISSIPATIONZ
-  // 
+  //
   enum Field {PAD,OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
               DISSIPATIONZ,EK};
 
@@ -57,18 +57,18 @@ protected:
   Complex *block;
   ImplicitHConvolution2 *Convolution;
   crfft2d *Backward;
-  
+
   ifstream ftin;
-  oxstream fwk,fw,fekvk,ftransfer;
+  oxstream fek,fw,fekvk,ftransfer;
   ofstream ft,fevt;
-  
+
   uvector count;
-  
+
   vector TE,TZ; // Energy and enstrophy transfers
   vector Eps,Eta,Zeta; // Energy, enstrophy, and palenstrophy injection rates
   vector DE,DZ; // Energy and enstrophy dissipation rates
   vector E; // Energy spectrum
-  
+
   Real Energy,Enstrophy,Palinstrophy;
   Array2<Real> k2inv;
 
@@ -76,25 +76,25 @@ public:
   void Initialize() {
     fevt << "# t\tE\tZ\tP" << endl;
   }
-  
+
   void InitialConditions() {
     w[0][0]=0.0; // Enforce no mean flow
     Loop(Initw(this),InitializeValue(this));
     fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
   }
-  
+
   void SetParameters() {
     setcount();
     fcount=0;
-  
+
     Forcing->Init();
-  
+
     Loop(InitNone(this),ForcingCount(this));
 
     fcount *= 2; // Account for Hermitian conjugate modes.
 
     Forcing->Init(fcount);
-  
+
     k2inv.Allocate(Nx,my,-mx+1,0);
     for(int i=-mx+1; i < mx; ++i) {
       int i2=i*i;
@@ -104,16 +104,29 @@ public:
       }
     }
   }
-  
+
   virtual void setcount() {
 #pragma omp parallel for num_threads(threads)
     for(unsigned i=0; i < nshells; i++)
       count[i]=0;
-  
+
     if(spectrum)
       Loop(InitNone(this),Count(this));
   }
-  
+
+  virtual void OutEnergies() {
+    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
+    fek << 2*mx-1 << my;
+    for(int i=-mx+1; i < mx; ++i) {
+      const Vector& wi=w[i];
+      for(int j=0; j < my; ++j) {
+        Real k2=i*i+j*j;
+        Real k2inv=k2 > 0.0 ? 1.0/k2 : 0.0;
+        fek << 0.5*abs2(wi[j])*k2inv;
+      }
+    }
+  }
+
   void FinalOutput() {
     Real E,Z,P;
     ComputeInvariants(w,E,Z,P);
@@ -122,26 +135,26 @@ public:
     cout << "Enstrophy = " << Z << newl;
     cout << "Palinstrophy = " << P << newl;
   }
-  
+
   void OutFrame(int it) {
     for(int i=-mx+1; i < mx; ++i)
       for(int j=0; j < my; ++j)
         f1[i][j]=w(i,j);
-    
+
     fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
-    
+
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
       f1(j)=0.0;
-    
+
     Backward->fft0(f1);
-     
+
     fw << 1 << 2*my << Nx+1;
     for(int j=2*my-1; j >= 0; j--)
       for(unsigned i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
-    
+
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
       f1(j)=0.0;
@@ -150,8 +163,8 @@ public:
   class FETL {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ,E;
-    
-  public: 
+
+  public:
     FETL(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                        Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
                        DE(b->DE), DZ(b->DZ), E(b->E) {}
@@ -179,12 +192,12 @@ public:
       Sij -= nuk2*wij;
     }
   };
-  
+
   class FTL {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ;
-    
-  public: 
+
+  public:
     FTL(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                       Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
                       DE(b->DE), DZ(b->DZ) {}
@@ -209,15 +222,15 @@ public:
       Sij -= nuk2*wij;
     }
   };
-  
+
   class FET {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ,E;
-    
-  public: 
+
+  public:
     FET(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                       Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
-                      DE(b->DE), DZ(b->DZ), E(b->E) {}                      
+                      DE(b->DE), DZ(b->DZ), E(b->E) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
@@ -240,12 +253,12 @@ public:
       E[index] += kinv*w2;
     }
   };
-  
+
   class FE {
     DNSBase *b;
     const vector& E;
-    
-  public: 
+
+  public:
     FE(DNSBase *b) : b(b), E(b->E) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
@@ -254,11 +267,11 @@ public:
       E[index] += abs2(wi[j])/k;
     }
   };
-  
+
   class FL {
     DNSBase *b;
-    
-  public: 
+
+  public:
     FL(DNSBase *b) : b(b) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
@@ -267,10 +280,10 @@ public:
       Si[j] -= b->nuk(k2)*wij;
     }
   };
-  
+
   class ForceStochastic {
     const vector& Eps,Eta,Zeta;
-  public: 
+  public:
     ForceStochastic(DNSBase *b) : Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta) {}
     inline void operator()(const Vector& wi, const Vector&, int i, int j) {
       unsigned k2=i*i+j*j;
@@ -282,26 +295,26 @@ public:
       Zeta[index] += k2*eta;
     }
   };
-  
+
   class ForceStochasticNO {
-  public: 
+  public:
     ForceStochasticNO(DNSBase *b) {}
     inline void operator()(const Vector& wi, const Vector&, int i, int j) {
       Forcing->ForceStochastic(wi[j],i,j);
     }
   };
-  
+
   class InitializeValue {
-  public: 
+  public:
     InitializeValue(DNSBase *b) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       wi[j]=InitialCondition->Value(i,j);
     }
   };
-  
+
   class ForcingCount {
     DNSBase *b;
-  public: 
+  public:
     ForcingCount(DNSBase *b) : b(b) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       if(Forcing->active(i,j)) {
@@ -309,11 +322,11 @@ public:
       }
     }
   };
-  
+
   class Invariants {
     DNSBase *b;
     Real &Energy,&Enstrophy,&Palinstrophy;
-  public: 
+  public:
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
                              Palinstrophy(b->Palinstrophy) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
@@ -324,37 +337,37 @@ public:
       Palinstrophy += k2*w2;
     }
   };
-  
+
   class InitwS {
     DNSBase *b;
-  public: 
+  public:
     InitwS(DNSBase *b) : b(b) {}
     inline void operator()(Vector& wi, Vector& Si, int i) {
       Dimension(wi,b->w[i]);
       Dimension(Si,b->S[i]);
     }
   };
-  
+
   class Initw {
     DNSBase *b;
-  public: 
+  public:
     Initw(DNSBase *b) : b(b) {}
     inline void operator()(Vector& wi, Vector& Si, int i) {
       Dimension(wi,b->w[i]);
     }
   };
-  
+
   class InitNone {
-  public: 
+  public:
     InitNone(DNSBase *b) {}
     inline void operator()(Vector& wi, Vector& Si, int i) {
     }
   };
-  
+
   class Count {
     DNSBase *b;
     const uvector& count;
-  public: 
+  public:
     Count(DNSBase *b) : b(b), count(b->count) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
@@ -363,16 +376,16 @@ public:
       ++count[index];
     }
   };
-  
+
   void NonLinearSource(const vector2& Src, const vector2& Y, double t) {
     f0.Dimension(Nx+1,my,-mx,0);
-  
+
     w.Set(Y[OMEGA]);
     f0.Set(Src[PAD]);
 
     f0[0][0]=0.0;
     f1[0][0]=0.0;
-  
+
     // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
     // requires only 4 FFTs per stage.
 #pragma omp parallel for num_threads(threads)
@@ -394,7 +407,7 @@ public:
     F[0]=f0;
     Convolution->convolve(F,multadvection2);
     f0[0][0]=0.0;
-  
+
     for(int i=-mx+1; i < mx; ++i) {
       Real i2=i*i;
       Vector f0i=f0[i];
@@ -404,7 +417,7 @@ public:
       }
     }
     fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
-  
+
 #if 0
     Real sum=0.0;
     for(int i=-mx+1; i < mx; ++i) {
@@ -424,9 +437,9 @@ public:
     Set(T,Src);
 #pragma omp parallel for num_threads(threads)
     for(unsigned K=0; K < nshells; K++)
-      T[K]=0.0;  
+      T[K]=0.0;
   }
-  
+
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
     if(spectrum) {
@@ -491,7 +504,7 @@ public:
         fcn(wi,Si,i,j);
     }
   }
-  
+
   template<class T>
   void Compute(T fcn, const vector2& Src, const vector2& Y)
   {
@@ -500,12 +513,12 @@ public:
 
     Loop(InitwS(this),fcn);
   }
-  
+
   void Stochastic(const vector2&Y, double, double dt)
   {
     if(!Forcing->Stochastic(dt)) return;
     w.Set(Y[OMEGA]);
-    
+
     if(spectrum == 0) {
       Loop(Initw(this),ForceStochasticNO(this));
     } else {
@@ -532,14 +545,14 @@ public:
   virtual void ComputeInvariants(const array2<Complex> &w, Real& E, Real& Z,
                                  Real& P) {
     Energy=Enstrophy=Palinstrophy=0.0;
-  
+
     Loop(Initw(this),Invariants(this));
-  
+
     E=Energy;
     Z=Enstrophy;
     P=Palinstrophy;
   }
-  
+
   virtual Real getSpectrum(unsigned i) {
     double c=count[i];
     return c > 0 ? E[i].re*twopi/c : 0.0;
@@ -551,7 +564,7 @@ public:
   Real Zeta_(unsigned i) {return Zeta[i].re;}
   Real DE_(unsigned i) {return DE[i].re;}
   Real DZ_(unsigned i) {return DZ[i].re;}
-  
+
   Real kb(unsigned i) {return i+0.5;}
   Real kc(unsigned i) {return i+1;}
 };
