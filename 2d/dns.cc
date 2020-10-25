@@ -38,6 +38,8 @@ Real icalpha=1.0;
 Real icbeta=1.0;
 Real k0=1.0; // Obsolete
 int randomIC=0;
+unsigned circular=0;
+int kmax2;
 
 class DNS : public DNSBase, public ProblemBase {
 public:
@@ -264,6 +266,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(spectrum,0,1,"Output spectrum? (0=no, 1=yes)");
   VOCAB(modalenergies,0,1,"Output modal energies? (0=no, 1=yes)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
+  VOCAB(circular,0,1,"Truncate spectrum on largest circle? (0=no, 1=yes)");
 
   METHOD(DNS);
 
@@ -352,6 +355,9 @@ void DNS::InitialConditions()
 
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
+
+  kmax2=::min((mx-1),(my-1));
+  kmax2 *= kmax2;
 
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 

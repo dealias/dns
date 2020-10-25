@@ -26,6 +26,9 @@ extern unsigned spectrum;
 extern int pH;
 extern int pL;
 
+extern unsigned circular;
+extern int kmax2;
+
 class DNSBase {
 protected:
   // Vocabulary:
@@ -308,7 +311,8 @@ public:
   public:
     InitializeValue(DNSBase *b) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      wi[j]=InitialCondition->Value(i,j);
+      wi[j]=(!circular || i*i+j*j <= kmax2) ?
+        InitialCondition->Value(i,j) : 0.0;
     }
   };
 
@@ -330,11 +334,13 @@ public:
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
                              Palinstrophy(b->Palinstrophy) {}
     inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      Real w2=abs2(wi[j]);
-      Enstrophy += w2;
-      unsigned k2=i*i+j*j;
-      Energy += w2/k2;
-      Palinstrophy += k2*w2;
+      int k2=i*i+j*j;
+      if(!circular || k2 <= kmax2) {
+        Real w2=abs2(wi[j]);
+        Enstrophy += w2;
+        Energy += w2/k2;
+        Palinstrophy += k2*w2;
+      }
     }
   };
 
@@ -416,6 +422,15 @@ public:
         f0i[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
       }
     }
+
+    if(circular) {
+      for(int i=-mx+1; i < mx; ++i) {
+        for(int j=(i <= 0 ? 1 : 0); j < my; ++j) {
+          if(i*i+j*j > kmax2) f0[i][j]=0.0;
+        }
+      }
+    }
+
     fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
 
 #if 0
