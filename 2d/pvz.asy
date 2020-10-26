@@ -108,7 +108,7 @@ while(nextrun()) {
 
   draw(graph(new real(real Z) {return (2*sqrt(2)*cG/5*(6*(Z3^5*Z)^(1/6)-Z))^2;},Zmin,Z3),grey);                                           //phi3(0 to Z3)
 
-  draw(graph(new real(real Z) {return sqrt(Lambda*Z);},Zmin,1),blue);
+  draw(graph(new real(real Z) {return sqrt(eta*Z);},Zmin,1),blue);
   draw(graph(new real(real Z) {return Z;},Zmin,1),red);
 
   draw(graph(new real(real Z) {return (cG*Z)^2/2;},Zmin,1),heavygreen);

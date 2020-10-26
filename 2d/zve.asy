@@ -86,10 +86,10 @@ while(nextrun()) {
     real kfp=kforce+deltaf/2;
     write(kfm,kfp);
 
-    draw(graph(new real(real E) {return E;},Emin,1),grey);
-    draw(graph(new real(real E) {return kfp^2*E;},Emin,1/kfp^2),magenta);
-    draw(graph(new real(real E) {return kfm^2*E;},Emin,1/kfm^2),magenta);
-    draw(graph(new real(real E) {return sqrt(E);},Emin,1),brown);
+    draw(graph(new real(real E) {return E;},Emin,1),red);
+    //    draw(graph(new real(real E) {return kfp^2*E;},Emin,1/kfp^2),magenta);
+    //   draw(graph(new real(real E) {return kfm^2*E;},Emin,1/kfm^2),magenta);
+    draw(graph(new real(real E) {return sqrt(E);},Emin,1),blue);
 
   //  real tau=1-sqrt(2-sqrt(2));
   //  real alpha=tau/sqrt(2);
