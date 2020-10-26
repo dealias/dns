@@ -119,8 +119,7 @@ real[][] thin(real[][] v, int depth)
 
 real[][] V=settings.outformat == "html" ? thin(v,64,64) : v;
 
-write(nx#2,ny#2);
-surface s=surface(V,(-nx#2,-ny#2),(nx#2,nx#2));//,Spline);
+surface s=surface(V,(-nx#2,-ny#2),(nx#2,ny#2));//,Spline);
 
 real[] level=uniform(min(V)*(1-sqrtEpsilon),max(V)*(1+sqrtEpsilon),256);
 
