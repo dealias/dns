@@ -5,10 +5,10 @@ import palette;
 
 currentprojection=orthographic(7,14,1);
 
-scale(Linear,Linear,Linear);
+scale(Linear,Linear,Log);
 usepackage("bm");
 
-string[][] t={{"ek","$\log_{10} \frac{|u_{\bf k}|^2}{2}$"}};
+string[][] t={{"ek","$\frac{|u_{\bf k}|^2}{2}$"}};
 
 string dir=getstring("directory","r");
 string field=getstring("field","ek");
@@ -49,7 +49,7 @@ real[][] v=new real[nx][ny];
 
 for(int j=0; j < my; ++j)
   for(int i=0; i < nx; ++i)
-    v[i][my-1+j]=log(v0[i][j]);
+    v[i][my-1+j]=v0[i][j];
 
 for(int j=1; j < my; ++j)
   for(int i=0; i < nx; ++i)
@@ -115,13 +115,14 @@ real[][] thin(real[][] v, int depth)
   return thin(V,depth-1);
 }
 
-//real[][] V=v=thin(v,2);
+real[][] V=settings.outformat == "html" ? thin(v,2) : thin(v,1);
 
-real[][] V=settings.outformat == "html" ? thin(v,64,64) : v;
+//real[][] V=settings.outformat == "html" ? thin(v,64,64) : v;
 
 surface s=surface(V,(-nx#2,-ny#2),(nx#2,ny#2));//,Spline);
 
-real[] level=uniform(min(V)*(1-sqrtEpsilon),max(V)*(1+sqrtEpsilon),256);
+real[] level=uniform(ScaleZ(min(V))*(1-sqrtEpsilon),
+                     ScaleZ(max(V))*(1+sqrtEpsilon),256);
 
 s.colors(palette(s.map(new real(triple v) {return find(level >= v.z);}),
                  BWRainbow2())); 
@@ -130,4 +131,4 @@ draw(s);
 
 xaxis3("$k_x$",Bounds,InTicks);
 yaxis3("$k_y$",Bounds,InTicks);
-zaxis3(t[0][1],Bounds,InTicks); // TODO: Fix log bug
+zaxis3(t[0][1],Bounds,InTicks);
