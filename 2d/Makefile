@@ -17,7 +17,8 @@ ifneq ($(strip $(FFTW_LIB_PATH)),)
 LIB += -L$(FFTW_LIB_PATH)
 endif
 
-EXTRA = fftw++ convolution $(CORE) $(UTILS)
+#EXTRA = fftw++ convolution $(CORE) $(UTILS)
+EXTRA = fftw++ convolve $(CORE) $(UTILS)
 FILES = dns $(EXTRA)
 OTHER = 
 

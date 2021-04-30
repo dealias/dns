@@ -5,7 +5,8 @@
 #include "kernel.h"
 #include "Array.h"
 #include "fftw++.h"
-#include "convolution.h"
+//#include "convolution.h"
+#include "tests/convolve.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
 #include "Conservative.h"
@@ -25,6 +26,27 @@ extern unsigned spectrum;
 
 extern int pH;
 extern int pL;
+
+// This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
+// requires only 4 FFTs per stage.
+void multadvection2(Complex **F, unsigned int n,
+                    /*
+                    const unsigned int indexsize,
+                    const unsigned int *index,
+                    unsigned int r,
+                    */
+                    unsigned int threads)
+{
+  double* F0=(double *) F[0];
+  double* F1=(double *) F[1];
+
+  for(unsigned int j=0; j < n; ++j) {
+    double u=F0[j];
+    double v=F1[j];
+    F0[j]=v*v-u*u;
+    F1[j]=u*v;
+  }
+}
 
 class DNSBase {
 protected:
@@ -55,7 +77,8 @@ protected:
   array2<Complex> buffer;
   Complex *F[2];
   Complex *block;
-  ImplicitHConvolution2 *Convolution;
+//  ImplicitHConvolution2 *Convolution;
+  ConvolutionHermitian2 *Convolution;
   crfft2d *Backward;
 
   ifstream ftin;
@@ -405,7 +428,11 @@ public:
     }
 
     F[0]=f0;
-    Convolution->convolve(F,multadvection2);
+
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
+
+    Convolution->convolve(F,F,multadvection2);
     f0[0][0]=0.0;
 
     for(int i=-mx+1; i < mx; ++i) {
