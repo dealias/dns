@@ -29,7 +29,7 @@ extern int pL;
 
 // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
 // requires only 4 FFTs per stage.
-void multadvection2(Complex **F, unsigned int n,
+void multadvection2(Complex **F, unsigned int offset, unsigned int n,
                     /*
                     const unsigned int indexsize,
                     const unsigned int *index,
@@ -37,8 +37,8 @@ void multadvection2(Complex **F, unsigned int n,
                     */
                     unsigned int threads)
 {
-  double* F0=(double *) F[0];
-  double* F1=(double *) F[1];
+  double* F0=(double *) (F[0]+offset);
+  double* F1=(double *) (F[1]+offset);
 
   for(unsigned int j=0; j < n; ++j) {
     double u=F0[j];
@@ -432,7 +432,7 @@ public:
     fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
     fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
 
-    Convolution->convolve(F,F,multadvection2);
+    Convolution->convolve(F,multadvection2);
     f0[0][0]=0.0;
 
     for(int i=-mx+1; i < mx; ++i) {
