@@ -396,7 +396,7 @@ void DNS::InitialConditions()
 
 //  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
 
-  unsigned Mx=3*mx-1;
+  unsigned Mx=3*mx-2;
   unsigned My=3*my-2;
   Convolution=new fftwpp::ConvolutionHermitian2(Nx+1,Ny+1,Mx,My,2,2);
 
