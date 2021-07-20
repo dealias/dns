@@ -118,12 +118,14 @@ public:
 
     Forcing->Init(fcount);
 
+    double scale=sqrt(Convolution->scale);
+
     k2inv.Allocate(Nx,my,-mx+1,0);
     for(int i=-mx+1; i < mx; ++i) {
       int i2=i*i;
       rVector k2invi=k2inv[i];
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
-        k2invi[j]=1.0/(i2+j*j);
+        k2invi[j]=scale/(i2+j*j);
       }
     }
   }
@@ -432,7 +434,7 @@ public:
     fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
     fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
 
-    Convolution->convolve(F,multadvection2);
+    Convolution->convolveRaw(F,multadvection2);
     f0[0][0]=0.0;
 
     for(int i=-mx+1; i < mx; ++i) {
