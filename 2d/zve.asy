@@ -1,10 +1,12 @@
 include getparam;
 include averages;
 
+size(12cm);
+
 import palette;
 
 scale(Log,Log);
-pen p=linewidth(1);
+defaultpen(linewidth(1));
 
 real[] t,E,Z;
 real G;
@@ -50,7 +52,6 @@ while(nextrun()) {
     G=N.f/nuH^2;                 // Grashof number for constant forcing
     tilde="";
   } else {
-    //    G=sqrt(eps)/nuH^(3/2);      // Grashof number for stochastic forcing
     G=sqrt(eps*(nuH+nuL))/nuH^2;      // Grashof number for stochastic forcing
     tilde="\tilde ";
   }
@@ -85,10 +86,10 @@ while(nextrun()) {
     real kfp=kforce+deltaf/2;
     write(kfm,kfp);
 
-    draw(graph(new real(real E) {return E;},Emin,1),grey);
-    draw(graph(new real(real E) {return kfp^2*E;},Emin,1/kfp^2),magenta);
-    draw(graph(new real(real E) {return kfm^2*E;},Emin,1/kfm^2),magenta);
-    draw(graph(new real(real E) {return sqrt(E);},Emin,1),brown);
+    draw(graph(new real(real E) {return E;},Emin,1),red);
+    //    draw(graph(new real(real E) {return kfp^2*E;},Emin,1/kfp^2),magenta);
+    //   draw(graph(new real(real E) {return kfm^2*E;},Emin,1/kfm^2),magenta);
+    draw(graph(new real(real E) {return sqrt(E);},Emin,1),blue);
 
   //  real tau=1-sqrt(2-sqrt(2));
   //  real alpha=tau/sqrt(2);
@@ -97,15 +98,10 @@ while(nextrun()) {
   //xequals(nuH^2/4,0.5*green);
   //yequals(nuH^2*kforce^2/4,0.5*blue);
 
-  /*
   picture bar;
   bounds range=bounds(Emin,Emax);
-  palette(bar,"$t$",range,(0,0),
-          (0.6*currentpicture.xsize,0.25cm),Bottom,
-          p,NoTicks);
-
-  add(bar.fit(),10^point(plain.S),30plain.S);
-  */
+  palette(bar,"$t$",range,(0,0),(0.25cm,0.6*currentpicture.ysize),p,NoTicks);
+  add(bar.fit(),point(plain.E),15plain.E);
 
   ++k;
 }

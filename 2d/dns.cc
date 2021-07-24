@@ -34,6 +34,7 @@ Real deltaf=1.0;
 unsigned movie=0;
 unsigned rezero=0;
 unsigned spectrum=1;
+unsigned modalenergies=0;
 Real icalpha=1.0;
 Real icbeta=1.0;
 Real k0=1.0; // Obsolete
@@ -43,9 +44,9 @@ class DNS : public DNSBase, public ProblemBase {
 public:
   DNS();
   ~DNS();
-  
+
   void InitialConditions();
-  
+
   void Output(int);
   void FinalOutput();
   oxstream fprolog;
@@ -60,21 +61,21 @@ public:
     startM=Start(EK);
     stopM=Stop(EK);
   }
-  
+
   void Source(const vector2& Src, const vector2& Y, double t) {
     DNSBase::Source(Src,Y,t);
   }
-  
+
   void Stochastic(const vector2&Y, double t, double dt) {
     DNSBase::Stochastic(Y,t,dt);
   }
-  
+
   void Initialize();
 };
 
 class ForcingMask {
   DNS *b;
-public: 
+public:
   ForcingMask(DNS *b) : b(b) {}
   inline void operator()(const Vector&, const Vector&, int i, int j) {
     if(Forcing->active(i,j)) {
@@ -86,7 +87,7 @@ public:
     }
   }
 };
-  
+
 DNS *DNSProblem;
 
 InitialConditionBase *InitialCondition;
@@ -95,14 +96,14 @@ ForcingBase *Forcing;
 class Zero : public InitialConditionBase {
 public:
   const char *Name() {return "Zero";}
-  
+
   Var Value(Real,Real) {return 0.0;}
 };
 
 class Constant : public InitialConditionBase {
 public:
   const char *Name() {return "Constant";}
-  
+
   Var Value(Real,Real) {return Complex(icalpha,icbeta);}
 };
 
@@ -148,11 +149,11 @@ class None : public ForcingBase {
 };
 
 class ConstantBanded : public ForcingBase {
-protected:  
+protected:
   double K1,K2;
 public:
   const char *Name() {return "Constant Banded";}
-  
+
   void Init() {
     double h=0.5*deltaf;
     K1=kforce-h;
@@ -160,12 +161,12 @@ public:
     K2=kforce+h;
     K2 *= K2;
   }
-  
+
   bool active(int i, int j) {
     int k=i*i+j*j;
     return K1 < k && k < K2;
   }
-  
+
   double Force(Complex& w, Complex& S, int i, int j) {
     if(active(i,j)) {
       S += force;
@@ -176,20 +177,20 @@ public:
 };
 
 class ConstantList : public ForcingBase {
-protected:  
+protected:
 public:
   const char *Name() {return "Constant List";}
-  
+
   int Active(int i, int j) {
     for(int index=0; index < Nforce; ++index)
       if(i == kxforces[index] && j == kyforces[index]) return index;
     return -1;
   }
-  
+
   bool active(int i, int j) {
     return Active(i,j) >= 0;
   }
-  
+
   double Force(Complex& w, Complex& S, int i, int j) {
     int index=Active(i,j);
     if(index >= 0) {
@@ -206,31 +207,31 @@ class WhiteNoiseBanded : public ConstantBanded {
   Real etanorm;
 public:
   const char *Name() {return "White-Noise Banded";}
-  
+
   void Init(unsigned fcount) {
     etanorm=1.0/((Real) fcount);
   }
-  
+
   bool Stochastic(double dt) {
     f0=sqrt(2.0*dt*eta*etanorm);
     return true;
   }
-  
+
   // For forcing diagnostic
   void ForceMask(Complex& w, Complex& S, int i, int j) {
     if(active(i,j)) {
       S=sqrt(2.0*eta*etanorm);
     }
   }
-  
+
   double ForceStochastic(Complex& w, int i, int j) {
-     if(active(i,j)) {
+    if(active(i,j)) {
       Complex f=f0*crand_gauss();
       double eta=realproduct(f,w)+0.5*abs2(f);
       w += f;
       return eta;
     }
-     return 0.0;
+    return 0.0;
   }
 };
 
@@ -260,8 +261,9 @@ DNSVocabulary::DNSVocabulary()
   VOCAB_NOLIMIT(ic,"Initial Condition");
   VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
   VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
-  VOCAB(movie,0,1,"Movie flag (0=off, 1=on)");
-  VOCAB(spectrum,0,1,"Spectrum flag (0=off, 1=on)");
+  VOCAB(movie,0,1,"Output movie? (0=no, 1=yes)");
+  VOCAB(spectrum,0,1,"Output spectrum? (0=no, 1=yes)");
+  VOCAB(modalenergies,0,1,"Output modal energies? (0=no, 1=yes)");
   VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
 
   METHOD(DNS);
@@ -325,7 +327,7 @@ public:
   static Real Zeta(unsigned i) {return DNSProblem->Zeta_(i);}
   static Real DE(unsigned i) {return DNSProblem->DE_(i);}
   static Real DZ(unsigned i) {return DNSProblem->DZ_(i);}
-  
+
   static Real kb(unsigned i) {return DNSProblem->kb(i);}
   static Real kc(unsigned i) {return DNSProblem->kc(i);}
 };
@@ -338,7 +340,7 @@ void DNS::Initialize()
 void DNS::InitialConditions()
 {
   fftw::maxthreads=threads;
-  
+
   // load vocabulary from global variables
   Nx=::Nx;
   Ny=::Ny;
@@ -351,7 +353,7 @@ void DNS::InitialConditions()
 
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
-  
+
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
   NY[PAD]=my;
@@ -390,10 +392,14 @@ void DNS::InitialConditions()
   vector f=Y[PAD];
   for(int j=0; j < my; ++j)
     f1(j)=f[j]=0.0;
-    
+
   F[1]=f1;
 
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
+//  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
+
+  unsigned Mx=3*mx-2;
+  unsigned My=3*my-2;
+  Convolution=new fftwpp::ConvolutionHermitian2(Nx+1,Ny+1,Mx,My,2,2);
 
   Allocate(count,nshells);
   setcount();
@@ -425,14 +431,14 @@ void DNS::InitialConditions()
     A2ur.Dimension(nx,2*nyp,(Real *) A2u());
     A2vr.Dimension(nx,2*nyp,(Real *) A2v());
 
-    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,w);
+//    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,w);
 
     Backward2=new fftwpp::crfft2d(nx,ny0,w0);
 //    Pad2=new fftwpp::ExplicitHTPad2(nx,ny0,Nx,nyp);
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
-  
+
   w.Set(Y[OMEGA]);
 
   Init(TE,Y[TRANSFERE]);
@@ -443,7 +449,7 @@ void DNS::InitialConditions()
   Init(DE,Y[DISSIPATIONE]);
   Init(DZ,Y[DISSIPATIONZ]);
   Init(E,Y[EK]);
-  
+
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
   tcount=0;
@@ -471,16 +477,16 @@ void DNS::InitialConditions()
   DNSBase::SetParameters();
 
   open_output(fprolog,dirsep,"prolog",false);
-  
+
   out_curve(fprolog,cwrap::kb,"kb",nshells+1);
   out_curve(fprolog,cwrap::kc,"kc",nshells);
-  
+
   Loop(InitNone(this),ForcingMask(this));
-  
+
   fprolog.close();
 
-  if(output)
-    open_output(fwk,dirsep,"wk");
+  if(modalenergies)
+    open_output(fek,dirsep,"ek");
 
   if(movie)
     open_output(fw,dirsep,"w");
@@ -499,6 +505,9 @@ void DNS::Output(int it)
 
   if(movie)
     OutFrame(it);
+
+  if(modalenergies)
+    OutEnergies();
 
   if(spectrum) {
     ostringstream buf;
@@ -539,7 +548,7 @@ void DNS::Output(int it)
 
   if(rezero && it % rezero == 0 && spectrum) {
     vector2 Y=Integrator->YVector();
-    
+
     Init(TE,Y[TRANSFERE]);
     Init(TZ,Y[TRANSFERZ]);
     Init(Eps,Y[EPS]);

@@ -8,8 +8,6 @@
 
 #include "utils.h"
 
-const Complex I(0.0,1.0);
-
 #if(COMPLEX)
 typedef Complex Var;
 inline Complex rand_gauss() {return crand_gauss();}
