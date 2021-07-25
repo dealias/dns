@@ -407,19 +407,20 @@ void DNS::InitialConditions()
   if(movie) {
     nx=4*mx-3+1;
     ny0=4*my-3+1;
-
+    
     unsigned nyp=ny0/2+1;
+    
 
     size_t align=sizeof(Complex);
     w0.Allocate(nx,nyp,-Nx,0,align);
-    u.Allocate(nx,nyp,-mx,0,align);
-    v.Allocate(nx,nyp,-mx,0,align);
-    ux.Allocate(nx,nyp,-mx,0,align);
-    uy.Allocate(nx,nyp,-mx,0,align);
-    vx.Allocate(nx,nyp,-mx,0,align);
-    vy.Allocate(nx,nyp,-mx,0,align);
-    A2u.Allocate(nx,nyp,-mx,0,align);
-    A2v.Allocate(nx,nyp,-mx,0,align);
+    u.Allocate(nx,nyp,-Nx,0,align);
+    v.Allocate(nx,nyp,-Nx,0,align);
+    ux.Allocate(nx,nyp,-Nx,0,align);
+    uy.Allocate(nx,nyp,-Nx,0,align);
+    vx.Allocate(nx,nyp,-Nx,0,align);
+    vy.Allocate(nx,nyp,-Nx,0,align);
+    A2u.Allocate(nx,nyp,-Nx,0,align);
+    A2v.Allocate(nx,nyp,-Nx,0,align);
     
     wr.Dimension(nx,2*nyp,(Real *) w0());
     ur.Dimension(nx,2*nyp,(Real *) u());

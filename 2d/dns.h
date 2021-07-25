@@ -213,7 +213,9 @@ public:
         Complex wij=w(i,j);        
         Real k4=i*i+j*j;
         k4 *= k4;
-        Complex psi=wij*k2inv[i][j];
+        Real k2=i*i+j*j;
+        Real k2inv=k2 > 0.0 ? 1.0/k2 : 0.0;
+        Complex psi=wij*k2inv;
         Complex uij=j*psi;
         Complex vij=-I*i*psi;
         u[i][j]=uij;
@@ -271,7 +273,7 @@ public:
         fw << (float) wr(i,j);
     fw.flush();
     
-    Real sum=0.0, norm1=0.0, norm2=0.0;
+    Real E=0.0, Z=0.0, sum=0.0, norm1=0.0, norm2=0.0;
     for(unsigned i=0; i < nx; i++) {
       for(unsigned j=0; j < ny0; j++) {
         Real bx=ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j];
@@ -279,11 +281,14 @@ public:
         Real ax=A2ur[i][j];
         Real ay=A2vr[i][j];
         sum += bx*ax+by*ay;
+        Z += wr[i][j]*wr[i][j];
+        E += ur(i,j)*ur(i,j)+vr(i,j)*vr(i,j);
         norm1 += bx*bx+by*by;
         norm2 += ax*ax+ay*ay; 
       }
     }
-//        sum += 0.5*(ur(i,j)*ur(i,j)+vr(i,j)*vr(i,j));
+    cout << "energy = " << 0.5*E/(nx*ny0) << endl;
+    cout << "enstrophy = " << 0.5*Z/(nx*ny0) << endl;
     cout << "Inner product=" << sum/((Nx+1)*(2*my-1)) << endl;
     cout << "Angle=" << acos(sum/sqrt(norm1*norm2))*180.0/PI << endl;
     
@@ -305,9 +310,11 @@ public:
     fw.flush();
 */
     
+    /*
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
       f1(j)=0.0;
+    */
   }
 
   class FETL {
