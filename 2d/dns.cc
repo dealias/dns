@@ -405,36 +405,37 @@ void DNS::InitialConditions()
   setcount();
 
   if(movie) {
-    nx=4*mx-3+1;
-    ny0=4*my-3+1;
-    
-    unsigned nyp=ny0/2+1;
-    
+    nx=4*mx-3;
+    ny0=4*my-3;
+
+    Convolution2=new fftwpp::ConvolutionHermitian2(Nx+1,Ny+1,nx,ny0,8,2);
+//    unsigned nyp=ny0/2+1;
+//    unsigned nyp=my;
 
     size_t align=sizeof(Complex);
-    w0.Allocate(nx,nyp,-Nx,0,align);
-    u.Allocate(nx,nyp,-Nx,0,align);
-    v.Allocate(nx,nyp,-Nx,0,align);
-    ux.Allocate(nx,nyp,-Nx,0,align);
-    uy.Allocate(nx,nyp,-Nx,0,align);
-    vx.Allocate(nx,nyp,-Nx,0,align);
-    vy.Allocate(nx,nyp,-Nx,0,align);
-    A2u.Allocate(nx,nyp,-Nx,0,align);
-    A2v.Allocate(nx,nyp,-Nx,0,align);
-    
-    wr.Dimension(nx,2*nyp,(Real *) w0());
-    ur.Dimension(nx,2*nyp,(Real *) u());
-    vr.Dimension(nx,2*nyp,(Real *) v());
-    uxr.Dimension(nx,2*nyp,(Real *) ux());
-    uyr.Dimension(nx,2*nyp,(Real *) uy());
-    vxr.Dimension(nx,2*nyp,(Real *) vx());
-    vyr.Dimension(nx,2*nyp,(Real *) vy());
-    A2ur.Dimension(nx,2*nyp,(Real *) A2u());
-    A2vr.Dimension(nx,2*nyp,(Real *) A2v());
+    w0.Allocate(Nx+1,my,-mx,0,align);
+    u.Allocate(Nx+1,my,-mx,0,align);
+    v.Allocate(Nx+1,my,-mx,0,align);
+    ux.Allocate(Nx+1,my,-mx,0,align);
+    uy.Allocate(Nx+1,my,-mx,0,align);
+    vx.Allocate(Nx+1,my,-mx,0,align);
+    vy.Allocate(Nx+1,my,-mx,0,align);
+    A2u.Allocate(Nx+1,my,-mx,0,align);
+    A2v.Allocate(Nx+1,my,-mx,0,align);
+
+    wr.Dimension(Nx+1,2*my,(Real *) w0());
+    ur.Dimension(Nx+1,2*my,(Real *) u());
+    vr.Dimension(Nx+1,2*my,(Real *) v());
+    uxr.Dimension(Nx+1,2*my,(Real *) ux());
+    uyr.Dimension(Nx+1,2*my,(Real *) uy());
+    vxr.Dimension(Nx+1,2*my,(Real *) vx());
+    vyr.Dimension(Nx+1,2*my,(Real *) vy());
+    A2ur.Dimension(Nx+1,2*my,(Real *) A2u());
+    A2vr.Dimension(Nx+1,2*my,(Real *) A2v());
 
 //    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,w);
 
-    Backward2=new fftwpp::crfft2d(nx,ny0,w0);
+//    Backward2=new fftwpp::crfft2d(nx,ny0,w0);
 //    Pad2=new fftwpp::ExplicitHTPad2(nx,ny0,Nx,nyp);
   }
 
@@ -497,7 +498,7 @@ void DNS::Output(int it)
 {
   vector y=Y[OMEGA];
   w.Set(y);
-    
+
   Real E,Z,P,P2;
   ComputeInvariants(w,E,Z,P,P2);
   fevt << t << "\t" << E << "\t" << Z << "\t" << P << "\t" << P2 << endl;

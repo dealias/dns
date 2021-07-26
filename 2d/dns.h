@@ -49,7 +49,9 @@ void multadvection2(Complex **F, unsigned int offset, unsigned int n,
   }
 }
 
-// A=8, B=1 TODO: Reduce to A=7, B=1 using incompressibility
+double Triplet0, Triplet, Norm1, Norm2;
+
+// A=8, B=0 TODO: Reduce to A=7, B=0 using incompressibility
 void multTriplet(Complex **F, unsigned int offset, unsigned int n,
                  unsigned int threads)
 {
@@ -71,7 +73,23 @@ void multTriplet(Complex **F, unsigned int offset, unsigned int n,
     double vy=F5[j];
     double A2u=F6[j];
     double A2v=F7[j];
-    F0[j]=(u*ux+v*uy)*A2u+(u*vx+v*vy)*A2v;
+    double bx=u*ux+v*uy;
+    double by=u*vx+v*vy;
+
+    double w=vx-uy;
+    double E=u*u+v*v;
+    double Z=w*w;
+    Triplet0 += E;
+    Triplet += Z;
+    F0[j]=E;
+    F1[j]=Z;
+
+//    Triplet += u*u+v*v;
+//    F0[j]=u*u+v*v;
+
+//    Triplet += bx*A2u+by*A2v;
+//    Norm1 += bx*bx+by*by;
+//    Norm2 += A2u*A2u+A2v*A2v;
   }
 }
 
@@ -97,7 +115,7 @@ protected:
 
   Array2<Complex> u,v,ux,uy,vx,vy,A2u,A2v;
   array2<Real> ur,vr,uxr,uyr,vxr,vyr,A2ur,A2vr; // Inverse Fourier transforms
-  
+
   int tcount;
   unsigned fcount;
 
@@ -107,10 +125,11 @@ protected:
   Array2<Complex> f0,f1;
   Array2<Complex> S;
   array2<Complex> buffer;
-  Complex *F[2];
+  Complex *F[8];
   Complex *block;
 //  ImplicitHConvolution2 *Convolution;
   ConvolutionHermitian2 *Convolution;
+  ConvolutionHermitian2 *Convolution2;
   crfft2d *Backward2;
 
   ifstream ftin;
@@ -210,13 +229,13 @@ public:
 
     for(int i=-mx+1; i < mx; ++i) {
       for(int j=0; j < my; ++j) {
-        Complex wij=w(i,j);        
+        Complex wij=w(i,j);
         Real k4=i*i+j*j;
         k4 *= k4;
         Real k2=i*i+j*j;
         Real k2inv=k2 > 0.0 ? 1.0/k2 : 0.0;
         Complex psi=wij*k2inv;
-        Complex uij=j*psi;
+        Complex uij=I*j*psi;
         Complex vij=-I*i*psi;
         u[i][j]=uij;
         v[i][j]=vij;
@@ -228,18 +247,18 @@ public:
         A2v[i][j]=k4*vij;
       }
     }
-    
-    unsigned nyp=ny0/2+1;
 
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,w0);
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,u);
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,v);
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,ux);
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,uy);
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,vx);
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,vy);
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,A2u);
-    fftwpp::HermitianSymmetrizeX(Nx,nyp,Nx,A2v);
+//    unsigned nyp=ny0/2+1;
+
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,w0);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,u);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,v);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,ux);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,uy);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,vx);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,vy);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v);
 
 //    Pad2->pad(w0);
     /*
@@ -256,7 +275,30 @@ public:
       A2v(j)=0.0;
     }
     */
-    
+
+    F[0]=u;
+    F[1]=v;
+    F[2]=ux;
+    F[3]=uy;
+    F[4]=vx;
+    F[5]=vy;
+    F[6]=A2u;
+    F[7]=A2v;
+
+    Triplet0=0.0;
+    Triplet=0.0;
+    Norm1=0.0;
+    Norm2=0.0;
+
+    Convolution2->convolveRaw(F,multTriplet);
+
+    f0.Set(F[0]);
+    double E=f0[0][0].re;
+
+    f0.Set(F[1]);
+    double Z=f0[0][0].re;
+
+    /*
     Backward2->fft0(w0);
     Backward2->fft0(u);
     Backward2->fft0(v);
@@ -266,14 +308,28 @@ public:
     Backward2->fft0(vy);
     Backward2->fft0(A2u);
     Backward2->fft0(A2v);
-     
+    */
+
+/*
     fw << 1 << ny0 << nx;
     for(int j=ny0-1; j >= 0; j--)
       for(unsigned i=0; i < nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
-    
-    Real E=0.0, Z=0.0, sum=0.0, norm1=0.0, norm2=0.0;
+*/
+
+    /*
+    cout << "H=" << H << endl;
+    double h=H/sqrt(norm1*norm2);
+    cout << h << endl;
+    if(h > 1.0) h=1.0;
+    if(h < -1.0) h=-1.0;
+    cout << "Angle=" << acos(h)*180.0/PI << endl;
+    */
+
+    F[1]=f1;
+
+    /*
     for(unsigned i=0; i < nx; i++) {
       for(unsigned j=0; j < ny0; j++) {
         Real bx=ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j];
@@ -284,14 +340,20 @@ public:
         Z += wr[i][j]*wr[i][j];
         E += ur(i,j)*ur(i,j)+vr(i,j)*vr(i,j);
         norm1 += bx*bx+by*by;
-        norm2 += ax*ax+ay*ay; 
+        norm2 += ax*ax+ay*ay;
       }
     }
-    cout << "energy = " << 0.5*E/(nx*ny0) << endl;
-    cout << "enstrophy = " << 0.5*Z/(nx*ny0) << endl;
-    cout << "Inner product=" << sum/((Nx+1)*(2*my-1)) << endl;
-    cout << "Angle=" << acos(sum/sqrt(norm1*norm2))*180.0/PI << endl;
-    
+    */
+
+    double scale=Convolution2->scale;
+    cout << "energy = " << 0.5*E*scale << endl;
+    cout << "energy = " << 0.5*Triplet0*scale << endl;
+    cout << "enstrophy = " << 0.5*Z*scale << endl;
+    cout << "enstrophy = " << 0.5*Triplet*scale << endl;
+//    cout << "enstrophy = " << 0.5*Triplet/(nx*ny0) << endl;
+//    cout << "Inner product=" << sum/((Nx+1)*(2*my-1)) << endl;
+//    cout << "Angle=" << acos(sum/sqrt(norm1*norm2))*180.0/PI << endl;
+
 /*
         f1[i][j]=w(i,j);
 
@@ -309,7 +371,7 @@ public:
         fw << (float) wr(i,j);
     fw.flush();
 */
-    
+
     /*
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
@@ -483,7 +545,7 @@ public:
   class Invariants {
     DNSBase *b;
     Real &Energy,&Enstrophy,&Palinstrophy,&Palinstrophy2;
-  public: 
+  public:
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
                              Palinstrophy(b->Palinstrophy),
                              Palinstrophy2(b->Palinstrophy2) {}
@@ -537,7 +599,7 @@ public:
   };
 
   void NonLinearSource(const vector2& Src, const vector2& Y, double t) {
-    f0.Dimension(Nx+1,my,-mx,0);
+//    f0.Dimension(Nx+1,my,-mx,0);
 
     w.Set(Y[OMEGA]);
     f0.Set(Src[PAD]);
@@ -708,7 +770,7 @@ public:
   virtual void ComputeInvariants(const array2<Complex> &w, Real& E, Real& Z,
                                  Real& P, Real& P2) {
     Energy=Enstrophy=Palinstrophy=Palinstrophy2=0.0;
-  
+
     Loop(Initw(this),Invariants(this));
 
     E=Energy;
