@@ -49,7 +49,7 @@ void multadvection2(Complex **F, unsigned int offset, unsigned int n,
   }
 }
 
-double Triplet0, Triplet, Norm1, Norm2;
+double Triplet, Norm1, Norm2;
 
 // A=8, B=0 TODO: Reduce to A=7, B=0 using incompressibility
 void multTriplet(Complex **F, unsigned int offset, unsigned int n,
@@ -76,20 +76,9 @@ void multTriplet(Complex **F, unsigned int offset, unsigned int n,
     double bx=u*ux+v*uy;
     double by=u*vx+v*vy;
 
-    double w=vx-uy;
-    double E=u*u+v*v;
-    double Z=w*w;
-    Triplet0 += E;
-    Triplet += Z;
-    F0[j]=E;
-    F1[j]=Z;
-
-//    Triplet += u*u+v*v;
-//    F0[j]=u*u+v*v;
-
-//    Triplet += bx*A2u+by*A2v;
-//    Norm1 += bx*bx+by*by;
-//    Norm2 += A2u*A2u+A2v*A2v;
+    Triplet += bx*A2u+by*A2v;
+    Norm1 += bx*bx+by*by;
+    Norm2 += A2u*A2u+A2v*A2v;
   }
 }
 
@@ -285,18 +274,11 @@ public:
     F[6]=A2u;
     F[7]=A2v;
 
-    Triplet0=0.0;
     Triplet=0.0;
     Norm1=0.0;
     Norm2=0.0;
 
     Convolution2->convolveRaw(F,multTriplet);
-
-    f0.Set(F[0]);
-    double E=f0[0][0].re;
-
-    f0.Set(F[1]);
-    double Z=f0[0][0].re;
 
     /*
     Backward2->fft0(w0);
@@ -346,13 +328,8 @@ public:
     */
 
     double scale=Convolution2->scale;
-    cout << "energy = " << 0.5*E*scale << endl;
-    cout << "energy = " << 0.5*Triplet0*scale << endl;
-    cout << "enstrophy = " << 0.5*Z*scale << endl;
-    cout << "enstrophy = " << 0.5*Triplet*scale << endl;
-//    cout << "enstrophy = " << 0.5*Triplet/(nx*ny0) << endl;
-//    cout << "Inner product=" << sum/((Nx+1)*(2*my-1)) << endl;
-//    cout << "Angle=" << acos(sum/sqrt(norm1*norm2))*180.0/PI << endl;
+    cout << "Inner product=" << Triplet*scale << endl;
+    cout << "Angle=" << acos(Triplet/sqrt(Norm1*Norm2))*180.0/PI << endl;
 
 /*
         f1[i][j]=w(i,j);

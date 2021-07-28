@@ -408,7 +408,7 @@ void DNS::InitialConditions()
     nx=4*mx-3;
     ny0=4*my-3;
 
-    Convolution2=new fftwpp::ConvolutionHermitian2(Nx+1,Ny+1,nx,ny0,8,2);
+    Convolution2=new fftwpp::ConvolutionHermitian2(Nx+1,Ny+1,nx,ny0,8,0);
 //    unsigned nyp=ny0/2+1;
 //    unsigned nyp=my;
 
