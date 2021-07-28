@@ -49,7 +49,7 @@ void multadvection2(Complex **F, unsigned int offset, unsigned int n,
   }
 }
 
-double Triplet0, Triplet, Norm1, Norm2;
+double Triplet0, Triplet, Triplet2, Norm1, Norm2;
 
 // A=8, B=0 TODO: Reduce to A=7, B=0 using incompressibility
 void multTriplet(Complex **F, unsigned int offset, unsigned int n,
@@ -81,6 +81,7 @@ void multTriplet(Complex **F, unsigned int offset, unsigned int n,
     double Z=w*w;
     Triplet0 += E;
     Triplet += Z;
+    Triplet2 += A2u*u+A2v*v;
     F0[j]=E;
     F1[j]=Z;
 
@@ -287,6 +288,7 @@ public:
 
     Triplet0=0.0;
     Triplet=0.0;
+    Triplet2=0.0;
     Norm1=0.0;
     Norm2=0.0;
 
@@ -350,6 +352,7 @@ public:
     cout << "energy = " << 0.5*Triplet0*scale << endl;
     cout << "enstrophy = " << 0.5*Z*scale << endl;
     cout << "enstrophy = " << 0.5*Triplet*scale << endl;
+    cout << "palinstrophy = " << 0.5*Triplet2*scale << endl;
 //    cout << "enstrophy = " << 0.5*Triplet/(nx*ny0) << endl;
 //    cout << "Inner product=" << sum/((Nx+1)*(2*my-1)) << endl;
 //    cout << "Angle=" << acos(sum/sqrt(norm1*norm2))*180.0/PI << endl;
