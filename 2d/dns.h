@@ -12,7 +12,6 @@
 #include "Conservative.h"
 #include "Exponential.h"
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
-#include "tests/explicit.h"
 
 using namespace Array;
 using namespace fftwpp;
