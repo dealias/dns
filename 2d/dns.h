@@ -36,7 +36,7 @@ protected:
 
   // Contiguous: TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,DISSIPATIONZ
   //
-  enum Field {PAD,OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
+  enum Field {OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
               DISSIPATIONZ,EK};
 
   int mx,my; // size of data arrays
@@ -418,7 +418,7 @@ public:
       }
     }
 
-#if 1
+#if 0
     Real sum=0.0;
     for(int i=-mx+1; i < mx; ++i) {
       Vector wi=w[i];

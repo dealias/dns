@@ -355,7 +355,6 @@ void DNS::InitialConditions()
 
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
-  NY[PAD]=my;
   NY[OMEGA]=Nx*my;
   NY[TRANSFERE]=nshells;
   NY[TRANSFERZ]=nshells;
@@ -384,14 +383,14 @@ void DNS::InitialConditions()
   w.Dimension(Nx,my,-mx+1,0);
   S.Dimension(Nx,my,-mx+1,0);
 
-  unsigned int size=(Nx+1)*(my+1);
+  unsigned int size=(Nx+1)*my;
   block=ComplexAlign(2*size);
   f0.Dimension(Nx+1,my,block,-mx,0);
   f1.Dimension(Nx+1,my,block+size,-mx,0);
 
-  vector f=Y[PAD];
+  // Zero Nyquist modes.
   for(int j=0; j < my; ++j)
-    f0(j)=f1(j)=f[j]=0.0;
+    f0(j)=f1(j)=0.0;
 
   F[0]=f0;
   F[1]=f1;
