@@ -380,40 +380,72 @@ public:
   void NonLinearSource(const vector2& Src, const vector2& Y, double t) {
     w.Set(Y[OMEGA]);
 
-    for(int i=-mx+1; i < mx; ++i)
-      f0[i][0]=0.0;
-
-    f1[0][0]=0.0;
-
     // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
     // requires only 4 FFTs per stage.
-#pragma omp parallel for num_threads(threads)
-    for(int i=-mx+1; i < mx; ++i) {
-      Vector wi=w[i];
-      Vector f0i=f0[i];
-      Vector f1i=f1[i];
-      rVector k2invi=k2inv[i];
-      if(i > 0) {
+    PARALLEL(
+      for(int i=-mx+1; i < 0; ++i) {
+        Vector wi=w[i];
+        Vector f0i=f0[i];
+        Vector f1i=f1[i];
+        rVector k2invi=k2inv[i];
+        for(int j=1; j < my; ++j) {
+          Complex wij=wi[j];
+          Real k2invij=k2invi[j];
+          Real jk2inv=j*k2invij;
+          Real ik2inv=i*k2invij;
+          f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
+          f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
+        }
+      });
+
+
+    Complex *f10=f1[0];
+    PARALLEL(
+    for(int j=0; j < my; ++j)
+      f10[j]=0.0;
+      );
+
+    PARALLEL(
+    for(int i=-mx+1; i < mx; ++i)
+      f0[i][0]=0.0;
+      );
+
+    Vector wi=w[0];
+    Vector f0i=f0[0];
+    rVector k2invi=k2inv[0];
+    PARALLEL(
+      for(int j=1; j < my; ++j) {
+        Complex wij=wi[j];
+        Real jk2inv=j*k2invi[j];
+        f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
+      });
+
+    PARALLEL(
+      for(int i=1; i < mx; ++i) {
+        Vector wi=w[i];
+        Vector f0i=f0[i];
+        Vector f1i=f1[i];
+        rVector k2invi=k2inv[i];
         Complex wij=wi[0];
         Real ik2inv=i*k2invi[0];
         Complex v=Complex(wij.im*ik2inv,-wij.re*ik2inv);
         f1i[0]=v;
         f1[-i][0]=conj(v);
-      }
-      for(int j=1; j < my; ++j) {
-        Complex wij=wi[j];
-        Real k2invij=k2invi[j];
-        Real jk2inv=j*k2invij;
-        Real ik2inv=i*k2invij;
-        f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
-        f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
-      }
-    }
+        for(int j=1; j < my; ++j) {
+          Complex wij=wi[j];
+          Real k2invij=k2invi[j];
+          Real jk2inv=j*k2invij;
+          Real ik2inv=i*k2invij;
+          f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
+          f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
+        }
+      })
 
     Convolution->convolve(F,multadvection2,false);
 
     S.Set(Src[OMEGA]);
 
+    PARALLEL(
     for(int i=-mx+1; i < mx; ++i) {
       Real i2=i*i;
       Vector f0i=f0[i];
@@ -422,7 +454,8 @@ public:
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
         Si[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
       }
-    }
+    });
+
 
 #if 0
     Real sum=0.0;
