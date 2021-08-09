@@ -385,21 +385,21 @@ void DNS::InitialConditions()
 
   unsigned int size=(Nx+1)*(my+1);
   block=ComplexAlign(2*size);
-  f0.Dimension(Nx+1,my+1,block,-mx,0);
-  f1.Dimension(Nx+1,my+1,block+size,-mx,0);
+  u.Dimension(Nx+1,my+1,block,-mx,0);
+  v.Dimension(Nx+1,my+1,block+size,-mx,0);
 
   // Zero x padding.
   for(int j=0; j < my; ++j)
-    f0[-mx][j]=f1[-mx][j]=0.0;
+    u[-mx][j]=v[-mx][j]=0.0;
 
   // Zero y padding.
   for(int i=-mx; i < mx; ++i)
-    f0[i][my]=f1[i][my]=0.0;
+    u[i][my]=v[i][my]=0.0;
 
-  f0[0][0]=f1[0][0]=0.0;
+  u[0][0]=v[0][0]=0.0;
 
-  F[0]=f0;
-  F[1]=f1;
+  F[0]=u;
+  F[1]=v;
 
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,false,2,2);
 
@@ -407,8 +407,8 @@ void DNS::InitialConditions()
   setcount();
 
   if(movie) {
-    wr.Dimension(Nx+1,2*my,(Real *) f1());
-    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,f1);
+    wr.Dimension(Nx+1,2*my,(Real *) v());
+    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,v);
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);

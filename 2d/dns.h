@@ -50,7 +50,7 @@ protected:
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
-  Array2<Complex> f0,f1;
+  Array2<Complex> u,v;
   Array2<Complex> S;
   array2<Complex> buffer;
   Complex *F[2];
@@ -139,15 +139,15 @@ public:
   void OutFrame(int it) {
     for(int i=-mx+1; i < mx; ++i)
       for(int j=0; j < my; ++j)
-        f1[i][j]=w(i,j);
+        v[i][j]=w(i,j);
 
-    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,f1);
+    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,v);
 
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
-      f1(j)=0.0;
+      v(j)=0.0;
 
-    Backward->fft0(f1);
+    Backward->fft0(v);
 
     fw << 1 << 2*my << Nx+1;
     for(int j=2*my-1; j >= 0; j--)
@@ -157,7 +157,7 @@ public:
 
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
-      f1(j)=0.0;
+      v(j)=0.0;
   }
 
   class FETL {
@@ -385,59 +385,59 @@ public:
     PARALLEL(
       for(int i=-mx+1; i < 0; ++i) {
         Vector wi=w[i];
-        Vector f0i=f0[i];
-        Vector f1i=f1[i];
+        Vector ui=u[i];
+        Vector vi=v[i];
         rVector k2invi=k2inv[i];
         for(int j=1; j < my; ++j) {
           Complex wij=wi[j];
           Real k2invij=k2invi[j];
           Real jk2inv=j*k2invij;
           Real ik2inv=i*k2invij;
-          f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
-          f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
+          ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
+          vi[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
         }
       });
 
 
-    Complex *f10=f1[0];
+    Complex *v0=v[0];
     PARALLEL(
     for(int j=0; j < my; ++j)
-      f10[j]=0.0;
+      v0[j]=0.0;
       );
 
     PARALLEL(
     for(int i=-mx+1; i < mx; ++i)
-      f0[i][0]=0.0;
+      u[i][0]=0.0;
       );
 
     Vector wi=w[0];
-    Vector f0i=f0[0];
+    Vector ui=u[0];
     rVector k2invi=k2inv[0];
     PARALLEL(
       for(int j=1; j < my; ++j) {
         Complex wij=wi[j];
         Real jk2inv=j*k2invi[j];
-        f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
+        ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv);
       });
 
     PARALLEL(
       for(int i=1; i < mx; ++i) {
         Vector wi=w[i];
-        Vector f0i=f0[i];
-        Vector f1i=f1[i];
+        Vector ui=u[i];
+        Vector vi=v[i];
         rVector k2invi=k2inv[i];
         Complex wij=wi[0];
         Real ik2inv=i*k2invi[0];
-        Complex v=Complex(wij.im*ik2inv,-wij.re*ik2inv);
-        f1i[0]=v;
-        f1[-i][0]=conj(v);
+        Complex V=Complex(wij.im*ik2inv,-wij.re*ik2inv);
+        vi[0]=V;
+        v[-i][0]=conj(V);
         for(int j=1; j < my; ++j) {
           Complex wij=wi[j];
           Real k2invij=k2invi[j];
           Real jk2inv=j*k2invij;
           Real ik2inv=i*k2invij;
-          f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
-          f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
+          ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv);
+          vi[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv);
         }
       })
 
@@ -448,11 +448,11 @@ public:
     PARALLEL(
     for(int i=-mx+1; i < mx; ++i) {
       Real i2=i*i;
-      Vector f0i=f0[i];
-      Vector f1i=f1[i];
+      Vector ui=u[i];
+      Vector vi=v[i];
       Vector Si=S[i];
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
-        Si[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
+        Si[j]=i*j*ui[j]+(i2-j*j)*vi[j];
       }
     });
 
