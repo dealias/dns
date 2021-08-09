@@ -383,19 +383,25 @@ void DNS::InitialConditions()
   w.Dimension(Nx,my,-mx+1,0);
   S.Dimension(Nx,my,-mx+1,0);
 
-  unsigned int size=(Nx+1)*my;
+  unsigned int size=(Nx+1)*(my+1);
   block=ComplexAlign(2*size);
-  f0.Dimension(Nx+1,my,block,-mx,0);
-  f1.Dimension(Nx+1,my,block+size,-mx,0);
+  f0.Dimension(Nx+1,my+1,block,-mx,0);
+  f1.Dimension(Nx+1,my+1,block+size,-mx,0);
 
-  // Zero Nyquist modes.
+  // Zero x padding.
   for(int j=0; j < my; ++j)
-    f0(j)=f1(j)=0.0;
+    f0[-mx][j]=f1[-mx][j]=0.0;
+
+  // Zero y padding.
+  for(int i=-mx; i < mx; ++i)
+    f0[i][my]=f1[i][my]=0.0;
+
+  f0[0][0]=f1[0][0]=0.0;
 
   F[0]=f0;
   F[1]=f1;
 
-  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
+  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,false,2,2);
 
   Allocate(count,nshells);
   setcount();

@@ -141,7 +141,7 @@ public:
       for(int j=0; j < my; ++j)
         f1[i][j]=w(i,j);
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
+    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,f1);
 
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
@@ -401,8 +401,8 @@ public:
       }
     }
 
-//    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
-//    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
+//    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,f0);
+//    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,f1);
 
     Convolution->convolve(F,multadvection2);
 
