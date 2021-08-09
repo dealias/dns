@@ -380,7 +380,9 @@ public:
   void NonLinearSource(const vector2& Src, const vector2& Y, double t) {
     w.Set(Y[OMEGA]);
 
-    f0[0][0]=0.0;
+    for(int i=-mx+1; i < mx; ++i)
+      f0[i][0]=0.0;
+
     f1[0][0]=0.0;
 
     // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
@@ -391,7 +393,14 @@ public:
       Vector f0i=f0[i];
       Vector f1i=f1[i];
       rVector k2invi=k2inv[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+      if(i > 0) {
+        Complex wij=wi[0];
+        Real ik2inv=i*k2invi[0];
+        Complex v=Complex(wij.im*ik2inv,-wij.re*ik2inv);
+        f1i[0]=v;
+        f1[-i][0]=conj(v);
+      }
+      for(int j=1; j < my; ++j) {
         Complex wij=wi[j];
         Real k2invij=k2invi[j];
         Real jk2inv=j*k2invij;
@@ -401,10 +410,7 @@ public:
       }
     }
 
-//    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,f0);
-//    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,f1);
-
-    Convolution->convolve(F,multadvection2);
+    Convolution->convolve(F,multadvection2,false);
 
     S.Set(Src[OMEGA]);
 
