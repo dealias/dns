@@ -384,14 +384,16 @@ void DNS::InitialConditions()
   w.Dimension(Nx,my,-mx+1,0);
   S.Dimension(Nx,my,-mx+1,0);
 
-  block=ComplexAlign((Nx+1)*my);
-  f0.Dimension(Nx+1,my,-mx,0);
-  f1.Dimension(Nx+1,my,block,-mx,0);
+  unsigned int size=(Nx+1)*(my+1);
+  block=ComplexAlign(2*size);
+  f0.Dimension(Nx+1,my,block,-mx,0);
+  f1.Dimension(Nx+1,my,block+size,-mx,0);
 
   vector f=Y[PAD];
   for(int j=0; j < my; ++j)
-    f1(j)=f[j]=0.0;
+    f0(j)=f1(j)=f[j]=0.0;
 
+  F[0]=f0;
   F[1]=f1;
 
   Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);

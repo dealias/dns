@@ -378,10 +378,7 @@ public:
   };
 
   void NonLinearSource(const vector2& Src, const vector2& Y, double t) {
-    f0.Dimension(Nx+1,my,-mx,0);
-
     w.Set(Y[OMEGA]);
-    f0.Set(Src[PAD]);
 
     f0[0][0]=0.0;
     f1[0][0]=0.0;
@@ -404,28 +401,31 @@ public:
       }
     }
 
-    F[0]=f0;
+//    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
+//    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
+
     Convolution->convolve(F,multadvection2);
-    f0[0][0]=0.0;
+
+    S.Set(Src[OMEGA]);
 
     for(int i=-mx+1; i < mx; ++i) {
       Real i2=i*i;
       Vector f0i=f0[i];
       Vector f1i=f1[i];
+      Vector Si=S[i];
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
-        f0i[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
+        Si[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
       }
     }
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
 
-#if 0
+#if 1
     Real sum=0.0;
     for(int i=-mx+1; i < mx; ++i) {
       Vector wi=w[i];
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
         Complex wij=wi[j];
-//      sum += (f0[i][j]*conj(wij)).re;
-        sum += (f0[i][j]*conj(wij)/(i*i+j*j)).re;
+//        sum += (S[i][j]*conj(wij)).re;
+        sum += (S[i][j]*conj(wij)/(i*i+j*j)).re;
       }
     }
     cout << sum << endl;
