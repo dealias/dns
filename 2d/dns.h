@@ -58,7 +58,7 @@ protected:
 
   // Contiguous: TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,DISSIPATIONZ
   //
-  enum Field {PAD,OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
+  enum Field {OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
               DISSIPATIONZ,EK};
 
   int mx,my; // size of data arrays
@@ -72,7 +72,7 @@ protected:
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
-  Array2<Complex> f0,f1;
+  Array2<Complex> u,v;
   Array2<Complex> S;
   array2<Complex> buffer;
   Complex *F[2];
@@ -164,15 +164,15 @@ public:
   void OutFrame(int it) {
     for(int i=-mx+1; i < mx; ++i)
       for(int j=0; j < my; ++j)
-        f1[i][j]=w(i,j);
+        v[i][j]=w(i,j);
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
+    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,v);
 
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
-      f1(j)=0.0;
+      v(j)=0.0;
 
-    Backward->fft0(f1);
+    Backward->fft0(v);
 
     fw << 1 << 2*my << Nx+1;
     for(int j=2*my-1; j >= 0; j--)
@@ -182,7 +182,7 @@ public:
 
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
-      f1(j)=0.0;
+      v(j)=0.0;
   }
 
   class FETL {
@@ -403,49 +403,94 @@ public:
   };
 
   void NonLinearSource(const vector2& Src, const vector2& Y, double t) {
-    f0.Dimension(Nx+1,my,-mx,0);
-
     w.Set(Y[OMEGA]);
-    f0.Set(Src[PAD]);
-
-    f0[0][0]=0.0;
-    f1[0][0]=0.0;
 
     // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
     // requires only 4 FFTs per stage.
-#pragma omp parallel for num_threads(threads)
-    for(int i=-mx+1; i < mx; ++i) {
-      Vector wi=w[i];
-      Vector f0i=f0[i];
-      Vector f1i=f1[i];
-      rVector k2invi=k2inv[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+    PARALLEL(
+      for(int i=-mx+1; i < 0; ++i) {
+        Vector wi=w[i];
+        Vector ui=u[i];
+        Vector vi=v[i];
+        rVector k2invi=k2inv[i];
+        for(int j=1; j < my; ++j) {
+          Complex wij=wi[j];
+          Real k2invij=k2invi[j];
+          Real jk2inv=j*k2invij;
+          Real ik2inv=i*k2invij;
+          ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
+          vi[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
+        }
+      });
+
+
+    Complex *v0=v[0];
+    PARALLEL(
+    for(int j=0; j < my; ++j)
+      v0[j]=0.0;
+      );
+
+    PARALLEL(
+    for(int i=-mx+1; i < mx; ++i)
+      u[i][0]=0.0;
+      );
+
+    Vector wi=w[0];
+    Vector ui=u[0];
+    rVector k2invi=k2inv[0];
+    PARALLEL(
+      for(int j=1; j < my; ++j) {
         Complex wij=wi[j];
-        Real k2invij=k2invi[j];
-        Real jk2inv=j*k2invij;
-        Real ik2inv=i*k2invij;
-        f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
-        f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
-      }
-    }
+        Real jk2inv=j*k2invi[j];
+        ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv);
+      });
 
-    F[0]=f0;
+    PARALLEL(
+      for(int i=1; i < mx; ++i) {
+        Vector wi=w[i];
+        Vector ui=u[i];
+        Vector vi=v[i];
+        rVector k2invi=k2inv[i];
+        Complex wij=wi[0];
+        Real ik2inv=i*k2invi[0];
+        Complex V=Complex(wij.im*ik2inv,-wij.re*ik2inv);
+        vi[0]=V;
+        v[-i][0]=conj(V);
+        for(int j=1; j < my; ++j) {
+          Complex wij=wi[j];
+          Real k2invij=k2invi[j];
+          Real jk2inv=j*k2invij;
+          Real ik2inv=i*k2invij;
+          ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv);
+          vi[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv);
+        }
+      })
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
+  // Zero x padding.
+    for(int j=0; j < my; ++j)
+      u[-mx][j]=v[-mx][j]=0.0;
+
+    /*
+  // Zero y padding.
+    for(int i=-mx; i < mx; ++i)
+      u[i][my]=v[i][my]=0.0;
+    */
 
     Convolution->convolveRaw(F,multadvection2);
-    f0[0][0]=0.0;
 
+    S.Set(Src[OMEGA]);
+
+    PARALLEL(
     for(int i=-mx+1; i < mx; ++i) {
       Real i2=i*i;
-      Vector f0i=f0[i];
-      Vector f1i=f1[i];
+      Vector ui=u[i];
+      Vector vi=v[i];
+      Vector Si=S[i];
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
-        f0i[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
+        Si[j]=i*j*ui[j]+(i2-j*j)*vi[j];
       }
-    }
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
+    });
+
 
 #if 0
     Real sum=0.0;
@@ -453,8 +498,8 @@ public:
       Vector wi=w[i];
       for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
         Complex wij=wi[j];
-//      sum += (f0[i][j]*conj(wij)).re;
-        sum += (f0[i][j]*conj(wij)/(i*i+j*j)).re;
+//        sum += (S[i][j]*conj(wij)).re;
+        sum += (S[i][j]*conj(wij)/(i*i+j*j)).re;
       }
     }
     cout << sum << endl;
