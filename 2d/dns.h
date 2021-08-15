@@ -77,7 +77,6 @@ protected:
   array2<Complex> buffer;
   Complex *F[2];
   Complex *block;
-//  ImplicitHConvolution2 *Convolution;
   ConvolutionHermitian2 *Convolution;
   crfft2d *Backward;
 
