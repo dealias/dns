@@ -468,13 +468,9 @@ public:
 
   // Zero x padding.
     for(int j=0; j < my; ++j)
-      u[-mx][j]=v[-mx][j]=0.0;
-
-    /*
-  // Zero y padding.
-    for(int i=-mx; i < mx; ++i)
-      u[i][my]=v[i][my]=0.0;
-    */
+      u[-mx][j]=0.0;
+    for(int j=0; j < my; ++j)
+      v[-mx][j]=0.0;
 
     Convolution->convolveRaw(F,multadvection2);
 
