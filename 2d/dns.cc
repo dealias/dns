@@ -396,7 +396,7 @@ void DNS::InitialConditions()
   unsigned My=3*my-2;
 
   ForwardBackward FB(2,2,threads); // 2 inputs, 2 outputs
-  auto fftx=new fftPadCentered(Nx+1,Mx,FB,my1,my1);
+  auto fftx=new fftPadCentered(Nx+1,Mx,FB,my,my1);
   auto convolvey=new ConvolutionHermitian(Ny,My,FB);
   Convolution=new fftwpp::ConvolutionHermitian2(fftx,convolvey);
 
