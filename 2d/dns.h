@@ -12,7 +12,6 @@
 #include "Conservative.h"
 #include "Exponential.h"
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
-#include "tests/explicit.h"
 
 using namespace Array;
 using namespace fftwpp;
@@ -57,24 +56,24 @@ void multTriplet(Complex **F, unsigned int offset, unsigned int n,
 {
   double* F0=(double *) (F[0]+offset);
   double* F1=(double *) (F[1]+offset);
-  double* F2=(double *) (F[2]+offset);
+//  double* F2=(double *) (F[2]+offset);
   double* F3=(double *) (F[3]+offset);
   double* F4=(double *) (F[4]+offset);
-  double* F5=(double *) (F[5]+offset);
+//  double* F5=(double *) (F[5]+offset);
   double* F6=(double *) (F[6]+offset);
   double* F7=(double *) (F[7]+offset);
 
   for(unsigned int j=0; j < n; ++j) {
     double u=F0[j];
     double v=F1[j];
-    double ux=F2[j];
+//    double ux=F2[j];
     double uy=F3[j];
     double vx=F4[j];
-    double vy=F5[j];
+//    double vy=F5[j];
     double A2u=F6[j];
     double A2v=F7[j];
-    double bx=u*ux+v*uy;
-    double by=u*vx+v*vy;
+//    double bx=u*ux+v*uy;
+//    double by=u*vx+v*vy;
 
     double w=vx-uy;
     double E=u*u+v*v;
@@ -138,6 +137,8 @@ protected:
   ofstream ft,fevt;
 
   uvector count;
+
+  typedef array1<Var>::opt vector;
 
   vector TE,TZ; // Energy and enstrophy transfers
   vector Eps,Eta,Zeta; // Energy, enstrophy, and palenstrophy injection rates
