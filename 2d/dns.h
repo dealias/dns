@@ -86,6 +86,8 @@ protected:
 
   uvector count;
 
+  typedef array1<Var>::opt vector;
+
   vector TE,TZ; // Energy and enstrophy transfers
   vector Eps,Eta,Zeta; // Energy, enstrophy, and palenstrophy injection rates
   vector DE,DZ; // Energy and enstrophy dissipation rates
