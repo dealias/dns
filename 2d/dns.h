@@ -167,7 +167,7 @@ public:
       for(int j=0; j < my; ++j)
         v[i][j]=w(i,j);
 
-    fftwpp::HermitianSymmetrizeX(mx,my+1,mx,v);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,v,my+1);
 
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
