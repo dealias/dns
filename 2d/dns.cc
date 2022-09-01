@@ -39,6 +39,27 @@ Real icbeta=1.0;
 Real k0=1.0; // Obsolete
 int randomIC=0;
 
+// This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
+// requires only 4 FFTs per stage.
+void multadvection2(Complex **F, unsigned int n,
+                    /*
+                    const unsigned int indexsize,
+                    const unsigned int *index,
+                    unsigned int r,
+                    */
+                    unsigned int threads)
+{
+  double* F0=(double *) F[0];
+  double* F1=(double *) F[1];
+
+  for(unsigned int j=0; j < n; ++j) {
+    double u=F0[j];
+    double v=F1[j];
+    F0[j]=v*v-u*u;
+    F1[j]=u*v;
+  }
+}
+
 class DNS : public DNSBase, public ProblemBase {
 public:
   DNS();
@@ -395,7 +416,7 @@ void DNS::InitialConditions()
   unsigned Mx=3*mx-2;
   unsigned My=3*my-2;
 
-  ForwardBackward FB(2,2,threads); // 2 inputs, 2 outputs
+  ForwardBackward FB(2,2,multadvection2,threads); // 2 inputs, 2 outputs
   auto fftx=new fftPadCentered(Nx+1,Mx,FB,my,my1);
   auto convolvey=new ConvolutionHermitian(Ny,My,FB);
   Convolution=new fftwpp::ConvolutionHermitian2(fftx,convolvey);

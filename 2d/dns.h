@@ -27,27 +27,6 @@ extern unsigned spectrum;
 extern int pH;
 extern int pL;
 
-// This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
-// requires only 4 FFTs per stage.
-void multadvection2(Complex **F, unsigned int offset, unsigned int n,
-                    /*
-                    const unsigned int indexsize,
-                    const unsigned int *index,
-                    unsigned int r,
-                    */
-                    unsigned int threads)
-{
-  double* F0=(double *) (F[0]+offset);
-  double* F1=(double *) (F[1]+offset);
-
-  for(unsigned int j=0; j < n; ++j) {
-    double u=F0[j];
-    double v=F1[j];
-    F0[j]=v*v-u*u;
-    F1[j]=u*v;
-  }
-}
-
 class DNSBase {
 protected:
   // Vocabulary:
@@ -473,7 +452,7 @@ public:
     for(int j=0; j < my; ++j)
       v[-mx][j]=0.0;
 
-    Convolution->convolveRaw(F,multadvection2);
+    Convolution->convolveRaw(F);
 
     S.Set(Src[OMEGA]);
 
