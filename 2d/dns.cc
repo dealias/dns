@@ -41,12 +41,7 @@ int randomIC=0;
 
 // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
 // requires only 4 FFTs per stage.
-void multadvection2(Complex **F, unsigned int n,
-                    /*
-                    const unsigned int indexsize,
-                    const unsigned int *index,
-                    unsigned int r,
-                    */
+void multadvection2(Complex **F, unsigned int n, const Indices&,
                     unsigned int threads)
 {
   double* F0=(double *) F[0];
@@ -416,9 +411,11 @@ void DNS::InitialConditions()
   unsigned Mx=3*mx-2;
   unsigned My=3*my-2;
 
-  ForwardBackward FB(2,2,multadvection2,threads); // 2 inputs, 2 outputs
-  auto fftx=new fftPadCentered(Nx+1,Mx,FB,my,my1);
-  auto convolvey=new ConvolutionHermitian(Ny,My,FB);
+  unsigned int A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
+  Application appx(A,B,multNone,threads);
+  auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
+  Application appy(A,B,multadvection2,appx.Threads(),fftx->l);
+  auto convolvey=new ConvolutionHermitian(Ny,My,appy);
   Convolution=new fftwpp::ConvolutionHermitian2(fftx,convolvey);
 
   Allocate(count,nshells);
