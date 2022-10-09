@@ -41,7 +41,7 @@ int randomIC=0;
 
 // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
 // requires only 4 FFTs per stage.
-void multadvection2(Complex **F, unsigned int n, const Indices&,
+void multadvection2(Complex **F, unsigned int n, Indices *,
                     unsigned int threads)
 {
   double* F0=(double *) F[0];
