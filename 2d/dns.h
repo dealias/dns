@@ -54,7 +54,7 @@ protected:
   Array2<Complex> S;
   array2<Complex> buffer;
   Complex *F[2];
-  Complex *block;
+  Complex **block;
   ConvolutionHermitian2 *Convolution;
   crfft2d *Backward;
 

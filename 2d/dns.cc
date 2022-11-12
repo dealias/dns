@@ -47,12 +47,13 @@ void multadvection2(Complex **F, unsigned int n, Indices *,
   double* F0=(double *) F[0];
   double* F1=(double *) F[1];
 
-  for(unsigned int j=0; j < n; ++j) {
-    double u=F0[j];
-    double v=F1[j];
-    F0[j]=v*v-u*u;
-    F1[j]=u*v;
-  }
+  PARALLEL(
+    for(unsigned int j=0; j < n; ++j) {
+      double u=F0[j];
+      double v=F1[j];
+      F0[j]=v*v-u*u;
+      F1[j]=u*v;
+    });
 }
 
 class DNS : public DNSBase, public ProblemBase {
@@ -328,7 +329,8 @@ DNS::DNS()
 
 DNS::~DNS()
 {
-  deleteAlign(block);
+  deleteAlign(block[0]);
+  delete [] block;
 }
 
 // wrapper for outcurve routines
@@ -383,7 +385,7 @@ void DNS::InitialConditions()
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
   cout << "\nALLOCATING FFT BUFFERS" << endl;
-  size_t align=sizeof(Complex);
+  size_t align=utils::ALIGNMENT;
 
   Allocator(align);
 
@@ -399,24 +401,27 @@ void DNS::InitialConditions()
   w.Dimension(Nx,my,-mx+1,0);
   S.Dimension(Nx,my,-mx+1,0);
 
-  unsigned int my1=my+1;
-  unsigned int size=(Nx+1)*my1;
-  block=ComplexAlign(2*size);
-  u.Dimension(Nx+1,my1,block,-mx,0);
-  v.Dimension(Nx+1,my1,block+size,-mx,0);
-
-  F[0]=u;
-  F[1]=v;
+  unsigned int my1=utils::align(my+1);
 
   unsigned Mx=3*mx-2;
   unsigned My=3*my-2;
 
   unsigned int A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
+  unsigned int N=max(A,B);
   Application appx(A,B,multNone,threads);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
+  bool embed=fftx->embed();
+  unsigned int size=embed ? fftx->outputSize() : fftx->inputSize();
+  block=ComplexAlign(N,size);
   Application appy(A,B,multadvection2,appx.Threads(),fftx->l);
   auto convolvey=new ConvolutionHermitian(Ny,My,appy);
-  Convolution=new fftwpp::ConvolutionHermitian2(fftx,convolvey);
+  Convolution=new fftwpp::ConvolutionHermitian2(fftx,convolvey,embed ? block : NULL);
+
+  u.Dimension(Nx+1,my1,block[0],-mx,0);
+  v.Dimension(Nx+1,my1,block[1],-mx,0);
+
+  F[0]=u;
+  F[1]=v;
 
   Allocate(count,nshells);
   setcount();
