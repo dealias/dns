@@ -4,6 +4,7 @@
 #include "options.h"
 #include "kernel.h"
 #include "Array.h"
+#include "array2h.h"
 #include "fftw++.h"
 #include "convolve.h"
 #include "Forcing.h"
@@ -18,8 +19,8 @@ using namespace fftwpp;
 using std::ostringstream;
 using fftwpp::twopi;
 
-typedef Array1<Var>::opt Vector;
-typedef Array1<Real>::opt rVector;
+typedef array1<Var>::opt vector;
+typedef array1<Real>::opt rvector;
 
 extern unsigned spectrum;
 
@@ -41,7 +42,7 @@ protected:
 
   int mx,my; // size of data arrays
 
-  Array2<Complex> w; // Vorticity field
+  array2h<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field
 
   int tcount;
@@ -51,10 +52,11 @@ protected:
   unsigned nshells;  // Number of spectral shells
 
   Array2<Complex> u,v;
-  Array2<Complex> S;
+  array2h<Complex> S;
   array2<Complex> buffer;
   Complex *F[2];
   Complex **block;
+
   ConvolutionHermitian2 *Convolution;
   crfft2d *Backward;
 
@@ -72,9 +74,11 @@ protected:
   vector E; // Energy spectrum
 
   Real Energy,Enstrophy,Palinstrophy;
-  Array2<Real> k2inv;
+  array2h<Real> k2inv;
 
 public:
+  array1<Real> nu;
+
   void Initialize() {
     fevt << "# t\tE\tZ\tP" << endl;
   }
@@ -82,7 +86,6 @@ public:
   void InitialConditions() {
     w[0][0]=0.0; // Enforce no mean flow
     Loop(Initw(this),InitializeValue(this));
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
   }
 
   void SetParameters() {
@@ -99,11 +102,11 @@ public:
 
     double scale=sqrt(Convolution->scale);
 
-    k2inv.Allocate(Nx,my,-mx+1,0);
+    k2inv.Allocate(mx,my); // TODO: Use Loop
     for(int i=-mx+1; i < mx; ++i) {
       int i2=i*i;
-      rVector k2invi=k2inv[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+      rvector k2invi=k2inv[i];
+      for(int j=i <= 0; j < my; ++j) {
         k2invi[j]=scale/(i2+j*j);
       }
     }
@@ -119,11 +122,10 @@ public:
   }
 
   virtual void OutEnergies() {
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
-    fek << 2*mx-1 << my;
-    for(int i=-mx+1; i < mx; ++i) {
-      const Vector& wi=w[i];
-      for(int j=0; j < my; ++j) {
+    fek << mx << my;
+    for(int i=-mx+1; i < mx; ++i) { // TODO: Use Loop
+      const vector& wi=w[i];
+      for(int j=i <= 0; j < my; ++j) {
         Real k2=i*i+j*j;
         Real k2inv=k2 > 0.0 ? 1.0/k2 : 0.0;
         fek << 0.5*abs2(wi[j])*k2inv;
@@ -141,8 +143,8 @@ public:
   }
 
   void OutFrame(int it) {
-    for(int i=-mx+1; i < mx; ++i)
-      for(int j=0; j < my; ++j)
+    for(int i=-mx+1; i < mx; ++i)  // TODO: Use Loop
+      for(int j=i <= 0; j < my; ++j)
         v[i][j]=w(i,j);
 
     fftwpp::HermitianSymmetrizeX(mx,my,mx,v,my+1);
@@ -172,7 +174,7 @@ public:
     FETL(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                        Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
                        DE(b->DE), DZ(b->DZ), E(b->E) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
@@ -205,7 +207,7 @@ public:
     FTL(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                       Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
                       DE(b->DE), DZ(b->DZ) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
@@ -235,7 +237,7 @@ public:
     FET(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                       Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
                       DE(b->DE), DZ(b->DZ), E(b->E) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
@@ -264,7 +266,7 @@ public:
 
   public:
     FE(DNSBase *b) : b(b), E(b->E) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
@@ -277,7 +279,7 @@ public:
 
   public:
     FL(DNSBase *b) : b(b) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Complex wij=wi[j];
       Forcing->Force(wij,Si[j],i,j);
@@ -289,7 +291,7 @@ public:
     const vector& Eps,Eta,Zeta;
   public:
     ForceStochastic(DNSBase *b) : Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta) {}
-    inline void operator()(const Vector& wi, const Vector&, int i, int j) {
+    inline void operator()(const vector& wi, const vector&, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
@@ -303,7 +305,7 @@ public:
   class ForceStochasticNO {
   public:
     ForceStochasticNO(DNSBase *b) {}
-    inline void operator()(const Vector& wi, const Vector&, int i, int j) {
+    inline void operator()(const vector& wi, const vector&, int i, int j) {
       Forcing->ForceStochastic(wi[j],i,j);
     }
   };
@@ -311,7 +313,7 @@ public:
   class InitializeValue {
   public:
     InitializeValue(DNSBase *b) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       wi[j]=InitialCondition->Value(i,j);
     }
   };
@@ -320,7 +322,7 @@ public:
     DNSBase *b;
   public:
     ForcingCount(DNSBase *b) : b(b) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       if(Forcing->active(i,j)) {
         ++b->fcount;
       }
@@ -333,7 +335,7 @@ public:
   public:
     Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
                              Palinstrophy(b->Palinstrophy) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       Real w2=abs2(wi[j]);
       Enstrophy += w2;
       unsigned k2=i*i+j*j;
@@ -346,7 +348,7 @@ public:
     DNSBase *b;
   public:
     InitwS(DNSBase *b) : b(b) {}
-    inline void operator()(Vector& wi, Vector& Si, int i) {
+    inline void operator()(vector& wi, vector& Si, int i) {
       Dimension(wi,b->w[i]);
       Dimension(Si,b->S[i]);
     }
@@ -356,7 +358,7 @@ public:
     DNSBase *b;
   public:
     Initw(DNSBase *b) : b(b) {}
-    inline void operator()(Vector& wi, Vector& Si, int i) {
+    inline void operator()(vector& wi, vector& Si, int i) {
       Dimension(wi,b->w[i]);
     }
   };
@@ -364,7 +366,7 @@ public:
   class InitNone {
   public:
     InitNone(DNSBase *b) {}
-    inline void operator()(Vector& wi, Vector& Si, int i) {
+    inline void operator()(vector& wi, vector& Si, int i) {
     }
   };
 
@@ -373,7 +375,7 @@ public:
     const uvector& count;
   public:
     Count(DNSBase *b) : b(b), count(b->count) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
       unsigned index=(unsigned)(k-0.5);
@@ -388,10 +390,10 @@ public:
     // requires only 4 FFTs per stage.
     PARALLEL(
       for(int i=-mx+1; i < 0; ++i) {
-        Vector wi=w[i];
-        Vector ui=u[i];
-        Vector vi=v[i];
-        rVector k2invi=k2inv[i];
+        vector wi=w[i];
+        vector ui=u[i];
+        vector vi=v[i];
+        rvector k2invi=k2inv[i];
         for(int j=1; j < my; ++j) {
           Complex wij=wi[j];
           Real k2invij=k2invi[j];
@@ -414,9 +416,9 @@ public:
       u[i][0]=0.0;
       );
 
-    Vector wi=w[0];
-    Vector ui=u[0];
-    rVector k2invi=k2inv[0];
+    vector wi=w[0];
+    vector ui=u[0];
+    rvector k2invi=k2inv[0];
     PARALLEL(
       for(int j=1; j < my; ++j) {
         Complex wij=wi[j];
@@ -426,10 +428,10 @@ public:
 
     PARALLEL(
       for(int i=1; i < mx; ++i) {
-        Vector wi=w[i];
-        Vector ui=u[i];
-        Vector vi=v[i];
-        rVector k2invi=k2inv[i];
+        vector wi=w[i];
+        vector ui=u[i];
+        vector vi=v[i];
+        rvector k2invi=k2inv[i];
         Complex wij=wi[0];
         Real ik2inv=i*k2invi[0];
         Complex V=Complex(wij.im*ik2inv,-wij.re*ik2inv);
@@ -458,10 +460,10 @@ public:
     PARALLEL(
     for(int i=-mx+1; i < mx; ++i) {
       Real i2=i*i;
-      Vector ui=u[i];
-      Vector vi=v[i];
-      Vector Si=S[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+      vector ui=u[i];
+      vector vi=v[i];
+      vector Si=S[i];
+      for(int j=i <= 0; j < my; ++j) {
         Si[j]=i*j*ui[j]+(i2-j*j)*vi[j];
       }
     });
@@ -470,8 +472,8 @@ public:
 #if 0
     Real sum=0.0;
     for(int i=-mx+1; i < mx; ++i) {
-      Vector wi=w[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+      vector wi=w[i];
+      for(int j=i <= 0; j < my; ++j) {
         Complex wij=wi[j];
 //        sum += (S[i][j]*conj(wij)).re;
         sum += (S[i][j]*conj(wij)/(i*i+j*j)).re;
@@ -546,11 +548,12 @@ public:
   template<class S, class T>
   void Loop(S init, T fcn)
   {
-    Vector wi,Si;
+    vector wi,Si;
     for(int i=-mx+1; i < mx; ++i) {
       init(wi,Si,i);
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j)
+      for(int j=i <= 0; j < my; ++j) {
         fcn(wi,Si,i,j);
+      }
     }
   }
 
@@ -578,10 +581,8 @@ public:
     }
   }
 
-  Nu LinearCoeff(unsigned k) {
-    unsigned i=k/my;
-    unsigned j=k-my*i;
-    return nuk(i*i+j*j);
+  Nu LinearCoeff(unsigned l) {
+    return nu[l];
   }
 
   Real nuk(double k2) {
@@ -591,7 +592,7 @@ public:
     return diss;
   }
 
-  virtual void ComputeInvariants(const array2<Complex> &w, Real& E, Real& Z,
+  virtual void ComputeInvariants(const array2h<Complex> &w, Real& E, Real& Z,
                                  Real& P) {
     Energy=Enstrophy=Palinstrophy=0.0;
 

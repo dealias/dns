@@ -93,7 +93,7 @@ class ForcingMask {
   DNS *b;
 public:
   ForcingMask(DNS *b) : b(b) {}
-  inline void operator()(const Vector&, const Vector&, int i, int j) {
+  inline void operator()(const vector&, const vector&, int i, int j) {
     if(Forcing->active(i,j)) {
       Complex w=0.0;
       Complex S=0.0;
@@ -101,6 +101,17 @@ public:
       if(S != 0.0)
         b->fprolog << i << j << abs(S);
     }
+  }
+};
+
+class Linearity {
+  DNS *b;
+  unsigned int l;
+public:
+  Linearity(DNS *b) : b(b), l(0) {}
+  inline void operator()(const vector&, const vector&, int i, int j) {
+    b->nu[l]=b->nuk(i*i+j*j);
+    ++l;
   }
 };
 
@@ -373,7 +384,7 @@ void DNS::InitialConditions()
 
   nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
 
-  NY[OMEGA]=Nx*my;
+  NY[OMEGA]=mx*(my-1)+(mx-1)*my;
   NY[TRANSFERE]=nshells;
   NY[TRANSFERZ]=nshells;
   NY[EPS]=nshells;
@@ -398,13 +409,13 @@ void DNS::InitialConditions()
   Dimension(DZ,nshells);
   Dimension(E,nshells);
 
-  w.Dimension(Nx,my,-mx+1,0);
-  S.Dimension(Nx,my,-mx+1,0);
-
-  unsigned int my1=utils::align(my+1);
+  w.Dimension(mx,my);
+  S.Dimension(mx,my);
 
   unsigned Mx=3*mx-2;
   unsigned My=3*my-2;
+
+  unsigned int my1=utils::align(my+1);
 
   unsigned int A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   unsigned int N=max(A,B);
@@ -469,6 +480,11 @@ void DNS::InitialConditions()
 
   DNSBase::InitialConditions();
   DNSBase::SetParameters();
+
+  if(Integrator->Exponential()) {
+    Allocate(nu,mx*(my-1)+(mx-1)*my);
+    Loop(InitNone(this),Linearity(this));
+  }
 
   open_output(fprolog,dirsep,"prolog",false);
 
