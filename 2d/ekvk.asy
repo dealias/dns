@@ -11,6 +11,7 @@ while(nextrun()) {
   Ekavg();
 
   real krmax=spectrum != 3 ? kb[kb.length-1]/sqrt(2) : kb[kb.length-1]+1;
+
   draw(graph(k,Ek,k <= krmax),p+Pen(n),texify(run));
   //draw(graph(k,Ek,k <= krmax),p+Pen(n),texify(run),marker(scale(0.8mm)*polygon(3+n)));
 }

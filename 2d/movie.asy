@@ -4,7 +4,7 @@ import animate;
 
 settings.tex="pdflatex";
 
-animation a=animation(global=false);
+animation a=animation(global=true);
 
 import graph;
 import palette;
@@ -13,7 +13,7 @@ import contour;
 string[][] t={{"C","C"},{"w","\omega"},{"vx","v_x"},{"vy","v_y"}};
 
 string dir=getstring("run");
-string field=getstring("field","vort");
+string field=getstring("field","w");
 bool global=getint("global",0) == 1;
 
 // figure out how many frames there are
