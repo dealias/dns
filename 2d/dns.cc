@@ -415,7 +415,7 @@ void DNS::InitialConditions()
   unsigned Mx=3*mx-2;
   unsigned My=3*my-2;
 
-  unsigned int my1=utils::align(my+1);
+  int my1=utils::align(my+1);
 
   unsigned int A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   unsigned int N=max(A,B);
@@ -481,10 +481,8 @@ void DNS::InitialConditions()
   DNSBase::InitialConditions();
   DNSBase::SetParameters();
 
-  if(Integrator->Exponential()) {
-    Allocate(nu,mx*(my-1)+(mx-1)*my);
-    Loop(InitNone(this),Linearity(this));
-  }
+  Allocate(nu,NY[OMEGA]);
+  Loop(InitNone(this),Linearity(this));
 
   open_output(fprolog,dirsep,"prolog",false);
 

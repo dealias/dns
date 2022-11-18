@@ -41,6 +41,7 @@ protected:
               DISSIPATIONZ,EK};
 
   int mx,my; // size of data arrays
+  int my1;   // x stride
 
   array2h<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field
@@ -100,16 +101,8 @@ public:
 
     Forcing->Init(fcount);
 
-    double scale=sqrt(Convolution->scale);
-
-    k2inv.Allocate(mx,my); // TODO: Use Loop
-    for(int i=-mx+1; i < mx; ++i) {
-      int i2=i*i;
-      rvector k2invi=k2inv[i];
-      for(int j=i <= 0; j < my; ++j) {
-        k2invi[j]=scale/(i2+j*j);
-      }
-    }
+    k2inv.Allocate(mx,my);
+    Loop(InitNone(this),K2inv(this,sqrt(Convolution->scale)));
   }
 
   virtual void setcount() {
@@ -123,14 +116,7 @@ public:
 
   virtual void OutEnergies() {
     fek << mx << my;
-    for(int i=-mx+1; i < mx; ++i) { // TODO: Use Loop
-      const vector& wi=w[i];
-      for(int j=i <= 0; j < my; ++j) {
-        Real k2=i*i+j*j;
-        Real k2inv=k2 > 0.0 ? 1.0/k2 : 0.0;
-        fek << 0.5*abs2(wi[j])*k2inv;
-      }
-    }
+    Loop(Initw(this),OutEk(this));
   }
 
   void FinalOutput() {
@@ -143,11 +129,9 @@ public:
   }
 
   void OutFrame(int it) {
-    for(int i=-mx+1; i < mx; ++i)  // TODO: Use Loop
-      for(int j=i <= 0; j < my; ++j)
-        v[i][j]=w(i,j);
+    Loop(Initw(this),wtov(this));
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,v,my+1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,v,my1);
 
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
@@ -169,11 +153,12 @@ public:
   class FETL {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ,E;
+    unsigned int l;
 
   public:
     FETL(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                        Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
-                       DE(b->DE), DZ(b->DZ), E(b->E) {}
+                       DE(b->DE), DZ(b->DZ), E(b->E), l(0) {}
     inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
@@ -185,7 +170,7 @@ public:
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv=1.0/k;
       Real kinv2=kinv*kinv;
-      Nu nuk2=b->nuk(k2);
+      Nu nuk2=b->nu[l++];
       Real nuk2Z=nuk2*w2;
       TE[index] += kinv2*transfer;
       TZ[index] += transfer;
@@ -202,11 +187,12 @@ public:
   class FTL {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ;
+    unsigned int l;
 
   public:
     FTL(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                       Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
-                      DE(b->DE), DZ(b->DZ) {}
+                      DE(b->DE), DZ(b->DZ), l(0) {}
     inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
@@ -216,7 +202,7 @@ public:
       Real transfer=realproduct(Sij,wij);
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv2=1.0/k2;
-      Nu nuk2=b->nuk(k2);
+      Nu nuk2=b->nu[l++];
       Real nuk2Z=nuk2*abs2(wij);
       TE[index] += kinv2*transfer;
       TZ[index] += transfer;
@@ -232,11 +218,12 @@ public:
   class FET {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ,E;
+    unsigned int l;
 
   public:
     FET(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                       Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
-                      DE(b->DE), DZ(b->DZ), E(b->E) {}
+                      DE(b->DE), DZ(b->DZ), E(b->E), l(0) {}
     inline void operator()(const vector& wi, const vector& Si, int i, int j) {
       unsigned k2=i*i+j*j;
       Real k=sqrt(k2);
@@ -248,7 +235,7 @@ public:
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv=1.0/k;
       Real kinv2=kinv*kinv;
-      Real nuk2Z=b->nuk(k2)*w2;
+      Real nuk2Z=b->nu[l++]*w2;
       TE[index] += kinv2*transfer;
       TZ[index] += transfer;
       Eps[index] += kinv2*eta;
@@ -276,14 +263,14 @@ public:
 
   class FL {
     DNSBase *b;
+    unsigned int l;
 
   public:
-    FL(DNSBase *b) : b(b) {}
+    FL(DNSBase *b) : b(b), l(0) {}
     inline void operator()(const vector& wi, const vector& Si, int i, int j) {
-      unsigned k2=i*i+j*j;
       Complex wij=wi[j];
       Forcing->Force(wij,Si[j],i,j);
-      Si[j] -= b->nuk(k2)*wij;
+      Si[j] -= b->nu[l++]*wij;
     }
   };
 
@@ -322,10 +309,38 @@ public:
     DNSBase *b;
   public:
     ForcingCount(DNSBase *b) : b(b) {}
-    inline void operator()(const vector& wi, const vector& Si, int i, int j) {
+    inline void operator()(const vector&, const vector&, int i, int j) {
       if(Forcing->active(i,j)) {
         ++b->fcount;
       }
+    }
+  };
+
+  class K2inv {
+    DNSBase *b;
+    double scale;
+  public:
+    K2inv(DNSBase *b, double scale) : b(b), scale(scale) {}
+    inline void operator()(const vector&, const vector&, int i, int j) {
+      b->k2inv(i,j)=scale/(i*i+j*j);
+    }
+  };
+
+  class wtov {
+    DNSBase *b;
+  public:
+    wtov(DNSBase *b) : b(b) {}
+    inline void operator()(const vector& wi, const vector&, int i, int j) {
+      b->v(i,j)=wi[j];
+    }
+  };
+
+  class OutEk {
+    DNSBase *b;
+  public:
+    OutEk(DNSBase *b) : b(b) {}
+    inline void operator()(const vector& wi, const vector&, int i, int j) {
+      b->fek << 0.5*abs2(wi[j])*b->k2inv(i,j);
     }
   };
 
@@ -551,7 +566,7 @@ public:
     vector wi,Si;
     for(int i=-mx+1; i < mx; ++i) {
       init(wi,Si,i);
-      for(int j=i <= 0; j < my; ++j) {
+      for(int j=i <= 0; j < my; ++j) { // start with j=1 if i <= 0
         fcn(wi,Si,i,j);
       }
     }
