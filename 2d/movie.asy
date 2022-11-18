@@ -14,6 +14,7 @@ string[][] t={{"C","C"},{"w","\omega"},{"vx","v_x"},{"vy","v_y"}};
 
 string dir=getstring("run");
 string field=getstring("field","vort");
+bool global=getint("global",0) == 1;
 
 // figure out how many frames there are
 real[][] T;
@@ -34,22 +35,24 @@ else if(last >= count) last=count-1;
 real m=infinity;
 real M=-infinity;
 
-file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
-for(int i=0; i <= last; ++i) {
-  if(eof(fin))
-    break;
+if(global) {
+  file fin=input(dir+"/"+field,mode="xdr").singlereal();
+  for(int i=0; i <= last; ++i) {
+    if(eof(fin))
+      break;
 
-  if(i < first) continue;
+    if(i < first) continue;
 
-  real[][][] buf=fin.read(3);
-  real[][] v=buf[0];
+    real[][][] buf=fin.read(3);
+    real[][] v=buf[0];
 
-  m=min(m,min(v));
-  M=max(M,max(v));
-  buf.delete();
+    m=min(m,min(v));
+    M=max(M,max(v));
+    buf.delete();
+  }
 }
 
-file fin=input(dir+"/"+field,check=true,mode="xdr").singlereal();
+file fin=input(dir+"/"+field,mode="xdr").singlereal();
 
 pen[] Palette=BWRainbow2();
 
@@ -67,7 +70,8 @@ for(int i=0; i <= last; ++i) {
   real[][] v=buf[0];
 
   picture bar;
-  bounds range=image(pic,v,Range(m,M),(0,0),(1,1),Palette,transpose=false,copy=false);
+  bounds range=image(pic,v,global ? Range(m,M) : Full,(0,0),(1,1),Palette,
+                     copy=false);
   buf.delete();
 
   int Divs=2;
