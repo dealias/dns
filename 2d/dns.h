@@ -145,10 +145,6 @@ public:
       for(unsigned i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
-
-// Zero Nyquist modes.
-    for(int j=0; j < my; ++j)
-      v(j)=0.0;
   }
 
   class FETL {
@@ -463,7 +459,8 @@ public:
         }
       })
 
-  // Zero x padding.
+
+     // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
       u[-mx][j]=0.0;
     for(int j=0; j < my; ++j)
