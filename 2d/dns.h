@@ -52,7 +52,7 @@ protected:
   unsigned nmode;
   unsigned nshells;  // Number of spectral shells
 
-  Array2<Complex> u,v;
+  Array2<Complex> u,v,V;
   array2h<Complex> S;
   array2<Complex> buffer;
   Complex *F[2];
@@ -129,15 +129,16 @@ public:
   }
 
   void OutFrame(int it) {
-    Loop(Initw(this),wtov(this));
+    Loop(Initw(this),wtoV(this));
+    V(0,0)=0.0;
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,v,my1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,V);
 
 // Zero Nyquist modes.
     for(int j=0; j < my; ++j)
-      v(j)=0.0;
+      V(j)=0.0;
 
-    Backward->fft0(v);
+    Backward->fft0(V);
 
     fw << 1 << 2*my << Nx+1;
     for(int j=2*my-1; j >= 0; j--)
@@ -326,12 +327,12 @@ public:
     }
   };
 
-  class wtov {
+  class wtoV {
     DNSBase *b;
   public:
-    wtov(DNSBase *b) : b(b) {}
+    wtoV(DNSBase *b) : b(b) {}
     inline void operator()(const vector& wi, const vector&, int i, int j) {
-      b->v(i,j)=wi[j];
+      b->V(i,j)=wi[j];
     }
   };
 

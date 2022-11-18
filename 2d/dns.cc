@@ -415,7 +415,7 @@ void DNS::InitialConditions()
   unsigned Mx=3*mx-2;
   unsigned My=3*my-2;
 
-  int my1=utils::align(my+1);
+  my1=utils::align(my+1);
 
   unsigned int A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   unsigned int N=max(A,B);
@@ -430,6 +430,7 @@ void DNS::InitialConditions()
 
   u.Dimension(Nx+1,my1,block[0],-mx,0);
   v.Dimension(Nx+1,my1,block[1],-mx,0);
+  V.Dimension(Nx+1,my,block[1],-mx,0);
 
   F[0]=u;
   F[1]=v;
