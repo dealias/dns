@@ -211,7 +211,7 @@ public:
   const char *Name() {return "Constant List";}
 
   Int Active(Int i, Int j) {
-    for(Int index=0; index < Nforce; ++index)
+    for(uInt index=0; index < Nforce; ++index)
       if(i == kxforces[index] && j == kyforces[index]) return index;
     return -1;
   }
