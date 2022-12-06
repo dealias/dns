@@ -10,15 +10,15 @@ class ForcingBase {
   virtual const char *Name() {return "None";}
   
   virtual void Init() {}
-  virtual void Init(size_t fcount) {}
-  virtual bool active(int i, int j) {return false;} 
+  virtual void Init(uInt fcount) {}
+  virtual bool active(Int i, Int j) {return false;} 
   virtual bool Stochastic(double dt=0.0) {return false;}
-  virtual double Force(Complex& w, Complex& S, int i, int j) {return 0.0;}
-  virtual void ForceMask(Complex& w, Complex& S, int i, int j) 
+  virtual double Force(Complex& w, Complex& S, Int i, Int j) {return 0.0;}
+  virtual void ForceMask(Complex& w, Complex& S, Int i, Int j) 
   {
     Force(w,S,i,j);
   }
-  virtual double ForceStochastic(Complex& w, int i, int j) {return 0.0;}
+  virtual double ForceStochastic(Complex& w, Int i, Int j) {return 0.0;}
 };
 
 extern ForcingBase *Forcing;

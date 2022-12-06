@@ -2,6 +2,10 @@
 #define __dnsbase_h__ 1
 
 #include "options.h"
+
+typedef ptrdiff_t Int;
+typedef size_t uInt;
+
 #include "kernel.h"
 #include "Array.h"
 #include "array2h.h"
@@ -13,9 +17,6 @@
 #include "Exponential.h"
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
 #include "seconds.h"
-
-typedef ptrdiff_t Int;
-typedef size_t uInt;
 
 using namespace Array;
 using namespace fftwpp;
@@ -46,8 +47,8 @@ protected:
   enum Field {OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
               DISSIPATIONZ,EK};
 
-  uInt mx,my; // size of data arrays
-  uInt my1;   // x stride
+  Int mx,my; // size of data arrays
+  Int my1;   // x stride
 
   array2h<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field
@@ -134,13 +135,13 @@ public:
     fftwpp::HermitianSymmetrizeX(mx,my,mx,V);
 
 // Zero Nyquist modes.
-    for(uInt j=0; j < my; ++j)
+    for(Int j=0; j < my; ++j)
       V(j)=0.0;
 
     Backward->fft0(V);
 
     fw << 1 << 2*my << Nx+1;
-    for(uInt j=2*my-1; j >= 0; j--)
+    for(Int j=2*my-1; j >= 0; j--)
       for(uInt i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
@@ -405,7 +406,7 @@ public:
         vector ui=u[i];
         vector vi=v[i];
         rvector k2invi=k2inv[i];
-        for(uInt j=1; j < my; ++j) {
+        for(Int j=1; j < my; ++j) {
           Complex wij=wi[j];
           Real k2invij=k2invi[j];
           Real jk2inv=j*k2invij;
@@ -418,27 +419,27 @@ public:
 
     Complex *v0=v[0];
     PARALLEL(
-    for(uInt j=0; j < my; ++j)
+    for(Int j=0; j < my; ++j)
       v0[j]=0.0;
       );
 
     PARALLEL(
-      for(Int i=-mx+1; i < (Int) mx; ++i)
-        u[i][0]=0.0;
+    for(Int i=-mx+1; i < mx; ++i)
+      u[i][0]=0.0;
       );
 
     vector wi=w[0];
     vector ui=u[0];
     rvector k2invi=k2inv[0];
     PARALLEL(
-      for(uInt j=1; j < my; ++j) {
+      for(Int j=1; j < my; ++j) {
         Complex wij=wi[j];
         Real jk2inv=j*k2invi[j];
         ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv);
       });
 
     PARALLEL(
-      for(uInt i=1; i < mx; ++i) {
+      for(Int i=1; i < mx; ++i) {
         vector wi=w[i];
         vector ui=u[i];
         vector vi=v[i];
@@ -448,7 +449,7 @@ public:
         Complex V=Complex(wij.im*ik2inv,-wij.re*ik2inv);
         vi[0]=V;
         v[-i][0]=conj(V);
-        for(uInt j=1; j < my; ++j) {
+        for(Int j=1; j < my; ++j) {
           Complex wij=wi[j];
           Real k2invij=k2invi[j];
           Real jk2inv=j*k2invij;
@@ -460,9 +461,9 @@ public:
 
 
      // Zero Nyquist modes.
-    for(uInt j=0; j < my; ++j)
+    for(Int j=0; j < my; ++j)
       u[-mx][j]=0.0;
-    for(uInt j=0; j < my; ++j)
+    for(Int j=0; j < my; ++j)
       v[-mx][j]=0.0;
 
     double t0=utils::nanoseconds();
@@ -472,21 +473,21 @@ public:
     S.Set(Src[OMEGA]);
 
     PARALLEL(
-      for(Int i=-mx+1; i < (Int) mx; ++i) {
-        Real i2=i*i;
-        vector ui=u[i];
-        vector vi=v[i];
-        vector Si=S[i];
-        for(uInt j=i <= 0; j < my; ++j) {
-          Si[j]=i*j*ui[j]+(i2-j*j)*vi[j];
-        }
-      });
+    for(Int i=-mx+1; i < mx; ++i) {
+      Real i2=i*i;
+      vector ui=u[i];
+      vector vi=v[i];
+      vector Si=S[i];
+      for(Int j=i <= 0; j < my; ++j) {
+        Si[j]=i*j*ui[j]+(i2-j*j)*vi[j];
+      }
+    });
 
 #if 0
     Real sum=0.0;
-    for(Int i=-mx+1; i < (Int) mx; ++i) {
+    for(Int i=-mx+1; i < mx; ++i) {
       vector wi=w[i];
-      for(uInt j=i <= 0; j < my; ++j) {
+      for(Int j=i <= 0; j < my; ++j) {
         Complex wij=wi[j];
 //        sum += (S[i][j]*conj(wij)).re;
         sum += (S[i][j]*conj(wij)/(i*i+j*j)).re;
@@ -562,9 +563,9 @@ public:
   void Loop(S init, T fcn)
   {
     vector wi,Si;
-    for(Int i=-mx+1; i < (Int) mx; ++i) {
+    for(Int i=-mx+1; i < mx; ++i) {
       init(wi,Si,i);
-      for(uInt j=i <= 0; j < my; ++j) { // start with j=1 if i <= 0
+      for(Int j=i <= 0; j < my; ++j) { // start with j=1 if i <= 0
         fcn(wi,Si,i,j);
       }
     }

@@ -27,8 +27,8 @@ Complex force=0.0;
 Real kforce=1.0;
 const uInt Nforce=2;
 Complex forces[Nforce];
-ptrdiff_t kxforces[Nforce];
-ptrdiff_t kyforces[Nforce];
+Int kxforces[Nforce];
+Int kyforces[Nforce];
 Real deltaf=1.0;
 uInt movie=0;
 uInt rezero=0;
@@ -95,8 +95,7 @@ class ForcingMask {
   DNS *b;
 public:
   ForcingMask(DNS *b) : b(b) {}
-  inline void operator()(const vector&, const vector&, ptrdiff_t i,
-                         ptrdiff_t j) {
+  inline void operator()(const vector&, const vector&, Int i, Int j) {
     if(Forcing->active(i,j)) {
       Complex w=0.0;
       Complex S=0.0;
@@ -112,7 +111,7 @@ class Linearity {
   uInt l;
 public:
   Linearity(DNS *b) : b(b), l(0) {}
-  inline void operator()(const vector&, const vector&, ptrdiff_t i, ptrdiff_t j) {
+  inline void operator()(const vector&, const vector&, Int i, Int j) {
     b->nu[l]=b->nuk(i*i+j*j);
     ++l;
   }
@@ -193,7 +192,7 @@ public:
   }
 
   bool active(Int i, Int j) {
-    int k=i*i+j*j;
+    Int k=i*i+j*j;
     return K1 < k && k < K2;
   }
 
@@ -211,18 +210,18 @@ protected:
 public:
   const char *Name() {return "Constant List";}
 
-  int Active(int i, int j) {
-    for(uInt index=0; index < Nforce; ++index)
+  Int Active(Int i, Int j) {
+    for(Int index=0; index < Nforce; ++index)
       if(i == kxforces[index] && j == kyforces[index]) return index;
     return -1;
   }
 
-  bool active(int i, int j) {
+  bool active(Int i, Int j) {
     return Active(i,j) >= 0;
   }
 
-  double Force(Complex& w, Complex& S, int i, int j) {
-    int index=Active(i,j);
+  double Force(Complex& w, Complex& S, Int i, Int j) {
+    Int index=Active(i,j);
     if(index >= 0) {
       Complex force=forces[index];
       S += force;
@@ -248,13 +247,13 @@ public:
   }
 
   // For forcing diagnostic
-  void ForceMask(Complex& w, Complex& S, int i, int j) {
+  void ForceMask(Complex& w, Complex& S, Int i, Int j) {
     if(active(i,j)) {
       S=sqrt(2.0*eta*etanorm);
     }
   }
 
-  double ForceStochastic(Complex& w, int i, int j) {
+  double ForceStochastic(Complex& w, Int i, Int j) {
     if(active(i,j)) {
       Complex f=f0*crand_gauss();
       double eta=realproduct(f,w)+0.5*abs2(f);
