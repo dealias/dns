@@ -421,20 +421,14 @@ void DNS::InitialConditions()
 
   uInt A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   uInt N=max(A,B);
-//  Application appx(A,B,multNone,threads);
-//  Application appx(A,B,multNone,threads,0,8192,1,1);
-  Application appx(A,B,multNone,threads,0,1024,1,1);
-//  Application appx(A,B,multNone,threads,0,512,1,1);
-//  Application appx(A,B,multNone,threads,0,32,1,1);
+  Application appx(A,B,multNone,threads);
+//  Application appx(A,B,multNone,threads,0,1024,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
   bool embed=fftx->embed();
   uInt size=embed ? fftx->outputSize() : fftx->inputSize();
   block=ComplexAlign(N,size);
-//  Application appy(A,B,multadvection2,appx.Threads(),fftx->l);
-//  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,24576,1,0);
-  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,3072,1,0);
-//  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,1536,1,0);
-//  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,96,1,0);
+  Application appy(A,B,multadvection2,appx.Threads(),fftx->l);
+//  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,3072,1,0);
   auto convolvey=new ConvolutionHermitian(Ny,My,appy);
   Convolution=new fftwpp::ConvolutionHermitian2(fftx,convolvey,embed ? block : NULL);
 
