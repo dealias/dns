@@ -49,7 +49,8 @@ void multadvection2(Complex **F, uInt n, Indices *,
   double* F0=(double *) F[0];
   double* F1=(double *) F[1];
 
-  PARALLEL(
+  PARALLELIF(
+    n > threshold,
     for(uInt j=0; j < n; ++j) {
       double u=F0[j];
       double v=F1[j];
@@ -95,7 +96,8 @@ class ForcingMask {
   DNS *b;
 public:
   ForcingMask(DNS *b) : b(b) {}
-  inline void operator()(const vector&, const vector&, Int i, Int j) {
+  inline void operator()(const vector&, const vector&,
+                         const nuvector &, Int i, Int j) {
     if(Forcing->active(i,j)) {
       Complex w=0.0;
       Complex S=0.0;
@@ -103,17 +105,6 @@ public:
       if(S != 0.0)
         b->fprolog << i << j << abs(S);
     }
-  }
-};
-
-class Linearity {
-  DNS *b;
-  uInt l;
-public:
-  Linearity(DNS *b) : b(b), l(0) {}
-  inline void operator()(const vector&, const vector&, Int i, Int j) {
-    b->nu[l]=b->nuk(i*i+j*j);
-    ++l;
   }
 };
 
@@ -370,6 +361,8 @@ void DNS::Initialize()
 void DNS::InitialConditions()
 {
   fftw::maxthreads=threads;
+  Threshold(threads);
+  threshold=1024;
 
   // load vocabulary from global variables
   Nx=::Nx;
@@ -423,12 +416,14 @@ void DNS::InitialConditions()
   uInt N=max(A,B);
   Application appx(A,B,multNone,threads);
 //  Application appx(A,B,multNone,threads,0,1024,1,1);
+//  Application appx(A,B,multNone,threads,0,8192,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
   bool embed=fftx->embed();
   uInt size=embed ? fftx->outputSize() : fftx->inputSize();
   block=ComplexAlign(N,size);
   Application appy(A,B,multadvection2,appx.Threads(),fftx->l);
 //  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,3072,1,0);
+//  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,24576,1,0);
   auto convolvey=new ConvolutionHermitian(Ny,My,appy);
   Convolution=new fftwpp::ConvolutionHermitian2(fftx,convolvey,embed ? block : NULL);
 
@@ -486,9 +481,6 @@ void DNS::InitialConditions()
   DNSBase::InitialConditions();
   DNSBase::SetParameters();
 
-  Allocate(nu,NY[OMEGA]);
-  Loop(InitNone(this),Linearity(this));
-
   open_output(fprolog,dirsep,"prolog",false);
 
   out_curve(fprolog,cwrap::kb,"kb",nshells+1);
@@ -510,9 +502,8 @@ void DNS::Output(uInt it)
   vector y=Y[OMEGA];
   w.Set(y);
 
-  Real E,Z,P;
-  ComputeInvariants(w,E,Z,P);
-  fevt << t << "\t" << E << "\t" << Z << "\t" << P << endl;
+  ComputeInvariants(w);
+  fevt << t << "\t" << Energy << "\t" << Enstrophy << "\t" << Palinstrophy << endl;
 
   if(output) out_curve(fw,y,"w",NY[OMEGA]);
 
@@ -575,12 +566,11 @@ void DNS::Output(uInt it)
 
 void DNS::FinalOutput()
 {
-  Real E,Z,P;
-  ComputeInvariants(w,E,Z,P);
+  ComputeInvariants(w);
   cout << endl;
-  cout << "Energy = " << E << newl;
-  cout << "Enstrophy = " << Z << newl;
-  cout << "Palinstrophy = " << P << newl;
+  cout << "Energy = " << Energy << newl;
+  cout << "Enstrophy = " << Enstrophy << newl;
+  cout << "Palinstrophy = " << Palinstrophy << newl;
 
   cout << "sum=" << sum << endl;
 }
