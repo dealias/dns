@@ -370,10 +370,9 @@ public:
   };
 
   class Invariants {
-    DNSBase *b;
     Real Energy,Enstrophy,Palinstrophy;
   public:
-    Invariants(DNSBase *b) : b(b), Energy(0.0), Enstrophy(0.0), Palinstrophy(0.0) {}
+    Invariants() : Energy(0.0), Enstrophy(0.0), Palinstrophy(0.0) {}
     inline void operator()(const vector& wi, Int i, Int j) {
       Real w2=abs2(wi[j]);
       Enstrophy += w2;
@@ -622,6 +621,8 @@ public:
   template<class S, class T>
   void Loop(S init, T fcn)
   {
+    // TODO: Allocate separate TE...E arrays for each thread
+
 //    PARALLELIF(
 //      2*mx > (Int) threshold,
       for(Int i=-mx+1; i < mx; ++i) {
@@ -672,12 +673,12 @@ public:
   virtual void ComputeInvariants(const array2h<Complex> &w) {
     Real E=0.0, Z=0.0, P=0.0;
 
-    PARALLELIFCODE(
+    OMPIF(
       2*mx > (Int) threshold,
       "omp parallel for num_threads(threads) reduction(+ : E,Z,P)",
       for(Int i=-mx+1; i < mx; ++i) {
         vector wi=this->w[i];
-        Invariants I(this);
+        Invariants I;
         for(Int j=i <= 0; j < my; ++j) // start with j=1 if i <= 0
           I(wi,i,j);
         I.reduce(E,Z,P);
