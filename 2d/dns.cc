@@ -418,14 +418,13 @@ void DNS::InitialConditions()
 //  Application appx(A,B,multNone,threads,0,1024,1,1);
 //  Application appx(A,B,multNone,threads,0,8192,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
-  bool embed=fftx->embed();
-  uInt size=embed ? fftx->outputSize() : fftx->inputSize();
-  block=ComplexAlign(N,size);
   Application appy(A,B,multadvection2,appx.Threads(),fftx->l);
 //  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,3072,1,0);
 //  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,24576,1,0);
-  auto convolvey=new ConvolutionHermitian(Ny,My,appy);
-  Convolution=new fftwpp::ConvolutionHermitian2(fftx,convolvey,embed ? block : NULL);
+  auto ffty=new fftPadHermitian(Ny,My,appy);
+  Convolve=new fftwpp::Convolution2(fftx,ffty);
+
+  block=ComplexAlign(N,fftx->inputSize());
 
   u.Dimension(Nx+1,my1,block[0],-mx,0);
   v.Dimension(Nx+1,my1,block[1],-mx,0);

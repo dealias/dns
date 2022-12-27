@@ -2,6 +2,7 @@
 #define __dnsbase_h__ 1
 
 #include "options.h"
+#include "fftw++.h"
 
 typedef ptrdiff_t Int;
 typedef size_t uInt;
@@ -9,14 +10,12 @@ typedef size_t uInt;
 #include "kernel.h"
 #include "Array.h"
 #include "array2h.h"
-#include "fftw++.h"
 #include "convolve.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
 #include "Conservative.h"
 #include "Exponential.h"
 #include <sys/stat.h> // On Sun computers this must come after xstream.h
-#include "seconds.h"
 
 using namespace Array;
 using namespace fftwpp;
@@ -66,7 +65,7 @@ protected:
   Complex *F[2];
   Complex **block;
 
-  ConvolutionHermitian2 *Convolution;
+  Convolution2 *Convolve;
   crfft2d *Backward;
 
   ifstream ftin;
@@ -111,7 +110,7 @@ public:
     Forcing->Init(fcount);
 
     k2inv.Allocate(mx,my);
-    Loop(InitNone(this),K2inv(this,sqrt(Convolution->scale)));
+    Loop(InitNone(this),K2inv(this,sqrt(Convolve->scale)));
 
     nu.Allocate(mx,my);
     Loop(Initnu(this),Linearity(this));
@@ -522,9 +521,9 @@ public:
         v[-mx][j]=0.0;
       );
 
-    double t0=utils::nanoseconds();
-    Convolution->convolveRaw(F);
-    sum += (utils::nanoseconds()-t0)*1.0e-9;
+    utils::cpuTimer C;
+    Convolve->convolveRaw(F);
+    sum += C.seconds();
 
     S.Set(Src[OMEGA]);
 
