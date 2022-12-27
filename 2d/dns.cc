@@ -418,7 +418,7 @@ void DNS::InitialConditions()
 //  Application appx(A,B,multNone,threads,0,1024,1,1);
 //  Application appx(A,B,multNone,threads,0,8192,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
-  Application appy(A,B,multadvection2,appx.Threads(),fftx->l);
+  Application appy(A,B,multadvection2,appx,fftx->C);
 //  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,3072,1,0);
 //  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,24576,1,0);
   auto ffty=new fftPadHermitian(Ny,My,appy);
