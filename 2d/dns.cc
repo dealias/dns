@@ -90,6 +90,8 @@ public:
   }
 
   void Initialize();
+
+  void ZeroDiagnostics();
 };
 
 class ForcingMask {
@@ -97,7 +99,7 @@ class ForcingMask {
 public:
   ForcingMask(DNS *b) : b(b) {}
   inline void operator()(const vector&, const vector&,
-                         const nuvector &, Int i, Int j) {
+                         const nuvector &, Int i, Int j, size_t) {
     if(Forcing->active(i,j)) {
       Complex w=0.0;
       Complex S=0.0;
@@ -362,7 +364,6 @@ void DNS::InitialConditions()
 {
   fftw::maxthreads=threads;
   Threshold(threads);
-  threshold=1024;
 
   // load vocabulary from global variables
   Nx=::Nx;
@@ -395,14 +396,20 @@ void DNS::InitialConditions()
 
   Allocator(align);
 
-  Dimension(TE,nshells);
-  Dimension(TZ,nshells);
-  Dimension(Eps,nshells);
-  Dimension(Eta,nshells);
-  Dimension(Zeta,nshells);
-  Dimension(DE,nshells);
-  Dimension(DZ,nshells);
-  Dimension(E,nshells);
+  Dimension(Sum,nshells);
+
+  uInt Nshells=threads*nshells;
+  Allocate(TE,Nshells);
+  Allocate(TZ,Nshells);
+  Allocate(Eps,Nshells);
+  Allocate(Eta,Nshells);
+  Allocate(Zeta,Nshells);
+  Allocate(DE,Nshells);
+  Allocate(DZ,Nshells);
+  Allocate(E,Nshells);
+
+  Dimension(Y0,Y);
+  Set(Y0,Y);
 
   w.Dimension(mx,my);
   S.Dimension(mx,my);
@@ -415,12 +422,12 @@ void DNS::InitialConditions()
   uInt A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   uInt N=max(A,B);
   Application appx(A,B,multNone,threads);
-//  Application appx(A,B,multNone,threads,0,1024,1,1);
-//  Application appx(A,B,multNone,threads,0,8192,1,1);
+//  Application appx(A,B,multNone,threads,1024,1,1);
+//  Application appx(A,B,multNone,threads,8192,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
-  Application appy(A,B,multadvection2,appx,fftx->C);
-//  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,3072,1,0);
-//  Application appy(A,B,multadvection2,appx.Threads(),fftx->l,24576,1,0);
+  Application appy(A,B,multadvection2,appx);
+//  Application appy(A,B,multadvection2,appx,3072,1,0);
+//  Application appy(A,B,multadvection2,appx,24576,1,0);
   auto ffty=new fftPadHermitian(Ny,My,appy);
   Convolve=new fftwpp::Convolution2(fftx,ffty);
 
@@ -434,7 +441,6 @@ void DNS::InitialConditions()
   F[1]=v;
 
   Allocate(count,nshells);
-  setcount();
 
   if(movie) {
     wr.Dimension(Nx+1,2*my,(Real *) v());
@@ -445,14 +451,7 @@ void DNS::InitialConditions()
 
   w.Set(Y[OMEGA]);
 
-  Init(TE,Y[TRANSFERE]);
-  Init(TZ,Y[TRANSFERZ]);
-  Init(Eps,Y[EPS]);
-  Init(Eta,Y[ETA]);
-  Init(Zeta,Y[ZETA]);
-  Init(DE,Y[DISSIPATIONE]);
-  Init(DZ,Y[DISSIPATIONZ]);
-  Init(E,Y[EK]);
+  ZeroDiagnostics();
 
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
@@ -485,7 +484,7 @@ void DNS::InitialConditions()
   out_curve(fprolog,cwrap::kb,"kb",nshells+1);
   out_curve(fprolog,cwrap::kc,"kc",nshells);
 
-  Loop(InitNone(this),ForcingMask(this));
+  Loop(InitNone(this),ForcingMask(this),1);
 
   fprolog.close();
 
@@ -494,6 +493,18 @@ void DNS::InitialConditions()
 
   if(movie)
     open_output(fw,dirsep,"w");
+}
+
+void DNS::ZeroDiagnostics()
+{
+  Zero(Y[TRANSFERE]);
+  Zero(Y[TRANSFERZ]);
+  Zero(Y[EPS]);
+  Zero(Y[ETA]);
+  Zero(Y[ZETA]);
+  Zero(Y[DISSIPATIONE]);
+  Zero(Y[DISSIPATIONZ]);
+  Zero(Y[EK]);
 }
 
 void DNS::Output(uInt it)
@@ -514,7 +525,6 @@ void DNS::Output(uInt it)
 
   if(spectrum) {
     ostringstream buf;
-    Set(this->E,Y[EK]);
     buf << "ekvk" << dirsep << "t" << tcount;
     const string& s=buf.str();
     open_output(fekvk,dirsep,s.c_str(),0);
@@ -523,13 +533,6 @@ void DNS::Output(uInt it)
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
 
-    Set(TE,Y[TRANSFERE]);
-    Set(TZ,Y[TRANSFERZ]);
-    Set(Eps,Y[EPS]);
-    Set(Eta,Y[ETA]);
-    Set(Zeta,Y[ZETA]);
-    Set(DE,Y[DISSIPATIONE]);
-    Set(DZ,Y[DISSIPATIONZ]);
     buf.str("");
     buf << "transfer" << dirsep << "t" << tcount;
     const string& S=buf.str();
@@ -551,15 +554,7 @@ void DNS::Output(uInt it)
 
   if(rezero && it % rezero == 0 && spectrum) {
     vector2 Y=Integrator->YVector();
-
-    Init(TE,Y[TRANSFERE]);
-    Init(TZ,Y[TRANSFERZ]);
-    Init(Eps,Y[EPS]);
-    Init(Eta,Y[ETA]);
-    Init(Zeta,Y[ZETA]);
-    Init(DE,Y[DISSIPATIONE]);
-    Init(DZ,Y[DISSIPATIONZ]);
-    Init(this->E,Y[EK]);
+    ZeroDiagnostics();
   }
 }
 
