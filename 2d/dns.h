@@ -605,9 +605,7 @@ public:
         v[-mx][j]=0.0;
       );
 
-    utils::cpuTimer C;
     Convolve->convolveRaw(F);
-    sum += C.seconds();
 
     S.Set(Src[OMEGA]);
 

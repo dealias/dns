@@ -39,8 +39,6 @@ Real icbeta=1.0;
 Real k0=1.0; // Obsolete
 uInt randomIC=0;
 
-double sum=0.0;
-
 // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
 // requires only 4 FFTs per stage.
 void multadvection2(Complex **F, uInt n, Indices *,
@@ -565,6 +563,4 @@ void DNS::FinalOutput()
   cout << "Energy = " << Energy << newl;
   cout << "Enstrophy = " << Enstrophy << newl;
   cout << "Palinstrophy = " << Palinstrophy << newl;
-
-  cout << "sum=" << sum << endl;
 }
