@@ -610,7 +610,7 @@ public:
     S.Set(Src[OMEGA]);
 
     PARALLELIF(
-      2*mx > (Int) threshold,
+      2*mx*my > (Int) threshold,
       for(Int i=-mx+1; i < mx; ++i) {
         Real i2=i*i;
         vector ui=u[i];
@@ -700,7 +700,7 @@ public:
   void Loop(S init, T fcn, uInt threads=1)
   {
     PARALLELIF(
-      2*mx > (Int) threshold,
+      2*mx*my > (Int) threshold,
       for(Int i=-mx+1; i < mx; ++i) {
         vector wi;
         vector Si;

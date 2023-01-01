@@ -7,6 +7,7 @@ const double ProblemVersion=1.0;
 #endif
 
 using namespace utils;
+using namespace parallel;
 
 const char *problem="Direct Numerical Simulation of Turbulence";
 
@@ -285,6 +286,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(spectrum,0,1,"Output spectrum? (0=no, 1=yes)");
   VOCAB(modalenergies,0,1,"Output modal energies? (0=no, 1=yes)");
   VOCAB(rezero,0,SIZE_MAX,"Rezero moments every rezero output steps for high accuracy");
+  VOCAB_NODUMP(threshold,0,SIZE_MAX,"Multithreading threshold");
 
   METHOD(DNS);
 
@@ -361,6 +363,8 @@ void DNS::Initialize()
 void DNS::InitialConditions()
 {
   fftw::maxthreads=threads;
+  if(threshold < SIZE_MAX)
+    lastThreads=0;
   Threshold(threads);
 
   // load vocabulary from global variables
