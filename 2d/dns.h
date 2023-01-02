@@ -92,6 +92,7 @@ protected:
   array2h<Real> nu; // Linear dissipation
 
   Real Energy,Enstrophy,Palinstrophy;
+  rvector energy,enstrophy,palinstrophy;
 
 public:
 
@@ -453,21 +454,35 @@ public:
   };
 
   class Invariants {
-    Real Energy,Enstrophy,Palinstrophy;
+    DNSBase *b;
+    const rvector& E,Z,P;
   public:
-    Invariants() : Energy(0.0), Enstrophy(0.0), Palinstrophy(0.0) {}
-    inline void operator()(const vector& wi, Int i, Int j) {
-      Real w2=abs2(wi[j]);
-      Enstrophy += w2;
-      uInt k2=i*i+j*j;
-      Energy += w2/k2;
-      Palinstrophy += k2*w2;
+    Invariants(DNSBase *b) : b(b), E(b->energy), Z(b->enstrophy),
+                             P(b->palinstrophy) {}
+    void init() {
+      for(size_t thread=0; thread < threads; ++thread) {
+        E[thread]=0.0;
+        Z[thread]=0.0;
+        P[thread]=0.0;
+      }
     }
 
-    void reduce(Real& E, Real& Z, Real& P) {
-      E += Energy;
-      Z += Enstrophy;
-      P += Palinstrophy;
+    inline void operator()(const vector& wi, const vector&, const nuvector &,
+                           Int i, Int j, size_t thread) {
+      Real w2=abs2(wi[j]);
+      Z[thread] += w2;
+      uInt k2=i*i+j*j;
+      E[thread] += w2/k2;
+      P[thread] += k2*w2;
+    }
+
+    void reduce(Real &Energy, Real &Enstrophy, Real& Palinstrophy) {
+      Energy=Enstrophy=Palinstrophy=0.0;
+      for(size_t thread=0; thread < threads; ++thread) {
+        Energy += E[thread];
+        Enstrophy += Z[thread];
+        Palinstrophy += P[thread];
+      }
     }
   };
 
@@ -697,7 +712,7 @@ public:
   }
 
   template<class S, class T>
-  void Loop(S init, T fcn, uInt threads=1)
+  void Loop(S init, T fcn, uInt threads=1, uint n=1)
   {
     PARALLELIF(
       2*mx*my > (Int) threshold,
@@ -706,7 +721,7 @@ public:
         vector Si;
         nuvector nui;
         init(wi,Si,nui,i);
-        uInt offset=nshells*get_thread_num0();
+        uInt offset=n*get_thread_num0();
         for(Int j=i <= 0; j < my; ++j) // start with j=1 if i <= 0
           fcn(wi,Si,nui,i,j,offset);
       });
@@ -719,7 +734,7 @@ public:
     w.Set(Y[OMEGA]);
 
     fcn.init();
-    Loop(InitAll(this),fcn,threads);
+    Loop(InitAll(this),fcn,threads,nshells);
     fcn.reduce(Src);
   }
 
@@ -745,23 +760,11 @@ public:
     return diss;
   }
 
-  virtual void ComputeInvariants(const array2h<Complex> &w) {
-    Real E=0.0, Z=0.0, P=0.0;
-
-    OMPIF(
-      2*mx > (Int) threshold,
-      "omp parallel for num_threads(threads) reduction(+ : E,Z,P)",
-      for(Int i=-mx+1; i < mx; ++i) {
-        vector wi=this->w[i];
-        Invariants I;
-        for(Int j=i <= 0; j < my; ++j) // start with j=1 if i <= 0
-          I(wi,i,j);
-        I.reduce(E,Z,P);
-      });
-
-    this->Energy=E;
-    this->Enstrophy=Z;
-    this->Palinstrophy=P;
+  virtual void ComputeInvariants() {
+    Invariants I(this);
+    I.init();
+    Loop(Initw(this),I,threads);
+    I.reduce(Energy,Enstrophy,Palinstrophy);
   }
 
   virtual Real getSpectrum(uInt i) {

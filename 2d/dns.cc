@@ -410,6 +410,10 @@ void DNS::InitialConditions()
   Allocate(DZ,Nshells);
   Allocate(E,Nshells);
 
+  Allocate(enstrophy,threads);
+  Allocate(energy,threads);
+  Allocate(palinstrophy,threads);
+
   Dimension(Y0,Y);
   Set(Y0,Y);
 
@@ -514,7 +518,7 @@ void DNS::Output(uInt it)
   vector y=Y[OMEGA];
   w.Set(y);
 
-  ComputeInvariants(w);
+  ComputeInvariants();
   fevt << t << "\t" << Energy << "\t" << Enstrophy << "\t" << Palinstrophy << endl;
 
   if(output) out_curve(fw,y,"w",NY[OMEGA]);
@@ -562,7 +566,7 @@ void DNS::Output(uInt it)
 
 void DNS::FinalOutput()
 {
-  ComputeInvariants(w);
+  ComputeInvariants();
   cout << endl;
   cout << "Energy = " << Energy << newl;
   cout << "Enstrophy = " << Enstrophy << newl;
