@@ -34,8 +34,8 @@ extern uInt spectrum;
 extern int pH;
 extern int pL;
 
-uInt get_thread_num0() {
-  return threads > 1 ? ::get_thread_num() : 0;
+inline uInt get_thread_num0() {
+  return threads > 1 ? parallel::get_thread_num() : 0;
 }
 
 class DNSBase {
