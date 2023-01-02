@@ -199,14 +199,14 @@ public:
       Sij -= nuk2*wij;
     }
     void init() {
-      b->Init(TE);
-      b->Init(TZ);
-      b->Init(Eps);
-      b->Init(Eta);
-      b->Init(Zeta);
-      b->Init(DE);
-      b->Init(DZ);
-      b->Init(E);
+      b->Zero(TE,threads);
+      b->Zero(TZ,threads);
+      b->Zero(Eps,threads);
+      b->Zero(Eta,threads);
+      b->Zero(Zeta,threads);
+      b->Zero(DE,threads);
+      b->Zero(DZ,threads);
+      b->Zero(E,threads);
     }
     void reduce(const vector2& Src) {
       b->Reduce(TE,Src[TRANSFERE]);
@@ -250,13 +250,13 @@ public:
       Sij -= nuk2*wij;
     }
     void init() {
-      b->Init(TE);
-      b->Init(TZ);
-      b->Init(Eps);
-      b->Init(Eta);
-      b->Init(Zeta);
-      b->Init(DE);
-      b->Init(DZ);
+      b->Zero(TE,threads);
+      b->Zero(TZ,threads);
+      b->Zero(Eps,threads);
+      b->Zero(Eta,threads);
+      b->Zero(Zeta,threads);
+      b->Zero(DE,threads);
+      b->Zero(DZ,threads);
     }
     void reduce(const vector2& Src) {
       b->Reduce(TE,Src[TRANSFERE]);
@@ -300,14 +300,14 @@ public:
       E[index] += kinv*w2;
     }
     void init() {
-      b->Init(TE);
-      b->Init(TZ);
-      b->Init(Eps);
-      b->Init(Eta);
-      b->Init(Zeta);
-      b->Init(DE);
-      b->Init(DZ);
-      b->Init(E);
+      b->Zero(TE,threads);
+      b->Zero(TZ,threads);
+      b->Zero(Eps,threads);
+      b->Zero(Eta,threads);
+      b->Zero(Zeta,threads);
+      b->Zero(DE,threads);
+      b->Zero(DZ,threads);
+      b->Zero(E,threads);
     }
     void reduce(const vector2& Src) {
       b->Reduce(TE,Src[TRANSFERE]);
@@ -335,7 +335,7 @@ public:
       E[index] += abs2(wi[j])/k;
     }
     void init() {
-      b->Init(E);
+      b->Zero(E,threads);
     }
     void reduce(const vector2& Src) {
       b->Reduce(E,Src[EK]);
@@ -371,9 +371,9 @@ public:
       Zeta[index] += k2*eta;
     }
     void init() {
-      b->Init(Eps);
-      b->Init(Eta);
-      b->Init(Zeta);
+      b->Zero(Eps,threads);
+      b->Zero(Eta,threads);
+      b->Zero(Zeta,threads);
     }
     void reduce(const vector2& Src) {
       b->Reduce(Eps,Src[EPS]);
@@ -651,22 +651,12 @@ public:
 #endif
   }
 
-  void Zero(const vector& T) {
+  void Zero(const vector& T, unsigned int threads=1) {
+    unsigned int stop=threads*nshells;
     PARALLELIF(
-      threads > threshold,
-        for(uInt K=0; K < nshells; K++)
-          T[K]=0.0;
-      );
-  }
-
-  void Init(const vector& T) {
-    PARALLELIF(
-      threads*nshells > threshold,
-    for(uInt t=0; t < threads; ++t) {
-      uInt start=nshells*t;
-      uInt stop=start+nshells;
-      for(uInt K=start; K < stop; ++K)
-        T[K]=0.0;
+      stop > threshold,
+    for(uInt k=0; k < stop; ++k) {
+      T[k]=0.0;
     });
   }
 

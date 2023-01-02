@@ -427,12 +427,12 @@ void DNS::InitialConditions()
 
   uInt A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   uInt N=max(A,B);
-  Application appx(A,B,multNone,threads);
-//  Application appx(A,B,multNone,threads,1024,1,1);
+//  Application appx(A,B,multNone,threads);
+  Application appx(A,B,multNone,threads,1024,1,1);
 //  Application appx(A,B,multNone,threads,8192,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
-  Application appy(A,B,multadvection2,appx);
-//  Application appy(A,B,multadvection2,appx,3072,1,0);
+//  Application appy(A,B,multadvection2,appx);
+  Application appy(A,B,multadvection2,appx,3072,1,0);
 //  Application appy(A,B,multadvection2,appx,24576,1,0);
   auto ffty=new fftPadHermitian(Ny,My,appy);
   Convolve=new fftwpp::Convolution2(fftx,ffty);
