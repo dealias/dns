@@ -375,10 +375,10 @@ public:
       b->Zero(Eta,threads);
       b->Zero(Zeta,threads);
     }
-    void reduce(const vector2& Src) {
-      b->Reduce(Eps,Src[EPS]);
-      b->Reduce(Eta,Src[ETA]);
-      b->Reduce(Zeta,Src[ZETA]);
+    void reduce(const vector2& Y) {
+      b->ReduceAdd(Eps,Y[EPS]);
+      b->ReduceAdd(Eta,Y[ETA]);
+      b->ReduceAdd(Zeta,Y[ZETA]);
     }
   };
 
@@ -671,6 +671,20 @@ public:
         for(uInt t=start; t < stop; t += nshells)
           sum += T[t];
         Sum[K]=sum;
+      });
+  }
+
+  void ReduceAdd(const vector& T, const vector& Y) {
+    Set(Sum,Y);
+    PARALLELIF(
+      threads*nshells > threshold,
+      for(uInt K=0; K < nshells; K++) {
+        uInt start=K;
+        uInt stop=K+nshells*threads;
+        Complex sum=0.0;
+        for(uInt t=start; t < stop; t += nshells)
+          sum += T[t];
+        Sum[K] += sum;
       });
   }
 
