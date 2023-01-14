@@ -439,6 +439,8 @@ void DNS::InitialConditions()
 
   Convolve=new fftwpp::Convolution2(fftx,ffty);
 
+  SaveWisdom();
+
   block=ComplexAlign(N,fftx->inputSize());
 
   u.Dimension(Nx+1,my1,block[0],-mx,0);
