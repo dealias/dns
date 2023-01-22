@@ -437,9 +437,9 @@ void DNS::InitialConditions()
 //  Application appy(A,B,multadvection2,appx,24576,1,0);
   auto ffty=new fftPadHermitian(Ny,My,appy);
 
-  Convolve=new fftwpp::Convolution2(fftx,ffty);
+  Convolve=new Convolution2(fftx,ffty);
 
-  SaveWisdom();
+  saveWisdom();
 
   block=ComplexAlign(N,fftx->inputSize());
 
