@@ -25,6 +25,7 @@ kyforces=0,0
 method=DNS
 microfactor=1
 microsteps=1
+modalenergies=0
 movie=0
 nuH=0.002
 nuL=0.15

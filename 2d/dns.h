@@ -2,11 +2,15 @@
 #define __dnsbase_h__ 1
 
 #include "options.h"
+#include "fftw++.h"
+
+typedef ptrdiff_t Int;
+typedef size_t uInt;
+
 #include "kernel.h"
 #include "Array.h"
-#include "fftw++.h"
-//#include "convolution.h"
-#include "tests/convolve.h"
+#include "array2h.h"
+#include "convolve.h"
 #include "Forcing.h"
 #include "InitialCondition.h"
 #include "Conservative.h"
@@ -19,106 +23,55 @@ using namespace fftwpp;
 using std::ostringstream;
 using fftwpp::twopi;
 
-typedef Array1<Var>::opt Vector;
-typedef Array1<Real>::opt rVector;
+typedef array1<Var>::opt vector;
+typedef array1<Real>::opt rvector;
+typedef array1<Nu>::opt nuvector;
 
-extern unsigned spectrum;
+extern double sum;
+
+extern uInt spectrum;
 
 extern int pH;
 extern int pL;
 
-// This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
-// requires only 4 FFTs per stage.
-void multadvection2(Complex **F, unsigned int offset, unsigned int n,
-                    /*
-                    const unsigned int indexsize,
-                    const unsigned int *index,
-                    unsigned int r,
-                    */
-                    unsigned int threads)
-{
-  double* F0=(double *) (F[0]+offset);
-  double* F1=(double *) (F[1]+offset);
-
-  for(unsigned int j=0; j < n; ++j) {
-    double u=F0[j];
-    double v=F1[j];
-    F0[j]=v*v-u*u;
-    F1[j]=u*v;
-  }
-}
-
 double Triplet, Norm1, Norm2;
-
-// A=8, B=0 TODO: Reduce to A=7, B=0 using incompressibility
-void multTriplet(Complex **F, unsigned int offset, unsigned int n,
-                 unsigned int threads)
-{
-  double* F0=(double *) (F[0]+offset);
-  double* F1=(double *) (F[1]+offset);
-  double* F2=(double *) (F[2]+offset);
-  double* F3=(double *) (F[3]+offset);
-  double* F4=(double *) (F[4]+offset);
-  double* F5=(double *) (F[5]+offset);
-  double* F6=(double *) (F[6]+offset);
-  double* F7=(double *) (F[7]+offset);
-
-  for(unsigned int j=0; j < n; ++j) {
-    double u=F0[j];
-    double v=F1[j];
-    double ux=F2[j];
-    double uy=F3[j];
-    double vx=F4[j];
-    double vy=F5[j];
-    double A2u=F6[j];
-    double A2v=F7[j];
-    double bx=u*ux+v*uy;
-    double by=u*vx+v*vy;
-
-    Triplet += bx*A2u+by*A2v;
-    Norm1 += bx*bx+by*by;
-    Norm2 += A2u*A2u+A2v*A2v;
-  }
-}
 
 class DNSBase {
 protected:
   // Vocabulary:
-  unsigned Nx;
-  unsigned Ny;
-  unsigned nx,ny0;
+  uInt Nx;
+  uInt Ny;
   Real nuH,nuL;
   Real kH2,kL2;
 
   // Contiguous: TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,DISSIPATIONZ
   //
-  enum Field {PAD,OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
+  enum Field {OMEGA,TRANSFERE,TRANSFERZ,EPS,ETA,ZETA,DISSIPATIONE,
               DISSIPATIONZ,EK};
 
-  int mx,my; // size of data arrays
+  Int mx,my; // size of data arrays
+  Int my1;   // x stride
 
-  Array2<Complex> w; // Vorticity field
-  Array2<Complex> w0; // Temporary expanded vorticity field
+  array2h<Complex> w; // Vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field
 
-  Array2<Complex> u,v,ux,uy,vx,vy,A2u,A2v;
+  uInt tcount;
+  uInt fcount;
+
+  uInt nshells;  // Number of spectral shells
+
+  Array2<Complex> u,v,V;
+  Array2<Complex> u0,v0,ux,uy,vx,vy,A2u,A2v;
   array2<Real> ur,vr,uxr,uyr,vxr,vyr,A2ur,A2vr; // Inverse Fourier transforms
+  array2h<Complex> S;
 
-  int tcount;
-  unsigned fcount;
-
-  unsigned nmode;
-  unsigned nshells;  // Number of spectral shells
-
-  Array2<Complex> f0,f1;
-  Array2<Complex> S;
   array2<Complex> buffer;
   Complex *F[8];
-  Complex *block;
-//  ImplicitHConvolution2 *Convolution;
-  ConvolutionHermitian2 *Convolution;
-  ConvolutionHermitian2 *Convolution2;
-  crfft2d *Backward2;
+  Complex **block;
+
+  Convolution2 *Convolve;
+  Convolution2 *Convolve2;
+  crfft2d *Backward;
 
   ifstream ftin;
   oxstream fek,fw,fekvk,ftransfer;
@@ -126,84 +79,80 @@ protected:
 
   uvector count;
 
+  typedef array1<Var>::opt vector;
+
+  vector2 Y0;
+
   vector TE,TZ; // Energy and enstrophy transfers
   vector Eps,Eta,Zeta; // Energy, enstrophy, and palenstrophy injection rates
   vector DE,DZ; // Energy and enstrophy dissipation rates
   vector E; // Energy spectrum
-  Real Energy,Enstrophy,Palinstrophy,Palinstrophy2;
-  Array2<Real> k2inv;
+  vector Sum; // For parallel reduction
+
+  array2h<Real> k2inv;
+  array2h<Real> nu; // Linear dissipation
+
+  Real Energy,Enstrophy,Palinstrophy;
+  rvector energy,enstrophy,palinstrophy;
 
 public:
+
   void Initialize() {
     fevt << "# t\tE\tZ\tP\tP2" << endl;
   }
 
   void InitialConditions() {
     w[0][0]=0.0; // Enforce no mean flow
-    Loop(Initw(this),InitializeValue(this));
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
+    Loop(Initw(this),InitializeValue(this),threads);
   }
 
   void SetParameters() {
     setcount();
+
     fcount=0;
-
     Forcing->Init();
-
-    Loop(InitNone(this),ForcingCount(this));
+    Loop(InitNone(this),ForcingCount(this),1);
 
     fcount *= 2; // Account for Hermitian conjugate modes.
-
     Forcing->Init(fcount);
 
-    double scale=sqrt(Convolution->scale);
+    k2inv.Allocate(mx,my);
+    Loop(InitNone(this),K2inv(this,sqrt(Convolve->scale)),threads);
 
-    k2inv.Allocate(Nx,my,-mx+1,0);
-    for(int i=-mx+1; i < mx; ++i) {
-      int i2=i*i;
-      rVector k2invi=k2inv[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
-        k2invi[j]=scale/(i2+j*j);
-      }
-    }
+    nu.Allocate(mx,my);
+    Loop(Initnu(this),Linearity(this),threads);
   }
 
   virtual void setcount() {
-#pragma omp parallel for num_threads(threads)
-    for(unsigned i=0; i < nshells; i++)
-      count[i]=0;
-
-    if(spectrum)
-      Loop(InitNone(this),Count(this));
-  }
-
-  virtual void OutEnergies() {
-    fftwpp::HermitianSymmetrizeX(mx,my,mx-1,w);
-    fek << 2*mx-1 << my;
-    for(int i=-mx+1; i < mx; ++i) {
-      const Vector& wi=w[i];
-      for(int j=0; j < my; ++j) {
-        Real k2=i*i+j*j;
-        Real k2inv=k2 > 0.0 ? 1.0/k2 : 0.0;
-        fek << 0.5*abs2(wi[j])*k2inv;
-      }
+    if(spectrum) {
+      for(uInt K=0; K < nshells; ++K)
+        count[K]=0;
+      Loop(InitNone(this),Count(this),1);
     }
   }
 
-  void FinalOutput() {
-    Real E,Z,P,P2;
-    ComputeInvariants(w,E,Z,P,P2);
-    cout << endl;
-    cout << "Energy = " << E << newl;
-    cout << "Enstrophy = " << Z << newl;
-    cout << "Palinstrophy = " << P << newl;
-    cout << "Palinstrophy2 = " << P2 << newl;
+  virtual void OutEnergies() {
+    fek << mx << my;
+    Loop(Initw(this),OutEk(this),1);
   }
 
-  void OutFrame(int it) {
-    w0=0.0;
-    u=0.0;
-    v=0.0;
+  void FinalOutput();
+
+  void OutFrame(uInt it) {
+    Loop(Initw(this),wtoV(this),1);
+    V(0,0)=0.0;
+
+// Zero Nyquist modes.
+    PARALLELIF(
+      my > (Int) threshold,
+      for(Int j=0; j < my; ++j)
+        V(j)=0.0;
+      );
+
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,V);
+
+    u0=0.0;
+    v0=0.0;
     ux=0.0;
     uy=0.0;
     vx=0.0;
@@ -211,13 +160,9 @@ public:
     A2u=0.0;
     A2v=0.0;
 
-    for(int i=-mx+1; i < mx; ++i)
-      for(int j=0; j < my; ++j)
-        w0[i][j]=w(i,j);
-
     for(int i=-mx+1; i < mx; ++i) {
       for(int j=0; j < my; ++j) {
-        Complex wij=w(i,j);
+        Complex wij=V(i,j);
         Real k4=i*i+j*j;
         k4 *= k4;
         Real k2=i*i+j*j;
@@ -225,8 +170,8 @@ public:
         Complex psi=wij*k2inv;
         Complex uij=I*j*psi;
         Complex vij=-I*i*psi;
-        u[i][j]=uij;
-        v[i][j]=vij;
+        u0[i][j]=uij;
+        v0[i][j]=vij;
         ux[i][j]=I*i*uij;
         uy[i][j]=I*j*uij;
         vx[i][j]=I*i*vij;
@@ -238,9 +183,8 @@ public:
 
 //    unsigned nyp=ny0/2+1;
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,w0);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,u);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,v);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,u0);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,v0);
     fftwpp::HermitianSymmetrizeX(mx,my,mx,ux);
     fftwpp::HermitianSymmetrizeX(mx,my,mx,uy);
     fftwpp::HermitianSymmetrizeX(mx,my,mx,vx);
@@ -253,8 +197,8 @@ public:
    // Zero Nyquist modes.
     for(int j=0; j < my; ++j) {
       w0(j)=0.0;
-      u(j)=0.0;
-      v(j)=0.0;
+      u0(j)=0.0;
+      v0(j)=0.0;
       ux(j)=0.0;
       uy(j)=0.0;
       vx(j)=0.0;
@@ -264,8 +208,8 @@ public:
     }
     */
 
-    F[0]=u;
-    F[1]=v;
+    F[0]=u0;
+    F[1]=v0;
     F[2]=ux;
     F[3]=uy;
     F[4]=vx;
@@ -277,18 +221,18 @@ public:
     Norm1=0.0;
     Norm2=0.0;
 
-    Convolution2->convolveRaw(F,multTriplet);
+    Convolve2->convolveRaw(F);
 
     /*
-    Backward2->fft0(w0);
-    Backward2->fft0(u);
-    Backward2->fft0(v);
-    Backward2->fft0(ux);
-    Backward2->fft0(uy);
-    Backward2->fft0(vx);
-    Backward2->fft0(vy);
-    Backward2->fft0(A2u);
-    Backward2->fft0(A2v);
+    Backward->fft0(w0);
+    Backward->fft0(u0);
+    Backward->fft0(v0);
+    Backward->fft0(ux);
+    Backward->fft0(uy);
+    Backward->fft0(vx);
+    Backward->fft0(vy);
+    Backward->fft0(A2u);
+    Backward->fft0(A2v);
     */
 
 /*
@@ -308,8 +252,6 @@ public:
     cout << "Angle=" << acos(h)*180.0/PI << endl;
     */
 
-    F[1]=f1;
-
     /*
     for(unsigned i=0; i < nx; i++) {
       for(unsigned j=0; j < ny0; j++) {
@@ -326,36 +268,30 @@ public:
     }
     */
 
-    double scale=Convolution2->scale;
+    double scale=Convolve2->scale;
     cout << "Inner product=" << Triplet*scale << endl;
     cout << "Angle=" << acos(Triplet/sqrt(Norm1*Norm2))*180.0/PI << endl;
 
-/*
-        f1[i][j]=w(i,j);
+    F[0]=u;
+    F[1]=v;
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
-
-// Zero Nyquist modes.
-    for(int j=0; j < my; ++j)
-      f1(j)=0.0;
-
-    Backward->fft0(f1);
+    Backward->fft0(V);
 
     fw << 1 << 2*my << Nx+1;
-    for(int j=2*my-1; j >= 0; j--)
-      for(unsigned i=0; i <= Nx; i++)
+    for(Int j=2*my-1; j >= 0; j--)
+      for(uInt i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
-*/
-
-    /*
-// Zero Nyquist modes.
-    for(int j=0; j < my; ++j)
-      f1(j)=0.0;
-    */
   }
 
-  class FETL {
+  class F {
+  public:
+    F() {}
+    virtual void init() {}
+    virtual void reduce(const vector2& Src) {}
+  };
+
+  class FETL : public F {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ,E;
 
@@ -363,10 +299,11 @@ public:
     FETL(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                        Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
                        DE(b->DE), DZ(b->DZ), E(b->E) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      unsigned k2=i*i+j*j;
+    inline void operator()(const vector& wi, const vector& Si,
+                           const nuvector &nui, Int i, Int j, uInt offset) {
+      uInt k2=i*i+j*j;
       Real k=sqrt(k2);
-      unsigned index=(unsigned)(k-0.5);
+      uInt index=offset+(uInt)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
       Complex& Sij=Si[j];
@@ -374,7 +311,7 @@ public:
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv=1.0/k;
       Real kinv2=kinv*kinv;
-      Nu nuk2=b->nuk(k2);
+      Nu nuk2=nui[j];
       Real nuk2Z=nuk2*w2;
       TE[index] += kinv2*transfer;
       TZ[index] += transfer;
@@ -386,9 +323,29 @@ public:
       E[index] += kinv*w2;
       Sij -= nuk2*wij;
     }
+    void init() {
+      b->Zero(TE,threads);
+      b->Zero(TZ,threads);
+      b->Zero(Eps,threads);
+      b->Zero(Eta,threads);
+      b->Zero(Zeta,threads);
+      b->Zero(DE,threads);
+      b->Zero(DZ,threads);
+      b->Zero(E,threads);
+    }
+    void reduce(const vector2& Src) {
+      b->Reduce(TE,Src[TRANSFERE]);
+      b->Reduce(TZ,Src[TRANSFERZ]);
+      b->Reduce(Eps,Src[EPS]);
+      b->Reduce(Eta,Src[ETA]);
+      b->Reduce(Zeta,Src[ZETA]);
+      b->Reduce(DE,Src[DISSIPATIONE]);
+      b->Reduce(DZ,Src[DISSIPATIONZ]);
+      b->Reduce(E,Src[EK]);
+    }
   };
 
-  class FTL {
+  class FTL : public F {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ;
 
@@ -396,16 +353,17 @@ public:
     FTL(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                       Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
                       DE(b->DE), DZ(b->DZ) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      unsigned k2=i*i+j*j;
+    inline void operator()(const vector& wi, const vector& Si,
+                           const nuvector &nui, Int i, Int j, uInt offset) {
+      uInt k2=i*i+j*j;
       Real k=sqrt(k2);
-      unsigned index=(unsigned)(k-0.5);
+      uInt index=offset+(uInt)(k-0.5);
       Complex wij=wi[j];
       Complex& Sij=Si[j];
       Real transfer=realproduct(Sij,wij);
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv2=1.0/k2;
-      Nu nuk2=b->nuk(k2);
+      Nu nuk2=nui[j];
       Real nuk2Z=nuk2*abs2(wij);
       TE[index] += kinv2*transfer;
       TZ[index] += transfer;
@@ -416,9 +374,27 @@ public:
       DZ[index] += nuk2Z;
       Sij -= nuk2*wij;
     }
+    void init() {
+      b->Zero(TE,threads);
+      b->Zero(TZ,threads);
+      b->Zero(Eps,threads);
+      b->Zero(Eta,threads);
+      b->Zero(Zeta,threads);
+      b->Zero(DE,threads);
+      b->Zero(DZ,threads);
+    }
+    void reduce(const vector2& Src) {
+      b->Reduce(TE,Src[TRANSFERE]);
+      b->Reduce(TZ,Src[TRANSFERZ]);
+      b->Reduce(Eps,Src[EPS]);
+      b->Reduce(Eta,Src[ETA]);
+      b->Reduce(Zeta,Src[ZETA]);
+      b->Reduce(DE,Src[DISSIPATIONE]);
+      b->Reduce(DZ,Src[DISSIPATIONZ]);
+    }
   };
 
-  class FET {
+  class FET  : public F {
     DNSBase *b;
     const vector& TE,TZ,Eps,Eta,Zeta,DE,DZ,E;
 
@@ -426,10 +402,11 @@ public:
     FET(DNSBase *b) : b(b), TE(b->TE), TZ(b->TZ),
                       Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta),
                       DE(b->DE), DZ(b->DZ), E(b->E) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      unsigned k2=i*i+j*j;
+    inline void operator()(const vector& wi, const vector& Si,
+                           const nuvector &nui, Int i, Int j, uInt offset) {
+      uInt k2=i*i+j*j;
       Real k=sqrt(k2);
-      unsigned index=(unsigned)(k-0.5);
+      uInt index=offset+(uInt)(k-0.5);
       Complex wij=wi[j];
       Real w2=abs2(wij);
       Complex& Sij=Si[j];
@@ -437,7 +414,7 @@ public:
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv=1.0/k;
       Real kinv2=kinv*kinv;
-      Real nuk2Z=b->nuk(k2)*w2;
+      Real nuk2Z=nui[j]*w2;
       TE[index] += kinv2*transfer;
       TZ[index] += transfer;
       Eps[index] += kinv2*eta;
@@ -447,101 +424,201 @@ public:
       DZ[index] += nuk2Z;
       E[index] += kinv*w2;
     }
+    void init() {
+      b->Zero(TE,threads);
+      b->Zero(TZ,threads);
+      b->Zero(Eps,threads);
+      b->Zero(Eta,threads);
+      b->Zero(Zeta,threads);
+      b->Zero(DE,threads);
+      b->Zero(DZ,threads);
+      b->Zero(E,threads);
+    }
+    void reduce(const vector2& Src) {
+      b->Reduce(TE,Src[TRANSFERE]);
+      b->Reduce(TZ,Src[TRANSFERZ]);
+      b->Reduce(Eps,Src[EPS]);
+      b->Reduce(Eta,Src[ETA]);
+      b->Reduce(Zeta,Src[ZETA]);
+      b->Reduce(DE,Src[DISSIPATIONE]);
+      b->Reduce(DZ,Src[DISSIPATIONZ]);
+      b->Reduce(E,Src[EK]);
+    }
   };
 
-  class FE {
+  class FE : public F {
     DNSBase *b;
     const vector& E;
 
   public:
     FE(DNSBase *b) : b(b), E(b->E) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      unsigned k2=i*i+j*j;
+    inline void operator()(const vector& wi, const vector&,
+                           const nuvector &, Int i, Int j, uInt offset) {
+      uInt k2=i*i+j*j;
       Real k=sqrt(k2);
-      unsigned index=(unsigned)(k-0.5);
+      uInt index=offset+(uInt)(k-0.5);
       E[index] += abs2(wi[j])/k;
+    }
+    void init() {
+      b->Zero(E,threads);
+    }
+    void reduce(const vector2& Src) {
+      b->Reduce(E,Src[EK]);
     }
   };
 
-  class FL {
+  class FL : public F {
     DNSBase *b;
 
   public:
     FL(DNSBase *b) : b(b) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      unsigned k2=i*i+j*j;
+    inline void operator()(const vector& wi, const vector& Si,
+                           const nuvector &nui, Int i, Int j, uInt) {
       Complex wij=wi[j];
       Forcing->Force(wij,Si[j],i,j);
-      Si[j] -= b->nuk(k2)*wij;
+      Si[j] -= nui[j]*wij;
     }
   };
 
-  class ForceStochastic {
+  class ForceStochastic : public F {
+    DNSBase *b;
     const vector& Eps,Eta,Zeta;
   public:
-    ForceStochastic(DNSBase *b) : Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta) {}
-    inline void operator()(const Vector& wi, const Vector&, int i, int j) {
-      unsigned k2=i*i+j*j;
+    ForceStochastic(DNSBase *b) : b(b), Eps(b->Eps), Eta(b->Eta), Zeta(b->Zeta) {}
+    inline void operator()(const vector& wi, const vector&,
+                           const nuvector &, Int i, Int j, uInt offset) {
+      uInt k2=i*i+j*j;
       Real k=sqrt(k2);
-      unsigned index=(unsigned)(k-0.5);
+      uInt index=offset+(uInt)(k-0.5);
       double eta=Forcing->ForceStochastic(wi[j],i,j);
       Eps[index] += eta/k2;
       Eta[index] += eta;
       Zeta[index] += k2*eta;
     }
+    void init() {
+      b->Zero(Eps,threads);
+      b->Zero(Eta,threads);
+      b->Zero(Zeta,threads);
+    }
+    void reduce(const vector2& Y) {
+      b->ReduceAdd(Eps,Y[EPS]);
+      b->ReduceAdd(Eta,Y[ETA]);
+      b->ReduceAdd(Zeta,Y[ZETA]);
+    }
   };
 
-  class ForceStochasticNO {
+  class ForceStochasticNO : public F {
   public:
     ForceStochasticNO(DNSBase *b) {}
-    inline void operator()(const Vector& wi, const Vector&, int i, int j) {
+    inline void operator()(const vector& wi, const vector&,
+                           const nuvector &, Int i, Int j, uInt) {
       Forcing->ForceStochastic(wi[j],i,j);
     }
   };
 
-  class InitializeValue {
+  class InitializeValue : public F {
   public:
     InitializeValue(DNSBase *b) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector& wi, const vector&,
+                           const nuvector &, Int i, Int j, uInt) {
       wi[j]=InitialCondition->Value(i,j);
     }
   };
 
-  class ForcingCount {
+  class ForcingCount : public F {
     DNSBase *b;
   public:
     ForcingCount(DNSBase *b) : b(b) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
+    inline void operator()(const vector&, const vector&,
+                           const nuvector &, Int i, Int j, uInt) {
       if(Forcing->active(i,j)) {
         ++b->fcount;
       }
     }
   };
 
-  class Invariants {
+  class K2inv  : public F {
     DNSBase *b;
-    Real &Energy,&Enstrophy,&Palinstrophy,&Palinstrophy2;
+    double scale;
   public:
-    Invariants(DNSBase *b) : b(b), Energy(b->Energy), Enstrophy(b->Enstrophy),
-                             Palinstrophy(b->Palinstrophy),
-                             Palinstrophy2(b->Palinstrophy2) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      Real w2=abs2(wi[j]);
-      Enstrophy += w2;
-      unsigned k2=i*i+j*j;
-      Energy += w2/k2;
-      Palinstrophy += k2*w2;
-      Palinstrophy2 += k2*k2*w2;
+    K2inv(DNSBase *b, double scale) : b(b), scale(scale) {}
+    inline void operator()(const vector&, const vector&,
+                           const nuvector &, Int i, Int j, uInt) {
+      b->k2inv(i,j)=scale/(i*i+j*j);
     }
   };
 
-  class InitwS {
+  class Linearity : public F {
     DNSBase *b;
   public:
-    InitwS(DNSBase *b) : b(b) {}
-    inline void operator()(Vector& wi, Vector& Si, int i) {
+    Linearity(DNSBase *b) : b(b) {}
+    inline void operator()(const vector&, const vector&,
+                           const nuvector &nui, Int i, Int j, uInt) {
+      nui[j]=b->nuk(i*i+j*j);
+    }
+  };
+
+  class wtoV : public F {
+    DNSBase *b;
+  public:
+    wtoV(DNSBase *b) : b(b) {}
+    inline void operator()(const vector&wi, const vector&,
+                           const nuvector &nui, Int i, Int j, uInt) {
+      b->V(i,j)=wi[j];
+    }
+  };
+
+  class OutEk : public F {
+    DNSBase *b;
+  public:
+    OutEk(DNSBase *b) : b(b) {}
+    inline void operator()(const vector&wi, const vector&,
+                           const nuvector &, Int i, Int j, uInt) {
+      b->fek << 0.5*abs2(wi[j])*b->k2inv(i,j);
+    }
+  };
+
+  class Invariants {
+    DNSBase *b;
+    const rvector& E,Z,P;
+  public:
+    Invariants(DNSBase *b) : b(b), E(b->energy), Z(b->enstrophy),
+                             P(b->palinstrophy) {}
+    void init() {
+      for(size_t thread=0; thread < threads; ++thread) {
+        E[thread]=0.0;
+        Z[thread]=0.0;
+        P[thread]=0.0;
+      }
+    }
+
+    inline void operator()(const vector& wi, const vector&, const nuvector &,
+                           Int i, Int j, size_t thread) {
+      Real w2=abs2(wi[j]);
+      Z[thread] += w2;
+      uInt k2=i*i+j*j;
+      E[thread] += w2/k2;
+      P[thread] += k2*w2;
+    }
+
+    void reduce(Real &Energy, Real &Enstrophy, Real& Palinstrophy) {
+      Energy=Enstrophy=Palinstrophy=0.0;
+      for(size_t thread=0; thread < threads; ++thread) {
+        Energy += E[thread];
+        Enstrophy += Z[thread];
+        Palinstrophy += P[thread];
+      }
+    }
+  };
+
+  class InitAll {
+    DNSBase *b;
+  public:
+    InitAll(DNSBase *b) : b(b) {}
+    inline void operator()(vector& wi, vector& Si, nuvector &nui, Int i) {
       Dimension(wi,b->w[i]);
       Dimension(Si,b->S[i]);
+      Dimension(nui,b->nu[i]);
     }
   };
 
@@ -549,15 +626,24 @@ public:
     DNSBase *b;
   public:
     Initw(DNSBase *b) : b(b) {}
-    inline void operator()(Vector& wi, Vector& Si, int i) {
+    inline void operator()(vector& wi, vector&, nuvector&, Int i) {
       Dimension(wi,b->w[i]);
+    }
+  };
+
+  class Initnu {
+    DNSBase *b;
+  public:
+    Initnu(DNSBase *b) : b(b) {}
+    inline void operator()(vector&, vector&, nuvector& nui, Int i) {
+      Dimension(nui,b->nu[i]);
     }
   };
 
   class InitNone {
   public:
     InitNone(DNSBase *b) {}
-    inline void operator()(Vector& wi, Vector& Si, int i) {
+    inline void operator()(vector&, vector&, nuvector&, Int) {
     }
   };
 
@@ -566,67 +652,123 @@ public:
     const uvector& count;
   public:
     Count(DNSBase *b) : b(b), count(b->count) {}
-    inline void operator()(const Vector& wi, const Vector& Si, int i, int j) {
-      unsigned k2=i*i+j*j;
+    inline void operator()(const vector&, const vector&,
+                           const nuvector &, Int i, Int j, uInt) {
+      uInt k2=i*i+j*j;
       Real k=sqrt(k2);
-      unsigned index=(unsigned)(k-0.5);
+      uInt index=(uInt)(k-0.5);
       ++count[index];
     }
   };
 
   void NonLinearSource(const vector2& Src, const vector2& Y, double t) {
-//    f0.Dimension(Nx+1,my,-mx,0);
-
     w.Set(Y[OMEGA]);
-    f0.Set(Src[PAD]);
-
-    f0[0][0]=0.0;
-    f1[0][0]=0.0;
 
     // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
     // requires only 4 FFTs per stage.
-#pragma omp parallel for num_threads(threads)
-    for(int i=-mx+1; i < mx; ++i) {
-      Vector wi=w[i];
-      Vector f0i=f0[i];
-      Vector f1i=f1[i];
-      rVector k2invi=k2inv[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+    PARALLELIF(
+      mx*my > (Int) threshold,
+      for(Int i=-mx+1; i < 0; ++i) {
+        vector wi=w[i];
+        vector ui=u[i];
+        vector vi=v[i];
+        rvector k2invi=k2inv[i];
+        for(Int j=1; j < my; ++j) {
+          Complex wij=wi[j];
+          Real k2invij=k2invi[j];
+          Real jk2inv=j*k2invij;
+          Real ik2inv=i*k2invij;
+          ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
+          vi[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
+        }
+      });
+
+
+    Complex *v0=v[0];
+
+    PARALLELIF(
+      my > (Int) threshold,
+    for(Int j=0; j < my; ++j)
+      v0[j]=0.0;
+      );
+
+    PARALLELIF(
+      2*mx > (Int) threshold,
+      for(Int i=-mx+1; i < mx; ++i)
+        u[i][0]=0.0;
+      );
+
+    vector wi=w[0];
+    vector ui=u[0];
+    rvector k2invi=k2inv[0];
+    PARALLELIF(
+      my > (Int) threshold,
+      for(Int j=1; j < my; ++j) {
         Complex wij=wi[j];
-        Real k2invij=k2invi[j];
-        Real jk2inv=j*k2invij;
-        Real ik2inv=i*k2invij;
-        f0i[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv); // u
-        f1i[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv); // v
-      }
-    }
+        Real jk2inv=j*k2invi[j];
+        ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv);
+      });
 
-    F[0]=f0;
+    PARALLELIF(
+      mx*my > (Int) threshold,
+      for(Int i=1; i < mx; ++i) {
+        vector wi=w[i];
+        vector ui=u[i];
+        vector vi=v[i];
+        rvector k2invi=k2inv[i];
+        Complex wij=wi[0];
+        Real ik2inv=i*k2invi[0];
+        Complex V=Complex(wij.im*ik2inv,-wij.re*ik2inv);
+        vi[0]=V;
+        v[-i][0]=conj(V);
+        for(Int j=1; j < my; ++j) {
+          Complex wij=wi[j];
+          Real k2invij=k2invi[j];
+          Real jk2inv=j*k2invij;
+          Real ik2inv=i*k2invij;
+          ui[j]=Complex(-wij.im*jk2inv,wij.re*jk2inv);
+          vi[j]=Complex(wij.im*ik2inv,-wij.re*ik2inv);
+        }
+      })
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f1);
 
-    Convolution->convolveRaw(F,multadvection2);
-    f0[0][0]=0.0;
+     // Zero Nyquist modes.
+    PARALLELIF(
+      my > (Int) threshold,
+      for(Int j=0; j < my; ++j)
+        u[-mx][j]=0.0;
+      );
 
-    for(int i=-mx+1; i < mx; ++i) {
-      Real i2=i*i;
-      Vector f0i=f0[i];
-      Vector f1i=f1[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
-        f0i[j]=i*j*f0i[j]+(i2-j*j)*f1i[j];
-      }
-    }
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,f0);
+    PARALLELIF(
+      my > (Int) threshold,
+      for(Int j=0; j < my; ++j)
+        v[-mx][j]=0.0;
+      );
+
+    Convolve->convolveRaw(F);
+
+    S.Set(Src[OMEGA]);
+
+    PARALLELIF(
+      2*mx*my > (Int) threshold,
+      for(Int i=-mx+1; i < mx; ++i) {
+        Real i2=i*i;
+        vector ui=u[i];
+        vector vi=v[i];
+        vector Si=S[i];
+        for(Int j=i <= 0; j < my; ++j) {
+          Si[j]=i*j*ui[j]+(i2-j*j)*vi[j];
+        }
+      });
 
 #if 0
     Real sum=0.0;
-    for(int i=-mx+1; i < mx; ++i) {
-      Vector wi=w[i];
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j) {
+    for(Int i=-mx+1; i < mx; ++i) {
+      vector wi=w[i];
+      for(Int j=i <= 0; j < my; ++j) {
         Complex wij=wi[j];
-//      sum += (f0[i][j]*conj(wij)).re;
-        sum += (f0[i][j]*conj(wij)/(i*i+j*j)).re;
+//        sum += (S[i][j]*conj(wij)).re;
+        sum += (S[i][j]*conj(wij)/(i*i+j*j)).re;
       }
     }
     cout << sum << endl;
@@ -634,76 +776,84 @@ public:
 #endif
   }
 
-  void Init(vector& T, const vector& Src) {
-    Set(T,Src);
-#pragma omp parallel for num_threads(threads)
-    for(unsigned K=0; K < nshells; K++)
-      T[K]=0.0;
+  void Zero(const vector& T, unsigned int threads=1) {
+    unsigned int stop=threads*nshells;
+    PARALLELIF(
+      stop > threshold,
+    for(uInt k=0; k < stop; ++k) {
+      T[k]=0.0;
+    });
+  }
+
+  void Reduce(const vector& T, const vector& Src) {
+    Set(Sum,Src);
+    PARALLELIF(
+      threads*nshells > threshold,
+      for(uInt K=0; K < nshells; K++) {
+        uInt start=K;
+        uInt stop=K+nshells*threads;
+        Complex sum=0.0;
+        for(uInt t=start; t < stop; t += nshells)
+          sum += T[t];
+        Sum[K]=sum;
+      });
+  }
+
+  void ReduceAdd(const vector& T, const vector& Y) {
+    Set(Sum,Y);
+    PARALLELIF(
+      threads*nshells > threshold,
+      for(uInt K=0; K < nshells; K++) {
+        uInt start=K;
+        uInt stop=K+nshells*threads;
+        Complex sum=0.0;
+        for(uInt t=start; t < stop; t += nshells)
+          sum += T[t];
+        Sum[K] += sum;
+      });
   }
 
   void ConservativeSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
-    if(spectrum) {
-      Init(TE,Src[TRANSFERE]);
-      Init(TZ,Src[TRANSFERZ]);
-      Init(Eps,Src[EPS]);
-      Init(Eta,Src[ETA]);
-      Init(Zeta,Src[ZETA]);
-      Init(DE,Src[DISSIPATIONE]);
-      Init(DZ,Src[DISSIPATIONZ]);
+    if(spectrum)
       Compute(FTL(this),Src,Y);
-    }
     else
       Compute(FL(this),Src,Y);
   }
 
   void NonConservativeSource(const vector2& Src, const vector2& Y, double t) {
-    if(spectrum) {
-      Init(E,Src[EK]);
+    if(spectrum)
       Compute(FE(this),Src,Y);
-    }
   }
 
   void ExponentialSource(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
-    if(spectrum) {
-      Init(TE,Src[TRANSFERE]);
-      Init(TZ,Src[TRANSFERZ]);
-      Init(Eps,Src[EPS]);
-      Init(Eta,Src[ETA]);
-      Init(Zeta,Src[ZETA]);
-      Init(DE,Src[DISSIPATIONE]);
-      Init(DZ,Src[DISSIPATIONZ]);
-      Init(E,Src[EK]);
+    if(spectrum)
       Compute(FET(this),Src,Y);
-    }
   }
 
   void Source(const vector2& Src, const vector2& Y, double t) {
     NonLinearSource(Src,Y,t);
-    if(spectrum) {
-      Init(TE,Src[TRANSFERE]);
-      Init(TZ,Src[TRANSFERZ]);
-      Init(Eps,Src[EPS]);
-      Init(Eta,Src[ETA]);
-      Init(Zeta,Src[ZETA]);
-      Init(DE,Src[DISSIPATIONE]);
-      Init(DZ,Src[DISSIPATIONZ]);
-      Init(E,Src[EK]);
+    if(spectrum)
       Compute(FETL(this),Src,Y);
-    } else
+    else
       Compute(FL(this),Src,Y);
   }
 
   template<class S, class T>
-  void Loop(S init, T fcn)
+  void Loop(S init, T fcn, uInt threads=1, uint n=1)
   {
-    Vector wi,Si;
-    for(int i=-mx+1; i < mx; ++i) {
-      init(wi,Si,i);
-      for(int j=i <= 0 ? 1 : 0; j < my; ++j)
-        fcn(wi,Si,i,j);
-    }
+    PARALLELIF(
+      2*mx*my > (Int) threshold,
+      for(Int i=-mx+1; i < mx; ++i) {
+        vector wi;
+        vector Si;
+        nuvector nui;
+        init(wi,Si,nui,i);
+        uInt offset=n*get_thread_num0();
+        for(Int j=i <= 0; j < my; ++j) // start with j=1 if i <= 0
+          fcn(wi,Si,nui,i,j,offset);
+      });
   }
 
   template<class T>
@@ -712,7 +862,9 @@ public:
     S.Set(Src[OMEGA]);
     w.Set(Y[OMEGA]);
 
-    Loop(InitwS(this),fcn);
+    fcn.init();
+    Loop(InitAll(this),fcn,threads,nshells);
+    fcn.reduce(Src);
   }
 
   void Stochastic(const vector2&Y, double, double dt)
@@ -720,20 +872,14 @@ public:
     if(!Forcing->Stochastic(dt)) return;
     w.Set(Y[OMEGA]);
 
-    if(spectrum == 0) {
-      Loop(Initw(this),ForceStochasticNO(this));
-    } else {
-      Set(Eps,Y[EPS]);
-      Set(Eta,Y[ETA]);
-      Set(Zeta,Y[ZETA]);
-      Loop(Initw(this),ForceStochastic(this));
-    }
+    if(spectrum == 0)
+      Loop(Initw(this),ForceStochasticNO(this),threads);
+    else
+      Compute(ForceStochastic(this),Y,Y);
   }
 
-  Nu LinearCoeff(unsigned k) {
-    unsigned i=k/my;
-    unsigned j=k-my*i;
-    return nuk(i*i+j*j);
+  Nu LinearCoeff(uInt l) {
+    return nu(l);
   }
 
   Real nuk(double k2) {
@@ -743,32 +889,27 @@ public:
     return diss;
   }
 
-  virtual void ComputeInvariants(const array2<Complex> &w, Real& E, Real& Z,
-                                 Real& P, Real& P2) {
-    Energy=Enstrophy=Palinstrophy=Palinstrophy2=0.0;
-
-    Loop(Initw(this),Invariants(this));
-
-    E=Energy;
-    Z=Enstrophy;
-    P=Palinstrophy;
-    P2=Palinstrophy2;
+  virtual void ComputeInvariants() {
+    Invariants I(this);
+    I.init();
+    Loop(Initw(this),I,threads);
+    I.reduce(Energy,Enstrophy,Palinstrophy);
   }
 
-  virtual Real getSpectrum(unsigned i) {
+  virtual Real getSpectrum(uInt i) {
     double c=count[i];
-    return c > 0 ? E[i].re*twopi/c : 0.0;
+    return c > 0 ? Y0[EK][i].re*twopi/c : 0.0;
   }
-  Real TE_(unsigned i) {return TE[i].re;}
-  Real TZ_(unsigned i) {return TZ[i].re;}
-  Real Eps_(unsigned i) {return Eps[i].re;}
-  Real Eta_(unsigned i) {return Eta[i].re;}
-  Real Zeta_(unsigned i) {return Zeta[i].re;}
-  Real DE_(unsigned i) {return DE[i].re;}
-  Real DZ_(unsigned i) {return DZ[i].re;}
+  Real TE_(uInt i) {return Y0[TRANSFERE][i].re;}
+  Real TZ_(uInt i) {return Y0[TRANSFERZ][i].re;}
+  Real Eps_(uInt i) {return Y0[EPS][i].re;}
+  Real Eta_(uInt i) {return Y0[ETA][i].re;}
+  Real Zeta_(uInt i) {return Y0[ZETA][i].re;}
+  Real DE_(uInt i) {return Y0[DISSIPATIONE][i].re;}
+  Real DZ_(uInt i) {return Y0[DISSIPATIONZ][i].re;}
 
-  Real kb(unsigned i) {return i+0.5;}
-  Real kc(unsigned i) {return i+1;}
+  Real kb(uInt i) {return i+0.5;}
+  Real kc(uInt i) {return i+1;}
 };
 
 extern InitialConditionBase *InitialCondition;

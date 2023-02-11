@@ -7,6 +7,7 @@ const double ProblemVersion=1.0;
 #endif
 
 using namespace utils;
+using namespace parallel;
 
 const char *problem="Direct Numerical Simulation of Turbulence";
 
@@ -20,25 +21,71 @@ Real nuH=0.0, nuL=0.0;
 Real kH=0.0, kL=0.0;
 int pH=1;
 int pL=0;
-unsigned Nx=1023;
-unsigned Ny=1023;
-unsigned nx,ny0;
+uInt Nx=1023;
+uInt Ny=1023;
 Real eta=0.0;
 Complex force=0.0;
 Real kforce=1.0;
-const int Nforce=2;
+const uInt Nforce=2;
 Complex forces[Nforce];
-int kxforces[Nforce];
-int kyforces[Nforce];
+Int kxforces[Nforce];
+Int kyforces[Nforce];
 Real deltaf=1.0;
-unsigned movie=0;
-unsigned rezero=0;
-unsigned spectrum=1;
-unsigned modalenergies=0;
+uInt movie=0;
+uInt rezero=0;
+uInt spectrum=1;
+uInt modalenergies=0;
 Real icalpha=1.0;
 Real icbeta=1.0;
 Real k0=1.0; // Obsolete
-int randomIC=0;
+uInt randomIC=0;
+
+// This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
+// requires only 4 FFTs per stage.
+void multadvection2(Complex **F, uInt n, Indices *, uInt threads)
+{
+  double* F0=(double *) F[0];
+  double* F1=(double *) F[1];
+
+  PARALLELIF(
+    n > threshold,
+    for(uInt j=0; j < n; ++j) {
+      double u=F0[j];
+      double v=F1[j];
+      F0[j]=v*v-u*u;
+      F1[j]=u*v;
+    });
+}
+
+// A=8, B=0 TODO: Reduce to A=7, B=0 using incompressibility
+void multTriplet(Complex **F, uInt n, Indices *, uInt threads)
+{
+  double* F0=(double *) F[0];
+  double* F1=(double *) F[1];
+  double* F2=(double *) F[2];
+  double* F3=(double *) F[3];
+  double* F4=(double *) F[4];
+  double* F5=(double *) F[5];
+  double* F6=(double *) F[6];
+  double* F7=(double *) F[7];
+
+  for(unsigned int j=0; j < n; ++j) {
+    double u=F0[j];
+    double v=F1[j];
+    double ux=F2[j];
+    double uy=F3[j];
+    double vx=F4[j];
+    double vy=F5[j];
+    double A2u=F6[j];
+    double A2v=F7[j];
+    double bx=u*ux+v*uy;
+    double by=u*vx+v*vy;
+
+    Triplet += bx*A2u+by*A2v;
+    Norm1 += bx*bx+by*by;
+    Norm2 += A2u*A2u+A2v*A2v;
+  }
+}
 
 class DNS : public DNSBase, public ProblemBase {
 public:
@@ -47,13 +94,13 @@ public:
 
   void InitialConditions();
 
-  void Output(int);
+  void Output(uInt);
   void FinalOutput();
   oxstream fprolog;
 
-  void IndexLimits(unsigned& start, unsigned& stop,
-		   unsigned& startT, unsigned& stopT,
-		   unsigned& startM, unsigned& stopM) {
+  void IndexLimits(uInt& start, uInt& stop,
+		   uInt& startT, uInt& stopT,
+		   uInt& startM, uInt& stopM) {
     start=Start(OMEGA);
     stop=Stop(OMEGA);
     startT=Start(TRANSFERE);
@@ -71,13 +118,16 @@ public:
   }
 
   void Initialize();
+
+  void ZeroDiagnostics();
 };
 
 class ForcingMask {
   DNS *b;
 public:
   ForcingMask(DNS *b) : b(b) {}
-  inline void operator()(const Vector&, const Vector&, int i, int j) {
+  inline void operator()(const vector&, const vector&,
+                         const nuvector &, Int i, Int j, size_t) {
     if(Forcing->active(i,j)) {
       Complex w=0.0;
       Complex S=0.0;
@@ -162,12 +212,12 @@ public:
     K2 *= K2;
   }
 
-  bool active(int i, int j) {
-    int k=i*i+j*j;
+  bool active(Int i, Int j) {
+    Int k=i*i+j*j;
     return K1 < k && k < K2;
   }
 
-  double Force(Complex& w, Complex& S, int i, int j) {
+  double Force(Complex& w, Complex& S, Int i, Int j) {
     if(active(i,j)) {
       S += force;
       return realproduct(force,w);
@@ -181,18 +231,18 @@ protected:
 public:
   const char *Name() {return "Constant List";}
 
-  int Active(int i, int j) {
-    for(int index=0; index < Nforce; ++index)
+  Int Active(Int i, Int j) {
+    for(uInt index=0; index < Nforce; ++index)
       if(i == kxforces[index] && j == kyforces[index]) return index;
     return -1;
   }
 
-  bool active(int i, int j) {
+  bool active(Int i, Int j) {
     return Active(i,j) >= 0;
   }
 
-  double Force(Complex& w, Complex& S, int i, int j) {
-    int index=Active(i,j);
+  double Force(Complex& w, Complex& S, Int i, Int j) {
+    Int index=Active(i,j);
     if(index >= 0) {
       Complex force=forces[index];
       S += force;
@@ -208,7 +258,7 @@ class WhiteNoiseBanded : public ConstantBanded {
 public:
   const char *Name() {return "White-Noise Banded";}
 
-  void Init(unsigned fcount) {
+  void Init(uInt fcount) {
     etanorm=1.0/((Real) fcount);
   }
 
@@ -218,13 +268,12 @@ public:
   }
 
   // For forcing diagnostic
-  void ForceMask(Complex& w, Complex& S, int i, int j) {
-    if(active(i,j)) {
+  void ForceMask(Complex& w, Complex& S, Int i, Int j) {
+    if(active(i,j))
       S=sqrt(2.0*eta*etanorm);
-    }
   }
 
-  double ForceStochastic(Complex& w, int i, int j) {
+  double ForceStochastic(Complex& w, Int i, Int j) {
     if(active(i,j)) {
       Complex f=f0*crand_gauss();
       double eta=realproduct(f,w)+0.5*abs2(f);
@@ -259,12 +308,13 @@ DNSVocabulary::DNSVocabulary()
   Vocabulary=this;
 
   VOCAB_NOLIMIT(ic,"Initial Condition");
-  VOCAB(Nx,1,INT_MAX,"Number of dealiased modes in x direction");
-  VOCAB(Ny,1,INT_MAX,"Number of dealiased modes in y direction");
+  VOCAB(Nx,1,SIZE_MAX,"Number of dealiased modes in x direction");
+  VOCAB(Ny,1,SIZE_MAX,"Number of dealiased modes in y direction");
   VOCAB(movie,0,1,"Output movie? (0=no, 1=yes)");
   VOCAB(spectrum,0,1,"Output spectrum? (0=no, 1=yes)");
   VOCAB(modalenergies,0,1,"Output modal energies? (0=no, 1=yes)");
-  VOCAB(rezero,0,INT_MAX,"Rezero moments every rezero output steps for high accuracy");
+  VOCAB(rezero,0,SIZE_MAX,"Rezero moments every rezero output steps for high accuracy");
+  VOCAB_NODUMP(threshold,0,SIZE_MAX,"Multithreading threshold");
 
   METHOD(DNS);
 
@@ -313,23 +363,24 @@ DNS::DNS()
 
 DNS::~DNS()
 {
-  deleteAlign(block);
+  deleteAlign(block[0]);
+  delete [] block;
 }
 
 // wrapper for outcurve routines
 class cwrap {
 public:
-  static Real Spectrum(unsigned i) {return DNSProblem->getSpectrum(i);}
-  static Real TE(unsigned i) {return DNSProblem->TE_(i);}
-  static Real TZ(unsigned i) {return DNSProblem->TZ_(i);}
-  static Real Eps(unsigned i) {return DNSProblem->Eps_(i);}
-  static Real Eta(unsigned i) {return DNSProblem->Eta_(i);}
-  static Real Zeta(unsigned i) {return DNSProblem->Zeta_(i);}
-  static Real DE(unsigned i) {return DNSProblem->DE_(i);}
-  static Real DZ(unsigned i) {return DNSProblem->DZ_(i);}
+  static Real Spectrum(uInt i) {return DNSProblem->getSpectrum(i);}
+  static Real TE(uInt i) {return DNSProblem->TE_(i);}
+  static Real TZ(uInt i) {return DNSProblem->TZ_(i);}
+  static Real Eps(uInt i) {return DNSProblem->Eps_(i);}
+  static Real Eta(uInt i) {return DNSProblem->Eta_(i);}
+  static Real Zeta(uInt i) {return DNSProblem->Zeta_(i);}
+  static Real DE(uInt i) {return DNSProblem->DE_(i);}
+  static Real DZ(uInt i) {return DNSProblem->DZ_(i);}
 
-  static Real kb(unsigned i) {return DNSProblem->kb(i);}
-  static Real kc(unsigned i) {return DNSProblem->kc(i);}
+  static Real kb(uInt i) {return DNSProblem->kb(i);}
+  static Real kc(uInt i) {return DNSProblem->kc(i);}
 };
 
 void DNS::Initialize()
@@ -340,6 +391,9 @@ void DNS::Initialize()
 void DNS::InitialConditions()
 {
   fftw::maxthreads=threads;
+  if(threshold < SIZE_MAX)
+    lastThreads=0;
+  Threshold(threads);
 
   // load vocabulary from global variables
   Nx=::Nx;
@@ -354,10 +408,9 @@ void DNS::InitialConditions()
   mx=(Nx+1)/2;
   my=(Ny+1)/2;
 
-  nshells=spectrum ? (unsigned) (hypot(mx-1,my-1)+0.5) : 0;
+  nshells=spectrum ? (uInt) (hypot(mx-1,my-1)+0.5) : 0;
 
-  NY[PAD]=my;
-  NY[OMEGA]=Nx*my;
+  NY[OMEGA]=mx*(my-1)+(mx-1)*my;
   NY[TRANSFERE]=nshells;
   NY[TRANSFERZ]=nshells;
   NY[EPS]=nshells;
@@ -369,53 +422,84 @@ void DNS::InitialConditions()
 
   cout << "\nGEOMETRY: (" << Nx << " X " << Ny << ")" << endl;
   cout << "\nALLOCATING FFT BUFFERS" << endl;
-  size_t align=sizeof(Complex);
+  uInt align=utils::ALIGNMENT;
 
   Allocator(align);
 
-  Dimension(TE,nshells);
-  Dimension(TZ,nshells);
-  Dimension(Eps,nshells);
-  Dimension(Eta,nshells);
-  Dimension(Zeta,nshells);
-  Dimension(DE,nshells);
-  Dimension(DZ,nshells);
-  Dimension(E,nshells);
+  Dimension(Sum,nshells);
 
-  w.Dimension(Nx,my,-mx+1,0);
-  S.Dimension(Nx,my,-mx+1,0);
+  uInt Nshells=threads*nshells;
+  Allocate(TE,Nshells);
+  Allocate(TZ,Nshells);
+  Allocate(Eps,Nshells);
+  Allocate(Eta,Nshells);
+  Allocate(Zeta,Nshells);
+  Allocate(DE,Nshells);
+  Allocate(DZ,Nshells);
+  Allocate(E,Nshells);
 
-  block=ComplexAlign((Nx+1)*my);
-  f0.Dimension(Nx+1,my,-mx,0);
-  f1.Dimension(Nx+1,my,block,-mx,0);
+  Allocate(enstrophy,threads);
+  Allocate(energy,threads);
+  Allocate(palinstrophy,threads);
 
-  vector f=Y[PAD];
-  for(int j=0; j < my; ++j)
-    f1(j)=f[j]=0.0;
+  Dimension(Y0,Y);
+  Set(Y0,Y);
 
-  F[1]=f1;
+  w.Dimension(mx,my);
+  S.Dimension(mx,my);
 
-//  Convolution=new fftwpp::ImplicitHConvolution2(mx,my,false,true,2,2);
+  uInt Mx=3*mx-2;
+  uInt My=3*my-2;
 
-  unsigned Mx=3*mx-2;
-  unsigned My=3*my-2;
-  Convolution=new fftwpp::ConvolutionHermitian2(Nx+1,Ny+1,Mx,My,2,2);
+  my1=utils::align(my+1);
+
+  uInt A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
+  uInt N=max(A,B);
+
+  Application appx(A,B,multNone,threads);
+//  Application appx(A,B,multNone,threads,1024,1,1);
+//  Application appx(A,B,multNone,threads,8192,1,1);
+  auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
+
+  Application appy(A,B,multadvection2,appx);
+//  Application appy(A,B,multadvection2,appx,3072,1,0);
+//  Application appy(A,B,multadvection2,appx,24576,1,0);
+  auto ffty=new fftPadHermitian(Ny,My,appy);
+
+  Convolve=new Convolution2(fftx,ffty);
+
+  saveWisdom();
+
+  block=ComplexAlign(N,fftx->inputSize());
+
+  u.Dimension(Nx+1,my1,block[0],-mx,0);
+  v.Dimension(Nx+1,my1,block[1],-mx,0);
+  V.Dimension(Nx+1,my,block[1],-mx,0);
+
+  F[0]=u;
+  F[1]=v;
 
   Allocate(count,nshells);
-  setcount();
 
   if(movie) {
-    nx=4*mx-3;
-    ny0=4*my-3;
+    uInt A=8, B=0; // 8 inputs, 0 outputs in Basdevant scheme
 
-    Convolution2=new fftwpp::ConvolutionHermitian2(Nx+1,Ny+1,nx,ny0,8,0);
-//    unsigned nyp=ny0/2+1;
-//    unsigned nyp=my;
+    uInt nx=4*mx-3;
+    uInt ny0=4*my-3;
 
-    size_t align=sizeof(Complex);
-    w0.Allocate(Nx+1,my,-mx,0,align);
-    u.Allocate(Nx+1,my,-mx,0,align);
-    v.Allocate(Nx+1,my,-mx,0,align);
+    Application appX(A,B,multNone,threads);
+//    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
+    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my);
+
+    Application appY(A,B,multTriplet,appX);
+    auto fftY=new fftPadHermitian(Ny,ny0,appY);
+
+    Convolve2=new Convolution2(fftX,fftY);
+
+    saveWisdom();
+
+    u0.Allocate(Nx+1,my,-mx,0,align);
+    v0.Allocate(Nx+1,my,-mx,0,align);
     ux.Allocate(Nx+1,my,-mx,0,align);
     uy.Allocate(Nx+1,my,-mx,0,align);
     vx.Allocate(Nx+1,my,-mx,0,align);
@@ -423,7 +507,7 @@ void DNS::InitialConditions()
     A2u.Allocate(Nx+1,my,-mx,0,align);
     A2v.Allocate(Nx+1,my,-mx,0,align);
 
-    wr.Dimension(Nx+1,2*my,(Real *) w0());
+    wr.Dimension(Nx+1,2*my,(Real *) V());
     ur.Dimension(Nx+1,2*my,(Real *) u());
     vr.Dimension(Nx+1,2*my,(Real *) v());
     uxr.Dimension(Nx+1,2*my,(Real *) ux());
@@ -433,24 +517,15 @@ void DNS::InitialConditions()
     A2ur.Dimension(Nx+1,2*my,(Real *) A2u());
     A2vr.Dimension(Nx+1,2*my,(Real *) A2v());
 
-//    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,w);
-
-//    Backward2=new fftwpp::crfft2d(nx,ny0,w0);
-//    Pad2=new fftwpp::ExplicitHTPad2(nx,ny0,Nx,nyp);
+    wr.Dimension(Nx+1,2*my,(Real *) v());
+    Backward=new fftwpp::crfft2d(Nx+1,2*my-1,v);
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);
 
   w.Set(Y[OMEGA]);
 
-  Init(TE,Y[TRANSFERE]);
-  Init(TZ,Y[TRANSFERZ]);
-  Init(Eps,Y[EPS]);
-  Init(Eta,Y[ETA]);
-  Init(Zeta,Y[ZETA]);
-  Init(DE,Y[DISSIPATIONE]);
-  Init(DZ,Y[DISSIPATIONZ]);
-  Init(E,Y[EK]);
+  ZeroDiagnostics();
 
   Forcing=DNS_Vocabulary.NewForcing(forcing);
 
@@ -483,7 +558,7 @@ void DNS::InitialConditions()
   out_curve(fprolog,cwrap::kb,"kb",nshells+1);
   out_curve(fprolog,cwrap::kc,"kc",nshells);
 
-  Loop(InitNone(this),ForcingMask(this));
+  Loop(InitNone(this),ForcingMask(this),1);
 
   fprolog.close();
 
@@ -494,14 +569,25 @@ void DNS::InitialConditions()
     open_output(fw,dirsep,"w");
 }
 
-void DNS::Output(int it)
+void DNS::ZeroDiagnostics()
+{
+  Zero(Y[TRANSFERE]);
+  Zero(Y[TRANSFERZ]);
+  Zero(Y[EPS]);
+  Zero(Y[ETA]);
+  Zero(Y[ZETA]);
+  Zero(Y[DISSIPATIONE]);
+  Zero(Y[DISSIPATIONZ]);
+  Zero(Y[EK]);
+}
+
+void DNS::Output(uInt it)
 {
   vector y=Y[OMEGA];
   w.Set(y);
 
-  Real E,Z,P,P2;
-  ComputeInvariants(w,E,Z,P,P2);
-  fevt << t << "\t" << E << "\t" << Z << "\t" << P << "\t" << P2 << endl;
+  ComputeInvariants();
+  fevt << t << "\t" << Energy << "\t" << Enstrophy << "\t" << Palinstrophy << endl;
 
   if(output) out_curve(fw,y,"w",NY[OMEGA]);
 
@@ -513,7 +599,6 @@ void DNS::Output(int it)
 
   if(spectrum) {
     ostringstream buf;
-    Set(this->E,Y[EK]);
     buf << "ekvk" << dirsep << "t" << tcount;
     const string& s=buf.str();
     open_output(fekvk,dirsep,s.c_str(),0);
@@ -522,13 +607,6 @@ void DNS::Output(int it)
     fekvk.close();
     if(!fekvk) msg(ERROR,"Cannot write to file ekvk");
 
-    Set(TE,Y[TRANSFERE]);
-    Set(TZ,Y[TRANSFERZ]);
-    Set(Eps,Y[EPS]);
-    Set(Eta,Y[ETA]);
-    Set(Zeta,Y[ZETA]);
-    Set(DE,Y[DISSIPATIONE]);
-    Set(DZ,Y[DISSIPATIONZ]);
     buf.str("");
     buf << "transfer" << dirsep << "t" << tcount;
     const string& S=buf.str();
@@ -550,25 +628,15 @@ void DNS::Output(int it)
 
   if(rezero && it % rezero == 0 && spectrum) {
     vector2 Y=Integrator->YVector();
-
-    Init(TE,Y[TRANSFERE]);
-    Init(TZ,Y[TRANSFERZ]);
-    Init(Eps,Y[EPS]);
-    Init(Eta,Y[ETA]);
-    Init(Zeta,Y[ZETA]);
-    Init(DE,Y[DISSIPATIONE]);
-    Init(DZ,Y[DISSIPATIONZ]);
-    Init(this->E,Y[EK]);
+    ZeroDiagnostics();
   }
 }
 
 void DNS::FinalOutput()
 {
-  Real E,Z,P,P2;
-  ComputeInvariants(w,E,Z,P,P2);
+  ComputeInvariants();
   cout << endl;
-  cout << "Energy = " << E << newl;
-  cout << "Enstrophy = " << Z << newl;
-  cout << "Palinstrophy = " << P << newl;
-  cout << "Palinstrophy2 = " << P2 << newl;
+  cout << "Energy = " << Energy << newl;
+  cout << "Enstrophy = " << Enstrophy << newl;
+  cout << "Palinstrophy = " << Palinstrophy << newl;
 }

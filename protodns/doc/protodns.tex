@@ -3,7 +3,7 @@
 \title{\huge{\textbf{\\Two-Dimensional {\tt ProtoDNS} Code}}}
 \author{Noel Murasko, Pedram Emami, and John C. Bowman\\University of Alberta\\Edmonton,
   Alberta, Canada}
-\date{\today}
+\date{November 18, 2022}
 
 % PAGE LAYOUT
 \setlength{\oddsidemargin}{0pt}
@@ -104,9 +104,9 @@ $$\begin{cases}
 \\
 \div \vu=0.
 \end{cases}$$
-This is obtained using the identity $\vu\cdot \grad\vu= \frac{1}{2}\grad u^2 - \grad\times(\grad\times \vu)$. One advantage of the vorticity equation is that it does not contain a pressure term. 
+This is obtained using the identity $\vu\cdot \grad\vu= \frac{1}{2}\grad u^2 - \grad\times(\grad\times \vu)$. One advantage of the vorticity equation is that it does not contain a pressure term.
 Moreover, in 2D, one can exploit the fact that the
-vorticity vector is always parallel to the normal $\zhat$ of the plane of motion. 
+vorticity vector is always parallel to the normal $\zhat$ of the plane of motion.
 The \In{vortex stretching} term is then given by $(\vw\dot\grad)\vu = 0$. The vorticity equation in 2D is then given by:
 \begin{equation}\label{vorticity}
 \begin{cases}
@@ -120,7 +120,7 @@ $\vu=\curl\vA$ in the Coulomb gauge $\div\vA=0$, so that
 $$
 \vw=\w\zhat=\curl(\curl \vA)=\grad(\div\vA)-\del^2 \vA=-\del^2 \vA.
 $$
-Hence $\del^2 A_x=\del^2 A_y=0$. Given periodic 
+Hence $\del^2 A_x=\del^2 A_y=0$. Given periodic
 conditions one may then without loss of generality take $A_x=A_y=0$ so that
 $\vA$, like $\vw$, has only one component $\w$, in the $\zhat$ direction.
 It is conventional to define $\psi\doteq -A_z$ to be
@@ -156,7 +156,7 @@ $\vu\cdot\grad\omega$ can be written as a convolution:
 \frac{\partial\omega_{\vk}}{\partial t} + \sum_{\vp}{\frac{(\hat{\vz}\cross\vp)\dot\vk}{p^2}\omega_{\vp}\omega_{\vk-\vp}}= -\nu k^2\omega_{\vk}.
 \end{equation}
 \section{Reducing the Number of FFTs}
-Instead of computing the advection term in Fourier space, we first transform to physical space using an inverse Fast Fourier Transform (FFT). Now, the nonlinear terms can computed by pointwise multiplication and addition. These terms are then transformed back into Fourier space with a forward FFT.
+Instead of computing the advection term in Fourier space, we first transform to physical space using an inverse Fast Fourier Transform (FFT). Now, the nonlinear terms can computed by point-wise multiplication and addition. These terms are then transformed back into Fourier space with a forward FFT.
 
 To obtain the advection term in \Eq{Fourier}, we take the $z$ component of the curl of this term:
 \begin{equation}\label{zAdvection}
@@ -167,11 +167,11 @@ The most computationally expensive part of this algorithm are the number of FFTs
 \vu\cdot\grad\omega = u_1\frac{\partial \omega}{\partial x_1}+u_2\frac{\partial \omega}{\partial x_2},
 \end{equation}
 one might think that five FFTs are required at each time step: four
-inverse FFTs to transfrom $u_1$, $ u_2$, $\partial \omega/\partial x_1$, and $\partial \omega/\partial x_2$ from Fourier space to physical space and one forward FFT to transform $u_1\left(\partial \omega/\partial x_1\right)+u_2\left(\partial \omega/\partial x_2\right)$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
+inverse FFTs to transform $u_1$, $ u_2$, $\partial \omega/\partial x_1$, and $\partial \omega/\partial x_2$ from Fourier space to physical space and one forward FFT to transform $u_1\left(\partial \omega/\partial x_1\right)+u_2\left(\partial \omega/\partial x_2\right)$ from physical space to Fourier space. If we rewrite the term in a clever way, however, we can get down to four FFTs.
 
 To reduce the amount of writing, we write $\vu\cdot\grad\vu$ in Einstein notation (sum over repeated indices)
 $$\vu\cdot\grad\vu =u_j\dfrac{\partial u_i}{\partial x_j}.$$
-Note that with the incompressibility condition, $\dfrac{\partial u_j}{\partial x_j} =0$, this equation can be written as 
+Note that with the incompressibility condition, $\dfrac{\partial u_j}{\partial x_j} =0$, this equation can be written as
 \begin{equation}\label{incompAdvection}
 u_j\dfrac{\partial u_i}{\partial x_j} = \dfrac{\partial (u_iu_j)}{\partial x_j}.
 \end{equation}
@@ -184,14 +184,14 @@ Now expanding \Eq{zAdvection} using \Eq{incompAdvection}, we have
 Thus, we can write \Eq{Fourier} as:
 \begin{equation}\label{evolutionary}
   \frac{\partial\omega_{\vk}}{\partial t} =
-  (k_x^2-k_y^2) {\cal F}_\vk\{uv\}+k_xk_y{\cal F}_\vk\{v^2-u^2\} -\nu k^2\omega_{\vk}.
+  (k_x^2-k_y^2) {\cal F}_\vk\{u_1v_2\}+k_xk_y{\cal F}_\vk\{u_2^2-u_1^2\} -\nu k^2\omega_{\vk}.
 \end{equation}
-Two inverse transforms are required to compute $u$ and $v$ in physical
-space, from which the quantities $uv$ and $v^2-u^2$ can then be
-calculated and transformed back to Fourier space with two additional
+Two inverse transforms are required to compute $u_1$ and $u_2$ in physical
+space, from which the quantities $u_1u_2$ and $u_2^2-u_1^2$ can then be
+calculated. Then they are transformed back to Fourier space with two additional
 forward transforms. The advection term in 2D can thus be calculated with four $\text{FFTs}$.
-\section{The Energy, Enstrophy, and Palinstrophy} 
-In this code, we compute three quantities from the simulation data: the energy $E$, the enstrophy $Z$, and palinstrophy $P$.  These quantities are only used in our analysis of the simulation. They are not inputs in any part of the algorithm. 
+\section{The Energy, Enstrophy, and Palinstrophy}
+In this code, we compute three quantities from the simulation data: the energy $E$, the enstrophy $Z$, and palinstrophy $P$.  These quantities are only used in our analysis of the simulation. They are not inputs in any part of the algorithm.
 \subsection{Definitions}
 The energy $E$ is a familiar concept in physics. In physical space, it is given by the mean squared velocity of the system:
 $$
@@ -205,11 +205,11 @@ We define the enstrophy as
 $$
 Z\doteq\frac{1}{2}\int |\vw|^2,
 $$
-so we have 
+so we have
 $$
 \frac{\partial E}{\partial t} = -2\nu Z.
 $$
-Similarly, it can be shown \cite{frisch95} that rate of change of the enstrophy of a unforced, and incompressible fluid is given by
+Similarly, it can be shown \cite{frisch95} that rate of change of the enstrophy of an unforced, and incompressible fluid is given by
 $$
 \frac{\partial Z}{\partial t} = -\nu \int |\grad\times \vw|^2.
 $$
@@ -217,11 +217,11 @@ The palinstrophy $P$ is then defined as
 $$
 P\doteq\frac{1}{2}\int |\grad \times \vw|^2,
 $$
-so we have 
+so we have
 $$
 \frac{\partial Z}{\partial t} = -2\nu P.
 $$
-While these definitions are motivating, they do not help with computation. These definitions are in physical space, not Fourier space. Furthermore, the energy is in terms of the velocity, while in our code, we only evolve the vorticity. In the next subsections, we will express $E$, $Z$, and $P$ in terms of $\vw_\vk$. 
+While these definitions are motivating, they do not help with computation. These definitions are in physical space, not Fourier space. Furthermore, the energy is in terms of the velocity, while in our code, we only evolve the vorticity. In the next subsections, we will express $E$, $Z$, and $P$ in terms of $\vw_\vk$.
 \subsection{The Energy}
 In physical space, energy is defined as the mean squared velocity of the system. First, we must express the velocity in terms of the vorticity. Taking the curl of the vorticity gives us
 $$\grad \times \vw = \grad \times(\grad \times \vu) = \grad(\grad\cdot \vu)- {\nabla}^2 \vu = - {\nabla}^2 \vu,$$
@@ -243,7 +243,7 @@ In physical space, the palinstrophy is given by the mean squared curl of the vor
 $$\cal{F}_{\vk}(\grad\times \vw) = i\vk\times \vw_\vk.$$
 The palinstrophy is then given by
 $$P = \sum_{\vk} |i\vk\times \vw_\vk|^2 = \sum_{\vk} (\vk\cdot \vk ) (\vw\cdot \vw)   = \sum_{\vk} k^2|\vw_\vk|^2 .$$
-So we have: 
+So we have:
 $$P = \sum_{\vk} k^2|\vw_\vk|^2 .$$
 \section{Numerical simulation}
 \subsection{The domain of simulation}
@@ -251,16 +251,16 @@ We notice that the velocity field in physical space is real. Because of this, we
 \begin{equation}
 \vu_\vk = \vu_{-\vk}^*,
 \end{equation}
-where we use $*$ to denote the complex conjugate. We exploit this to reduce the number of modes we have to compute explicitly. 
-We take the domain of our solution to be: 
+where we use $*$ to denote the complex conjugate. We exploit this to reduce the number of modes we have to compute explicitly.
+We take the domain of our solution to be:
 $$
-\vk = (k_x, k_y): k_x \in [-m_x + 1, m_x -1],\ k_y \in 
+\vk = (k_x, k_y): k_x \in [-m_x + 1, m_x -1],\ k_y \in
 \begin{cases}
 [1, m_y -1]&\text{if }k_x \leq 0\\
 [0, m_y -1]&\text{if }k_x > 0\\
 \end{cases}.
 $$
-This is shown in as a diagram in Figure~(\ref{domain}). 
+This is shown in as a diagram in Figure~(\ref{domain}).
 
 One might notice that we do not compute the velocity at the mode $\vk = (0,0)$. This isn't a problem, as this mode doesn't evolve in time. It corresponds to the mean flow of the system. For simplicity, we assert that the system has zero mean flow, by setting $u_{(0,0)} = 0$.
 \begin{figure}[ht]
@@ -276,7 +276,7 @@ We can now summarize the steps of the algorithm:
 \item Initialize $\omega_{\vk}$ in Fourier space;
 \item Calculate the velocity components $u_\vk$ and $v_\vk$ from $\omega_{\vk}$;
 \item Take the inverse discrete fast Fourier transform
-  ($\text{FFT}^{-1}$) of $u_\vk$ and $\u_\vk$;
+  ($\text{FFT}^{-1}$) of $u_\vk$ and $u_\vk$;
 \item Calculate $uv$ and $v^2-u^2$ term in physical space;
 \item Take the forward discrete fast Fourier transform ($\text{FFT}$) of
 $uv$ and $v^2-u^2$;
@@ -284,7 +284,7 @@ $uv$ and $v^2-u^2$;
 \item \emph{Optionally}, compute the energy, enstrophy, and palinstrophy from $\omega_\vk$.
 \item Repeat steps 2 -- 7 for the desired number of time steps.
 \end{enumerate}
-A simplified version of the numerical algorithm is shown as a flow chart in Figure~(\ref{algorithm}). 
+A simplified version of the numerical algorithm is shown as a flow chart in Figure~(\ref{algorithm}).
 
 \begin{figure}[ht]
 \begin{center}

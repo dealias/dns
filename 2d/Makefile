@@ -17,12 +17,11 @@ ifneq ($(strip $(FFTW_LIB_PATH)),)
 LIB += -L$(FFTW_LIB_PATH)
 endif
 
-#EXTRA = fftw++ convolution $(CORE) $(UTILS)
 EXTRA = fftw++ convolve $(CORE) $(UTILS)
 FILES = dns $(EXTRA)
-OTHER = 
+OTHER =
 
-LIB += -L$(HOME)/fftw/lib -lfftw3 -lfftw3_omp
+LIB += -lfftw3 -lfftw3_omp
 
 include $(TRI)/config/Rules
 

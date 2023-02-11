@@ -41,13 +41,13 @@ for(int j=0; j < Ny; ++j)
 
 v=transpose(v);
 int Nx=v[0].length;
-  
+
 pen[] Palette=BWRainbow2();
 
 picture bar;
 real[][] dummy;
 
-bounds range=image(v,(0,0),(1,1),Palette);
+bounds range=image(v,(0,0),(1,1),Palette,copy=false);
 
 int Divs=10;
 
