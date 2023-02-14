@@ -474,7 +474,7 @@ void DNS::InitialConditions()
 
   u.Dimension(Nx+1,my1,block[0],-mx,0);
   v.Dimension(Nx+1,my1,block[1],-mx,0);
-  V.Dimension(Nx+1,my,block[1],-mx,0);
+  V.Dimension(Nx+1,my1,block[1],-mx,0);
 
   F[0]=u;
   F[1]=v;
@@ -488,8 +488,7 @@ void DNS::InitialConditions()
     uInt ny0=4*my-3;
 
     Application appX(A,B,multNone,threads);
-//    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
-    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my);
+    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
 
     Application appY(A,B,multTriplet,appX);
     auto fftY=new fftPadHermitian(Ny,ny0,appY);
@@ -498,27 +497,29 @@ void DNS::InitialConditions()
 
     saveWisdom();
 
-    u0.Allocate(Nx+1,my,-mx,0,align);
-    v0.Allocate(Nx+1,my,-mx,0,align);
-    ux.Allocate(Nx+1,my,-mx,0,align);
-    uy.Allocate(Nx+1,my,-mx,0,align);
-    vx.Allocate(Nx+1,my,-mx,0,align);
-    vy.Allocate(Nx+1,my,-mx,0,align);
-    A2u.Allocate(Nx+1,my,-mx,0,align);
-    A2v.Allocate(Nx+1,my,-mx,0,align);
+    u0.Allocate(Nx+1,my1,-mx,0,align);
+    v0.Allocate(Nx+1,my1,-mx,0,align);
+    ux.Allocate(Nx+1,my1,-mx,0,align);
+    uy.Allocate(Nx+1,my1,-mx,0,align);
+    vx.Allocate(Nx+1,my1,-mx,0,align);
+    vy.Allocate(Nx+1,my1,-mx,0,align);
+    A2u.Allocate(Nx+1,my1,-mx,0,align);
+    A2v.Allocate(Nx+1,my1,-mx,0,align);
 
-    wr.Dimension(Nx+1,2*my,(Real *) V());
-    ur.Dimension(Nx+1,2*my,(Real *) u());
-    vr.Dimension(Nx+1,2*my,(Real *) v());
-    uxr.Dimension(Nx+1,2*my,(Real *) ux());
-    uyr.Dimension(Nx+1,2*my,(Real *) uy());
-    vxr.Dimension(Nx+1,2*my,(Real *) vx());
-    vyr.Dimension(Nx+1,2*my,(Real *) vy());
-    A2ur.Dimension(Nx+1,2*my,(Real *) A2u());
-    A2vr.Dimension(Nx+1,2*my,(Real *) A2v());
+    wr.Dimension(Nx+1,2*my1,(Real *) V());
+    ur.Dimension(Nx+1,2*my1,(Real *) u());
+    vr.Dimension(Nx+1,2*my1,(Real *) v());
+    uxr.Dimension(Nx+1,2*my1,(Real *) ux());
+    uyr.Dimension(Nx+1,2*my1,(Real *) uy());
+    vxr.Dimension(Nx+1,2*my1,(Real *) vx());
+    vyr.Dimension(Nx+1,2*my1,(Real *) vy());
+    A2ur.Dimension(Nx+1,2*my1,(Real *) A2u());
+    A2vr.Dimension(Nx+1,2*my1,(Real *) A2v());
 
+    /*
     wr.Dimension(Nx+1,2*my,(Real *) v());
     Backward=new fftwpp::crfft2d(Nx+1,2*my-1,v);
+    */
   }
 
   InitialCondition=DNS_Vocabulary.NewInitialCondition(ic);

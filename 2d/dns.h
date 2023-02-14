@@ -149,7 +149,7 @@ public:
         V(j)=0.0;
       );
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,V);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,V,my1);
 
     u0=0.0;
     v0=0.0;
@@ -183,14 +183,14 @@ public:
 
 //    unsigned nyp=ny0/2+1;
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,u0);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,v0);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,ux);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,uy);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,vx);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,vy);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,u0,my1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,v0,my1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,ux,my1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,uy,my1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,vx,my1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,vy,my1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u,my1);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v,my1);
 
 //    Pad2->pad(w0);
     /*
@@ -275,6 +275,7 @@ public:
     F[0]=u;
     F[1]=v;
 
+    /*
     Backward->fft0(V);
 
     fw << 1 << 2*my << Nx+1;
@@ -282,6 +283,7 @@ public:
       for(uInt i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
+    */
   }
 
   class F {
