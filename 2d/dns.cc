@@ -42,8 +42,7 @@ uInt randomIC=0;
 
 // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
 // requires only 4 FFTs per stage.
-void multadvection2(Complex **F, uInt n, Indices *,
-                    uInt threads)
+void multadvection2(Complex **F, uInt n, Indices *, uInt threads)
 {
   double* F0=(double *) F[0];
   double* F1=(double *) F[1];
@@ -445,7 +444,6 @@ void DNS::InitialConditions()
 
   u.Dimension(Nx+1,my1,block[0],-mx,0);
   v.Dimension(Nx+1,my1,block[1],-mx,0);
-  V.Dimension(Nx+1,my,block[1],-mx,0);
 
   F[0]=u;
   F[1]=v;
@@ -453,6 +451,7 @@ void DNS::InitialConditions()
   Allocate(count,nshells);
 
   if(movie) {
+    W.Dimension(Nx+1,my,v(),-mx,0);
     wr.Dimension(Nx+1,2*my,(Real *) v());
     Backward=new fftwpp::crfft2d(Nx+1,2*my-1,v);
   }

@@ -27,8 +27,6 @@ typedef array1<Var>::opt vector;
 typedef array1<Real>::opt rvector;
 typedef array1<Nu>::opt nuvector;
 
-extern double sum;
-
 extern uInt spectrum;
 
 extern int pH;
@@ -50,7 +48,8 @@ protected:
   Int mx,my; // size of data arrays
   Int my1;   // x stride
 
-  array2h<Complex> w; // Vorticity field
+  array2h<Complex> w; // vorticity field
+  Array2<Complex> W;  // copy of vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field
 
   uInt tcount;
@@ -58,9 +57,9 @@ protected:
 
   uInt nshells;  // Number of spectral shells
 
-  Array2<Complex> u,v,V;
+  Array2<Complex> u,v;
   array2h<Complex> S;
-  array2<Complex> buffer;
+
   Complex *F[2];
   Complex **block;
 
@@ -134,19 +133,13 @@ public:
   void FinalOutput();
 
   void OutFrame(uInt it) {
-    Loop(Initw(this),wtoV(this),1);
-    V(0,0)=0.0;
+    // Output movie:
+    Loop(Initw(this),wtoW(this),1);
+    W(0,0).re=0.0;
 
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,V);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,W,my,threads);
 
-// Zero Nyquist modes.
-    PARALLELIF(
-      my > (Int) threshold,
-      for(Int j=0; j < my; ++j)
-        V(j)=0.0;
-      );
-
-    Backward->fft0(V);
+    Backward->fft0(W);
 
     fw << 1 << 2*my << Nx+1;
     for(Int j=2*my-1; j >= 0; j--)
@@ -361,7 +354,7 @@ public:
       uInt k2=i*i+j*j;
       Real k=sqrt(k2);
       uInt index=offset+(uInt)(k-0.5);
-      double eta=Forcing->ForceStochastic(wi[j],i,j);
+      Real eta=Forcing->ForceStochastic(wi[j],i,j);
       Eps[index] += eta/k2;
       Eta[index] += eta;
       Zeta[index] += k2*eta;
@@ -429,13 +422,13 @@ public:
     }
   };
 
-  class wtoV : public F {
+  class wtoW : public F {
     DNSBase *b;
   public:
-    wtoV(DNSBase *b) : b(b) {}
+    wtoW(DNSBase *b) : b(b) {}
     inline void operator()(const vector&wi, const vector&,
                            const nuvector &nui, Int i, Int j, uInt) {
-      b->V(i,j)=wi[j];
+      b->W(i,j)=wi[j];
     }
   };
 
@@ -721,7 +714,7 @@ public:
         vector Si;
         nuvector nui;
         init(wi,Si,nui,i);
-        uInt offset=n*get_thread_num0();
+        uInt offset=n*parallel::get_thread_num(threads);
         for(Int j=i <= 0; j < my; ++j) // start with j=1 if i <= 0
           fcn(wi,Si,nui,i,j,offset);
       });
