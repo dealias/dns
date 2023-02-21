@@ -57,6 +57,8 @@ void multadvection2(Complex **F, uInt n, Indices *, uInt threads)
     });
 }
 
+Real *Triplet, *Norm1, *Norm2;
+
 // A=8, B=0 TODO: Reduce to A=7, B=0 using incompressibility
 void multTriplet(Complex **F, uInt n, Indices *, uInt threads)
 {
@@ -69,22 +71,29 @@ void multTriplet(Complex **F, uInt n, Indices *, uInt threads)
   double* F6=(double *) F[6];
   double* F7=(double *) F[7];
 
-  for(unsigned int j=0; j < n; ++j) {
-    double u=F0[j];
-    double v=F1[j];
-    double ux=F2[j];
-    double uy=F3[j];
-    double vx=F4[j];
-    double vy=F5[j];
-    double A2u=F6[j];
-    double A2v=F7[j];
-    double bx=u*ux+v*uy;
-    double by=u*vx+v*vy;
+  Real triplet=0.0, norm1=0.0, norm2=0.0;
+  PARALLELIF(
+    n > threshold,
+    for(unsigned int j=0; j < n; ++j) {
+      double u=F0[j];
+      double v=F1[j];
+      double ux=F2[j];
+      double uy=F3[j];
+      double vx=F4[j];
+      double vy=F5[j];
+      double A2u=F6[j];
+      double A2v=F7[j];
+      double bx=u*ux+v*uy;
+      double by=u*vx+v*vy;
 
-    Triplet += bx*A2u+by*A2v;
-    Norm1 += bx*bx+by*by;
-    Norm2 += A2u*A2u+A2v*A2v;
-  }
+      triplet += bx*A2u+by*A2v;
+      norm1 += bx*bx+by*by;
+      norm2 += A2u*A2u+A2v*A2v;
+    });
+  size_t t=parallel::get_thread_num();
+  Triplet[t] += triplet;
+  Norm1[t] += norm1;
+  Norm2[t] += norm2;
 }
 
 class DNS : public DNSBase, public ProblemBase {
@@ -485,6 +494,10 @@ void DNS::InitialConditions()
 
     uInt nx=4*mx-3;
     uInt ny0=4*my-3;
+
+    Triplet=new Real[threads];
+    Norm1=new Real[threads];
+    Norm2=new Real[threads];
 
     Application appX(A,B,multNone,threads);
     auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);

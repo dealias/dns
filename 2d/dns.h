@@ -27,14 +27,12 @@ typedef array1<Var>::opt vector;
 typedef array1<Real>::opt rvector;
 typedef array1<Nu>::opt nuvector;
 
-extern double sum;
-
 extern uInt spectrum;
 
 extern int pH;
 extern int pL;
 
-double Triplet, Norm1, Norm2;
+extern Real *Triplet, *Norm1, *Norm2;
 
 class DNSBase {
 protected:
@@ -177,15 +175,24 @@ public:
     fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u,my1,threads);
     fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v,my1,threads);
 
-    Triplet=0.0;
-    Norm1=0.0;
-    Norm2=0.0;
+    for(size_t t=0; t < threads; ++t) {
+      Triplet[t]=0.0;
+      Norm1[t]=0.0;
+      Norm2[t]=0.0;
+    }
 
     Convolve2->convolveRaw(F);
 
-    double scale=Convolve2->scale;
-    cout << "Inner product=" << Triplet*scale << endl;
-    cout << "Angle=" << acos(Triplet/sqrt(Norm1*Norm2))*180.0/PI << endl;
+    Real triplet=0.0, norm1=0.0, norm2=0.0;
+    for(size_t t=0; t < threads; ++t) {
+      triplet += Triplet[t];
+      norm1 += Norm1[t];
+      norm2 += Norm2[t];
+    }
+
+    Real scale=Convolve2->scale;
+    cout << "Inner product=" << triplet*scale << endl;
+    cout << "Angle=" << acos(triplet/sqrt(norm1*norm2))*180.0/PI << endl;
 
     Loop(Initw(this),wtoW(this),1);
     W(0,0).re=0.0;
@@ -408,7 +415,7 @@ public:
       uInt k2=i*i+j*j;
       Real k=sqrt(k2);
       uInt index=offset+(uInt)(k-0.5);
-      double eta=Forcing->ForceStochastic(wi[j],i,j);
+      Real eta=Forcing->ForceStochastic(wi[j],i,j);
       Eps[index] += eta/k2;
       Eta[index] += eta;
       Zeta[index] += k2*eta;
@@ -768,7 +775,7 @@ public:
         vector Si;
         nuvector nui;
         init(wi,Si,nui,i);
-        uInt offset=n*get_thread_num0();
+        uInt offset=n*get_thread_num();
         for(Int j=i <= 0; j < my; ++j) // start with j=1 if i <= 0
           fcn(wi,Si,nui,i,j,offset);
       });
