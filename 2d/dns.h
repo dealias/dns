@@ -62,7 +62,6 @@ protected:
   Array2<Complex> u,v,ux,uy,vx,vy,A2u,A2v;
   array2h<Complex> S;
 
-  array2<Complex> buffer;
   Complex *F[8];
   Complex **block;
 
@@ -84,6 +83,7 @@ protected:
   vector Eps,Eta,Zeta; // Energy, enstrophy, and palenstrophy injection rates
   vector DE,DZ; // Energy and enstrophy dissipation rates
   vector E; // Energy spectrum
+
   vector Sum; // For parallel reduction
 
   array2h<Real> k2inv;
@@ -194,10 +194,10 @@ public:
     cout << "Inner product=" << triplet*scale << endl;
     cout << "Angle=" << acos(triplet/sqrt(norm1*norm2))*180.0/PI << endl;
 
+    // Output movie:
     Loop(Initw(this),wtoW(this),1);
     W(0,0).re=0.0;
 
-    // Output movie:
     fftwpp::HermitianSymmetrizeX(mx,my,mx,W,my,threads);
 
     Backward->fft0(W);
@@ -775,7 +775,7 @@ public:
         vector Si;
         nuvector nui;
         init(wi,Si,nui,i);
-        uInt offset=n*get_thread_num();
+        uInt offset=n*parallel::get_thread_num(threads);
         for(Int j=i <= 0; j < my; ++j) // start with j=1 if i <= 0
           fcn(wi,Si,nui,i,j,offset);
       });
