@@ -52,7 +52,8 @@ protected:
   Int mx,my; // size of data arrays
   Int my1;   // x stride
 
-  array2h<Complex> w; // Vorticity field
+  array2h<Complex> w; // vorticity field
+  Array2<Complex> W;  // copy of vorticity field
   array2<Real> wr; // Inverse Fourier transform of vorticity field
 
   uInt tcount;
@@ -60,9 +61,7 @@ protected:
 
   uInt nshells;  // Number of spectral shells
 
-  Array2<Complex> u,v,V;
-  Array2<Complex> u0,v0,ux,uy,vx,vy,A2u,A2v;
-  array2<Real> ur,vr,uxr,uyr,vxr,vyr,A2ur,A2vr; // Inverse Fourier transforms
+  Array2<Complex> u,v,ux,uy,vx,vy,A2u,A2v;
   array2h<Complex> S;
 
   array2<Complex> buffer;
@@ -139,30 +138,18 @@ public:
   void FinalOutput();
 
   void OutFrame(uInt it) {
-    Loop(Initw(this),wtoV(this),1);
-    V(0,0)=0.0;
-
-// Zero Nyquist modes.
-    PARALLELIF(
-      my > (Int) threshold,
-      for(Int j=0; j < my; ++j)
-        V(j)=0.0;
-      );
-
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,V,my1);
-
-    u0=0.0;
-    v0=0.0;
-    ux=0.0;
-    uy=0.0;
-    vx=0.0;
-    vy=0.0;
-    A2u=0.0;
-    A2v=0.0;
+    u(0,0).re=0.0;
+    v(0,0).re=0.0;
+    ux(0,0).re=0.0;
+    uy(0,0).re=0.0;
+    vx(0,0).re=0.0;
+    vy(0,0).re=0.0;
+    A2u(0,0).re=0.0;
+    A2v(0,0).re=0.0;
 
     for(int i=-mx+1; i < mx; ++i) {
-      for(int j=0; j < my; ++j) {
-        Complex wij=V(i,j);
+      for(Int j=i <= 0; j < my; ++j) { // start with j=1 if i <= 0
+        Complex wij=w(i,j);
         Real k4=i*i+j*j;
         k4 *= k4;
         Real k2=i*i+j*j;
@@ -170,8 +157,8 @@ public:
         Complex psi=wij*k2inv;
         Complex uij=I*j*psi;
         Complex vij=-I*i*psi;
-        u0[i][j]=uij;
-        v0[i][j]=vij;
+        u[i][j]=uij;
+        v[i][j]=vij;
         ux[i][j]=I*i*uij;
         uy[i][j]=I*j*uij;
         vx[i][j]=I*i*vij;
@@ -181,41 +168,14 @@ public:
       }
     }
 
-//    unsigned nyp=ny0/2+1;
-
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,u0,my1);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,v0,my1);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,ux,my1);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,uy,my1);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,vx,my1);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,vy,my1);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u,my1);
-    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v,my1);
-
-//    Pad2->pad(w0);
-    /*
-   // Zero Nyquist modes.
-    for(int j=0; j < my; ++j) {
-      w0(j)=0.0;
-      u0(j)=0.0;
-      v0(j)=0.0;
-      ux(j)=0.0;
-      uy(j)=0.0;
-      vx(j)=0.0;
-      vy(j)=0.0;
-      A2u(j)=0.0;
-      A2v(j)=0.0;
-    }
-    */
-
-    F[0]=u0;
-    F[1]=v0;
-    F[2]=ux;
-    F[3]=uy;
-    F[4]=vx;
-    F[5]=vy;
-    F[6]=A2u;
-    F[7]=A2v;
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,u,my1,threads);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,v,my1,threads);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,ux,my1,threads);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,uy,my1,threads);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,vx,my1,threads);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,vy,my1,threads);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u,my1,threads);
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v,my1,threads);
 
     Triplet=0.0;
     Norm1=0.0;
@@ -223,67 +183,23 @@ public:
 
     Convolve2->convolveRaw(F);
 
-    /*
-    Backward->fft0(w0);
-    Backward->fft0(u0);
-    Backward->fft0(v0);
-    Backward->fft0(ux);
-    Backward->fft0(uy);
-    Backward->fft0(vx);
-    Backward->fft0(vy);
-    Backward->fft0(A2u);
-    Backward->fft0(A2v);
-    */
-
-/*
-    fw << 1 << ny0 << nx;
-    for(int j=ny0-1; j >= 0; j--)
-      for(unsigned i=0; i < nx; i++)
-        fw << (float) wr(i,j);
-    fw.flush();
-*/
-
-    /*
-    cout << "H=" << H << endl;
-    double h=H/sqrt(norm1*norm2);
-    cout << h << endl;
-    if(h > 1.0) h=1.0;
-    if(h < -1.0) h=-1.0;
-    cout << "Angle=" << acos(h)*180.0/PI << endl;
-    */
-
-    /*
-    for(unsigned i=0; i < nx; i++) {
-      for(unsigned j=0; j < ny0; j++) {
-        Real bx=ur[i][j]*uxr[i][j]+vr[i][j]*uyr[i][j];
-        Real by=ur[i][j]*vxr[i][j]+vr[i][j]*vyr[i][j];
-        Real ax=A2ur[i][j];
-        Real ay=A2vr[i][j];
-        sum += bx*ax+by*ay;
-        Z += wr[i][j]*wr[i][j];
-        E += ur(i,j)*ur(i,j)+vr(i,j)*vr(i,j);
-        norm1 += bx*bx+by*by;
-        norm2 += ax*ax+ay*ay;
-      }
-    }
-    */
-
     double scale=Convolve2->scale;
     cout << "Inner product=" << Triplet*scale << endl;
     cout << "Angle=" << acos(Triplet/sqrt(Norm1*Norm2))*180.0/PI << endl;
 
-    F[0]=u;
-    F[1]=v;
+    Loop(Initw(this),wtoW(this),1);
+    W(0,0).re=0.0;
 
-    /*
-    Backward->fft0(V);
+    // Output movie:
+    fftwpp::HermitianSymmetrizeX(mx,my,mx,W,my,threads);
+
+    Backward->fft0(W);
 
     fw << 1 << 2*my << Nx+1;
     for(Int j=2*my-1; j >= 0; j--)
       for(uInt i=0; i <= Nx; i++)
         fw << (float) wr(i,j);
     fw.flush();
-    */
   }
 
   class F {
@@ -560,13 +476,13 @@ public:
     }
   };
 
-  class wtoV : public F {
+  class wtoW : public F {
     DNSBase *b;
   public:
-    wtoV(DNSBase *b) : b(b) {}
+    wtoW(DNSBase *b) : b(b) {}
     inline void operator()(const vector&wi, const vector&,
                            const nuvector &nui, Int i, Int j, uInt) {
-      b->V(i,j)=wi[j];
+      b->W(i,j)=wi[j];
     }
   };
 
