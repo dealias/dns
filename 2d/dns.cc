@@ -190,7 +190,7 @@ public:
   double Force(Complex& w, Complex& S, Int i, Int j) {
     if(active(i,j)) {
       S += force;
-      return realproduct(force,w);
+      return realProduct(force,w);
     }
     return 0.0;
   }
@@ -216,7 +216,7 @@ public:
     if(index >= 0) {
       Complex force=forces[index];
       S += force;
-      return realproduct(force,w);
+      return realProduct(force,w);
     }
     return 0.0;
   }
@@ -246,7 +246,7 @@ public:
   double ForceStochastic(Complex& w, Int i, Int j) {
     if(active(i,j)) {
       Complex f=f0*crand_gauss();
-      double eta=realproduct(f,w)+0.5*abs2(f);
+      double eta=realProduct(f,w)+0.5*abs2(f);
       w += f;
       return eta;
     }
