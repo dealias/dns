@@ -440,7 +440,7 @@ void DNS::InitialConditions()
 
   saveWisdom();
 
-  block=ComplexAlign(N,fftx->inputSize());
+  block=ComplexAlign(N,fftx->inputLength());
 
   u.Dimension(Nx+1,my1,block[0],-mx,0);
   v.Dimension(Nx+1,my1,block[1],-mx,0);
