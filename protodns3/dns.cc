@@ -1,3 +1,5 @@
+// TODO: Add Badevant
+
 #include <cmath>
 #include <iomanip>
 #include <fstream>
@@ -53,7 +55,7 @@ void init(vector4& u)
       }
     }
   }
-}  
+}
 
 void multadvection3(double **F, unsigned int m,
                     const unsigned int indexsize,
@@ -66,7 +68,7 @@ void multadvection3(double **F, unsigned int m,
   double* F3=F[3];
   double* F4=F[4];
   double* F5=F[5];
-  
+
   for(unsigned int j=0; j < m; ++j) {
     double u=F0[j];
     double v=F1[j];
@@ -85,7 +87,7 @@ void Source(const vector4& u, vector4 &S)
   f0[0][0][0]=0.0;
   f1[0][0][0]=0.0;
   f2[0][0][0]=0.0;
-  
+
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
@@ -93,20 +95,20 @@ void Source(const vector4& u, vector4 &S)
         f1[i][j][k]=u[1][i][j][k];
         f2[i][j][k]=u[2][i][j][k];
       }
-    } 
+    }
   }
 
   Complex *F[]={f0,f1,f2,f3,f4,f5};
   Convolution->convolve(F,multadvection3);
-  
+
   vector3 S0=S[0];
   vector3 S1=S[1];
   vector3 S2=S[2];
-  
+
   S0(0,0,0)=0.0; // Enforce no mean flow.
   S1(0,0,0)=0.0;
   S2(0,0,0)=0.0;
-  
+
   // The purpose of pressure is to enforce incompressibility!
   // Apply projection operator.
   for(int i=-mx+1; i < mx; ++i) {
@@ -118,11 +120,11 @@ void Source(const vector4& u, vector4 &S)
         Complex S11=f3[i][j][k];
         Complex S12=f4[i][j][k];
         Complex S22=f5[i][j][k];
-        
+
         Complex s0=Complex(0.0,i*S00+j*S01+k*S02);
         Complex s1=Complex(0.0,i*S01+j*S11+k*S12);
         Complex s2=Complex(0.0,i*S02+j*S12+k*S22);
-        
+
         // Calculate -i*P
         Complex miP=(i*s0+j*s1+k*s2)/(i*i+j*j+k*k);
         S0[i][j][k]=i*miP-s0;
@@ -131,11 +133,11 @@ void Source(const vector4& u, vector4 &S)
       }
     }
   }
-    
+
   HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S0);
   HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S1);
   HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,S2);
-  
+
 #if 0
   Complex sum=0.0;
   for(int i=-mx+1; i < mx; ++i) {
@@ -151,8 +153,8 @@ void Source(const vector4& u, vector4 &S)
   }
   cout << "sum=" << sum << endl;
   cout << endl;
-#endif  
-  
+#endif
+
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
@@ -178,7 +180,7 @@ inline double abs2(Complex x, Complex y, Complex z)
 void Spectrum()
 {
   ofstream ekvk("ekvk",ios::out);
-  
+
   int kmax=(int) hypot(mx-1,my-1,mz-1);
   double E[kmax+1];
   double Z[kmax+1];
@@ -186,12 +188,12 @@ void Spectrum()
     E[K]=0.0;
     Z[K]=0.0;
   }
-     
+
   for(int i=-mx+1; i < mx; ++i) {
     for(int j=-my+1; j < my; ++j) {
       for(int k=(j < 0 || (j == 0 && i <= 0)) ? 1 : 0; k < mz; ++k) {
 	int k2=i*i+j*j+k*k;
-        int K=sqrt(k2);	
+        int K=sqrt(k2);
         int index=(int) (K+0.5);
         double e=abs2(u[0][i][j][k],u[1][i][j][k],u[2][i][j][k]);
         E[index] += e;
@@ -199,9 +201,9 @@ void Spectrum()
       }
     }
   }
-    
+
   ekvk << "# k\tE(k)" << endl;
-  
+
   for(int k=1; k <= kmax; ++k)
     ekvk << k << "\t" << E[k] << "\t" << Z[k] << endl;
 }
@@ -249,21 +251,21 @@ int main(int argc, char* argv[])
   f5.Allocate(Nx,Ny,mz,-mx+1,-my+1,0,align);
 
   Convolution=new ImplicitHConvolution3(mx,my,mz,true,true,true,3,6);
-  
+
   u.Allocate(3,Nx,Ny,mz,0,-mx+1,-my+1,0,align);
   S.Allocate(3,Nx,Ny,mz,0,-mx+1,-my+1,0,align);
-  
+
   init(u);
   u(0,0,0,0)=0.0; // Enforce no mean flow.
   u(1,0,0,0)=0.0;
   u(2,0,0,0)=0.0;
-  
+
   HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,u[0]);
   HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,u[1]);
   HermitianSymmetrizeXY(mx,my,mz,mx-1,my-1,u[2]);
-  
+
   cout.precision(15);
-  
+
   for(int step=0; step < n; ++step) {
 //    Output(step,step == 0);
     Output(step,true);
@@ -282,6 +284,6 @@ int main(int argc, char* argv[])
   cout << endl;
   Output(n,true);
   Spectrum();
-     
+
   return 0;
 }
