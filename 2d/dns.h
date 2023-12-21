@@ -232,7 +232,7 @@ public:
       Complex wij=wi[j];
       Real w2=abs2(wij);
       Complex& Sij=Si[j];
-      Real transfer=realproduct(Sij,wij);
+      Real transfer=realProduct(Sij,wij);
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv=1.0/k;
       Real kinv2=kinv*kinv;
@@ -285,7 +285,7 @@ public:
       uInt index=offset+(uInt)(k-0.5);
       Complex wij=wi[j];
       Complex& Sij=Si[j];
-      Real transfer=realproduct(Sij,wij);
+      Real transfer=realProduct(Sij,wij);
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv2=1.0/k2;
       Nu nuk2=nui[j];
@@ -335,7 +335,7 @@ public:
       Complex wij=wi[j];
       Real w2=abs2(wij);
       Complex& Sij=Si[j];
-      Real transfer=realproduct(Sij,wij);
+      Real transfer=realProduct(Sij,wij);
       Real eta=Forcing->Force(wij,Sij,i,j);
       Real kinv=1.0/k;
       Real kinv2=kinv*kinv;

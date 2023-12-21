@@ -229,7 +229,7 @@ public:
   double Force(Complex& w, Complex& S, Int i, Int j) {
     if(active(i,j)) {
       S += force;
-      return realproduct(force,w);
+      return realProduct(force,w);
     }
     return 0.0;
   }
@@ -255,7 +255,7 @@ public:
     if(index >= 0) {
       Complex force=forces[index];
       S += force;
-      return realproduct(force,w);
+      return realProduct(force,w);
     }
     return 0.0;
   }
@@ -285,7 +285,7 @@ public:
   double ForceStochastic(Complex& w, Int i, Int j) {
     if(active(i,j)) {
       Complex f=f0*crand_gauss();
-      double eta=realproduct(f,w)+0.5*abs2(f);
+      double eta=realProduct(f,w)+0.5*abs2(f);
       w += f;
       return eta;
     }
@@ -465,7 +465,8 @@ void DNS::InitialConditions()
   uInt A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   uInt N=max(A,B);
 
-  Application appx(A,B,multNone,threads);
+// Disable overwrite optimization to allow indexing transformed values.
+  Application appx(A,B,multNone,threads,false);
 //  Application appx(A,B,multNone,threads,1024,1,1);
 //  Application appx(A,B,multNone,threads,8192,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
@@ -479,7 +480,7 @@ void DNS::InitialConditions()
 
   saveWisdom();
 
-  block=ComplexAlign(N,fftx->inputSize());
+  block=ComplexAlign(N,fftx->inputLength());
 
   u.Dimension(Nx+1,my1,block[0],-mx,0);
   v.Dimension(Nx+1,my1,block[1],-mx,0);
