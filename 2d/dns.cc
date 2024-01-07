@@ -57,11 +57,23 @@ void multAdvection2(Complex **F, uInt n, Indices *, uInt threads)
     });
 }
 
-Real *Triplet, *Norm1, *Norm2;
+  double acos1(double x) {
+    if(x < -1) return PI;
+    else if(x > 1) return 0;
+    else return acos(x);
+  }
+
+  double dotProduct(double triplet, double norm1, double norm2) {
+    double denom=norm1*norm2;
+//    return denom != 0.0 ? acos1(triplet/sqrt(denom))*180.0/PI : 0.0;
+    return denom != 0.0 ? triplet/sqrt(denom) : 0.0;
+  }
 
 // A=8, B=0 TODO: Reduce to A=7, B=0 using incompressibility
-void multTriplet(Complex **F, uInt n, Indices *, uInt threads)
+void multTriplet(Complex **F, uInt n, Indices *indices, uInt threads)
 {
+  if(indices->size != 1) return;
+
   double* F0=(double *) F[0];
   double* F1=(double *) F[1];
   double* F2=(double *) F[2];
@@ -71,7 +83,14 @@ void multTriplet(Complex **F, uInt n, Indices *, uInt threads)
   double* F6=(double *) F[6];
   double* F7=(double *) F[7];
 
-  Real triplet=0.0, norm1=0.0, norm2=0.0;
+  fftBase *fft=indices->fft;
+  size_t r=indices->r;
+  size_t x=indices->index[0];
+
+  rvector Corrx=Corr[x];
+
+  size_t offset=indices->offset;
+
   PARALLELIF(
     n > threshold,
     for(unsigned int j=0; j < n; ++j) {
@@ -85,15 +104,14 @@ void multTriplet(Complex **F, uInt n, Indices *, uInt threads)
       double A2v=F7[j];
       double bx=u*ux+v*uy;
       double by=u*vx+v*vy;
+      size_t y=fft->index(r,j+offset);
 
-      triplet += bx*A2u+by*A2v;
-      norm1 += bx*bx+by*by;
-      norm2 += A2u*A2u+A2v*A2v;
+      double triplet=bx*A2u+by*A2v;
+      double norm1=bx*bx+by*by;
+      double norm2=A2u*A2u+A2v*A2v;
+      Corrx[y] += dotProduct(abs(triplet),norm1,norm2);
+
     });
-  size_t t=parallel::get_thread_num();
-  Triplet[t] += triplet;
-  Norm1[t] += norm1;
-  Norm2[t] += norm2;
 }
 
 class DNS : public DNSBase, public ProblemBase {
@@ -403,7 +421,6 @@ void DNS::InitialConditions()
   if(threshold < SIZE_MAX)
     lastThreads=0;
   Threshold(threads);
-
   // load vocabulary from global variables
   Nx=::Nx;
   Ny=::Ny;
@@ -465,8 +482,8 @@ void DNS::InitialConditions()
   uInt A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   uInt N=max(A,B);
 
-// Disable overwrite optimization to allow indexing transformed values.
-  Application appx(A,B,multNone,threads,false);
+//  Application appx(A,B,multNone,threads);
+  Application appx(A,B,multNone,128);
 //  Application appx(A,B,multNone,threads,1024,1,1);
 //  Application appx(A,B,multNone,threads,8192,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
@@ -496,19 +513,27 @@ void DNS::InitialConditions()
     uInt nx=4*mx-3;
     uInt ny0=4*my-3;
 
-    Triplet=new Real[threads];
-    Norm1=new Real[threads];
-    Norm2=new Real[threads];
-
-    Application appX(A,B,multNone,threads);
-    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
+// Disable overwrite optimization to allow indexing transformed values.
+    Application appX(A,B,multNone,threads,false);
+//    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
+    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1,nx,1,1);
 
     Application appY(A,B,multTriplet,appX);
-    auto fftY=new fftPadHermitian(Ny,ny0,appY);
+//    auto fftY=new fftPadHermitian(Ny,ny0,appY);
+//    auto fftY=new fftPadHermitian(Ny,ny0,appY,1,ny0,1,1);
+    auto fftY=new fftPadHermitian(Ny,ny0,appY,1,4,2,1);
 
     Convolve2=new Convolution2(fftX,fftY);
 
     saveWisdom();
+
+    lx=fftX->paddedSize();
+    ly=fftY->paddedSize();
+
+    Corr.Allocate(lx,ly);
+
+    Corr=0.0;
+    alignCount=0;
 
     ux.Allocate(Nx+1,my1,-mx,0,align);
     uy.Allocate(Nx+1,my1,-mx,0,align);

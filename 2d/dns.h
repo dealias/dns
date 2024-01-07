@@ -32,7 +32,8 @@ extern uInt spectrum;
 extern int pH;
 extern int pL;
 
-extern Real *Triplet, *Norm1, *Norm2;
+array2<Real> Corr;
+uInt alignCount;
 
 class DNSBase {
 protected:
@@ -49,6 +50,8 @@ protected:
 
   Int mx,my; // size of data arrays
   Int my1;   // x stride
+
+  size_t lx,ly; // dimensions of real arrays
 
   array2h<Complex> w; // vorticity field
   Array2<Complex> W;  // copy of vorticity field
@@ -175,25 +178,25 @@ public:
     fftwpp::HermitianSymmetrizeX(mx,my,mx,A2u,my1,threads);
     fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v,my1,threads);
 
-    for(size_t t=0; t < threads; ++t) {
-      Triplet[t]=0.0;
-      Norm1[t]=0.0;
-      Norm2[t]=0.0;
-    }
-
     Convolve2->convolveRaw(F);
 
-    Real triplet=0.0, norm1=0.0, norm2=0.0;
-    for(size_t t=0; t < threads; ++t) {
-      triplet += Triplet[t];
-      norm1 += Norm1[t];
-      norm2 += Norm2[t];
+//    cout << "Inner product=" << triplet*scale << endl;
+
+//    Real scale=Convolve2->scale;
+
+    cout << endl;
+    ++alignCount;
+    double corr=0.0;
+    for(size_t i=0; i < lx; ++i) {
+      for(size_t j=0; j < ly; ++j) {
+        corr += Corr[i][j];
+      }
     }
+    corr /= (alignCount*lx*ly);
+    Corr=0.0;
+    alignCount=0;
 
-    Real scale=Convolve2->scale;
-    cout << "Inner product=" << triplet*scale << endl;
-    cout << "Angle=" << acos(triplet/sqrt(norm1*norm2))*180.0/PI << endl;
-
+    cout << "Count:" << alignCount << " mean Correlation=" << corr << " ";
     // Output movie:
     Loop(Initw(this),wtoW(this),1);
     W(0,0).re=0.0;
