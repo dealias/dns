@@ -108,7 +108,7 @@ public:
     Loop(InitNone(this),ForcingCount(this),1);
 
     fcount *= 2; // Account for Hermitian conjugate modes.
-    Forcing->Init(fcount);
+    Forcing->Scale(fcount);
 
     k2inv.Allocate(mx,my);
     Loop(InitNone(this),K2inv(this,sqrt(Convolve->scale)),threads);

@@ -42,7 +42,7 @@ uInt randomIC=0;
 
 // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
 // requires only 4 FFTs per stage.
-void multadvection2(Complex **F, uInt n, Indices *, uInt threads)
+void multAdvection2(Complex **F, uInt n, Indices *, uInt threads)
 {
   double* F0=(double *) F[0];
   double* F1=(double *) F[1];
@@ -228,7 +228,7 @@ class WhiteNoiseBanded : public ConstantBanded {
 public:
   const char *Name() {return "White-Noise Banded";}
 
-  void Init(uInt fcount) {
+  void Scale(uInt fcount) {
     etanorm=1.0/((Real) fcount);
   }
 
@@ -431,7 +431,7 @@ void DNS::InitialConditions()
 //  Application appx(A,B,multNone,threads,8192,1,1);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
 
-  Application appy(A,B,multadvection2,appx);
+  Application appy(A,B,multAdvection2,appx);
 //  Application appy(A,B,multadvection2,appx,3072,1,0);
 //  Application appy(A,B,multadvection2,appx,24576,1,0);
   auto ffty=new fftPadHermitian(Ny,My,appy);
@@ -440,7 +440,7 @@ void DNS::InitialConditions()
 
   saveWisdom();
 
-  block=ComplexAlign(N,fftx->inputLength());
+  block=ComplexAlign(N,fftx->inputLength()*fftx->S);
 
   u.Dimension(Nx+1,my1,block[0],-mx,0);
   v.Dimension(Nx+1,my1,block[1],-mx,0);
