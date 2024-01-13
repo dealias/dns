@@ -57,18 +57,6 @@ void multAdvection2(Complex **F, uInt n, Indices *, uInt threads)
     });
 }
 
-  double acos1(double x) {
-    if(x < -1) return PI;
-    else if(x > 1) return 0;
-    else return acos(x);
-  }
-
-  double dotProduct(double triplet, double norm1, double norm2) {
-    double denom=norm1*norm2;
-//    return denom != 0.0 ? acos1(triplet/sqrt(denom))*180.0/PI : 0.0;
-    return denom != 0.0 ? triplet/sqrt(denom) : 0.0;
-  }
-
 // A=8, B=0 TODO: Reduce to A=7, B=0 using incompressibility
 void multTriplet(Complex **F, uInt n, Indices *indices, uInt threads)
 {
@@ -109,8 +97,8 @@ void multTriplet(Complex **F, uInt n, Indices *indices, uInt threads)
       double triplet=bx*A2u+by*A2v;
       double norm1=bx*bx+by*by;
       double norm2=A2u*A2u+A2v*A2v;
-      Corrx[y] += dotProduct(abs(triplet),norm1,norm2);
-
+      double denom=norm1*norm2;
+      Corrx[y] += denom != 0.0 ? triplet/sqrt(denom) : 0.0;
     });
 }
 
@@ -507,7 +495,7 @@ void DNS::InitialConditions()
 
   Allocate(count,nshells);
 
-  if(movie) {
+  if(true) {
     uInt A=8, B=0; // 8 inputs, 0 outputs in Basdevant scheme
 
     uInt nx=4*mx-3;
@@ -519,9 +507,9 @@ void DNS::InitialConditions()
     auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1,nx,1,1);
 
     Application appY(A,B,multTriplet,appX);
-//    auto fftY=new fftPadHermitian(Ny,ny0,appY);
+    auto fftY=new fftPadHermitian(Ny,ny0,appY);
 //    auto fftY=new fftPadHermitian(Ny,ny0,appY,1,ny0,1,1);
-    auto fftY=new fftPadHermitian(Ny,ny0,appY,1,4,2,1);
+//    auto fftY=new fftPadHermitian(Ny,ny0,appY,1,4,2,1);
 
     Convolve2=new Convolution2(fftX,fftY);
 
@@ -548,7 +536,9 @@ void DNS::InitialConditions()
     F[5]=vy;
     F[6]=A2u;
     F[7]=A2v;
+  }
 
+  if(movie) {
     W.Dimension(Nx+1,my,v(),-mx,0);
     wr.Dimension(Nx+1,2*my,(Real *) v());
     Backward=new fftwpp::crfft2d(Nx+1,2*my-1,v);
@@ -662,6 +652,24 @@ void DNS::Output(uInt it)
   if(rezero && it % rezero == 0 && spectrum) {
     vector2 Y=Integrator->YVector();
     ZeroDiagnostics();
+  }
+
+  if(it > 0) {
+    cout << endl;
+    double corr=0.0;
+
+    PARALLELIF(
+      lx*ly > threshold,
+      for(size_t i=0; i < lx; ++i) {
+        for(size_t j=0; j < ly; ++j) {
+          corr=max(corr,abs(Corr[i][j]));
+        }
+      });
+
+    corr /= alignCount;
+
+    cout << "Count:" << alignCount << " maximum |time-averaged Correlation|="
+         << corr << " ";
   }
 }
 

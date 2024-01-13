@@ -138,7 +138,7 @@ public:
 
   void FinalOutput();
 
-  void OutFrame(uInt it) {
+  void align() {
     u(0,0).re=0.0;
     v(0,0).re=0.0;
     ux(0,0).re=0.0;
@@ -148,12 +148,13 @@ public:
     A2u(0,0).re=0.0;
     A2v(0,0).re=0.0;
 
+    PARALLELIF(
+      2*mx*my > (Int) threshold,
     for(int i=-mx+1; i < mx; ++i) {
       for(Int j=i <= 0; j < my; ++j) { // start with j=1 if i <= 0
         Complex wij=w(i,j);
-        Real k4=i*i+j*j;
-        k4 *= k4;
         Real k2=i*i+j*j;
+        Real k4=k2*k2;
         Real k2inv=k2 > 0.0 ? 1.0/k2 : 0.0;
         Complex psi=wij*k2inv;
         Complex uij=I*j*psi;
@@ -168,6 +169,7 @@ public:
         A2v[i][j]=k4*vij;
       }
     }
+      );
 
     fftwpp::HermitianSymmetrizeX(mx,my,mx,u,my1,threads);
     fftwpp::HermitianSymmetrizeX(mx,my,mx,v,my1,threads);
@@ -179,24 +181,10 @@ public:
     fftwpp::HermitianSymmetrizeX(mx,my,mx,A2v,my1,threads);
 
     Convolve2->convolveRaw(F);
-
-//    cout << "Inner product=" << triplet*scale << endl;
-
-//    Real scale=Convolve2->scale;
-
-    cout << endl;
     ++alignCount;
-    double corr=0.0;
-    for(size_t i=0; i < lx; ++i) {
-      for(size_t j=0; j < ly; ++j) {
-        corr += Corr[i][j];
-      }
-    }
-    corr /= (alignCount*lx*ly);
-    Corr=0.0;
-    alignCount=0;
+  }
 
-    cout << "Count:" << alignCount << " mean Correlation=" << corr << " ";
+  void OutFrame(uInt it) {
     // Output movie:
     Loop(Initw(this),wtoW(this),1);
     W(0,0).re=0.0;
@@ -797,8 +785,11 @@ public:
 
   void Stochastic(const vector2&Y, double, double dt)
   {
-    if(!Forcing->Stochastic(dt)) return;
     w.Set(Y[OMEGA]);
+    align();
+
+    if(!Forcing->Stochastic(dt)) return;
+//    w.Set(Y[OMEGA]);
 
     if(spectrum == 0)
       Loop(Initw(this),ForceStochasticNO(this),threads);
