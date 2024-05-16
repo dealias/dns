@@ -25,9 +25,9 @@ struct norm {
   real f,F;
 }
 
-norm fnorm(real[] F) {      
+norm fnorm(real[] F) {
   real f2,F2;
-    
+
   for(int k=0; k < F.length; ++k) {
     int i=Fi[k];
     int j=Fj[k];
@@ -68,8 +68,9 @@ while(nextrun()) {
   write("G=",G);
   write("Lambda=",Lambda);
   real cG=CA*G;
-  
+
   real norm=G^2*nuH^2;
+  write("norm=",norm);
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm; P=2*a[3]/norm;
 
   real Z1=1;
@@ -87,14 +88,14 @@ while(nextrun()) {
   P=P[start:end];
   real incr=(E.length-1)/tmax;
   pen[] p=Rainbow(Z.length);
-  
+
   for(int i=0; i < Z.length; ++i) {
     frame mark;
     fill(mark,scale(0.4mm)*polygon(3+k),p[round(t[i]*incr)]);
     //    fill(mark,scale(0.4mm)*unitcircle,p[round(t[i]*incr)]);
     add(mark,Scale((Z[i],P[i])));
   }
-  
+
   real Zmin=min(Z);
   real Zmax=max(Z);
   real Pmin=min(P);
@@ -130,4 +131,3 @@ while(nextrun()) {
 
 xaxis("$2Z/(\nu "+tilde+"G)^2$",BottomTop,LeftTicks);
 yaxis("$2P/(\nu "+tilde+"G)^2$",LeftRight,RightTicks);
-

@@ -81,7 +81,7 @@ void multTriplet(Complex **F, uInt n, Indices *indices, uInt threads)
 
   PARALLELIF(
     n > threshold,
-    for(unsigned int j=0; j < n; ++j) {
+    for(uInt j=0; j < n; ++j) {
       double u=F0[j];
       double v=F1[j];
       double ux=F2[j];
@@ -95,10 +95,15 @@ void multTriplet(Complex **F, uInt n, Indices *indices, uInt threads)
       size_t y=fft->index(r,j+offset);
 
       double triplet=bx*A2u+by*A2v;
-      double norm1=bx*bx+by*by;
-      double norm2=A2u*A2u+A2v*A2v;
-      double denom=norm1*norm2;
-      Corrx[y] += denom != 0.0 ? triplet/sqrt(denom) : 0.0;
+//      double norm1=bx*bx+by*by;
+//      double norm2=A2u*A2u+A2v*A2v;
+//      double denom=norm1*norm2;
+//      Corrx[y] += denom != 0.0 ? triplet/sqrt(denom) : 0.0;
+      Corrx[y] += triplet;
+
+//      Corrx[y] += u*u+v*v;
+//      double w=vx-uy;
+//      Corrx[y] += w*w;
     });
 }
 
@@ -470,15 +475,10 @@ void DNS::InitialConditions()
   uInt A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   uInt N=max(A,B);
 
-//  Application appx(A,B,multNone,threads);
-  Application appx(A,B,multNone,128);
-//  Application appx(A,B,multNone,threads,1024,1,1);
-//  Application appx(A,B,multNone,threads,8192,1,1);
+  Application appx(A,B,multNone,threads,true,true);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
 
   Application appy(A,B,multAdvection2,appx);
-//  Application appy(A,B,multadvection2,appx,3072,1,0);
-//  Application appy(A,B,multadvection2,appx,24576,1,0);
   auto ffty=new fftPadHermitian(Ny,My,appy);
 
   Convolve=new Convolution2(fftx,ffty);
@@ -502,9 +502,9 @@ void DNS::InitialConditions()
     uInt ny0=4*my-3;
 
 // Disable overwrite optimization to allow indexing transformed values.
-    Application appX(A,B,multNone,threads,false);
-//    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
-    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1,nx,1,1);
+    Application appX(A,B,multNone,threads,false,true);
+    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
+//    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1,nx,1,1);
 
     Application appY(A,B,multTriplet,appX);
     auto fftY=new fftPadHermitian(Ny,ny0,appY);
@@ -518,6 +518,7 @@ void DNS::InitialConditions()
     lx=fftX->paddedSize();
     ly=fftY->paddedSize();
 
+    cout <<  " " << lx << " " << ly << endl;
     Corr.Allocate(lx,ly);
 
     Corr=0.0;
@@ -662,14 +663,18 @@ void DNS::Output(uInt it)
       lx*ly > threshold,
       for(size_t i=0; i < lx; ++i) {
         for(size_t j=0; j < ly; ++j) {
-          corr=max(corr,abs(Corr[i][j]));
+          corr += Corr[i][j];
         }
       });
 
     corr /= alignCount;
+    double scale=Convolve2->scale;
+    corr *= scale*scale;
 
-    cout << "Count:" << alignCount << " maximum |time-averaged Correlation|="
-         << corr << " ";
+    cout << "Count:" << alignCount << " dot product=" << corr << " ";
+
+//    alignCount=0;
+//    Corr=0.0;
   }
 }
 

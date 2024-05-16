@@ -33,6 +33,7 @@ extern int pH;
 extern int pL;
 
 array2<Real> Corr;
+
 uInt alignCount;
 
 class DNSBase {
@@ -167,6 +168,9 @@ public:
         vy[i][j]=I*j*vij;
         A2u[i][j]=k4*uij;
         A2v[i][j]=k4*vij;
+//        Real k=pow(sqrt(k2),-4.0);
+//        A2u[i][j]=k*uij;
+//        A2v[i][j]=k*vij;
       }
     }
       );
@@ -786,7 +790,6 @@ public:
   void Stochastic(const vector2&Y, double, double dt)
   {
     w.Set(Y[OMEGA]);
-    align();
 
     if(!Forcing->Stochastic(dt)) return;
 //    w.Set(Y[OMEGA]);
@@ -795,6 +798,8 @@ public:
       Loop(Initw(this),ForceStochasticNO(this),threads);
     else
       Compute(ForceStochastic(this),Y,Y);
+
+    align();
   }
 
   Nu LinearCoeff(uInt l) {
