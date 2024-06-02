@@ -31,6 +31,7 @@ extern uInt spectrum;
 
 extern int pH;
 extern int pL;
+extern Real nPower;
 
 array2<Real> Corr;
 
@@ -93,13 +94,13 @@ protected:
   array2h<Real> k2inv;
   array2h<Real> nu; // Linear dissipation
 
-  Real Energy,Enstrophy,Palinstrophy;
-  rvector energy,enstrophy,palinstrophy;
+  Real Energy,Enstrophy,Palinstrophy,Hyperpalinstrophy;
+  rvector energy,enstrophy,palinstrophy,hyperpalinstrophy;
 
 public:
 
   void Initialize() {
-    fevt << "# t\tE\tZ\tP\tP2" << endl;
+    fevt << "# t\tE\tZ\tP\tPn" << endl;
   }
 
   void InitialConditions() {
@@ -155,7 +156,6 @@ public:
       for(Int j=i <= 0; j < my; ++j) { // start with j=1 if i <= 0
         Complex wij=w(i,j);
         Real k2=i*i+j*j;
-        Real k4=k2*k2;
         Real k2inv=k2 > 0.0 ? 1.0/k2 : 0.0;
         Complex psi=wij*k2inv;
         Complex uij=I*j*psi;
@@ -166,11 +166,9 @@ public:
         uy[i][j]=I*j*uij;
         vx[i][j]=I*i*vij;
         vy[i][j]=I*j*vij;
-        A2u[i][j]=k4*uij;
-        A2v[i][j]=k4*vij;
-//        Real k=pow(sqrt(k2),-4.0);
-//        A2u[i][j]=k*uij;
-//        A2v[i][j]=k*vij;
+        Real k=pow(k2,nPower);
+        A2u[i][j]=k*uij;
+        A2v[i][j]=k*vij;
       }
     }
       );
@@ -500,15 +498,16 @@ public:
 
   class Invariants {
     DNSBase *b;
-    const rvector& E,Z,P;
+    const rvector& E,Z,P,Pn;
   public:
     Invariants(DNSBase *b) : b(b), E(b->energy), Z(b->enstrophy),
-                             P(b->palinstrophy) {}
+                             P(b->palinstrophy), Pn(b->hyperpalinstrophy) {}
     void init() {
       for(size_t thread=0; thread < threads; ++thread) {
         E[thread]=0.0;
         Z[thread]=0.0;
         P[thread]=0.0;
+        Pn[thread]=0.0;
       }
     }
 
@@ -519,14 +518,16 @@ public:
       uInt k2=i*i+j*j;
       E[thread] += w2/k2;
       P[thread] += k2*w2;
+      Pn[thread] += pow(k2,nPower)*w2;
     }
 
-    void reduce(Real &Energy, Real &Enstrophy, Real& Palinstrophy) {
-      Energy=Enstrophy=Palinstrophy=0.0;
+    void reduce(Real &Energy, Real &Enstrophy, Real& Palinstrophy, Real &Hyperpalinstrophy) {
+      Energy=Enstrophy=Palinstrophy=Hyperpalinstrophy=0.0;
       for(size_t thread=0; thread < threads; ++thread) {
         Energy += E[thread];
         Enstrophy += Z[thread];
         Palinstrophy += P[thread];
+        Hyperpalinstrophy += Pn[thread];
       }
     }
   };
@@ -817,7 +818,7 @@ public:
     Invariants I(this);
     I.init();
     Loop(Initw(this),I,threads);
-    I.reduce(Energy,Enstrophy,Palinstrophy);
+    I.reduce(Energy,Enstrophy,Palinstrophy,Hyperpalinstrophy);
   }
 
   virtual Real getSpectrum(uInt i) {
