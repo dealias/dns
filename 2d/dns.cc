@@ -21,6 +21,7 @@ Real nuH=0.0, nuL=0.0;
 Real kH=0.0, kL=0.0;
 int pH=1;
 int pL=0;
+Real nPower=2;
 uInt Nx=1023;
 uInt Ny=1023;
 Real eta=0.0;
@@ -305,6 +306,7 @@ DNSVocabulary::DNSVocabulary()
   VOCAB(kH,0.0,STD_MAX,"Restrict high wavenumber dissipation to [kH,infinity)");
   VOCAB(pH,0,0,"Power of Laplacian for high-wavenumber viscosity");
   VOCAB(pL,0,0,"Power of Laplacian for molecular viscosity");
+  VOCAB(nPower,-REAL_MAX,REAL_MAX,"Power of Laplacian in bilinear term");
 
   VOCAB_NOLIMIT(forcing,"Forcing type");
   ForcingTable=new Table<ForcingBase>("forcing");
@@ -411,6 +413,7 @@ void DNS::InitialConditions()
   Allocate(enstrophy,threads);
   Allocate(energy,threads);
   Allocate(palinstrophy,threads);
+  Allocate(hyperpalinstrophy,threads);
 
   Dimension(Y0,Y);
   Set(Y0,Y);
@@ -522,7 +525,8 @@ void DNS::Output(uInt it)
   w.Set(y);
 
   ComputeInvariants();
-  fevt << t << "\t" << Energy << "\t" << Enstrophy << "\t" << Palinstrophy << endl;
+  fevt << t << "\t" << Energy << "\t" << Enstrophy << "\t" << Palinstrophy
+       << "\t" << Hyperpalinstrophy << endl;
 
   if(output) out_curve(fw,y,"w",NY[OMEGA]);
 
@@ -574,4 +578,5 @@ void DNS::FinalOutput()
   cout << "Energy = " << Energy << newl;
   cout << "Enstrophy = " << Enstrophy << newl;
   cout << "Palinstrophy = " << Palinstrophy << newl;
+  cout << "Hyperpalinstrophy = " << Hyperpalinstrophy << newl;
 }
