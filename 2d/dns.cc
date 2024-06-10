@@ -661,15 +661,21 @@ void DNS::Output(uInt it)
 
   if(it > 0) {
     cout << endl;
-    double corr=0.0;
-
+    double corrThread[threads];
+    for(size_t t=0; t < threads; ++t)
+      corrThread[t]=0.0;
     PARALLELIF(
       lx*ly > threshold,
       for(size_t i=0; i < lx; ++i) {
+        double sum=0.0;
         for(size_t j=0; j < ly; ++j) {
-          corr += Corr[i][j];
+          sum += Corr[i][j];
         }
+        corrThread[get_thread_num(threads)] += sum;
       });
+    double corr=0.0;
+    for(size_t t=0; t < threads; ++t)
+      corr += corrThread[t];
 
     corr /= alignCount;
     double scale=Convolve2->scale;
