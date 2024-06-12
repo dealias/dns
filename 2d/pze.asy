@@ -99,10 +99,14 @@ while(nextrun()) {
                Scale(maxE,maxE,maxP)--
                Scale(minE,minE,maxP)--cycle),blue+opacity(0.5));
 
-  draw(surface(graph(new triple(real E) {return (E,sqrt(E),minP);},minE,maxE)--
-               graph(new triple(real E) {return (E,sqrt(E),maxP);},maxE,minE)--
-               cycle),heavygreen+opacity(0.5));
+  draw(surface(shift(0,0,Scale(minE,minZ,minP).z)*
+               extrude(graph(new pair(real E) {return (E,sqrt(E));},
+                             minE,maxE),
+                       Scale(minE,minZ,maxP)-Scale(minE,minZ,minP))),heavygreen+opacity(0.5));
 }
+
+currentprojection=orthographic(camera=Scale(maxE,maxZ,maxP)-Scale(minE,minZ,minP),
+                               target=Scale(minE,minZ,minP));
 
 xaxis3(Label("$2E/(\nu "+tilde+"G)^2$",position=1),
        YZEquals(minE,minP,extend=false),OutTicks);
