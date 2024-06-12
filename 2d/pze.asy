@@ -1,4 +1,10 @@
+// polystrophy: energy, enstrophy, palinstrophy, hyperpalinstrophy
+
+// simpson(new real(real k){return (exp(1/k^2)-1)*k^(-5/3);},1,100000000);
+// 0.51285662696
+
 import graph3;
+import palette;
 
 pen opacity=opacity(settings.outformat == "html" ? 1.0 : 0.5);
 
@@ -48,6 +54,7 @@ triple Scale(picture pic=currentpicture, real x, real y, real z) {
 real minE,minZ,minP;
 real maxE,maxZ,maxP;
 
+int k=0;
 while(nextrun()) {
   file fin=input(rundir()+"evt").line();
   real[][] a=fin;
@@ -58,16 +65,9 @@ while(nextrun()) {
   eta=2*sum(Tk[ETA]);
   eps=2*sum(Tk[EPS]);
 
-  string Constant="Constant";
-  if(substr(forcing,0,length(Constant)) == Constant) {
-    G=N.F/nuH^2;                 // Grashof number for constant forcing
-    tilde="";
-    Lambda=(N.F/N.f)^2;          // Lambda := |A^(1/2)f|^2/|f|^2
-  } else {
-    G=sqrt(eta*(nuH+nuL))/nuH^2; // Grashof number for stochastic forcing
-    tilde="\tilde ";
-    Lambda=eta/eps;
-  }
+  G=sqrt(eta*(nuH+nuL))/nuH^2; // Grashof number for stochastic forcing
+  tilde="\tilde ";
+  Lambda=eta/eps;
 
   write("G=",G);
   write("Lambda=",Lambda);
@@ -77,14 +77,25 @@ while(nextrun()) {
 
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm; P=2*a[3]/norm;
 
+  /*
   int start=0;
   int stop=t.length;
   t=t[start:stop];
   E=E[start:stop];
   Z=Z[start:stop];
   P=P[start:stop];
+  */
 
-  draw(graph(E,Z,P,operator --),magenta);
+  guide3 g=graph(E,Z,P,operator --);
+  pen[] p=Rainbow(E.length#10);
+  triple curr=Scale(E[0],Z[0],P[0]);
+  for(int i=0; i < E.length-1; ++i) {
+    triple next=Scale(E[i+1],Z[i+1],P[i+1]);
+    draw(curr--next,p[i#10]);
+    curr=next;
+  }
+
+  ++k;
 
   minE=min(E);
   minZ=min(Z);
