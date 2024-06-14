@@ -1,6 +1,6 @@
 import graph3;
 
-pen p=opacity(settings.outformat == "html" ? 1.0 : 0.5);
+pen opacity=opacity(settings.outformat == "html" ? 1.0 : 0.5);
 
 size3(25cm,15cm,15cm,keepAspect=false);
 
@@ -84,7 +84,6 @@ while(nextrun()) {
   Z=Z[start:stop];
   P=P[start:stop];
 
-
   draw(graph(E,Z,P,operator --),magenta);
 
   minE=min(E);
@@ -100,42 +99,42 @@ while(nextrun()) {
                      minE,maxE),
                Scale(minE,minE,maxE^0.25)-
                Scale(minE,minE,minE)),
-       blue+p);
+       blue+opacity);
 
   // Z=E^0.5
   draw(extrude(graph(new triple(real E) {return (E,sqrt(E),minE);},
                      minE,maxE),
                Scale(minE,sqrt(minE),maxE^0.25)-
                Scale(minE,sqrt(minE),minE)),
-       blue+p);
+       blue+opacity);
 
  // P=Z
   draw(extrude(graph(new triple(real Z) {return (minE,Z,Z);},
                      minE,sqrt(maxE)),
                Scale(maxE,minE,minE)-
                Scale(minE,minE,minE)),
-       red+p);
+       red+opacity);
 
  // P=Z^0.5
   draw(extrude(graph(new triple(real Z) {return (minE,Z,sqrt(Z));},
                      minE,sqrt(maxE)),
                Scale(maxE,minE,sqrt(minE))-
                Scale(minE,minE,sqrt(minE))),
-       red+p);
+       red+opacity);
 
  // P=E
   draw(extrude(graph(new triple(real E) {return (E,minE,E);},
                      minE,maxE),
                Scale(minE,sqrt(maxE),minE)-
                Scale(minE,minE,minE)),
-       heavygreen+p);
+       heavygreen+opacity);
 
  // P=E^0.25
   draw(extrude(graph(new triple(real E) {return (E,minE,E^0.25);},
                      minE,maxE),
                Scale(minE,sqrt(maxE),minE^0.25)-
                Scale(minE,minE,minE^0.25)),
-       heavygreen+p);
+       heavygreen+opacity);
 
 }
 
