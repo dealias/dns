@@ -75,16 +75,15 @@ while(nextrun()) {
 
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm; P=2*a[3]/norm;
 
-  /*
-  int start=0;
-  int stop=1000;
+  int start=100;
+  int stop=t.length;
   t=t[start:stop];
   E=E[start:stop];
   Z=Z[start:stop];
   P=P[start:stop];
-  */
 
-  draw(graph(E,Z,P,operator --),red);
+
+  draw(graph(E,Z,P,operator --),magenta);
 
   minE=min(E);
   minZ=min(Z);
@@ -94,15 +93,48 @@ while(nextrun()) {
   maxZ=max(Z);
   maxP=max(P);
 
-  draw(surface(Scale(minE,minE,minP)--
-               Scale(maxE,maxE,minP)--
-               Scale(maxE,maxE,maxP)--
-               Scale(minE,minE,maxP)--cycle),blue+opacity(0.5));
+  // E=Z
+  draw(extrude(graph(new triple(real E) {return (E,E,minE);},
+                     minE,maxE),
+               Scale(minE,minE,maxE^0.25)-
+               Scale(minE,minE,minE)),
+       blue+opacity(0.5));
 
-  draw(surface(shift(0,0,Scale(minE,minZ,minP).z)*
-               extrude(graph(new pair(real E) {return (E,sqrt(E));},
-                             minE,maxE),
-                       Scale(minE,minZ,maxP)-Scale(minE,minZ,minP))),heavygreen+opacity(0.5));
+  // Z=E^0.5
+  draw(extrude(graph(new triple(real E) {return (E,sqrt(E),minE);},
+                     minE,maxE),
+               Scale(minE,sqrt(minE),maxE^0.25)-
+               Scale(minE,sqrt(minE),minE)),
+       blue+opacity(0.5));
+
+ // P=Z
+  draw(extrude(graph(new triple(real Z) {return (minE,Z,Z);},
+                     minE,sqrt(maxE)),
+               Scale(maxE,minE,minE)-
+               Scale(minE,minE,minE)),
+       red+opacity(0.5));
+
+ // P=Z^0.5
+  draw(extrude(graph(new triple(real Z) {return (minE,Z,sqrt(Z));},
+                     minE,sqrt(maxE)),
+               Scale(maxE,minE,sqrt(minE))-
+               Scale(minE,minE,sqrt(minE))),
+       red+opacity(0.5));
+
+ // P=E
+  draw(extrude(graph(new triple(real E) {return (E,minE,E);},
+                     minE,maxE),
+               Scale(minE,sqrt(maxE),minE)-
+               Scale(minE,minE,minE)),
+       heavygreen+opacity(0.5));
+
+ // P=E^0.25
+  draw(extrude(graph(new triple(real E) {return (E,minE,E^0.25);},
+                     minE,maxE),
+               Scale(minE,sqrt(maxE),minE^0.25)-
+               Scale(minE,minE,minE^0.25)),
+       heavygreen+opacity(0.5));
+
 }
 
 currentprojection=orthographic(camera=Scale(maxE,maxZ,maxP)-Scale(minE,minZ,minP),
