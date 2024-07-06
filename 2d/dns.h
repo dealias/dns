@@ -94,7 +94,7 @@ protected:
   array2h<Real> k2inv;
   array2h<Real> nu; // Linear dissipation
 
-  Real Energy,Enstrophy,Palinstrophy,Hyperpalinstrophy;
+  Real Energy,Enstrophy,Palinstrophy,Polystrophy;
   rvector energy,enstrophy,palinstrophy,hyperpalinstrophy;
 
 public:
@@ -521,13 +521,13 @@ public:
       Pn[thread] += pow(k2,nPower)*w2;
     }
 
-    void reduce(Real &Energy, Real &Enstrophy, Real& Palinstrophy, Real &Hyperpalinstrophy) {
-      Energy=Enstrophy=Palinstrophy=Hyperpalinstrophy=0.0;
+    void reduce(Real &Energy, Real &Enstrophy, Real& Palinstrophy, Real &Polystrophy) {
+      Energy=Enstrophy=Palinstrophy=Polystrophy=0.0;
       for(size_t thread=0; thread < threads; ++thread) {
         Energy += E[thread];
         Enstrophy += Z[thread];
         Palinstrophy += P[thread];
-        Hyperpalinstrophy += Pn[thread];
+        Polystrophy += Pn[thread];
       }
     }
   };
@@ -818,7 +818,7 @@ public:
     Invariants I(this);
     I.init();
     Loop(Initw(this),I,threads);
-    I.reduce(Energy,Enstrophy,Palinstrophy,Hyperpalinstrophy);
+    I.reduce(Energy,Enstrophy,Palinstrophy,Polystrophy);
   }
 
   virtual Real getSpectrum(uInt i) {
