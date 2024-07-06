@@ -526,7 +526,7 @@ void DNS::Output(uInt it)
 
   ComputeInvariants();
   fevt << t << "\t" << Energy << "\t" << Enstrophy << "\t" << Palinstrophy
-       << "\t" << Hyperpalinstrophy << endl;
+       << "\t" << Polystrophy << endl;
 
   if(output) out_curve(fw,y,"w",NY[OMEGA]);
 
@@ -578,5 +578,5 @@ void DNS::FinalOutput()
   cout << "Energy = " << Energy << newl;
   cout << "Enstrophy = " << Enstrophy << newl;
   cout << "Palinstrophy = " << Palinstrophy << newl;
-  cout << "Hyperpalinstrophy = " << Hyperpalinstrophy << newl;
+  cout << "Polystrophy_" << nPower << "= " << Polystrophy << newl;
 }
