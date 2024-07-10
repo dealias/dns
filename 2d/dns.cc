@@ -41,6 +41,10 @@ Real icbeta=1.0;
 Real k0=1.0; // Obsolete
 uInt randomIC=0;
 
+double P2;
+array2<Real> Triplet,Norm1,Norm2;
+uInt alignCount;
+
 // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
 // requires only 4 FFTs per stage.
 void multAdvection2(Complex **F, uInt n, Indices *, uInt threads)
@@ -76,7 +80,9 @@ void multTriplet(Complex **F, uInt n, Indices *indices, uInt threads)
   size_t r=indices->r;
   size_t x=indices->index[0];
 
-  rvector Corrx=Corr[x];
+  rvector Tripletx=Triplet[x];
+  rvector Norm1x=Norm1[x];
+  rvector Norm2x=Norm2[x];
 
   size_t offset=indices->offset;
 
@@ -96,15 +102,12 @@ void multTriplet(Complex **F, uInt n, Indices *indices, uInt threads)
       size_t y=fft->index(r,j+offset);
 
       double triplet=bx*A2u+by*A2v;
-//      double norm1=bx*bx+by*by;
-//      double norm2=A2u*A2u+A2v*A2v;
-//      double denom=norm1*norm2;
-//      Corrx[y] += denom != 0.0 ? triplet/sqrt(denom) : 0.0;
-      Corrx[y] += triplet;
+      Tripletx[y] += triplet;
 
-//      Corrx[y] += u*u+v*v;
-//      double w=vx-uy;
-//      Corrx[y] += w*w;
+      double norm1=bx*bx+by*by;
+      double norm2=A2u*A2u+A2v*A2v;
+      Norm1x[y] += norm1;
+      Norm2x[y] += norm2;
     });
 }
 
@@ -522,9 +525,14 @@ void DNS::InitialConditions()
     ly=fftY->paddedSize();
 
     cout <<  " " << lx << " " << ly << endl;
-    Corr.Allocate(lx,ly);
+    Triplet.Allocate(lx,ly);
+    Norm1.Allocate(lx,ly);
+    Norm2.Allocate(lx,ly);
 
-    Corr=0.0;
+    P2=0.0;
+    Triplet=0.0;
+    Norm1=0.0;
+    Norm2=0.0;
     alignCount=0;
 
     ux.Allocate(Nx+1,my1,-mx,0,align);
@@ -592,8 +600,12 @@ void DNS::InitialConditions()
   if(modalenergies)
     open_output(fek,dirsep,"ek");
 
-  if(movie)
+  if(movie) {
     open_output(fw,dirsep,"w");
+  }
+
+  open_output(fangle,dirsep,"angle");
+  open_output(ftriplet,dirsep,"triplet");
 }
 
 void DNS::ZeroDiagnostics()
@@ -616,8 +628,6 @@ void DNS::Output(uInt it)
   ComputeInvariants();
   fevt << t << "\t" << Energy << "\t" << Enstrophy << "\t" << Palinstrophy
        << "\t" << Polystrophy << endl;
-
-  if(output) out_curve(fw,y,"w",NY[OMEGA]);
 
   if(movie)
     OutFrame(it);
@@ -660,31 +670,25 @@ void DNS::Output(uInt it)
   }
 
   if(it > 0) {
-    cout << endl;
-    double corrThread[threads];
-    for(size_t t=0; t < threads; ++t)
-      corrThread[t]=0.0;
-    PARALLELIF(
-      lx*ly > threshold,
-      for(size_t i=0; i < lx; ++i) {
-        double sum=0.0;
-        for(size_t j=0; j < ly; ++j) {
-          sum += Corr[i][j];
-        }
-        corrThread[get_thread_num(threads)] += sum;
-      });
-    double corr=0.0;
-    for(size_t t=0; t < threads; ++t)
-      corr += corrThread[t];
+    fangle << lx << ly;
+    for(uInt i=0; i < lx; ++i) {
+      for(uInt j=0; j < ly; ++j) {
+        double denom=sqrt(Norm1[i][j]*Norm2[i][j]);
+        fangle <<
+          (float) (acos(Triplet[i][j]*(denom ? 1.0/denom : 0.0))*180.0/PI);
+      }
+    }
+    fangle.flush();
 
-    corr /= alignCount;
     double scale=Convolve2->scale;
-    corr *= scale*scale;
+//    scale *= scale/alignCount;
+    scale *= scale/(2.0*nuH*P2);
 
-    cout << "Count:" << alignCount << " dot product=" << corr << " ";
-
-//    alignCount=0;
-//    Corr=0.0;
+    ftriplet << lx << ly;
+    for(uInt i=0; i < lx; ++i)
+      for(uInt j=0; j < ly; ++j)
+        ftriplet << (float) (Triplet[i][j]*scale);
+    ftriplet.flush();
   }
 }
 

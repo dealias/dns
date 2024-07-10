@@ -22,30 +22,18 @@ else if(frame > last) frame=last;
 string name=run+"/"+field;
 file fin=input(name,mode="xdr").singlereal();
 
-real[][][] vinverted;
-
-int nz=fin;
-int ny=fin;
 int nx=fin;
+int ny=fin;
 
-int pos=((3+nx*ny*nz)*frame)*4;
+int pos=((3+nx*ny)*frame)*4;
 seek(fin,pos);
-vinverted=fin.read(3);
+real[][] v=fin.dimension(nx,ny);
+
 if(eof(fin)) abort("EOF encountered on file "+name);
-
-real[][] v;
-int Ny=vinverted[0].length;
-
-for(int j=0; j < Ny; ++j)
-  v[j]=vinverted[0][Ny-1-j];
-
-v=transpose(v);
-int Nx=v[0].length;
 
 pen[] Palette=BWRainbow2();
 
 picture bar;
-real[][] dummy;
 
 bounds range=image(v,(0,0),(1,1),Palette,copy=false);
 

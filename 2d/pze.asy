@@ -77,21 +77,23 @@ while(nextrun()) {
 
   t=a[0]; E=2*a[1]/norm; Z=2*a[2]/norm; P=2*a[3]/norm;
 
-  /*
-  int start=0;
+  int start=1;
   int stop=t.length;
   t=t[start:stop];
   E=E[start:stop];
   Z=Z[start:stop];
   P=P[start:stop];
-  */
 
   guide3 g=graph(E,Z,P,operator --);
-  pen[] p=Rainbow(E.length#10);
+
+  int ceilquotient(int a, int b) {return (a+b-1)#b;}
+
+  int N=10;
+  pen[] p=Rainbow(ceilquotient(E.length,N));
   triple curr=Scale(E[0],Z[0],P[0]);
   for(int i=0; i < E.length-1; ++i) {
     triple next=Scale(E[i+1],Z[i+1],P[i+1]);
-    draw(curr--next,p[i#10]);
+    draw(curr--next,p[i#N]);
     curr=next;
   }
 

@@ -33,9 +33,9 @@ extern int pH;
 extern int pL;
 extern Real nPower;
 
-array2<Real> Corr;
-
-uInt alignCount;
+extern double P2;
+extern array2<Real> Triplet,Norm1,Norm2;
+extern uInt alignCount;
 
 class DNSBase {
 protected:
@@ -75,7 +75,7 @@ protected:
   crfft2d *Backward;
 
   ifstream ftin;
-  oxstream fek,fw,fekvk,ftransfer;
+  oxstream fek,fw,fekvk,ftransfer,fangle,ftriplet;
   ofstream ft,fevt;
 
   uvector count;
@@ -136,6 +136,7 @@ public:
   virtual void OutEnergies() {
     fek << mx << my;
     Loop(Initw(this),OutEk(this),1);
+    fek.flush();
   }
 
   void FinalOutput();
@@ -149,6 +150,9 @@ public:
     vy(0,0).re=0.0;
     A2u(0,0).re=0.0;
     A2v(0,0).re=0.0;
+
+    ComputeInvariants();
+    P2 += Polystrophy;
 
     PARALLELIF(
       2*mx*my > (Int) threshold,
@@ -195,9 +199,9 @@ public:
 
     Backward->fft0(W);
 
-    fw << 1 << 2*my << Nx+1;
-    for(Int j=2*my-1; j >= 0; j--)
-      for(uInt i=0; i <= Nx; i++)
+    fw << Nx+1 << 2*my;
+    for(uInt i=0; i <= Nx; ++i)
+      for(Int j=0; j < 2*my; ++j)
         fw << (float) wr(i,j);
     fw.flush();
   }

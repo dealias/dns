@@ -64,17 +64,17 @@ real[][] thin(real[][] v, int nx, int ny)
   for(int i=0; i < n; ++i)
     for(int j=0; j < m; ++j)
       V[i][j]=factor*v[i][j];
-  
+
   V=fft(V,1);
   V.cyclic=true;
   for(pair[] v : V)
     v.cyclic=true;
-  
+
   int Nx=2*nx;
   int Ny=2*ny;
-  
+
   pair[][] A=array(Nx,array(Ny,(0,0)));
-  
+
   A.cyclic=true;
   for(pair[] a : A)
     a.cyclic=true;
@@ -87,13 +87,13 @@ real[][] thin(real[][] v, int nx, int ny)
       A[i][j]=V[i][j];
 
   A=fft(A,-1);
-  
+
   real[][] a=new real[Nx][Ny];
-  
+
   for(int i=0; i < Nx; ++i)
     for(int j=0; j < Ny; ++j)
       a[i][j]=A[i][j].x;
-  
+
   return a;
 }
 
@@ -125,7 +125,7 @@ real[] level=uniform(ScaleZ(min(V))*(1-sqrtEpsilon),
                      ScaleZ(max(V))*(1+sqrtEpsilon),256);
 
 s.colors(palette(s.map(new real(triple v) {return find(level >= v.z);}),
-                 BWRainbow2())); 
+                 BWRainbow2()));
 
 draw(s);
 
