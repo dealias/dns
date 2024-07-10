@@ -37,7 +37,7 @@ real[][] v=fin.dimension(nx,ny);
 
 if(eof(fin)) abort("EOF encountered on file "+name);
 
-int Nx=128;
+int Nx=512;
 int Ny=Nx;
 
 real[][] V=v[0:Nx];
@@ -78,8 +78,14 @@ texpreamble("
 \def\B{{\cal B}}
 ");
 
+Label zlabel;
+if(field == "w")
+  zlabel="$\omega$";
+if(field == "angle")
+  zlabel="$\langle\theta\rangle$";
+if(field == "triplet")
+  zlabel=rotate(90)*"$\frac{\langle(\B(\vu,\vu),A^2\vu)\rangle}{2\nu \langle P_2\rangle}$";
+
 xaxis3("$x$",Bounds,InTicks(beginlabel=false));
 yaxis3("$y$",Bounds,InTicks);
-zaxis3(field == "angle" ? "$\langle\theta\rangle$" :
-       rotate(90)*"$\frac{\langle(\B(\vu,\vu),A^2\vu)\rangle}{2\nu \langle P_2\rangle}$",
-       Bounds,InTicks);
+zaxis3(zlabel,Bounds,InTicks);
