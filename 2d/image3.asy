@@ -23,8 +23,8 @@ if (frame < 0 || frame > last) frame=last;
 string name=dir+"/"+field;
 file fin=input(name,mode="xdr").singlereal();
 
-int ny=fin;
 int nx=fin;
+int ny=fin;
 
 int pos=(2+nx*ny)*frame*4;
 seek(fin,pos);

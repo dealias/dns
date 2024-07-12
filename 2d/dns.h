@@ -28,6 +28,7 @@ typedef array1<Real>::opt rvector;
 typedef array1<Nu>::opt nuvector;
 
 extern uInt spectrum;
+extern uInt modalenergies;
 
 extern int pH;
 extern int pL;
@@ -35,6 +36,7 @@ extern Real nPower;
 
 extern double P2;
 extern array2<Real> Triplet,Norm1,Norm2;
+extern Array2<Real> SumEk;
 extern uInt alignCount;
 
 class DNSBase {
@@ -135,7 +137,7 @@ public:
 
   virtual void OutEnergies() {
     fek << mx << my;
-    Loop(Initw(this),OutEk(this),1);
+    Loop(InitNone(this),OutEk(this),1);
     fek.flush();
   }
 
@@ -188,6 +190,9 @@ public:
 
     Convolve2->convolveRaw(F);
     ++alignCount;
+
+    if(modalenergies)
+      Loop(Initw(this),sumEk(this),1);
   }
 
   void OutFrame(uInt it) {
@@ -490,13 +495,23 @@ public:
     }
   };
 
+  class sumEk : public F {
+    DNSBase *b;
+  public:
+    sumEk(DNSBase *b) : b(b) {}
+    inline void operator()(const vector&wi, const vector&,
+                           const nuvector &, Int i, Int j, uInt) {
+      SumEk[i][j] += 0.5*abs2(wi[j])*b->k2inv(i,j);
+    }
+  };
+
   class OutEk : public F {
     DNSBase *b;
   public:
     OutEk(DNSBase *b) : b(b) {}
     inline void operator()(const vector&wi, const vector&,
                            const nuvector &, Int i, Int j, uInt) {
-      b->fek << 0.5*abs2(wi[j])*b->k2inv(i,j);
+      b->fek << SumEk[i][j]/alignCount;
     }
   };
 

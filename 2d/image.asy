@@ -25,8 +25,15 @@ file fin=input(name,mode="xdr").singlereal();
 int nx=fin;
 int ny=fin;
 
-int pos=((3+nx*ny)*frame)*4;
+write(nx,ny);
+
+int pos=(2+nx*ny)*frame*4;
 seek(fin,pos);
+int nx=fin;
+int ny=fin;
+
+write(nx,ny);
+
 real[][] v=fin.dimension(nx,ny);
 
 if(eof(fin)) abort("EOF encountered on file "+name);

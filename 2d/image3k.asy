@@ -8,7 +8,7 @@ currentprojection=orthographic(7,14,1);
 scale(Linear,Linear,Log);
 usepackage("bm");
 
-string[][] t={{"ek","$\frac{|u_{\bf k}|^2}{2}$"}};
+string[][] t={{"ek","$\langle\frac{|{\bm u}_{\bm k}|^2}{2}\rangle$"}};
 
 string dir=getstring("directory","r");
 string field=getstring("field","ek");
@@ -26,34 +26,40 @@ if (frame < 0 || frame > last) frame=last;
 string name=dir+"/"+field;
 file fin=input(name,mode="xdr");
 
-real[][] v0;
-
-int nx=fin;
+int mx=fin;
 int my=fin;
 
-write(nx,my);
-int pos=(2*4+nx*my*8)*frame;
+write(mx,my);
+
+int N=((2mx-1)*(2my-1)-1);
+int pos=(2+N)*frame*4;
 seek(fin,pos);
-v0=fin.read(2);
-if(eof(fin)) abort("EOF encountered on file "+name);
 
-int hx=nx#2;
+int mx=fin;
+int my=fin;
 
-v0[hx][0]=max(v0);
+write(mx,my);
 
+int nx=2*mx-1;
 int ny=2*my-1;
 
 real[][] v=new real[nx][ny];
 
-// Apply Hermitian symmetry
+for(int i=-mx+1; i < mx; ++i)
+  v[mx-1+i]=new real[ny];
 
-for(int j=0; j < my; ++j)
-  for(int i=0; i < nx; ++i)
-    v[i][my-1+j]=v0[i][j];
+for(int i=-mx+1; i < mx; ++i) {
+  for(int j=i <= 0 ? 1 : 0; j < my; ++j) { // start with j=1 if i <= 0
+    real ek=fin;
+    v[mx-1+i][my-1+j]=ek;
+    v[mx-1-i][my-1-j]=ek; // Apply Hermitian symmetry
+  }
+}
 
-for(int j=1; j < my; ++j)
-  for(int i=0; i < nx; ++i)
-    v[nx-1-i][my-1-j]=v[i][my-1+j];
+v[mx-1][my-1]=0; // DC mode
+real M=max(v);
+if(M == 0) abort("Invalid spectrum.");
+v[mx-1][my-1]=max(v); // override DC mode
 
 real[][] thin(real[][] v, int nx, int ny)
 {
@@ -115,17 +121,17 @@ real[][] thin(real[][] v, int depth)
   return thin(V,depth-1);
 }
 
-real[][] V=settings.outformat == "html" ? thin(v,2) : thin(v,1);
+real[][] V=settings.outformat == "html" ? thin(v,3) : thin(v,2);
 
 //real[][] V=settings.outformat == "html" ? thin(v,64,64) : v;
 
-surface s=surface(V,(-nx#2,-ny#2),(nx#2,ny#2));//,Spline);
+surface s=surface(V,(-mx+1,-my+1),(mx-1,my-1),Spline);
 
 real[] level=uniform(ScaleZ(min(V))*(1-sqrtEpsilon),
                      ScaleZ(max(V))*(1+sqrtEpsilon),256);
 
 s.colors(palette(s.map(new real(triple v) {return find(level >= v.z);}),
-                 BWRainbow2()));
+                 BWRainbow()));
 
 draw(s);
 

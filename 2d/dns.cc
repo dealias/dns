@@ -43,6 +43,7 @@ uInt randomIC=0;
 
 double P2;
 array2<Real> Triplet,Norm1,Norm2;
+Array2<Real> SumEk;
 uInt alignCount;
 
 // This 2D version of the scheme of Basdevant, J. Comp. Phys, 50, 1983
@@ -528,6 +529,11 @@ void DNS::InitialConditions()
     Triplet.Allocate(lx,ly);
     Norm1.Allocate(lx,ly);
     Norm2.Allocate(lx,ly);
+
+    if(modalenergies) {
+      SumEk.Allocate(Nx+1,my1,-mx,0,align);
+      SumEk=0.0;
+    }
 
     P2=0.0;
     Triplet=0.0;
