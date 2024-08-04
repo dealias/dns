@@ -412,6 +412,7 @@ public:
 void DNS::Initialize()
 {
   DNSBase::Initialize();
+  DNSBase::align();
 }
 
 void DNS::InitialConditions()
@@ -525,7 +526,6 @@ void DNS::InitialConditions()
     lx=fftX->paddedSize();
     ly=fftY->paddedSize();
 
-    cout <<  " " << lx << " " << ly << endl;
     Triplet.Allocate(lx,ly);
     Norm1.Allocate(lx,ly);
     Norm2.Allocate(lx,ly);
@@ -675,27 +675,25 @@ void DNS::Output(uInt it)
     ZeroDiagnostics();
   }
 
-  if(it > 0) {
-    fangle << lx << ly;
-    for(uInt i=0; i < lx; ++i) {
-      for(uInt j=0; j < ly; ++j) {
-        double denom=sqrt(Norm1[i][j]*Norm2[i][j]);
-        fangle <<
-          (float) (acos(Triplet[i][j]*(denom ? 1.0/denom : 0.0))*180.0/PI);
-      }
+  fangle << lx << ly;
+  for(uInt i=0; i < lx; ++i) {
+    for(uInt j=0; j < ly; ++j) {
+      double denom=sqrt(Norm1[i][j]*Norm2[i][j]);
+      fangle <<
+        (float) (acos(Triplet[i][j]*(denom ? 1.0/denom : 0.0))*180.0/PI);
     }
-    fangle.flush();
-
-    double scale=Convolve2->scale;
-//    scale *= scale/alignCount;
-    scale *= scale/(2.0*nuH*P2);
-
-    ftriplet << lx << ly;
-    for(uInt i=0; i < lx; ++i)
-      for(uInt j=0; j < ly; ++j)
-        ftriplet << (float) (Triplet[i][j]*scale);
-    ftriplet.flush();
   }
+  fangle.flush();
+
+  double scale=Convolve2->scale;
+//    scale *= scale/alignCount;
+  scale *= scale/(2.0*nuH*P2);
+
+  ftriplet << lx << ly;
+  for(uInt i=0; i < lx; ++i)
+    for(uInt j=0; j < ly; ++j)
+      ftriplet << (float) (Triplet[i][j]*scale);
+  ftriplet.flush();
 }
 
 void DNS::FinalOutput()

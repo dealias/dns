@@ -106,7 +106,7 @@ public:
   }
 
   void InitialConditions() {
-    w[0][0]=0.0; // Enforce no mean flow
+    w[0][0]=0.0; // Enforce zero mean flow
     Loop(Initw(this),InitializeValue(this),threads);
   }
 
