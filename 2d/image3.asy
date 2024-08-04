@@ -5,6 +5,8 @@ import palette;
 
 currentlight=Viewport;
 
+currentprojection=orthographic(dir(72,40));
+
 usepackage("bm");
 
 string dir=getstring("directory","");
@@ -15,7 +17,7 @@ real[][] T;
 file fin=input(dir+"/t").line();
 real[][] T=fin.dimension(0,0);
 T=transpose(T);
-int last=T[0].length-2;
+int last=T[0].length-1;
 
 int frame=getint("frame (<= "+(string) last+")");
 if (frame < 0 || frame > last) frame=last;
@@ -37,7 +39,7 @@ real[][] v=fin.dimension(nx,ny);
 
 if(eof(fin)) abort("EOF encountered on file "+name);
 
-int Nx=512;
+int Nx=1024;
 int Ny=Nx;
 
 real[][] V=v[0:Nx];
@@ -51,25 +53,15 @@ write(V[0].length);
 real maxV=max(V);
 real minV=min(V);
 
-currentprojection=orthographic((11,-6,10));
-scale(Linear(1/Nx),Linear(1/Ny),Linear(1/(maxV-minV)));
-
 int Ncolors=256;
 
 real[] level=uniform(ScaleZ(minV)*(1-sqrtEpsilon),
                      ScaleZ(maxV)*(1+sqrtEpsilon),Ncolors);
+
 surface s=surface(V,(0,0),(Nx,Ny),Spline);
-//surface s=tessellation(V,(0,0),(nx,ny));
 s.colors(palette(s.map(new real(triple v) {return find(level >= v.z);}),
-               BWRainbow2()));
-draw(s,red);
-
-/*
-drawTessellation(V,(0,0),(nx,ny), new pen[](triple[] v) {
-    return palette(map(new real(triple v) {return find(level >= v.z);},v),
-                   BWRainbow2());});
-*/
-
+                 BWRainbow2()));
+draw(s,render(tessellate=true));
 
 usepackage("bm");
 texpreamble("
@@ -84,8 +76,8 @@ if(field == "w")
 if(field == "angle")
   zlabel="$\langle\theta\rangle$";
 if(field == "triplet")
-  zlabel=rotate(90)*"$\frac{\langle(\B(\vu,\vu),A^2\vu)\rangle}{2\nu \langle P_2\rangle}$";
+  zlabel=rotate(90)*"$\frac{(\B(\vu,\vu),A^2\vu)}{2\nu P_2}$";
 
-xaxis3("$x$",Bounds,InTicks(beginlabel=false));
+xaxis3("$x$",Bounds,InTicks(endlabel=false));
 yaxis3("$y$",Bounds,InTicks);
 zaxis3(zlabel,Bounds,InTicks);

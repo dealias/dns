@@ -3,9 +3,12 @@ size(0,15cm,IgnoreAspect);
 import graph3;
 import palette;
 
-currentprojection=orthographic(7,14,1);
+currentlight=light(white,specular=gray(0.7),(0,0,1));
 
-scale(Linear,Linear,Log);
+currentprojection=orthographic(dir(30,40));
+//currentprojection=orthographic(7,14,1);
+
+//scale(Linear,Linear,Log);
 usepackage("bm");
 
 string[][] t={{"ek","$\langle\frac{|{\bm u}_{\bm k}|^2}{2}\rangle$"}};
@@ -57,51 +60,11 @@ for(int i=-mx+1; i < mx; ++i) {
 }
 
 v[mx-1][my-1]=0; // DC mode
-real M=max(v);
-if(M == 0) abort("Invalid spectrum.");
-v[mx-1][my-1]=max(v); // override DC mode
+real maxv=max(v);
+if(maxv == 0) abort("Invalid spectrum.");
+v[mx-1][my-1]=maxv; // override DC mode
 
-real[][] thin(real[][] v, int nx, int ny)
-{
-  int n=v.length;
-  int m=n == 0 ? 0 : v[0].length;
-  pair[][] V=new pair[n][m];
-  real factor=1/(n*m);
-  for(int i=0; i < n; ++i)
-    for(int j=0; j < m; ++j)
-      V[i][j]=factor*v[i][j];
-
-  V=fft(V,1);
-  V.cyclic=true;
-  for(pair[] v : V)
-    v.cyclic=true;
-
-  int Nx=2*nx;
-  int Ny=2*ny;
-
-  pair[][] A=array(Nx,array(Ny,(0,0)));
-
-  A.cyclic=true;
-  for(pair[] a : A)
-    a.cyclic=true;
-
-  int hx=nx#2;
-  int hy=ny#2;
-
-  for(int i=-hx; i <= hx; ++i)
-    for(int j=-hy; j <= hy; ++j)
-      A[i][j]=V[i][j];
-
-  A=fft(A,-1);
-
-  real[][] a=new real[Nx][Ny];
-
-  for(int i=0; i < Nx; ++i)
-    for(int j=0; j < Ny; ++j)
-      a[i][j]=A[i][j].x;
-
-  return a;
-}
+scale(Linear,Linear,Log);
 
 real[][] thin(real[][] v, int depth)
 {
@@ -121,20 +84,18 @@ real[][] thin(real[][] v, int depth)
   return thin(V,depth-1);
 }
 
-real[][] V=settings.outformat == "html" ? thin(v,3) : thin(v,2);
+real[][] V=thin(v,0);
 
-//real[][] V=settings.outformat == "html" ? thin(v,64,64) : v;
-
-surface s=surface(V,(-mx+1,-my+1),(mx-1,my-1),Spline);
+surface s=surface(V,(-mx+1,-my+1),(mx-1,my-1));
 
 real[] level=uniform(ScaleZ(min(V))*(1-sqrtEpsilon),
                      ScaleZ(max(V))*(1+sqrtEpsilon),256);
 
 s.colors(palette(s.map(new real(triple v) {return find(level >= v.z);}),
-                 BWRainbow()));
+                 Rainbow()));
 
-draw(s);
+draw(s,render(tessellate=true));
 
-xaxis3("$k_x$",Bounds,InTicks);
-yaxis3("$k_y$",Bounds,InTicks);
+xaxis3("$k_x$",Bounds,InTicks());
+yaxis3("$k_y$",Bounds,InTicks());
 zaxis3(t[0][1],Bounds,InTicks);

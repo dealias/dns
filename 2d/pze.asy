@@ -10,6 +10,8 @@ pen opacity=opacity(settings.outformat == "html" ? 1.0 : 0.5);
 
 size3(25cm,15cm,15cm,keepAspect=false);
 
+currentprojection=orthographic(dir(72,40));
+
 include getparam;
 include averages;
 
@@ -150,9 +152,6 @@ while(nextrun()) {
        heavygreen+opacity);
 
 }
-
-currentprojection=orthographic(camera=Scale(maxE,maxZ,maxP)-Scale(minE,minZ,minP),
-                               target=Scale(minE,minZ,minP));
 
 xaxis3(Label("$2E/(\nu "+tilde+"G)^2$",position=1),
        YZEquals(minE,minP,extend=false),OutTicks);
