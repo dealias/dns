@@ -15,7 +15,10 @@ currentprojection=orthographic(dir(72,40));
 include getparam;
 include averages;
 
-scale(Log,Log,Log);
+string scale=getstring("scale","log");
+
+if(scale == "log")
+  scale(Log,Log,Log);
 
 real[] t,E,Z,P;
 real G,Lambda;

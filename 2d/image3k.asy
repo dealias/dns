@@ -5,8 +5,7 @@ import palette;
 
 currentlight=light(white,specular=gray(0.7),(0,0,1));
 
-currentprojection=orthographic(dir(30,40));
-//currentprojection=orthographic(7,14,1);
+currentprojection=orthographic(dir(30,10));
 
 //scale(Linear,Linear,Log);
 usepackage("bm");
@@ -84,7 +83,7 @@ real[][] thin(real[][] v, int depth)
   return thin(V,depth-1);
 }
 
-real[][] V=thin(v,0);
+real[][] V=thin(v,1);
 
 surface s=surface(V,(-mx+1,-my+1),(mx-1,my-1));
 

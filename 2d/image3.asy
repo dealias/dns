@@ -6,6 +6,7 @@ import palette;
 currentlight=Viewport;
 
 currentprojection=orthographic(dir(72,40));
+//currentprojection=orthographic(dir(40,40));
 
 usepackage("bm");
 
@@ -79,5 +80,6 @@ if(field == "triplet")
   zlabel=rotate(90)*"$\frac{(\B(\vu,\vu),A^2\vu)}{2\nu P_2}$";
 
 xaxis3("$x$",Bounds,InTicks(endlabel=false));
+//xaxis3("$x$",Bounds,InTicks);
 yaxis3("$y$",Bounds,InTicks);
 zaxis3(zlabel,Bounds,InTicks);
