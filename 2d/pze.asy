@@ -6,14 +6,14 @@
 import graph3;
 import palette;
 
-pen opacity=opacity(settings.outformat == "html" ? 1.0 : 0.5);
-
-size3(25cm,15cm,15cm,keepAspect=false);
-
-currentprojection=orthographic(dir(72,40));
-
 include getparam;
 include averages;
+
+pen opacity=opacity(settings.outformat == "html" ? 1 : 0.35);
+
+size(14cm,0,keepAspect=false);
+
+currentprojection=orthographic(dir(72,40));
 
 string scale=getstring("scale","log");
 

@@ -1,7 +1,7 @@
-size(0,15cm,IgnoreAspect);
-
 import graph3;
 import palette;
+
+size(390pt,0,IgnoreAspect);
 
 currentlight=Viewport;
 
@@ -69,6 +69,8 @@ texpreamble("
 \def\v{\bm}
 \def\vu{{\v u}}
 \def\B{{\cal B}}
+\def\dot{{\v \cdot}}
+\def\grad{\v\nabla}
 ");
 
 Label zlabel;
@@ -77,7 +79,7 @@ if(field == "w")
 if(field == "angle")
   zlabel="$\langle\theta\rangle$";
 if(field == "triplet")
-  zlabel=rotate(90)*"$\frac{(\B(\vu,\vu),A^2\vu)}{2\nu P_2}$";
+  zlabel=rotate(90)*"$\frac{\langle(\vu\dot\grad)\vu\dot A^2\vu\rangle}{2\nu P_2}$";
 
 xaxis3("$x$",Bounds,InTicks(endlabel=false));
 //xaxis3("$x$",Bounds,InTicks);

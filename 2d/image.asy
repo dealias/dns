@@ -4,6 +4,8 @@ import graph;
 import palette;
 import contour;
 
+size(390pt,0,IgnoreAspect);
+
 string[][] t={{"w","\omega"},{"vx","v_x"},{"vy","v_y"}};
 
 string field=getstring("field","w");
