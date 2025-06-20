@@ -483,7 +483,7 @@ void DNS::InitialConditions()
   uInt A=2, B=2; // 2 inputs, 2 outputs in Basdevant scheme
   uInt N=max(A,B);
 
-  Application appx(A,B,multNone,threads,true,true);
+  Application appx(A,B,multNone,threads,true);
   auto fftx=new fftPadCentered(Nx+1,Mx,appx,my,my1);
 
   Application appy(A,B,multAdvection2,appx);
@@ -509,7 +509,7 @@ void DNS::InitialConditions()
     uInt nx=4*mx-3;
     uInt ny0=4*my-3;
 
-    Application appX(A,B,multNone,threads,true,true);
+    Application appX(A,B,multNone,threads,true);
     auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
 //    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1,nx,1,1);
 
