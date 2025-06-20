@@ -509,8 +509,7 @@ void DNS::InitialConditions()
     uInt nx=4*mx-3;
     uInt ny0=4*my-3;
 
-// Disable overwrite optimization to allow indexing transformed values.
-    Application appX(A,B,multNone,threads,false,true);
+    Application appX(A,B,multNone,threads,true,true);
     auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1);
 //    auto fftX=new fftPadCentered(Nx+1,nx,appX,my,my1,nx,1,1);
 
